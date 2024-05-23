@@ -1,3 +1,4 @@
+from Source.Core.Downloader import Downloader
 from Source.Core.Objects import Objects
 
 from dublib.Methods import ReadJSON, WriteJSON
@@ -53,14 +54,14 @@ class BaseStructs:
 			"publication_year": None,
 			"description": None,
 			"age_limit": None,
+
+			"type": None,
+			"status": None,
+			"is_licensed": None,
 			
 			"genres": [],
 			"tags": [],
 			"franchises": [],
-			
-			"type": None,
-			"status": None,
-			"is_licensed": None,
 			
 			"branches": [],
 			"content": {} 
@@ -134,24 +135,35 @@ class Manga:
 		# Дополнение содержимого.
 		self.__Manga["content"] = amending_method(self.__Manga["content"], message)
 
-	def download_covers(self):
+	def download_covers(self, system_objects: Objects, output_dir: str, filename: str, message: str):
 		"""
-		Скачивает обложки
-			output_dir – директория хранения.
+		Скачивает обложки.
+			system_objects – коллекция системных объектов;
+			output_dir – директория хранения;
+			filename – используемое имя файла;
+			message – сообщение для внутреннего обработчика.
 		"""
 
-		pass
+		# Директория обложек.
+		CoversDirectory = f"{output_dir}/{filename}"
+		# Если директория обложек не существует, создать её.
+		if not os.path.exists(CoversDirectory): os.makedirs(CoversDirectory)
 
-	def merge(self, output_dir: str, filename: str, system_objects: Objects):
+		# Для каждой обложки.
+		for Cover in self.__Manga["covers"]:
+			# Загрузка обложки.
+			Downloader(system_objects, exception = True).cover(Cover["url"], self.__Manga["site"], CoversDirectory, self.__Manga["slug"])
+
+	def merge(self, system_objects: Objects, output_dir: str, filename: str):
 		"""
 		Объединяет данные описательного файла и текущей структуры данных.
+			system_objects – коллекция системных объектов;
 			output_dir – директория хранения;
-			filename – имя файла;
-			system_objects – коллекция системных объектов.
+			filename – имя файла.
 		"""
 
-		# Если локальный файл существует.
-		if os.path.exists(f"{output_dir}/{filename}.json"):
+		# Если локальный файл существует и не включён режим перезаписи.
+		if os.path.exists(f"{output_dir}/{filename}.json") and not system_objects.FORCE_MODE:
 			# Чтение описательного файла.
 			LocalManga = ReadJSON(f"{output_dir}/{filename}.json")
 			# Локальные данные содержимого.
@@ -178,17 +190,28 @@ class Manga:
 						MergedChaptersCount += 1
 
 			# Запись в лог информации: количество глав, для которых выполнено слияние.
-			system_objects.logger.merged_chapters_count(MergedChaptersCount)
+			system_objects.logger.info("Title: \"" + self.__Manga["slug"] + f"\". Merged chapters count: {MergedChaptersCount}.")
 
-	def save(self, output_dir: str, filename: str):
+		# Если включён режим перезаписи.
+		elif system_objects.FORCE_MODE:
+			# Запись в лог информации: тайтл перезаписан.
+			system_objects.logger.info("Title: \"" + self.__Manga["slug"] + "\". Local data removed.")
+
+	def save(self, system_objects: Objects, output_dir: str, filename: str, legacy: bool = False):
 		"""
 		Сохраняет данные манги в описательный файл.
+			system_objects – коллекция системных объектов;
 			output_dir – директория хранения;
-			filename – имя файла.
+			filename – имя файла;
+			legacy – указывает, нужно ли форматировать описательный файл в устаревший формат.
 		"""
 
 		# Сохранение описательного файла.
 		WriteJSON(f"{output_dir}/{filename}.json", self.__Manga)
+		# Запись в лог информации: данные сконвертированы в устаревший формат.
+		if legacy: system_objects.logger.info("Title: \"" + self.__Manga["slug"] + "\". Converted to legacy format.")
+		# Запись в лог информации: данные сохранены.
+		system_objects.logger.info("Title: \"" + self.__Manga["slug"] + "\". Saved.")
 
 	#==========================================================================================#
 	# >>>>> ПУБЛИЧНЫЕ МЕТОДЫ УСТАНОВКИ СВОЙСТВ <<<<< #

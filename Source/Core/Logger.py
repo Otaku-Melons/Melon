@@ -38,6 +38,14 @@ class Logger:
 	# >>>>> БАЗОВЫЕ ТИПЫ ЗАПИСЕЙ <<<<< #
 	#==========================================================================================#
 
+	def critical(self, text: str):
+		"""
+		Записывает в лог критическую ошибку.
+			text – данные.
+		"""
+
+		logging.critical(text)
+
 	def error(self, text: str):
 		"""
 		Записывает в лог ошибку.
@@ -66,24 +74,37 @@ class Logger:
 	# >>>>> ШАБЛОНЫ ТИПОВ ЗАПИСЕЙ <<<<< #
 	#==========================================================================================#
 
-	def chapter_amended(self, slug: str, chapter_id: int):
+	def amending_end(self, slug: str, chapters_cont: int):
 		"""
-		Записывает в лог данные дополненной главы
+		Записывает в лог информацию о количестве дополненных глав.
 			slug – алиас;
-			chapter_id – идентификатор главы.
+			chapters_cont – количество дополненных глав.
 		"""
 
 		# Запись в лог информации.
-		logging.info(f"Title: \"{slug}\" Chapter {chapter_id} amended.")
+		logging.info(f"Title: \"{slug}\". Amended chapters count: {chapters_cont}.")
 
-	def merged_chapters_count(self, chapters_count: int):
+	def chapter_amended(self, slug: str, chapter_id: int, is_paid: bool):
 		"""
-		Записывает в лог количество полученных из локального файла глав.
-			chapters_count – количество глав.
+		Записывает в лог данные дополненной главы.
+			slug – алиас;
+			chapter_id – идентификатор главы;
+			is_paid – является ли глава платной.
+		"""
+
+		# Составление типа главы.
+		Chapter = "Paid chapter" if is_paid else "Chapter"
+		# Запись в лог информации.
+		logging.info(f"Title: \"{slug}\". {Chapter} {chapter_id} amended.")
+
+	def parsing_start(self, slug: str):
+		"""
+		Записывает в лог сообщение об успешном парсинге данных тайтла.
+			slug – алиас.
 		"""
 
 		# Запись в лог информации.
-		logging.info(f"Merged chapters count: {chapters_count}.")
+		logging.info(f"Title: \"{slug}\". Parsing...")
 
 	def request_error(self, response: WebResponse, text: str | None = None):
 		"""

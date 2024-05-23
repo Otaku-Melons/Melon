@@ -1,4 +1,4 @@
-from Source.Core.ParsersManager import ParsersManager
+from Source.Core.Manager import Manager
 from Source.Core.Logger import Logger
 
 class Objects:
@@ -28,10 +28,10 @@ class Objects:
 		return self.__Logger
 
 	@property
-	def parsers_manager(self) -> ParsersManager:
+	def manager(self) -> Manager:
 		"""Менеджер парсеров"""
 
-		return self.__ParsersManager
+		return self.__Manager
 
 	#==========================================================================================#
 	# >>>>> МЕТОДЫ <<<<< #
@@ -42,6 +42,6 @@ class Objects:
 		#---> Генерация динамических свойств.
 		#==========================================================================================#
 		# Менеджер парсеров.
-		self.__ParsersManager = ParsersManager()
+		self.__Manager = Manager()
 		# Менеджер логов.
 		self.__Logger = Logger()

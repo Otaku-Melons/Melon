@@ -1,6 +1,31 @@
+from Source.Core.Downloader import Downloader
 from Source.Core.Objects import Objects
 
 from dublib.Terminalyzer import CommandData
+from dublib.Methods import Cls
+
+def com_get(system_objects: Objects, command: CommandData):
+	"""
+	Скачивает изображение.
+		system_objects – коллекция системных объектов;
+		command – объект представления консольной команды.
+	"""
+
+	# Запись в лог информации: заголовок парсинга.
+	system_objects.logger.info("====== Downloading ======")
+	# Определение каталога и имени файла.
+	Directory = command.values["dir"] if "dir" in command.keys else None
+	Filename = command.values["name"] if "name" in command.keys else None
+	if "fullname" in command.keys: Filename = command.values["fullname"]
+	FullName = True if "fullname" in command.keys else False
+	# Вывод в консоль: загрузка.
+	print(f"URL: {command.arguments[0]}\nDownloading... ", end = "")
+	# Загрузка изображения.
+	Downloader(system_objects, exception = True).image(command.arguments[0], command.values["site"], Directory, Filename, FullName)
+	# Переключение состояния удаления логов.
+	system_objects.REMOVE_LOG = True
+	# Вывод в консоль: завершение загрузки.
+	print("Done.")
 
 def com_list(system_objects: Objects):
 	"""
@@ -9,15 +34,15 @@ def com_list(system_objects: Objects):
 	"""
 
 	# Список названий.
-	ParsersList = system_objects.parsers_manager.parsers_names
+	ParsersList = system_objects.manager.parsers_names
 	# Включение удаление лога.
 	system_objects.REMOVE_LOG = True 
 
 	# Для каждого парсера.
 	for Parser in ParsersList:
 		# Получение данных парсера.
-		Version = system_objects.parsers_manager.get_parser_version(Parser)
-		Site = system_objects.parsers_manager.get_parser_site(Parser)
+		Version = system_objects.manager.get_parser_version(Parser)
+		Site = system_objects.manager.get_parser_site(Parser)
 		# Вывод в консоль: название и версия парсера.
 		print(f"{Parser} ({Site}) – {Version}")
 
@@ -28,12 +53,14 @@ def com_parse(system_objects: Objects, command: CommandData):
 		command – объект представления консольной команды.
 	"""
 
+	# Очистка консоли.
+	Cls()
 	# Название парсера.
-	ParserName = command.arguments[0]
+	ParserName = command.values["use"]
 	# Инициализация парсера.
-	Parser = system_objects.parsers_manager.launch(ParserName)
+	Parser = system_objects.manager.launch(ParserName, system_objects)
 	# Настройки парсера.
-	ParserSettings = system_objects.parsers_manager.get_parser_settings(ParserName)
+	ParserSettings = system_objects.manager.get_parser_settings(ParserName)
 	# Запись в лог информации: заголовок парсинга.
 	system_objects.logger.info("====== Parsing ======")
 	# Алиасы тайтлов.
@@ -83,7 +110,7 @@ def com_parse(system_objects: Objects, command: CommandData):
 
 	else:
 		# Запись аргумента в качестве цели парсинга.
-		Slugs.append(command.arguments[1])
+		Slugs.append(command.arguments[0])
 		
 	# Если указан стартовый тайтл.
 	if "from" in command.keys:
@@ -104,7 +131,7 @@ def com_parse(system_objects: Objects, command: CommandData):
 
 		#---> Парсинг базовых данных.
 		#==========================================================================================#
-		Title = system_objects.parsers_manager.get_parser_struct(ParserName)
+		Title = system_objects.manager.get_parser_struct(ParserName)
 		Parser.parse(Slugs[Index])
 		Title.set_site(Parser.site)
 		Title.set_id(Parser.id)
@@ -134,18 +161,10 @@ def com_parse(system_objects: Objects, command: CommandData):
 
 		#---> Обработка содержимого.
 		#==========================================================================================#
-		Title.merge(ParserSettings["common"]["titles_directory"], Filename, system_objects)
+		Title.merge(system_objects, ParserSettings["common"]["titles_directory"], Filename)
 		Title.amend(Parser.amend, Message)
-		# Title.download_covers(ParserSettings["common"]["covers_directory"])
-		Title.save(ParserSettings["common"]["titles_directory"], Filename)
+		Title.download_covers(system_objects, ParserSettings["common"]["covers_directory"], Filename, Message)
+		Title.save(system_objects, ParserSettings["common"]["titles_directory"], Filename)
 
-		# # Вывод в консоль: прогресс .
-		# print("Parsing titles: " + str(Index + 1) + " / " + str(len(Slugs)))
-		# # Генерация сообщения.
-		# ExternalMessage = InFuncMessage_Shutdown + InFuncMessage_ForceMode + "Parsing titles: " + str(Index + 1) + " / " + str(len(Slugs)) + "\n"
-		# # Парсинг тайтла.
-		# LocalTitle = Parser(Settings, Slugs[Index], ForceMode = IsForceModeActivated, Message = ExternalMessage)	
-		# # Сохранение локальных файлов тайтла.
-		# LocalTitle.save()
-		# # Выжидание указанного интервала, если не все тайтлы спаршены.
-		# if Index < len(Slugs): sleep(Settings["delay"])
+	# Очистка консоли.
+	Cls()

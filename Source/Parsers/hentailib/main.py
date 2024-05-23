@@ -1,5 +1,6 @@
 from Source.Core.Formats.Manga import BaseStructs, Manga, Statuses, Types
 from Source.CLI.Templates import PrintAmendingProgress
+from Source.Core.Objects import Objects
 from Source.Core.Logger import Logger
 
 from dublib.Methods import ReadJSON, RemoveRecurringSubstrings, Zerotify
@@ -257,7 +258,9 @@ class Parser:
 		Description = None
 		# Если присутствует описание, записать его и отформатировать.
 		if "summary" in data.keys(): Description = RemoveRecurringSubstrings(data["summary"], "\n").strip().replace(" \n", "\n")
-
+		# Обнуление пустого описания.
+		Description = Zerotify(Description)
+		
 		return Description
 
 	def __GetFranchises(self, data: dict) -> list[str]:
@@ -416,6 +419,8 @@ class Parser:
 		if Response.status_code == 200:
 			# Парсинг ответа.
 			Response = Response.json["data"]
+			# Запись в лог информации: начало парсинга.
+			self.__SystemObjects.logger.parsing_start(self.__Slug)
 
 		else:
 			# Запись в лог ошибки.
@@ -478,8 +483,11 @@ class Parser:
 	# >>>>> ПУБЛИЧНЫЕ МЕТОДЫ <<<<< #
 	#==========================================================================================#
 
-	def __init__(self):
-		"""Модульный парсер."""
+	def __init__(self, system_objects: Objects):
+		"""
+		Модульный парсер.
+			system_objects – коллекция системных объектов.
+		"""
 
 		#---> Генерация динамических свойств.
 		#==========================================================================================#
@@ -493,6 +501,8 @@ class Parser:
 		self.__Slug = None
 		# Менеджер логов.
 		self.__Logger = Logger()	
+		# Коллекция системных объектов.
+		self.__SystemObjects = system_objects
 
 	def amend(self, content: dict | None = None, message: str = "") -> dict:
 		"""
@@ -530,9 +540,14 @@ class Parser:
 						content[BranchID][ChapterIndex]["slides"] = Slides
 						# Вывод в консоль: прогресс дополнения.
 						PrintAmendingProgress(message, AmendedChaptersCount, ChaptersToAmendCount)
+						# Запись в лог информации: глава дополнена.
+						self.__SystemObjects.logger.chapter_amended(self.__Slug, content[BranchID][ChapterIndex]["id"], False)
 
 					# Выжидание интервала.
 					sleep(self.__Settings["common"]["delay"])
+
+		# Запись в лог информации: количество дополненных глав.
+		self.__SystemObjects.logger.amending_end(self.__Slug, AmendedChaptersCount)
 
 		return content
 
