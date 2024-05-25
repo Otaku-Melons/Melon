@@ -49,6 +49,14 @@ Com.add_key_position(["use"], ArgumentsTypes.Text, important = True)
 Com.add_key_position(["from"], ArgumentsTypes.All)
 CommandsList.append(Com)
 
+# Создание команды: repair.
+Com = Command("repair")
+Com.add_argument(ArgumentsTypes.All, important = True)
+Com.add_key_position(["chapter"], ArgumentsTypes.All, important = True)
+Com.add_key_position(["use"], ArgumentsTypes.Text, important = True)
+Com.add_flag_position(["s"])
+CommandsList.append(Com)
+
 # Инициализация обработчика консольных аргументов.
 TerminalProcessor = Terminalyzer()
 # Получение информации о проверке команд.
@@ -102,6 +110,9 @@ if "list" == CommandDataStruct.name: com_list(SystemObjects)
 
 # Обработка команд: parse.
 if "parse" == CommandDataStruct.name: com_parse(SystemObjects, CommandDataStruct)
+
+# Обработка команд: repair.
+if "repair" == CommandDataStruct.name: com_repair(SystemObjects, CommandDataStruct)
 
 #==========================================================================================#
 # >>>>> ЗАВЕРШЕНИЕ РАБОТЫ <<<<< #

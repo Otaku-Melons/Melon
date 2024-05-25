@@ -15,7 +15,7 @@ class Manager:
 		"""Список названий доступных парсеров."""
 
 		# Получение списка каталогов в директории парсеров.
-		Parsers = os.listdir("Source/Parsers")
+		Parsers = os.listdir("Parsers")
 		# Удаление директории шаблонов.
 		if "Templates" in Parsers: Parsers.remove("Templates")
 
@@ -77,7 +77,7 @@ class Manager:
 		"""
 
 		# Чтение настроек.
-		Settings = ReadJSON(f"Source/Parsers/{parser_name}/settings.json")
+		Settings = ReadJSON(f"Parsers/{parser_name}/settings.json")
 		# Устанавливает стандартные директории.
 		self.__PutDefaultDirectories(Settings)
 
@@ -90,7 +90,7 @@ class Manager:
 		"""
 
 		# Импорт парсера.
-		Module = importlib.import_module(f"Source.Parsers.{parser_name}.main")
+		Module = importlib.import_module(f"Parsers.{parser_name}.main")
 
 		return Module.SITE
 
@@ -101,7 +101,7 @@ class Manager:
 		"""
 
 		# Импорт парсера.
-		Module = importlib.import_module(f"Source.Parsers.{parser_name}.main")
+		Module = importlib.import_module(f"Parsers.{parser_name}.main")
 
 		return Module.STRUCT
 
@@ -112,7 +112,7 @@ class Manager:
 		"""
 
 		# Импорт парсера.
-		Module = importlib.import_module(f"Source.Parsers.{parser_name}.main")
+		Module = importlib.import_module(f"Parsers.{parser_name}.main")
 
 		return Module.VERSION
 
@@ -129,7 +129,7 @@ class Manager:
 		# Если парсер существует.
 		if parser_name in self.parsers_names:
 			# Инициализация парсера.
-			Module = importlib.import_module(f"Source.Parsers.{parser_name}.main")
+			Module = importlib.import_module(f"Parsers.{parser_name}.main")
 			Parser = Module.Parser(system_objects)
 			# Запись в лог информации: название и версия парсера.
 			system_objects.logger.info(f"Parser: \"{Module.NAME}\" (version {Module.VERSION}).")

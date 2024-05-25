@@ -1,11 +1,12 @@
 {
 	"type": "manga",
 	"common": {
-		"archives_directory": "Output/manga/archives",
-		"covers_directory": "Output/manga/covers",
-		"titles_directory": "Output/manga/titles",
+		"archives_directory": "",
+		"covers_directory": "",
+		"titles_directory": "",
 		"use_id_as_filename": false,
 		"sizing_images": true,
+		"legacy": true,
 		"delay": 1
 	},
 	"proxy": {

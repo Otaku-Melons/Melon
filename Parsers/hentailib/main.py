@@ -260,7 +260,7 @@ class Parser:
 		if "summary" in data.keys(): Description = RemoveRecurringSubstrings(data["summary"], "\n").strip().replace(" \n", "\n")
 		# Обнуление пустого описания.
 		Description = Zerotify(Description)
-		
+
 		return Description
 
 	def __GetFranchises(self, data: dict) -> list[str]:
@@ -456,7 +456,7 @@ class Parser:
 			"Манга": Types.manga,
 			"Манхва": Types.manhwa,
 			"Маньхуа": Types.manhua,
-			"Руманга": Types.ru_comic,
+			"Руманга": Types.russian_comic,
 			"Комикс западный": Types.western_comic,
 			"OEL-манга": Types.oel
 		}
@@ -492,7 +492,7 @@ class Parser:
 		#---> Генерация динамических свойств.
 		#==========================================================================================#
 		# Настройки парсера.
-		self.__Settings = ReadJSON(f"Source/Parsers/{NAME}/settings.json")
+		self.__Settings = ReadJSON(f"Parsers/{NAME}/settings.json")
 		# Менеджер WEB-запросов.
 		self.__Requestor = self.__InitializeRequestor()
 		# Структура данных.
@@ -581,3 +581,31 @@ class Parser:
 		self.__Title["status"] = self.__GetStatus(Data)
 		self.__Title["is_licensed"] = Data["is_licensed"]
 		self.__Title["content"] = self.__GetContent()
+
+	def repair(self, content: dict, chapter_id: int) -> dict | None:
+		"""
+		Заново получает данные слайдов главы главы.
+			content – содержимое тайтла;
+			chapter_id – идентификатор главы.
+		"""
+
+		# Для каждой ветви.
+		for BranchID in content.keys():
+			
+			# Для каждый главы.
+			for ChapterIndex in range(len(content[BranchID])):
+				
+				# Если ID совпадает с искомым.
+				if content[BranchID][ChapterIndex]["id"] == chapter_id:
+					# Получение списка слайдов главы.
+					Slides = self.__GetSlides(
+						content[BranchID][ChapterIndex]["number"],
+						content[BranchID][ChapterIndex]["volume"],
+						BranchID
+					)
+					# Запись в лог информации: глава восстановлена.
+					self.__SystemObjects.logger.chapter_repaired(self.__Slug, chapter_id, content[BranchID][ChapterIndex]["is_paid"])
+					# Запись восстановленной главы.
+					content[BranchID][ChapterIndex]["slides"] = Slides
+
+		return content

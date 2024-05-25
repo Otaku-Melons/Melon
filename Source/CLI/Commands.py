@@ -22,8 +22,8 @@ def com_get(system_objects: Objects, command: CommandData):
 	print(f"URL: {command.arguments[0]}\nDownloading... ", end = "")
 	# Загрузка изображения.
 	Downloader(system_objects, exception = True).image(command.arguments[0], command.values["site"], Directory, Filename, FullName)
-	# Переключение состояния удаления логов.
-	system_objects.REMOVE_LOG = True
+	# Включение удаление лога.
+	system_objects.REMOVE_LOG = True 
 	# Вывод в консоль: завершение загрузки.
 	print("Done.")
 
@@ -158,13 +158,50 @@ def com_parse(system_objects: Objects, command: CommandData):
 		Message = system_objects.MSG_SHUTDOWN + system_objects.MSG_FORCE_MODE
 		# Используемое имя файла.
 		Filename = Parser.id if ParserSettings["common"]["use_id_as_filename"] else Parser.slug
+		# Состояние: используется ли устаревший формат.
+		Legacy = True if ParserSettings["common"]["legacy"] else False
 
 		#---> Обработка содержимого.
 		#==========================================================================================#
 		Title.merge(system_objects, ParserSettings["common"]["titles_directory"], Filename)
 		Title.amend(Parser.amend, Message)
 		Title.download_covers(system_objects, ParserSettings["common"]["covers_directory"], Filename, Message)
-		Title.save(system_objects, ParserSettings["common"]["titles_directory"], Filename)
+		Title.save(system_objects, ParserSettings["common"]["titles_directory"], Filename, Legacy)
 
+	# Очистка консоли.
+	Cls()
+
+def com_repair(system_objects: Objects, command: CommandData):
+	"""
+	Выполняет парсинг тайтла.
+		system_objects – коллекция системных объектов;
+		command – объект представления консольной команды.
+	"""
+
+	# Очистка консоли.
+	Cls()
+	# Название парсера.
+	ParserName = command.values["use"]
+	# Инициализация парсера.
+	Parser = system_objects.manager.launch(ParserName, system_objects)
+	# Настройки парсера.
+	ParserSettings = system_objects.manager.get_parser_settings(ParserName)
+	# Запись в лог информации: заголовк восстановления.
+	system_objects.logger.info("====== Repairing ======")
+	# Имя описательного файла.
+	Filename = Filename[:-5] if command.arguments[0].endswith(".json") else command.arguments[0]
+	# Вывод в консоль: идёт процесс восстановления главы.
+	print("Repairing...")
+
+	#---> Восстановление главы.
+	#==========================================================================================#
+	Title = system_objects.manager.get_parser_struct(ParserName)
+	Title.open(system_objects, ParserSettings["common"]["titles_directory"], Filename)
+	Parser.parse(Title.slug)
+	Title.repair(Parser.repair, int(command.values["chapter"]))
+	Title.save(system_objects, ParserSettings["common"]["titles_directory"], Filename)
+
+	# Включение удаление лога.
+	system_objects.REMOVE_LOG = True 
 	# Очистка консоли.
 	Cls()

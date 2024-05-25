@@ -75,9 +75,10 @@ class Downloader:
 		#==========================================================================================#
 		Filetype = self.__GetFiletype(url)
 		Filename = self.__GetFilename(url)
+		IsCoverExists = os.path.exists(f"{directory}/{Filename}{Filetype}")
 
 		# Если файл не существует или включён режим перезаписи.
-		if not os.path.exists(f"{directory}{Filename}{Filetype}") or self.__SystemObjects.FORCE_MODE:
+		if not IsCoverExists or self.__SystemObjects.FORCE_MODE:
 
 			#---> Инициализация менеджера запросов.
 			#==========================================================================================#
@@ -97,12 +98,12 @@ class Downloader:
 			if Response.status_code == 200:
 				
 				# Открытие потока записи.
-				with open(f"{directory}{Filename}{Filetype}", "wb") as FileWriter:
+				with open(f"{directory}/{Filename}{Filetype}", "wb") as FileWriter:
 					# Запись изображения.
 					FileWriter.write(Response.content)
 
-					# Если включён режим перезаписи.
-					if self.__SystemObjects.FORCE_MODE:
+					# Если обложка существовала и был включён режим перезаписи.
+					if IsCoverExists and self.__SystemObjects.FORCE_MODE:
 						# Запись в лог информации: обложка перезаписана.
 						self.__SystemObjects.logger.info(f"Title: \"{slug}\". Cover overwritten: \"{Filename}{Filetype}\".")
 

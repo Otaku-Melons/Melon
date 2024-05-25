@@ -1,3 +1,4 @@
+from Source.Core.Formats.Legacy import LegacyManga
 from Source.Core.Downloader import Downloader
 from Source.Core.Objects import Objects
 
@@ -83,7 +84,8 @@ class Types(enum.Enum):
 	manhua = "manhua"
 	oel = "oel"
 	western_comic = "western_comic"
-	ru_comic = "ru_comic"
+	russian_comic = "russian_comic"
+	indonesian_comic = "indonesian_comic"
 
 #==========================================================================================#
 # >>>>> ОСНОВНОЙ КЛАСС <<<<< #
@@ -91,6 +93,22 @@ class Types(enum.Enum):
 
 class Manga:
 	"""Объектное представление манги."""
+
+	#==========================================================================================#
+	# >>>>> СВОЙСТВА ТОЛЬКО ДЛЯ ЧТЕНИЯ <<<<< #
+	#==========================================================================================#
+
+	@property
+	def id(self) -> str | None:
+		"""Идентификатор."""
+
+		return self.__Manga["id"]
+
+	@property
+	def slug(self) -> str | None:
+		"""Алиас."""
+
+		return self.__Manga["slug"]
 
 	#==========================================================================================#
 	# >>>>> ПРИВАТНЫЕ МЕТОДЫ <<<<< #
@@ -166,6 +184,8 @@ class Manga:
 		if os.path.exists(f"{output_dir}/{filename}.json") and not system_objects.FORCE_MODE:
 			# Чтение описательного файла.
 			LocalManga = ReadJSON(f"{output_dir}/{filename}.json")
+			# Если локальный описательный файл имеет устаревший формат, конвертировать его.
+			if LocalManga["format"] != "melon-manga": LocalManga = LegacyManga.from_legacy(LocalManga)
 			# Локальные данные содержимого.
 			LocalContent = dict()
 			# Количество глав, для которых выполнено слияние.
@@ -197,6 +217,29 @@ class Manga:
 			# Запись в лог информации: тайтл перезаписан.
 			system_objects.logger.info("Title: \"" + self.__Manga["slug"] + "\". Local data removed.")
 
+	def open(self, system_objects: Objects, output_dir: str, filename: str):
+		"""
+		Считывает локальный описательный файл.
+			system_objects – коллекция системных объектов;
+			output_dir – директория хранения;
+			filename – имя файла.
+		"""
+
+		# Чтение описательного файла.
+		self.__Manga = ReadJSON(f"{output_dir}/{filename}.json")
+		# Если локальный описательный файл имеет устаревший формат, конвертировать его.
+		if self.__Manga["format"] != "melon-manga": self.__Manga = LegacyManga.from_legacy(self.__Manga)
+
+	def repair(self, repairing_method: any, chapter_id: int):
+		"""
+		Заново получает данные о слайдах в главе.
+			repairing_method – указатель на метод из парсера для восстановления;
+			chapter_id – идентификатор целевой главы.
+		"""
+
+		# Восстановление слайдов.
+		self.__Manga["content"] = repairing_method(self.__Manga["content"], chapter_id)
+
 	def save(self, system_objects: Objects, output_dir: str, filename: str, legacy: bool = False):
 		"""
 		Сохраняет данные манги в описательный файл.
@@ -206,10 +249,13 @@ class Manga:
 			legacy – указывает, нужно ли форматировать описательный файл в устаревший формат.
 		"""
 
-		# Сохранение описательного файла.
-		WriteJSON(f"{output_dir}/{filename}.json", self.__Manga)
+		
+		# Если требуется сохранение в устарвшем формате, конвертировать словарь.
+		if legacy: self.__Manga = LegacyManga.to_legacy(self.__Manga)
 		# Запись в лог информации: данные сконвертированы в устаревший формат.
 		if legacy: system_objects.logger.info("Title: \"" + self.__Manga["slug"] + "\". Converted to legacy format.")
+		# Сохранение описательного файла.
+		WriteJSON(f"{output_dir}/{filename}.json", self.__Manga)
 		# Запись в лог информации: данные сохранены.
 		system_objects.logger.info("Title: \"" + self.__Manga["slug"] + "\". Saved.")
 

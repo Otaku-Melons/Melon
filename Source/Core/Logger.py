@@ -97,6 +97,19 @@ class Logger:
 		# Запись в лог информации.
 		logging.info(f"Title: \"{slug}\". {Chapter} {chapter_id} amended.")
 
+	def chapter_repaired(self, slug: str, chapter_id: int, is_paid: bool):
+		"""
+		Записывает в лог данные дополненной главы.
+			slug – алиас;
+			chapter_id – идентификатор главы;
+			is_paid – является ли глава платной.
+		"""
+
+		# Составление типа главы.
+		Chapter = "Paid chapter" if is_paid else "Chapter"
+		# Запись в лог информации.
+		logging.info(f"Title: \"{slug}\". {Chapter} {chapter_id} repaired.")
+
 	def parsing_start(self, slug: str):
 		"""
 		Записывает в лог сообщение об успешном парсинге данных тайтла.
