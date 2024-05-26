@@ -11,7 +11,7 @@
 | hentailib  | _manga_  | https://hentailib.me/    | ❌          | ✅         |
 | mangalib   | _manga_  | https://test-front.mangalib.me/     | ❌          | ✅         |
 | yaoilib    | _manga_  | https://test-front.yaoilib.me/      | ❌          | ✅         |
-| remanga    | _manga_  | https://remanga.org/     | ❌          | ❌         |
+| remanga    | _manga_  | https://remanga.org/     | ❌          | ✅         |
 | ranobehub  | _novel_  | https://ranobehub.org/   | ❌          | ❌         |
 | desu       | _manga_  | https://desu.me/         | ❌          | ❌         |
 | hentaichan | _manga_  | https://hentaichan.live/ | ❌          | ❌         |

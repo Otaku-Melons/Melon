@@ -487,7 +487,15 @@ class Parser:
 		Config.set_header("Authorization", self.__Settings["custom"]["token"])
 		Config.set_header("Referer", f"https://{SITE}/")
 		WebRequestorObject = WebRequestor(Config)
-
+		# Установка прокси.
+		if self.__Settings["proxy"]["enable"] == True: WebRequestorObject.add_proxy(
+			Protocols.HTTPS,
+			host = Settings["proxy"]["host"],
+			port = Settings["proxy"]["port"],
+			login = Settings["proxy"]["login"],
+			password = Settings["proxy"]["password"]
+		)
+		
 		return WebRequestorObject
 
 	def __MergeListOfLists(self, list_of_lists: list) -> list:

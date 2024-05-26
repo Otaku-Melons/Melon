@@ -473,6 +473,14 @@ class Parser:
 		Config.generate_user_agent("pc")
 		Config.curl_cffi.enable_http2(True)
 		WebRequestorObject = WebRequestor(Config)
+		# Установка прокси.
+		if self.__Settings["proxy"]["enable"] == True: WebRequestorObject.add_proxy(
+			Protocols.HTTPS,
+			host = Settings["proxy"]["host"],
+			port = Settings["proxy"]["port"],
+			login = Settings["proxy"]["login"],
+			password = Settings["proxy"]["password"]
+		)
 
 		return WebRequestorObject
 
