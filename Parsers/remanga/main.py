@@ -5,17 +5,21 @@ from Source.Core.Logger import Logger
 
 from dublib.Methods import ReadJSON, RemoveRecurringSubstrings, Zerotify
 from dublib.WebRequestor import WebConfig, WebLibs, WebRequestor
+from skimage.metrics import structural_similarity
+from dublib.Polyglot import HTML
+from skimage import io
 from time import sleep
 
-import urllib.parse
+import cv2
+import os
 
 #==========================================================================================#
 # >>>>> ОПРЕДЕЛЕНИЯ <<<<< #
 #==========================================================================================#
 
-VERSION = "3.0.0"
-NAME = "hentailib"
-SITE = "hentailib.me"
+VERSION = "2.0.0"
+NAME = "remanga"
+SITE = "remanga.org"
 STRUCT = Manga()
 
 #==========================================================================================#
@@ -141,6 +145,29 @@ class Parser:
 	# >>>>> ПРИВАТНЫЕ МЕТОДЫ <<<<< #
 	#==========================================================================================#
 
+	def __CheckForStubs(self, url: str) -> bool:
+		"""
+		Проверяет, является ли обложка заглушкой.
+			url – ссылка на обложку.
+		"""
+
+		# Список индексов фильтров.
+		FiltersDirectories = os.listdir("Parsers/remanga/Filters")
+
+		# Для каждого фильтра.
+		for FilterIndex in FiltersDirectories:
+			# Список щаблонов.
+			Patterns = os.listdir(f"Parsers/remanga/Filters/{FilterIndex}")
+			
+			# Для каждого фильтра.
+			for Pattern in Patterns:
+				# Сравнение изображений.
+				Result = self.__CompareImages(url, f"Parsers/remanga/Filters/{FilterIndex}/{Pattern}")
+				# Если разница между обложкой и шаблоном составляет менее 50%.
+				if Result != None and Result < 50.0: return True
+		
+		return False
+
 	def __CalculateEmptyChapters(self, content: dict) -> int:
 		"""Подсчитывает количество глав без слайдов."""
 
@@ -157,71 +184,105 @@ class Parser:
 
 		return ChaptersCount
 
+	def __CompareImages(self, url: str, pattern_path: str) -> float | None:
+		"""
+		Сравнивает изображение с фильтром.
+			url – ссылка на обложку;
+			pattern_path – путь к шаблону.
+		"""
+
+		# Процент отличия.
+		Differences = None
+
+		try:
+			# Чтение изображений.
+			Pattern = io.imread(url)
+			Image = cv2.imread(pattern_path)
+			# Преобразование изображений в чёрно-белый формат.
+			Pattern = cv2.cvtColor(Pattern, cv2.COLOR_BGR2GRAY)
+			Image = cv2.cvtColor(Image, cv2.COLOR_BGR2GRAY)
+			# Получение разрешений изображений.
+			PatternHeight, PatternWidth = Pattern.shape
+			ImageHeight, ImageWidth = Image.shape
+		
+			# Если шаблон и изображение имеют одинаковое разрешение.
+			if PatternHeight == ImageHeight and PatternWidth == ImageWidth:
+				# Сравнение двух изображений.
+				(Similarity, Differences) = structural_similarity(Pattern, Image, full = True)
+				# Конвертирование в проценты.
+				Differences = 100.0 - (float(Similarity) * 100.0)
+
+		except Exception as ExceptionData:
+			# Запись в лог ошибки: исключение.
+			self.__SystemObjects.logger.error("Problem occurred during filtering stubs: \"" + str(ExceptionData) + "\".")		
+			# Обнуление процента отличий.
+			Differences = None
+
+		return Differences
+
 	def __GetAgeLimit(self, data: dict) -> int:
 		"""
 		Получает возрастной рейтинг.
 			data – словарь данных тайтла.
 		"""
 
+		# Определения возрастных ограничений.
+		Ratings = {
+			0: 0,
+			1: 16,
+			2: 18
+		}
 		# Возрастной рейтинг.
-		Rating = int(data["ageRestriction"]["label"].split(" ")[0].replace("+", ""))
+		Rating = Ratings[data["age_limit"]]
 
 		return Rating 
 
-	def __GetAuthors(self, data: dict) -> list[str]:
-		"""Получает список авторов."""
-
-		# Список авторов.
-		Authors = list()
-		# Для каждого автора записать имя.
-		for Author in data["authors"]: Authors.append(Author["name"])
-
-		return Authors
-
-	def __GetContent(self) -> dict:
+	def __GetContent(self, data: str) -> dict:
 		"""Получает содержимое тайтла."""
 
 		# Структура содержимого.
 		Content = dict()
-		# Запрос содержимого.
-		Response = self.__Requestor.get(f"https://api.lib.social/api/manga/{self.__Slug}/chapters")
-		
-		# Если запрос успешен.
-		if Response.status_code == 200:
-			# Парсинг данных в JSON.
-			Data = Response.json["data"]
 
-			# Для каждой главы.
-			for Chapter in Data:
+		# Для каждой ветви.
+		for Branch in data["branches"]:
+			# ID ветви и количество глав.
+			BranchID = Branch["id"]
+			ChaptersCount = Branch["count_chapters"]
 
-				# Для каждой ветви.
-				for BranchData in Chapter["branches"]:
-					# ID ветви.
-					BranchID = str(BranchData["branch_id"])
-					# Если ветвь не определена, синтезировать новую добавлением нуля к ID тайтла.
-					if BranchID == "None": BranchID = str(self.__Title["id"]) + "0"
-					# Если ветвь не существует, создать её.
-					if BranchID not in Content.keys(): Content[BranchID] = list()
-					# Переводчики.
-					Translators = [sub["name"] for sub in BranchData["teams"]]
-					# Буфер главы.
-					Buffer = {
-						"id": BranchData["id"],
-						"volume": float(Chapter["volume"]) if "." in Chapter["volume"] else int(Chapter["volume"]),
-						"number": float(Chapter["number"]) if "." in Chapter["number"] else int(Chapter["number"]),
-						"name": Zerotify(Chapter["name"]),
-						"is_paid": False,
-						"translators": Translators,
-						"slides": []	
-					}
-					# Запись главы.
-					Content[BranchID].append(Buffer)
+			# Для каждой страницы ветви.
+			for BranchPage in range(0, int(ChaptersCount / 100) + 1):
+				# Выполнение запроса.
+				Response = self.__Requestor.get(f"https://api.remanga.org/api/titles/chapters/?branch_id={BranchID}&count={ChaptersCount}&ordering=-index&page=" + str(BranchPage + 1) + "&user_data=1")
 
-		else:
-			# Запись в лог ошибки.
-			self.__SystemObjects.logger.request_error(Response, "Unable to request chapter.")
+				# Если запрос успешен.
+				if Response.status_code == 200:
+					# Парсинг данных в JSON.
+					Data = Response.json["content"]
 
-		return Content
+					# Для каждой главы.
+					for Chapter in Data:
+						# Если ветвь не существует, создать её.
+						if BranchID not in Content.keys(): Content[str(BranchID)] = list()
+						# Переводчики.
+						Translators = [sub["name"] for sub in Chapter["publishers"]]
+						# Буфер главы.
+						Buffer = {
+							"id": Chapter["id"],
+							"volume": Chapter["tome"],
+							"number": float(Chapter["chapter"]) if "." in Chapter["chapter"] else int(Chapter["chapter"]),
+							"name": Zerotify(Chapter["name"]),
+							"is_paid": False,
+							"translators": Translators,
+							"slides": []	
+						}
+						# Запись главы.
+						Content[str(BranchID)].append(Buffer)
+
+				else:
+					# Запись в лог ошибки.
+					self.__SystemObjects.logger.request_error(Response, "Unable to request chapter.")
+
+		return Content			
 
 	def __GetCovers(self, data: dict) -> list[str]:
 		"""Получает список обложек."""
@@ -229,19 +290,29 @@ class Parser:
 		# Список обложек.
 		Covers = list()
 
-		# Если обложка присутствует.
-		if data["cover"]:
-			# Дополнение структуры.
-			Covers.append({
-				"link": data["cover"]["default"],
-				"filename": data["cover"]["default"].split("/")[-1]
-			})
+		# Для каждой обложки.
+		for CoverURI in data["img"].values():
+			# Буфер.
+			Buffer = {
+				"link": f"https://{SITE}{CoverURI}",
+				"filename": CoverURI.split("/")[-1]
+			}
 
-		# Если включен режим получения размеров обложек.
-		if self.__Settings["common"]["sizing_images"]:
-			# Дополнение структуры размерами.
-			Covers[0]["width"] = None
-			Covers[0]["height"] = None
+			# Если включен режим получения размеров обложек.
+			if self.__Settings["common"]["sizing_images"]:
+				# Дополнение структуры размерами.
+				Buffer["width"] = None
+				Buffer["height"] = None
+
+			# Дополнение структуры.
+			Covers.append(Buffer)
+
+		# Если обложка является заглушкой.
+		if self.__Settings["custom"]["unstub"] and self.__CheckForStubs(Buffer["link"]):
+			# Очистка данных обложек.
+			Covers = list()
+			# Запись в лог информации обложки помечены как заглушки.
+			self.__SystemObjects.logger.covers_unstubbed(self.__Slug)
 
 		return Covers
 
@@ -253,27 +324,16 @@ class Parser:
 
 		# Описание.
 		Description = None
-		# Если присутствует описание, записать его и отформатировать.
-		if "summary" in data.keys(): Description = RemoveRecurringSubstrings(data["summary"], "\n").strip().replace(" \n", "\n")
+		# Удаление тегов и спецсимволов HTML. 
+		Description = HTML(data["description"]).plain_text
+		# Удаление ненужных символов.
+		Description = Description.replace("\r", "").replace("\xa0", " ").strip()
+		# Удаление повторяющихся символов новой строки.
+		Description = RemoveRecurringSubstrings(Description, "\n")
 		# Обнуление пустого описания.
 		Description = Zerotify(Description)
 
 		return Description
-
-	def __GetFranchises(self, data: dict) -> list[str]:
-		"""
-		Получает список серий.
-			data – словарь данных тайтла.
-		"""
-
-		# Франшизы.
-		Franchises = list()
-		# Для каждой франшизы записать название.
-		for Franchise in data["franchise"]: Franchises.append(Franchise["name"])
-		# Удаление оригинальных работ.
-		if "Оригинальные работы" in Franchises: Franchises.remove("Оригинальные работы")
-
-		return Franchises
 
 	def __GetGenres(self, data: dict) -> list[str]:
 		"""
@@ -288,88 +348,46 @@ class Parser:
 
 		return Genres
 
-	def __GetServer(self) -> str:
-		"""Возвращает домен сервера хранения изображений."""
-
-		# Сервер.
-		Server = ""
-		# ID текущего сервера.
-		CurrentServerID = 4
-		# Адрес запроса.
-		URL = f"https://api.lib.social/api/constants?fields[]=imageServers"
-		# Заголовки запроса.
-		Headers = {
-			"Authorization": self.__Settings["custom"]["token"],
-			"Referer": f"https://{SITE}/"
-		}
-		# Запрос серверных констант.
-		Response = self.__Requestor.get(URL, headers = Headers)
-
-		# Если запрос успешен.
-		if Response.status_code == 200:
-			# Парсинг данных в JSON.
-			Data = Response.json["data"]["imageServers"]
-
-			# Для каждого сервера.
-			for ServerData in Data:
-				# Если сервер поддерживает текущий домен, записать его URL.
-				if ServerData["id"] == self.__Settings["custom"]["server"] and CurrentServerID in ServerData["site_ids"]: Server = ServerData["url"]
-
-		else:
-			# Запись в лог ошибки.
-			self.__SystemObjects.logger.request_error(Response, "Unable to request site constants.")
-
-		return Server
-
-	def __GetSlides(self, number: str, volume: str, branch_id: str) -> list[dict]:
+	def __GetSlides(self, chapter_id: int) -> list[dict]:
 		"""
 		Получает данные о слайдах главы.
-			number – номер главы;
-			volume – номер тома;
-			branch_id – ID ветви.
+			chapter_id – идентификатор главы.
 		"""
 
 		# Список слайдов.
 		Slides = list()
-		# Получение домена сервера хранения слайдов.
-		Server = self.__GetServer()
-		# Модификатор запроса ветви.
-		Branch = "" if branch_id == str(self.__Title["id"]) + "0" else f"&branch_id={branch_id}"
-		# Адрес запроса.
-		URL = f"https://api.lib.social/api/manga/{self.__Slug}/chapter?number={number}&volume={volume}{Branch}"
-		# Заголовки запроса.
-		Headers = {
-			"Authorization": self.__Settings["custom"]["token"],
-			"Referer": f"https://{SITE}/"
-		}
-		# Запрос слайдов.
-		Response = self.__Requestor.get(URL, headers = Headers)
+		# Выполнение запроса.
+		Response = self.__Requestor.get(f"https://api.remanga.org/api/titles/chapters/{chapter_id}")
 
 		# Если запрос успешен.
 		if Response.status_code == 200:
 			# Парсинг данных в JSON.
-			Data = Response.json["data"]["pages"]
+			Data = Response.json["content"]
+			# Объндинение групп страниц.
+			Data["pages"] = self.__MergeListOfLists(Data["pages"])
 
 			# Для каждого слайда.
-			for SlideIndex in range(len(Data)):
+			for SlideIndex in range(len(Data["pages"])):
 				# Буфер слайда.
 				Buffer = {
 					"index": SlideIndex + 1,
-					"link": Server + Data[SlideIndex]["url"].replace(" ", "%20")
+					"link": Data["pages"][SlideIndex]["link"]
 				}
+				# Если указано настройками, русифицировать ссылку на слайд.
+				if self.__Settings["custom"]["ru_links"]: Buffer["link"] = self.__RusificateLink(Buffer["link"])
 
 				# Если включен режим получения размеров обложек.
 				if self.__Settings["common"]["sizing_images"]:
 					# Дополнение структуры размерами.
-					Buffer["width"] = Data[SlideIndex]["width"]
-					Buffer["height"] = Data[SlideIndex]["height"]
+					Buffer["width"] = Data["pages"][SlideIndex]["width"]
+					Buffer["height"] = Data["pages"][SlideIndex]["height"]
 
 				# Запись слайда. 
 				Slides.append(Buffer)
 
 		else:
 			# Запись в лог ошибки.
-			self.__SystemObjects.logger.request_error(Response, "Unable to request chapter content.")
+			self.__Logger.request_error(Response, "Unable to request chapter content.")
 
 		return Slides
 
@@ -383,49 +401,19 @@ class Parser:
 		Status = None
 		# Статусы тайтлов.
 		StatusesDetermination = {
-			1: Statuses.ongoing,
-			2: Statuses.completed,
-			3: Statuses.announced,
-			4: Statuses.dropped,
-			5: Statuses.dropped
+			"Продолжается": Statuses.ongoing,
+			"Закончен": Statuses.completed,
+			"Анонс": Statuses.announced,
+			"Заморожен": Statuses.dropped,
+			"Нет переводчика": Statuses.dropped,
+			"Не переводится (лицензировано)": Statuses.dropped
 		}
 		# Индекс статуса на сайте.
-		SiteStatusIndex = data["status"]["id"]
+		SiteStatusIndex = data["status"]["name"]
 		# Если индекс статуса валиден, преобразовать его в поддерживаемый статус.
 		if SiteStatusIndex in StatusesDetermination.keys(): Status = StatusesDetermination[SiteStatusIndex]
 
 		return Status
-
-	def __GetTitleData(self) -> dict | None:
-		"""
-		Получает данные тайтла.
-			slug – алиас.
-		"""
-
-		# Адрес запроса.
-		URL = f"https://api.lib.social/api/manga/{self.__Slug}?fields[]=eng_name&fields[]=otherNames&fields[]=summary&fields[]=releaseDate&fields[]=type_id&fields[]=caution&fields[]=genres&fields[]=tags&fields[]=franchise&fields[]=authors&fields[]=manga_status_id&fields[]=status_id"
-		# Заголовки запроса.
-		Headers = {
-			"Authorization": self.__Settings["custom"]["token"],
-			"Referer": f"https://{SITE}/"
-		}
-		# Выполнение запроса.
-		Response = self.__Requestor.get(URL, headers = Headers)
-
-		# Если запрос успешен.
-		if Response.status_code == 200:
-			# Парсинг ответа.
-			Response = Response.json["data"]
-			# Запись в лог информации: начало парсинга.
-			self.__SystemObjects.logger.parsing_start(self.__Slug)
-
-		else:
-			# Запись в лог ошибки.
-			self.__SystemObjects.logger.request_error(Response, "Unable to request title data.")
-			# Обнуление ответа.
-			Response = None
-
-		return Response
 
 	def __GetTags(self, data: dict) -> list[str]:
 		"""
@@ -436,9 +424,33 @@ class Parser:
 		# Описание.
 		Tags = list()
 		# Для каждого тега записать имя.
-		for Tag in data["tags"]: Tags.append(Tag["name"].lower())
+		for Tag in data["categories"]: Tags.append(Tag["name"].lower())
 
 		return Tags
+
+	def __GetTitleData(self) -> dict | None:
+		"""
+		Получает данные тайтла.
+			slug – алиас.
+		"""
+
+		# Выполнение запроса.
+		Response = self.__Requestor.get(f"https://api.remanga.org/api/titles/{self.__Slug}")
+
+		# Если запрос успешен.
+		if Response.status_code == 200:
+			# Парсинг ответа.
+			Response = Response.json["content"]
+			# Запись в лог информации: начало парсинга.
+			self.__SystemObjects.logger.parsing_start(self.__Slug)
+
+		else:
+			# Запись в лог ошибки.
+			self.__Logger.request_error(Response, "Unable to request title data.")
+			# Обнуление ответа.
+			Response = None
+
+		return Response
 
 	def __GetType(self, data: dict) -> str:
 		"""
@@ -453,12 +465,12 @@ class Parser:
 			"Манга": Types.manga,
 			"Манхва": Types.manhwa,
 			"Маньхуа": Types.manhua,
-			"Руманга": Types.russian_comic,
-			"Комикс западный": Types.western_comic,
-			"OEL-манга": Types.oel
+			"Рукомикс": Types.russian_comic,
+			"Западный комикс": Types.western_comic,
+			"Индонезийский комикс": Types.indonesian_comic
 		}
 		# Определение с сайта.
-		SiteType = data["type"]["label"]
+		SiteType = data["type"]["name"]
 		# Если определение с сайта валидно, преобразовать его.
 		if SiteType in TypesDeterminations.keys(): Type = TypesDeterminations[SiteType]
 
@@ -472,9 +484,42 @@ class Parser:
 		Config.select_lib(WebLibs.curl_cffi)
 		Config.generate_user_agent("pc")
 		Config.curl_cffi.enable_http2(True)
+		Config.set_header("Authorization", self.__Settings["custom"]["token"])
+		Config.set_header("Referer", f"https://{SITE}/")
 		WebRequestorObject = WebRequestor(Config)
 
 		return WebRequestorObject
+
+	def __MergeListOfLists(self, list_of_lists: list) -> list:
+		"""
+		Объединяет список списков в один список.
+			list_of_lists – список списоков.
+		"""
+		
+		# Если список не пустой и включает списки, то объединить.
+		if len(list_of_lists) > 0 and type(list_of_lists[0]) is list:
+			# Результат объединения.
+			Result = list()
+			# Объединить все списки в один список.
+			for List in list_of_lists: Result.extend(List)
+
+			return Result
+
+		# Если список включет словари, то вернуть без изменений.
+		else: return ListOfLists
+
+	def __RusificateLink(self, link: str) -> str:
+		"""
+		Задаёт домен российского сервера для ссылки на слайд.
+			link – ссылка на слайд.
+		"""
+
+		# Если слайд на пятом международном сервере, заменить его.
+		if link.startswith("https://img5.reimg.org"): link = link.replace("https://img5.reimg.org", "https://reimg2.org")
+		# Замена других серверов.
+		link = link.replace("reimg.org", "reimg2.org")
+
+		return link
 
 	#==========================================================================================#
 	# >>>>> ПУБЛИЧНЫЕ МЕТОДЫ <<<<< #
@@ -522,11 +567,7 @@ class Parser:
 				# Если слайды не описаны или включён режим перезаписи.
 				if content[BranchID][ChapterIndex]["slides"] == []:
 					# Получение списка слайдов главы.
-					Slides = self.__GetSlides(
-						content[BranchID][ChapterIndex]["number"],
-						content[BranchID][ChapterIndex]["volume"],
-						BranchID
-					)
+					Slides = self.__GetSlides(content[BranchID][ChapterIndex]["id"])
 					# Инкремент количества дополненных глав.
 					AmendedChaptersCount += 1
 
@@ -558,16 +599,17 @@ class Parser:
 		self.__Slug = slug
 		# Получение описания.
 		Data = self.__GetTitleData()
+		
 		# Занесение данных.
 		self.__Title["site"] = SITE
 		self.__Title["id"] = Data["id"]
 		self.__Title["slug"] = slug
-		self.__Title["ru_name"] = Data["rus_name"]
-		self.__Title["en_name"] = Data["eng_name"]
-		self.__Title["another_names"] = Data["otherNames"]
+		self.__Title["ru_name"] = Data["main_name"]
+		self.__Title["en_name"] = Data["secondary_name"]
+		self.__Title["another_names"] = Data["another_name"].split(" / ")
 		self.__Title["covers"] = self.__GetCovers(Data)
-		self.__Title["authors"] = self.__GetAuthors(Data)
-		self.__Title["publication_year"] = int(Data["releaseDate"])
+		self.__Title["authors"] = []
+		self.__Title["publication_year"] = Data["issue_year"]
 		self.__Title["description"] = self.__GetDescription(Data)
 		self.__Title["age_limit"] = self.__GetAgeLimit(Data)
 		self.__Title["type"] = self.__GetType(Data)
@@ -575,8 +617,8 @@ class Parser:
 		self.__Title["is_licensed"] = Data["is_licensed"]
 		self.__Title["genres"] = self.__GetGenres(Data)
 		self.__Title["tags"] = self.__GetTags(Data)
-		self.__Title["franchises"] = self.__GetFranchises(Data)
-		self.__Title["content"] = self.__GetContent()
+		self.__Title["franchises"] = []
+		self.__Title["content"] = self.__GetContent(Data)
 
 	def repair(self, content: dict, chapter_id: int) -> dict:
 		"""
@@ -594,11 +636,7 @@ class Parser:
 				# Если ID совпадает с искомым.
 				if content[BranchID][ChapterIndex]["id"] == chapter_id:
 					# Получение списка слайдов главы.
-					Slides = self.__GetSlides(
-						content[BranchID][ChapterIndex]["number"],
-						content[BranchID][ChapterIndex]["volume"],
-						BranchID
-					)
+					Slides = self.__GetSlides(content[BranchID][ChapterIndex]["id"])
 					# Запись в лог информации: глава восстановлена.
 					self.__SystemObjects.logger.chapter_repaired(self.__Slug, chapter_id, content[BranchID][ChapterIndex]["is_paid"])
 					# Запись восстановленной главы.

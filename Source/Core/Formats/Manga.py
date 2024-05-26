@@ -2,7 +2,8 @@ from Source.Core.Formats.Legacy import LegacyManga
 from Source.Core.Downloader import Downloader
 from Source.Core.Objects import Objects
 
-from dublib.Methods import ReadJSON, WriteJSON
+from dublib.Methods import Cls, ReadJSON, WriteJSON
+from time import sleep
 
 import enum
 import os
@@ -166,11 +167,21 @@ class Manga:
 		CoversDirectory = f"{output_dir}/{filename}"
 		# Если директория обложек не существует, создать её.
 		if not os.path.exists(CoversDirectory): os.makedirs(CoversDirectory)
+		# Очистка консоли.
+		Cls()
+		# Вывод в консоль: сообщение из внешнего обработчика.
+		print(message)
 
 		# Для каждой обложки.
-		for Cover in self.__Manga["covers"]:
+		for CoverIndex in range(len(self.__Manga["covers"])):
+			# Вывод в консоль: загрузка обложки.
+			print(f"Downloading cover: \"{filename}\"... ", end = "")
 			# Загрузка обложки.
-			Downloader(system_objects, exception = True).cover(Cover["url"], self.__Manga["site"], CoversDirectory, self.__Manga["slug"])
+			Result = Downloader(system_objects, exception = True).cover(self.__Manga["covers"][CoverIndex]["link"], self.__Manga["site"], CoversDirectory, self.__Manga["slug"])
+			# Вывод в консоль: статус загрузки.
+			print(Result)
+			# Выжидание интервала.
+			sleep(0.25)
 
 	def merge(self, system_objects: Objects, output_dir: str, filename: str):
 		"""
@@ -248,7 +259,6 @@ class Manga:
 			filename – имя файла;
 			legacy – указывает, нужно ли форматировать описательный файл в устаревший формат.
 		"""
-
 		
 		# Если требуется сохранение в устарвшем формате, конвертировать словарь.
 		if legacy: self.__Manga = LegacyManga.to_legacy(self.__Manga)

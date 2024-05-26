@@ -1,0 +1,4 @@
+opencv-python-headless
+scikit-image
+dublib==0.6.2
+Pillow

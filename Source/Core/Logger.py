@@ -110,6 +110,15 @@ class Logger:
 		# Запись в лог информации.
 		logging.info(f"Title: \"{slug}\". {Chapter} {chapter_id} repaired.")
 
+	def covers_unstubbed(self, slug: str):
+		"""
+		Записывает в лог информацию об удалении обложек по причине того, что те являются заглушками.
+			slug – алиас.
+		"""
+
+		# Запись в лог информации.
+		logging.info(f"Title: \"{slug}\". Stubs detected. Covers downloading will be skipped.")
+
 	def parsing_start(self, slug: str):
 		"""
 		Записывает в лог сообщение об успешном парсинге данных тайтла.
@@ -135,8 +144,15 @@ class Logger:
 	# >>>>> МЕТОДЫ УПРАВЛЕНИЯ ЛОГАМИ <<<<< #
 	#==========================================================================================#
 
-	def remove(self):
-		"""Удаляет файл лога."""
+	def close(self, clean: bool = False):
+		"""
+		Закрывает логи.
+			clean – Указывает, нужно ли удалить файл лога.
+		"""
 
-		# Если файл существует, удалить его.
-		if os.path.exists(self.__LogFilename): os.remove(self.__LogFilename)
+		# Запись в лог: заголовок конца лога.
+		logging.info("====== End ======")
+		# Отключение логов.
+		logging.shutdown()
+		# Если указано и файл существует, удалить его.
+		if clean and os.path.exists(self.__LogFilename): os.remove(self.__LogFilename)

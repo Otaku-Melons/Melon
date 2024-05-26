@@ -59,7 +59,7 @@ class Downloader:
 		# Состояние: следует ли выбрасывать исключения.
 		self.__RaiseExceptions = exception
 
-	def cover(self, url: str, site: str, directory: str, slug: str):
+	def cover(self, url: str, site: str, directory: str, slug: str) -> str:
 		"""
 		Скачивает обложку.
 			url – ссылка на изображение;
@@ -68,8 +68,8 @@ class Downloader:
 			slug – алиас тайтла.
 		"""
 
-		# Состояние: упешна ли загрузка.
-		IsSuccess = False
+		# Описание загрузки.
+		Status = None
 
 		#---> Определение параметров файла.
 		#==========================================================================================#
@@ -110,16 +110,25 @@ class Downloader:
 					else:
 						# Запись в лог информации: обложка скачана.
 						self.__SystemObjects.logger.info(f"Title: \"{slug}\". Cover downloaded: \"{Filename}{Filetype}\".")
+						
+					# Изменение сообщения.
+					Status = "Done."
 
 			else:
 				# Запись в лог ошибки запроса.
 				self.__SystemObjects.logger.request_error(Response, f"Unable to download cover: \"{Filename}{Filetype}\".")
 				# Выброс исключения.
 				if self.__RaiseExceptions: raise Exception(f"Unable to download cover: \"{Filename}{Filetype}\". Response code: {Response.status_code}.")
+				# Изменение сообщения.
+				Status = "Failure!"
 
 		else:
 			# Запись в лог информации: обложка уже существует.
 			self.__SystemObjects.logger.info(f"Title: \"{slug}\". Cover already exists: \"{Filename}{Filetype}\".")
+			# Изменение сообщения.
+			Status = "Skipped."
+
+		return Status
 
 	def image(self, url: str, site: str, directory: str | None = None, filename: str | None = None, full_filename: bool = False):
 		"""

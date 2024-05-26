@@ -121,11 +121,13 @@ if "repair" == CommandDataStruct.name: com_repair(SystemObjects, CommandDataStru
 # Если лог нужно удалить.
 if SystemObjects.REMOVE_LOG:
 	# Удаление файла лога.
-	SystemObjects.logger.remove()
+	SystemObjects.logger.close(clean = True)
+
+else:
+	# Закрытие лога.
+	SystemObjects.logger.close()
 
 # Если задан флаг выключения.
 if SystemObjects.SHUTDOWN:
-	# Запись в лог сообщения: немедленное выключение ПК.
-	SystemObjects.logger.info("Turning off computer.")
 	# Выключение ПК.
 	Shutdown()

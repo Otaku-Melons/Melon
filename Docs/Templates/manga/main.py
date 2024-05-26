@@ -8,6 +8,8 @@ from dublib.Methods import ReadJSON
 
 VERSION = ""
 NAME = ""
+SITE = ""
+STRUCT = Manga()
 
 #==========================================================================================#
 # >>>>> ОСНОВНОЙ КЛАСС <<<<< #
@@ -24,113 +26,129 @@ class Parser:
 	def site(self) -> str:
 		"""Домен целевого сайта."""
 
-		return None
+		return self.__Title["site"]
 
 	@property
 	def id(self) -> int:
 		"""Целочисленный идентификатор."""
 
-		return None
+		return self.__Title["id"]
 
 	@property
 	def slug(self) -> int:
 		"""Алиас."""
 
-		return None
+		return self.__Title["slug"]
 
 	@property
 	def ru_name(self) -> str | None:
 		"""Название на русском."""
 
-		return None
+		return self.__Title["ru_name"]
 
 	@property
 	def en_name(self) -> str | None:
 		"""Название на английском."""
 
-		return None
+		return self.__Title["en_name"]
 
 	@property
 	def another_names(self) -> list[str]:
 		"""Список альтернативных названий."""
 
-		return None
+		return self.__Title["another_names"]
 
 	@property
 	def covers(self) -> list[dict]:
 		"""Список описаний обложки."""
 
-		return None
+		return self.__Title["covers"]
 
 	@property
 	def authors(self) -> list[str]:
 		"""Список авторов."""
 
-		return None
+		return self.__Title["authors"]
 
 	@property
 	def publication_year(self) -> int | None:
 		"""Год публикации."""
 
-		return None
+		return self.__Title["publication_year"]
 
 	@property
 	def description(self) -> str | None:
 		"""Описание."""
 
-		return None
+		return self.__Title["description"]
 
 	@property
 	def age_limit(self) -> int | None:
 		"""Возрастное ограничение."""
 
-		return None
+		return self.__Title["age_limit"]
 
 	@property
 	def genres(self) -> list[str]:
 		"""Список жанров."""
 
-		return None
+		return self.__Title["genres"]
 
 	@property
 	def tags(self) -> list[str]:
 		"""Список тегов."""
 
-		return None
+		return self.__Title["tags"]
 
 	@property
 	def franchises(self) -> list[str]:
 		"""Список франшиз."""
 
-		return None
+		return self.__Title["franchises"]
 
 	@property
 	def type(self) -> Types | None:
 		"""Тип тайтла."""
 
-		return None
+		return self.__Title["type"]
 
 	@property
 	def status(self) -> Statuses | None:
 		"""Статус тайтла."""
 
-		return None
+		return self.__Title["status"]
 
 	@property
 	def is_licensed(self) -> bool | None:
 		"""Состояние: лицензирован ли тайтл на данном ресурсе."""
 
-		return None
+		return self.__Title["is_licensed"]
 
 	@property
 	def content(self) -> dict:
 		"""Содержимое тайтла."""
 
-		return None
+		return self.__Title["content"]
 
 	#==========================================================================================#
 	# >>>>> ПРИВАТНЫЕ МЕТОДЫ <<<<< #
 	#==========================================================================================#
+
+	def __CalculateEmptyChapters(self, content: dict) -> int:
+		"""Подсчитывает количество глав без слайдов."""
+
+		# Количество глав.
+		ChaptersCount = 0
+
+		# Для каждой ветви.
+		for BranchID in content.keys():
+
+			# Для каждой главы.
+			for Chapter in content[BranchID]:
+				# Если глава не содержит слайдов, подсчитать её.
+				if not Chapter["slides"]: ChaptersCount += 1
+
+		return ChaptersCount
 
 	def __InitializeRequestor(self) -> WebRequestor:
 		"""Инициализирует модуль WEB-запросов."""
@@ -148,31 +166,38 @@ class Parser:
 	# >>>>> ПУБЛИЧНЫЕ МЕТОДЫ <<<<< #
 	#==========================================================================================#
 
-	def __init__(self, slug: str, global_settings: dict):
+	def __init__(self, system_objects: Objects):
 		"""
 		Модульный парсер.
-			slug – алиас ресурса.
+			system_objects – коллекция системных объектов.
 		"""
 
 		#---> Генерация динамических свойств.
 		#==========================================================================================#
 		# Настройки парсера.
-		self.__Settings = ReadJSON(f"Source/Parsers/{NAME}/settings.json")
+		self.__Settings = ReadJSON(f"Parsers/{NAME}/settings.json")
 		# Менеджер WEB-запросов.
 		self.__Requestor = self.__InitializeRequestor()
 		# Структура данных.
 		self.__Title = None
 		# Алиас тайтла.
 		self.__Slug = None
+		# Коллекция системных объектов.
+		self.__SystemObjects = system_objects
 
-	def amend(self, content: dict | None = None):
+	def amend(self, content: dict | None = None, message: str = "") -> dict:
 		"""
-		Дополняет содержимое подробной информацией.
-			content – содержимое тайтла для дополнения.
+		Дополняет каждую главу в кажой ветви информацией о содержимом.
+			content – содержимое тайтла для дополнения;
+			message – сообщение для портов CLI.
 		"""
 
 		# Если содержимое не указано, использовать текущее.
 		if content == None: content = self.content
+		# Подсчёт количества глав для дополнения.
+		ChaptersToAmendCount = self.__CalculateEmptyChapters(content)
+		# Количество дополненных глав.
+		AmendedChaptersCount = 0
 		
 		# Скрипт дополнения содержимого...
 
@@ -182,7 +207,7 @@ class Parser:
 	def parse(self, slug: str):
 		"""
 		Получает основные данные тайтла.
-			slug – алиас ресурса.
+			slug – алиас тайтла, использующийся для идентификации оного в адресе.
 		"""
 
 		# Заполнение базовых данных.

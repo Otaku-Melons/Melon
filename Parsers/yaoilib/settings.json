@@ -1,0 +1,23 @@
+{
+	"type": "manga",
+	"common": {
+		"archives_directory": "",
+		"covers_directory": "",
+		"titles_directory": "",
+		"use_id_as_filename": true,
+		"sizing_images": true,
+		"legacy": true,
+		"delay": 1
+	},
+	"proxy": {
+		"enable": false,
+		"host": "",
+		"port": "",
+		"login": "",
+		"password": ""
+	},
+	"custom": {
+		"token": "Bearer eyJ0eXAiOiJKV1QiLCJhbGciOiJSUzI1NiJ9.eyJhdWQiOiIxIiwianRpIjoiNDcwMjhlZjg1NmUzZmQ3MDE1ZjViMGNhNTcxOTJhMGI2YTg3Y2UyOTMzMTU0MGNhZjgzMmFjNTk0OGMyYTYyNmY1NmRjOTI4YTZmMDAyMDAiLCJpYXQiOjE3MTY3MzM5ODQuNzY5NjgzLCJuYmYiOjE3MTY3MzM5ODQuNzY5Njg0LCJleHAiOjE3MTk0MTIzODQuNzY0MDgzLCJzdWIiOiI0NzkwIiwic2NvcGVzIjpbXX0.M6EaZdgqxfoDyZcWmlTL5widVUT12O__cYwB5IH-3iG44PdjMjtLnEGhAN_IACjxrx_ocdz5-uYkoQAoheAkCKbcdD5wXDqhXN9lHvFoT05hRtap2SZG2uUQGHRmfZSvyeZVuSghvOWPbSOdas8LGXVScT_1xZf0skVuSpopzxtZPbV6wS6Fl-Cv3qRrX8s9y-zSP0ZOp08eIpA5WBYUiQx_pGfbPFTDlBWLH20_L4HOx1cAGE-1-hjr_ag-gv1_bEu_WS9XPGhfbRwl1ObKgAtk221XDMHqE9Vn-mx2L38pC_AoTAmFCNa1AlieHKgf-A0mg5gkXPPh7IC9Lga_FBR1kN8jlPVGrT0UD_TeFgrGOTT2HqZuoFCxOmeGEFzUNdwo3iPk9iMjJcWQvvmv2jcb7XwTEfNDLEKe8TFMMmMgEw6ZtGw0gVgc1tfBWd9UAphpv5agU1dyO7_xPDrjmkXwdu8-G4SUXS8YlSkBTs0Q3e7X4rS0US-wOF6RTBODg0bRkBTdY7_dBwK-TpY8T4sXWdxa7RP6M0ZXlUcW4yLB34dLNZH_QccuerYWRoXooB-V174GryaN9pL3_m_Ax6aLRm_IDrf4he3tGKsEZn3XHdGs7V_fiyVdC1JDAyOKjDPExZqKypzHgroIoGbPjDuACB6YKxY6ypmM3FdepUc",
+		"server": "main"
+	}
+}

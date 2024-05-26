@@ -1,0 +1,23 @@
+{
+	"type": "manga",
+	"common": {
+		"archives_directory": "",
+		"covers_directory": "",
+		"titles_directory": "",
+		"use_id_as_filename": true,
+		"sizing_images": true,
+		"legacy": true,
+		"delay": 1
+	},
+	"proxy": {
+		"enable": false,
+		"host": "",
+		"port": "",
+		"login": "",
+		"password": ""
+	},
+	"custom": {
+		"token": "",
+		"server": "main"
+	}
+}

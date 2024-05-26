@@ -88,25 +88,25 @@ def com_parse(system_objects: Objects, command: CommandData):
 		
 	# Если активирован флаг обновления локальных файлов.
 	elif "local" in command.flags:
-		# # Вывод в консоль: идёт поиск тайтлов.
-		# print("Scanning titles...")
-		# # Получение списка файлов в директории.
-		# Slugs = os.listdir(Settings["titles-directory"])
-		# # Фильтрация только файлов формата JSON.
-		# Slugs = list(filter(lambda x: x.endswith(".json"), Slugs))
+		# Вывод в консоль: идёт поиск тайтлов.
+		print("Scanning titles...")
+		# Получение списка файлов в директории.
+		Slugs = os.listdir(ParserSettings["common"]["titles_directory"])
+		# Фильтрация только файлов формата JSON.
+		Slugs = list(filter(lambda File: File.endswith(".json"), Slugs))
 			
-		# # Чтение всех алиасов из локальных файлов.
-		# for File in Slugs:
-		# 	# Открытие локального описательного файла JSON.
-		# 	with open(Settings["titles-directory"] + "/" + File, encoding = "utf-8") as FileRead:
-		# 		# JSON файл тайтла.
-		# 		LocalTitle = json.load(FileRead)
-		# 		# Помещение алиаса в список.
-		# 		TitlesList.append(str(LocalTitle["slug"]) if "slug" in LocalTitle.keys() else str(LocalTitle["dir"]))
+		# Для каждого алиаса.
+		for Slug in Slugs:
 
-		# # Запись в лог информации: количество доступных для парсинга тайтлов.
-		# logging.info("Local titles to parsing: " + str(len(TitlesList)) + ".")
-		pass
+			# Открытие локального описательного файла JSON.
+			with open(ParserSettings["common"]["titles_directory"] + "/" + Slug, encoding = "utf-8") as FileRead:
+				# JSON файл тайтла.
+				LocalTitle = json.load(FileRead)
+				# Помещение алиаса в список.
+				Slugs.append(LocalTitle["slug"])
+
+		# Запись в лог информации: количество тайтлов для парсинга.
+		logging.info("Local titles to parsing: " + str(len(Slugs)) + ".")
 
 	else:
 		# Запись аргумента в качестве цели парсинга.
@@ -155,7 +155,7 @@ def com_parse(system_objects: Objects, command: CommandData):
 		#---> Получение дополнительных данных.
 		#==========================================================================================#
 		# Сообщение для внутреннего обработчика.
-		Message = system_objects.MSG_SHUTDOWN + system_objects.MSG_FORCE_MODE
+		Message = system_objects.MSG_SHUTDOWN + system_objects.MSG_FORCE_MODE + f"Parsing: {Index + 1} / {len(Slugs)}\nCurrent title: {Slugs[Index]}\n"
 		# Используемое имя файла.
 		Filename = Parser.id if ParserSettings["common"]["use_id_as_filename"] else Parser.slug
 		# Состояние: используется ли устаревший формат.
@@ -190,6 +190,8 @@ def com_repair(system_objects: Objects, command: CommandData):
 	system_objects.logger.info("====== Repairing ======")
 	# Имя описательного файла.
 	Filename = Filename[:-5] if command.arguments[0].endswith(".json") else command.arguments[0]
+	# Состояние: используется ли устаревший формат.
+	Legacy = True if ParserSettings["common"]["legacy"] else False
 	# Вывод в консоль: идёт процесс восстановления главы.
 	print("Repairing...")
 
@@ -199,7 +201,7 @@ def com_repair(system_objects: Objects, command: CommandData):
 	Title.open(system_objects, ParserSettings["common"]["titles_directory"], Filename)
 	Parser.parse(Title.slug)
 	Title.repair(Parser.repair, int(command.values["chapter"]))
-	Title.save(system_objects, ParserSettings["common"]["titles_directory"], Filename)
+	Title.save(system_objects, ParserSettings["common"]["titles_directory"], Filename, Legacy)
 
 	# Включение удаление лога.
 	system_objects.REMOVE_LOG = True 

@@ -31,32 +31,33 @@ class Manager:
 			parser_name – название парсера.
 		"""
 
-	def __PutDefaultDirectories(self, settings: dict):
+	def __PutDefaultDirectories(self, settings: dict, parser_name: str):
 		"""
 		Подстанавливает стандартные директории на пустые места.
-			settings – словарь настроек.
+			settings – словарь настроек;
+			parser_name – название парсера.
 		"""
 
 		# Если директория архивов не установлена.
 		if not settings["common"]["archives_directory"]:
 			# Установка директории.
-			settings["common"]["archives_directory"] = "Output/hentailib/archives"
+			settings["common"]["archives_directory"] = f"Output/{parser_name}/archives"
 			# Если директория не существует, создать её.
-			if not os.path.exists("Output/hentailib/archives"): os.makedirs("Output/hentailib/archives")
+			if not os.path.exists(f"Output/{parser_name}/archives"): os.makedirs(f"Output/{parser_name}/archives")
 
 		# Если директория обложек не установлена.
 		if not settings["common"]["covers_directory"]:
 			# Установка директории.
-			settings["common"]["covers_directory"] = "Output/hentailib/covers"
+			settings["common"]["covers_directory"] = f"Output/{parser_name}/covers"
 			# Если директория не существует, создать её.
-			if not os.path.exists("Output/hentailib/covers"): os.makedirs("Output/hentailib/covers")
+			if not os.path.exists(f"Output/{parser_name}/covers"): os.makedirs(f"Output/{parser_name}/covers")
 
 		# Если директория тайтлов не установлена.
 		if not settings["common"]["titles_directory"]:
 			# Установка директории.
-			settings["common"]["titles_directory"] = "Output/hentailib/titles"
+			settings["common"]["titles_directory"] = f"Output/{parser_name}/titles"
 			# Если директория не существует, создать её.
-			if not os.path.exists("Output/hentailib/titles"): os.makedirs("Output/hentailib/titles")
+			if not os.path.exists(f"Output/{parser_name}/titles"): os.makedirs(f"Output/{parser_name}/titles")
 
 	#==========================================================================================#
 	# >>>>> ПУБЛИЧНЫЕ МЕТОДЫ <<<<< #
@@ -79,7 +80,7 @@ class Manager:
 		# Чтение настроек.
 		Settings = ReadJSON(f"Parsers/{parser_name}/settings.json")
 		# Устанавливает стандартные директории.
-		self.__PutDefaultDirectories(Settings)
+		self.__PutDefaultDirectories(Settings, parser_name)
 
 		return Settings
 

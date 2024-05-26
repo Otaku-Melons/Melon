@@ -14,8 +14,8 @@ import urllib.parse
 #==========================================================================================#
 
 VERSION = "3.0.0"
-NAME = "hentailib"
-SITE = "hentailib.me"
+NAME = "mangalib"
+SITE = "test-front.mangalib.me"
 STRUCT = Manga()
 
 #==========================================================================================#
@@ -559,7 +559,7 @@ class Parser:
 		# Получение описания.
 		Data = self.__GetTitleData()
 		# Занесение данных.
-		self.__Title["site"] = SITE
+		self.__Title["site"] = "mangalib.me"
 		self.__Title["id"] = Data["id"]
 		self.__Title["slug"] = slug
 		self.__Title["ru_name"] = Data["rus_name"]
