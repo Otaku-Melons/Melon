@@ -12,3 +12,14 @@ def PrintAmendingProgress(message: str, current_state: int, max_state: int):
 	Cls()
 	# Вывод в консоль: прогресс.
 	print(f"{message}\nAmending: {current_state} / {max_state}")
+
+def PrintStatus(message: str):
+	"""
+	Выводит в консоль прогресс дополнение глав информацией о содержимом.
+		message – сообщение из внешнего обработчика.
+	"""
+
+	# Очистка консоли.
+	Cls()
+	# Вывод в консоль: прогресс.
+	print(f"{message}\nParsing data...")

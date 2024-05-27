@@ -1,5 +1,5 @@
 from Source.Core.Formats.Manga import BaseStructs, Manga, Statuses, Types
-from Source.CLI.Templates import PrintAmendingProgress
+from Source.CLI.Templates import PrintAmendingProgress, PrintStatus
 from Source.Core.Objects import Objects
 from Source.Core.Logger import Logger
 
@@ -142,6 +142,46 @@ class Parser:
 		return self.__Title["content"]
 
 	#==========================================================================================#
+	# >>>>> СТАНДАРТНЫЕ ПРИВАТНЫЕ МЕТОДЫ <<<<< #
+	#==========================================================================================#
+
+	def __CalculateEmptyChapters(self, content: dict) -> int:
+		"""Подсчитывает количество глав без слайдов."""
+
+		# Количество глав.
+		ChaptersCount = 0
+
+		# Для каждой ветви.
+		for BranchID in content.keys():
+
+			# Для каждой главы.
+			for Chapter in content[BranchID]:
+				# Если глава не содержит слайдов, подсчитать её.
+				if not Chapter["slides"]: ChaptersCount += 1
+
+		return ChaptersCount
+
+	def __InitializeRequestor(self) -> WebRequestor:
+		"""Инициализирует модуль WEB-запросов."""
+
+		# Инициализация и настройка объекта.
+		Config = WebConfig()
+		Config.select_lib(WebLibs.curl_cffi)
+		Config.generate_user_agent("pc")
+		Config.curl_cffi.enable_http2(True)
+		WebRequestorObject = WebRequestor(Config)
+		# Установка прокси.
+		if self.__Settings["proxy"]["enable"] == True: WebRequestorObject.add_proxy(
+			Protocols.HTTPS,
+			host = Settings["proxy"]["host"],
+			port = Settings["proxy"]["port"],
+			login = Settings["proxy"]["login"],
+			password = Settings["proxy"]["password"]
+		)
+
+		return WebRequestorObject
+
+	#==========================================================================================#
 	# >>>>> ПРИВАТНЫЕ МЕТОДЫ <<<<< #
 	#==========================================================================================#
 
@@ -167,22 +207,6 @@ class Parser:
 				if Result != None and Result < 50.0: return True
 		
 		return False
-
-	def __CalculateEmptyChapters(self, content: dict) -> int:
-		"""Подсчитывает количество глав без слайдов."""
-
-		# Количество глав.
-		ChaptersCount = 0
-
-		# Для каждой ветви.
-		for BranchID in content.keys():
-
-			# Для каждой главы.
-			for Chapter in content[BranchID]:
-				# Если глава не содержит слайдов, подсчитать её.
-				if not Chapter["slides"]: ChaptersCount += 1
-
-		return ChaptersCount
 
 	def __CompareImages(self, url: str, pattern_path: str) -> float | None:
 		"""
@@ -476,28 +500,6 @@ class Parser:
 
 		return Type
 
-	def __InitializeRequestor(self) -> WebRequestor:
-		"""Инициализирует модуль WEB-запросов."""
-
-		# Инициализация и настройка объекта.
-		Config = WebConfig()
-		Config.select_lib(WebLibs.curl_cffi)
-		Config.generate_user_agent("pc")
-		Config.curl_cffi.enable_http2(True)
-		Config.set_header("Authorization", self.__Settings["custom"]["token"])
-		Config.set_header("Referer", f"https://{SITE}/")
-		WebRequestorObject = WebRequestor(Config)
-		# Установка прокси.
-		if self.__Settings["proxy"]["enable"] == True: WebRequestorObject.add_proxy(
-			Protocols.HTTPS,
-			host = Settings["proxy"]["host"],
-			port = Settings["proxy"]["port"],
-			login = Settings["proxy"]["login"],
-			password = Settings["proxy"]["password"]
-		)
-		
-		return WebRequestorObject
-
 	def __MergeListOfLists(self, list_of_lists: list) -> list:
 		"""
 		Объединяет список списков в один список.
@@ -552,6 +554,9 @@ class Parser:
 		# Коллекция системных объектов.
 		self.__SystemObjects = system_objects
 
+		# Выбор парсера для системы логгирования.
+		self.__SystemObjects.logger.select_parser(NAME)
+
 	def amend(self, content: dict | None = None, message: str = "") -> dict:
 		"""
 		Дополняет каждую главу в кажой ветви информацией о содержимом.
@@ -565,6 +570,8 @@ class Parser:
 		ChaptersToAmendCount = self.__CalculateEmptyChapters(content)
 		# Количество дополненных глав.
 		AmendedChaptersCount = 0
+		# Индекс прогресса.
+		ProgressIndex = 0
 
 		# Для каждой ветви.
 		for BranchID in content.keys():
@@ -574,20 +581,22 @@ class Parser:
 				
 				# Если слайды не описаны или включён режим перезаписи.
 				if content[BranchID][ChapterIndex]["slides"] == []:
+					# Инкремент прогресса.
+					ProgressIndex += 1
 					# Получение списка слайдов главы.
 					Slides = self.__GetSlides(content[BranchID][ChapterIndex]["id"])
-					# Инкремент количества дополненных глав.
-					AmendedChaptersCount += 1
 
 					# Если получены слайды.
 					if Slides:
+						# Инкремент количества дополненных глав.
+						AmendedChaptersCount += 1
 						# Запись информации о слайде.
 						content[BranchID][ChapterIndex]["slides"] = Slides
-						# Вывод в консоль: прогресс дополнения.
-						PrintAmendingProgress(message, AmendedChaptersCount, ChaptersToAmendCount)
 						# Запись в лог информации: глава дополнена.
 						self.__SystemObjects.logger.chapter_amended(self.__Slug, content[BranchID][ChapterIndex]["id"], False)
 
+					# Вывод в консоль: прогресс дополнения.
+					PrintAmendingProgress(message, ProgressIndex, ChaptersToAmendCount)
 					# Выжидание интервала.
 					sleep(self.__Settings["common"]["delay"])
 
@@ -596,18 +605,20 @@ class Parser:
 
 		return content
 
-	def parse(self, slug: str):
+	def parse(self, slug: str, message: str = ""):
 		"""
 		Получает основные данные тайтла.
-			slug – алиас тайтла, использующийся для идентификации оного в адресе.
+			slug – алиас тайтла, использующийся для идентификации оного в адресе;
+			message – сообщение для портов CLI.
 		"""
 
 		# Заполнение базовых данных.
 		self.__Title = BaseStructs().manga
 		self.__Slug = slug
+		# Вывод в лог: статус парсинга.
+		PrintStatus(message)
 		# Получение описания.
 		Data = self.__GetTitleData()
-		
 		# Занесение данных.
 		self.__Title["site"] = SITE
 		self.__Title["id"] = Data["id"]

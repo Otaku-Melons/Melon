@@ -128,11 +128,13 @@ def com_parse(system_objects: Objects, command: CommandData):
 
 	# Парсинг тайтлов.
 	for Index in range(StartIndex, len(Slugs)):
+		# Сообщение для внутреннего обработчика.
+		Message = system_objects.MSG_SHUTDOWN + system_objects.MSG_FORCE_MODE + f"Parsing: {Index + 1} / {len(Slugs)}\nCurrent title: {Slugs[Index]}\n"
 
 		#---> Парсинг базовых данных.
 		#==========================================================================================#
 		Title = system_objects.manager.get_parser_struct(ParserName)
-		Parser.parse(Slugs[Index])
+		Parser.parse(Slugs[Index], Message)
 		Title.set_site(Parser.site)
 		Title.set_id(Parser.id)
 		Title.set_slug(Parser.slug)
@@ -154,8 +156,6 @@ def com_parse(system_objects: Objects, command: CommandData):
 
 		#---> Получение дополнительных данных.
 		#==========================================================================================#
-		# Сообщение для внутреннего обработчика.
-		Message = system_objects.MSG_SHUTDOWN + system_objects.MSG_FORCE_MODE + f"Parsing: {Index + 1} / {len(Slugs)}\nCurrent title: {Slugs[Index]}\n"
 		# Используемое имя файла.
 		Filename = Parser.id if ParserSettings["common"]["use_id_as_filename"] else Parser.slug
 		# Состояние: используется ли устаревший формат.

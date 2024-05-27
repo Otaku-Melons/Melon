@@ -1,3 +1,5 @@
+from Source.CLI.Templates import PrintAmendingProgress, PrintStatus
+
 from dublib.WebRequestor import WebConfig, WebLibs, WebRequestor
 from Source.Core.Formats.Manga import Statuses, Types
 from dublib.Methods import ReadJSON
@@ -131,7 +133,7 @@ class Parser:
 		return self.__Title["content"]
 
 	#==========================================================================================#
-	# >>>>> ПРИВАТНЫЕ МЕТОДЫ <<<<< #
+	# >>>>> СТАНДАРТНЫЕ ПРИВАТНЫЕ МЕТОДЫ <<<<< #
 	#==========================================================================================#
 
 	def __CalculateEmptyChapters(self, content: dict) -> int:
@@ -159,8 +161,22 @@ class Parser:
 		Config.generate_user_agent("pc")
 		Config.curl_cffi.enable_http2(True)
 		WebRequestorObject = WebRequestor(Config)
+		# Установка прокси.
+		if self.__Settings["proxy"]["enable"] == True: WebRequestorObject.add_proxy(
+			Protocols.HTTPS,
+			host = Settings["proxy"]["host"],
+			port = Settings["proxy"]["port"],
+			login = Settings["proxy"]["login"],
+			password = Settings["proxy"]["password"]
+		)
 
 		return WebRequestorObject
+
+	#==========================================================================================#
+	# >>>>> ПРИВАТНЫЕ МЕТОДЫ <<<<< #
+	#==========================================================================================#
+
+	# В разработке...
 
 	#==========================================================================================#
 	# >>>>> ПУБЛИЧНЫЕ МЕТОДЫ <<<<< #
@@ -185,6 +201,9 @@ class Parser:
 		# Коллекция системных объектов.
 		self.__SystemObjects = system_objects
 
+		# Выбор парсера для системы логгирования.
+		self.__SystemObjects.logger.select_parser(NAME)
+
 	def amend(self, content: dict | None = None, message: str = "") -> dict:
 		"""
 		Дополняет каждую главу в кажой ветви информацией о содержимом.
@@ -198,21 +217,26 @@ class Parser:
 		ChaptersToAmendCount = self.__CalculateEmptyChapters(content)
 		# Количество дополненных глав.
 		AmendedChaptersCount = 0
+		# Индекс прогресса.
+		ProgressIndex = 0
 		
 		# Скрипт дополнения содержимого...
 
 		# Запись дополненного содержимого.
 		self.__Title["content"] = content
 
-	def parse(self, slug: str):
+	def parse(self, slug: str, message: str = ""):
 		"""
 		Получает основные данные тайтла.
-			slug – алиас тайтла, использующийся для идентификации оного в адресе.
+			slug – алиас тайтла, использующийся для идентификации оного в адресе;
+			message – сообщение для портов CLI.
 		"""
 
 		# Заполнение базовых данных.
 		self.__Title = BaseStructs().manga
 		self.__Slug = slug
+		# Вывод в лог: статус парсинга.
+		PrintStatus(message)
 
 		# Скрипт парсинга основных данных...
 

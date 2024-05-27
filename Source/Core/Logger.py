@@ -1,15 +1,82 @@
+from telebot.types import InputMediaDocument
 from dublib.WebRequestor import WebResponse
+from dublib.Polyglot import Markdown
+from dublib.Methods import ReadJSON
 from datetime import datetime
+from time import sleep
 
 import logging
+import telebot
 import time
+import sys
 import os
 
 class Logger:
 	"""Менеджер логов."""
 
 	#==========================================================================================#
-	# >>>>> МЕТОДЫ <<<<< #
+	# >>>>> ПРИВАТНЫЕ МЕТОДЫ <<<<< #
+	#==========================================================================================#
+
+	def __ReadSettings(self) -> dict:
+		"""Считвает настройки логов для конкретного парсера."""
+
+		# Настройки.
+		Settings = dict()
+		# Если файл логов существует, прочитать его содержимое.
+		if os.path.exists(f"Parsers/{self.__ParserName}/logger.json"): Settings = ReadJSON(f"Parsers/{self.__ParserName}/logger.json")
+		
+		return Settings
+
+	def __SendReport(self, description: str):
+		"""
+		Отправляет сообщение в чат Telegram.
+			description – описание ошибки.
+		"""
+
+		# Если заданы настройки и включено получение отчётов через Telegram.
+		if self.__LoggerSettings and "telebot" in self.__LoggerSettings.keys() and self.__LoggerSettings["telebot"]["enable"]:
+			# Токен бота.
+			Token = self.__LoggerSettings["telebot"]["bot_token"]
+			# Экранирование описания.
+			description = Markdown(description).escaped_text
+			# Инициализация бота.
+			Bot = telebot.TeleBot(Token)
+			# Очистка параметров запуска.
+			LaunchArguments = list(sys.argv)
+			LaunchArguments.pop(0)
+			# Команда запуска.
+			Command = Markdown(" ".join(LaunchArguments)).escaped_text
+			# Комментарий.
+			Comment = ("*Comment:* " + self.__LoggerSettings["telebot"]["comment"] + "\n") if self.__LoggerSettings["telebot"]["comment"] else ""
+			# Описание ошибки.
+			Message = f"*Parser:* {self.__ParserName}\n{Comment}*Command:* `{Command}`\n\n_{description}_"
+
+			# Если сообщение не кэшировано.
+			if Message != self.__ErrorCache:
+				# Кэширование сообщения.
+				self.__ErrorCache = Message
+
+				# Если нужно прикрепить файл лога.
+				if self.__LoggerSettings["telebot"]["attach_log"]:
+					# Отправка лога с данными.
+					Bot.send_document(
+						self.__LoggerSettings["telebot"]["chat_id"],
+						document = open(self.__LogFilename, "rb"), 
+						caption = Message,
+						parse_mode = "MarkdownV2"
+					)
+
+				else:
+					# Отправка сообщения.
+					Bot.send_message(
+						self.__LoggerSettings["telebot"]["chat_id"],
+						Message,
+						parse_mode = "MarkdownV2"
+					)
+
+	#==========================================================================================#
+	# >>>>> ПУБЛИЧНЫЕ МЕТОДЫ <<<<< #
 	#==========================================================================================#
 
 	def __init__(self):
@@ -19,6 +86,12 @@ class Logger:
 		#==========================================================================================#
 		# Путь к файлу лога.
 		self.__LogFilename = None
+		# Название парсера.
+		self.__ParserName = None
+		# Текущие настройки логгирования.
+		self.__LoggerSettings = dict()
+		# Кэш описания ошибки.
+		self.__ErrorCache = None
 
 		#---> Настройка логов.
 		#==========================================================================================#
@@ -33,6 +106,17 @@ class Logger:
 		self.__LogFilename = self.__LogFilename.replace(":", "-")
 		# Установка конфигнурации.
 		logging.basicConfig(filename = self.__LogFilename, encoding = "utf-8", level = logging.INFO, format = "%(asctime)s %(levelname)s: %(message)s", datefmt = "%Y-%m-%d %H:%M:%S")		
+
+	def select_parser(self, parser_name: str):
+		"""
+		Задаёт парсер, для которого будут применены настройки логгирования.
+			parser_name – название парсера.
+		"""
+
+		# Сохранение названия.
+		self.__ParserName = parser_name
+		# Чтение настроек логов.
+		self.__LoggerSettings = self.__ReadSettings()
 
 	#==========================================================================================#
 	# >>>>> БАЗОВЫЕ ТИПЫ ЗАПИСЕЙ <<<<< #
@@ -52,7 +136,10 @@ class Logger:
 			text – данные.
 		"""
 
+		# Запись в лог ошибки.
 		logging.error(text)
+		# Отправка отчёта.
+		self.__SendReport(text)
 
 	def info(self, text: str):
 		"""
@@ -138,7 +225,7 @@ class Logger:
 		# Если не передано описание, использовать стандартное.
 		if not text: text = "Request error."
 		# Запись в лог ошибки.
-		logging.error(f"{text} Response code: {response.status_code}.")
+		self.error(f"{text} Response code: {response.status_code}.")
 
 	#==========================================================================================#
 	# >>>>> МЕТОДЫ УПРАВЛЕНИЯ ЛОГАМИ <<<<< #
