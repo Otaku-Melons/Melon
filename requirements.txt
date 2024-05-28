@@ -1,2 +1,5 @@
+# Melon
 pyTelegramBotAPI
 dublib==0.6.2
+# Parsers
+-r /Parsers/remanga/requirements.txt

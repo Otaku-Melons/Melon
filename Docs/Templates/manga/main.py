@@ -1,6 +1,6 @@
 from Source.CLI.Templates import PrintAmendingProgress, PrintStatus
 
-from dublib.WebRequestor import WebConfig, WebLibs, WebRequestor
+from dublib.WebRequestor import Protocols, WebConfig, WebLibs, WebRequestor
 from Source.Core.Formats.Manga import Statuses, Types
 from dublib.Methods import ReadJSON
 
@@ -162,12 +162,12 @@ class Parser:
 		Config.curl_cffi.enable_http2(True)
 		WebRequestorObject = WebRequestor(Config)
 		# Установка прокси.
-		if self.__Settings["proxy"]["enable"] == True: WebRequestorObject.add_proxy(
+		if self.__Settings["proxy"]["enable"]: WebRequestorObject.add_proxy(
 			Protocols.HTTPS,
-			host = Settings["proxy"]["host"],
-			port = Settings["proxy"]["port"],
-			login = Settings["proxy"]["login"],
-			password = Settings["proxy"]["password"]
+			host = self.__Settings["proxy"]["host"],
+			port = self.__Settings["proxy"]["port"],
+			login = self.__Settings["proxy"]["login"],
+			password = self.__Settings["proxy"]["password"]
 		)
 
 		return WebRequestorObject
@@ -239,5 +239,3 @@ class Parser:
 		PrintStatus(message)
 
 		# Скрипт парсинга основных данных...
-
-		pass

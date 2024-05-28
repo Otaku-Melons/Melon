@@ -5,13 +5,13 @@
 * **collect** – сбор списка алиасов в текстовый файл с поддержкой фильтрации;
 * **repair** – обновление содержимого главы в существующем описательном файле.
 
-# Парсеры
-|            | **type** | **site**                 | **collect** | **repair** |
+## Парсеры
+| **Парсер** | **Тип** | **Сайт**                 | **collect** | **repair** |
 |------------|----------|--------------------------|-------------|------------|
 | hentailib  | _manga_  | https://hentailib.me/    | ❌          | ✅         |
 | mangalib   | _manga_  | https://test-front.mangalib.me/     | ❌          | ✅         |
-| yaoilib    | _manga_  | https://test-front.yaoilib.me/      | ❌          | ✅         |
+| slashlib   | _manga_  | https://test-front.slashlib.me/     | ❌          | ✅         |
 | remanga    | _manga_  | https://remanga.org/     | ❌          | ✅         |
-| ranobehub  | _novel_  | https://ranobehub.org/   | ❌          | ❌         |
+| ranobehub  | _ranobe_ | https://ranobehub.org/   | ❌          | ❌         |
 | desu       | _manga_  | https://desu.me/         | ❌          | ❌         |
 | hentaichan | _manga_  | https://hentaichan.live/ | ❌          | ❌         |
