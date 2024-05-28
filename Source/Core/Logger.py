@@ -161,20 +161,22 @@ class Logger:
 	# >>>>> ШАБЛОНЫ ТИПОВ ЗАПИСЕЙ <<<<< #
 	#==========================================================================================#
 
-	def amending_end(self, slug: str, chapters_cont: int):
+	def amending_end(self, slug: str, title_id: int, chapters_cont: int):
 		"""
 		Записывает в лог информацию о количестве дополненных глав.
 			slug – алиас;
+			title_id – целочисленный идентификатор тайтла;
 			chapters_cont – количество дополненных глав.
 		"""
 
 		# Запись в лог информации.
-		logging.info(f"Title: \"{slug}\". Amended chapters count: {chapters_cont}.")
+		logging.info(f"Title: \"{slug}\" (ID: {title_id}). Amended chapters count: {chapters_cont}.")
 
-	def chapter_amended(self, slug: str, chapter_id: int, is_paid: bool):
+	def chapter_amended(self, slug: str, title_id: int, chapter_id: int, is_paid: bool):
 		"""
 		Записывает в лог данные дополненной главы.
 			slug – алиас;
+			title_id – целочисленный идентификатор тайтла;
 			chapter_id – идентификатор главы;
 			is_paid – является ли глава платной.
 		"""
@@ -182,12 +184,13 @@ class Logger:
 		# Составление типа главы.
 		Chapter = "Paid chapter" if is_paid else "Chapter"
 		# Запись в лог информации.
-		logging.info(f"Title: \"{slug}\". {Chapter} {chapter_id} amended.")
+		logging.info(f"Title: \"{slug}\" (ID: {title_id}). {Chapter} {chapter_id} amended.")
 
-	def chapter_repaired(self, slug: str, chapter_id: int, is_paid: bool):
+	def chapter_repaired(self, slug: str, title_id: int, chapter_id: int, is_paid: bool):
 		"""
 		Записывает в лог данные дополненной главы.
 			slug – алиас;
+			title_id – целочисленный идентификатор тайтла;
 			chapter_id – идентификатор главы;
 			is_paid – является ли глава платной.
 		"""
@@ -195,25 +198,27 @@ class Logger:
 		# Составление типа главы.
 		Chapter = "Paid chapter" if is_paid else "Chapter"
 		# Запись в лог информации.
-		logging.info(f"Title: \"{slug}\". {Chapter} {chapter_id} repaired.")
+		logging.info(f"Title: \"{slug}\" (ID: {title_id}). {Chapter} {chapter_id} repaired.")
 
-	def covers_unstubbed(self, slug: str):
+	def covers_unstubbed(self, slug: str, title_id: int):
 		"""
 		Записывает в лог информацию об удалении обложек по причине того, что те являются заглушками.
+			title_id – целочисленный идентификатор тайтла;
 			slug – алиас.
 		"""
 
 		# Запись в лог информации.
-		logging.info(f"Title: \"{slug}\". Stubs detected. Covers downloading will be skipped.")
+		logging.info(f"Title: \"{slug}\" (ID: {title_id}). Stubs detected. Covers downloading will be skipped.")
 
-	def parsing_start(self, slug: str):
+	def parsing_start(self, slug: str, title_id: int):
 		"""
 		Записывает в лог сообщение об успешном парсинге данных тайтла.
+			title_id – целочисленный идентификатор тайтла;
 			slug – алиас.
 		"""
 
 		# Запись в лог информации.
-		logging.info(f"Title: \"{slug}\". Parsing...")
+		logging.info(f"Title: \"{slug}\" (ID: {title_id}). Parsing...")
 
 	def request_error(self, response: WebResponse, text: str | None = None):
 		"""

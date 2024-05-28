@@ -1,10 +1,11 @@
 from Source.Core.Formats.Manga import BaseStructs, Manga, Statuses, Types
 from Source.CLI.Templates import PrintAmendingProgress, PrintStatus
+from Source.Core.Downloader import Downloader
 from Source.Core.Objects import Objects
 from Source.Core.Logger import Logger
 
+from dublib.WebRequestor import Protocols, WebConfig, WebLibs, WebRequestor
 from dublib.Methods import ReadJSON, RemoveRecurringSubstrings, Zerotify
-from dublib.WebRequestor import WebConfig, WebLibs, WebRequestor
 from skimage.metrics import structural_similarity
 from dublib.Polyglot import HTML
 from skimage import io
@@ -169,14 +170,15 @@ class Parser:
 		Config.select_lib(WebLibs.curl_cffi)
 		Config.generate_user_agent("pc")
 		Config.curl_cffi.enable_http2(True)
+		Config.set_header("Authorization", self.__Settings["custom"]["token"])
 		WebRequestorObject = WebRequestor(Config)
 		# Установка прокси.
-		if self.__Settings["proxy"]["enable"] == True: WebRequestorObject.add_proxy(
+		if self.__Settings["proxy"]["enable"]: WebRequestorObject.add_proxy(
 			Protocols.HTTPS,
-			host = Settings["proxy"]["host"],
-			port = Settings["proxy"]["port"],
-			login = Settings["proxy"]["login"],
-			password = Settings["proxy"]["password"]
+			host = self.__Settings["proxy"]["host"],
+			port = self.__Settings["proxy"]["port"],
+			login = self.__Settings["proxy"]["login"],
+			password = self.__Settings["proxy"]["password"]
 		)
 
 		return WebRequestorObject
@@ -192,17 +194,17 @@ class Parser:
 		"""
 
 		# Список индексов фильтров.
-		FiltersDirectories = os.listdir("Parsers/remanga/Filters")
+		FiltersDirectories = os.listdir(f"Parsers/{NAME}/Filters")
 
 		# Для каждого фильтра.
 		for FilterIndex in FiltersDirectories:
 			# Список щаблонов.
-			Patterns = os.listdir(f"Parsers/remanga/Filters/{FilterIndex}")
+			Patterns = os.listdir(f"Parsers/{NAME}/Filters/{FilterIndex}")
 			
 			# Для каждого фильтра.
 			for Pattern in Patterns:
 				# Сравнение изображений.
-				Result = self.__CompareImages(url, f"Parsers/remanga/Filters/{FilterIndex}/{Pattern}")
+				Result = self.__CompareImages(url, f"Parsers/{NAME}/Filters/{FilterIndex}/{Pattern}")
 				# Если разница между обложкой и шаблоном составляет менее 50%.
 				if Result != None and Result < 50.0: return True
 		
@@ -220,7 +222,7 @@ class Parser:
 
 		try:
 			# Чтение изображений.
-			Pattern = io.imread(url)
+			Pattern = io.imread(f"Parsers/{NAME}/Temp/cover")
 			Image = cv2.imread(pattern_path)
 			# Преобразование изображений в чёрно-белый формат.
 			Pattern = cv2.cvtColor(Pattern, cv2.COLOR_BGR2GRAY)
@@ -331,12 +333,19 @@ class Parser:
 			# Дополнение структуры.
 			Covers.append(Buffer)
 
-		# Если обложка является заглушкой.
-		if self.__Settings["custom"]["unstub"] and self.__CheckForStubs(Buffer["link"]):
-			# Очистка данных обложек.
-			Covers = list()
-			# Запись в лог информации обложки помечены как заглушки.
-			self.__SystemObjects.logger.covers_unstubbed(self.__Slug)
+		# Если включена фильтрация заглушек.
+		if self.__Settings["custom"]["unstub"]:
+			# Если каталог для временных файлов не существует, создать его.
+			if not os.path.exists(f"Parsers/{NAME}/Temp"): os.makedirs(f"Parsers/{NAME}/Temp")
+			# Скачивание обложки.
+			Downloader(self.__SystemObjects, self.__Requestor).image(Buffer["link"], SITE, directory = f"Parsers/{NAME}/Temp", filename = "cover", full_filename = True)
+
+			# Если обложка является заглушкой.
+			if self.__CheckForStubs(Buffer["link"]):
+				# Очистка данных обложек.
+				Covers = list()
+				# Запись в лог информации обложки помечены как заглушки.
+				self.__SystemObjects.logger.covers_unstubbed(self.__Slug, self.__Title["id"])
 
 		return Covers
 
@@ -411,7 +420,7 @@ class Parser:
 
 		else:
 			# Запись в лог ошибки.
-			self.__Logger.request_error(Response, "Unable to request chapter content.")
+			self.__SystemObjects.logger.request_error(Response, "Unable to request chapter content.")
 
 		return Slides
 
@@ -466,11 +475,11 @@ class Parser:
 			# Парсинг ответа.
 			Response = Response.json["content"]
 			# Запись в лог информации: начало парсинга.
-			self.__SystemObjects.logger.parsing_start(self.__Slug)
+			self.__SystemObjects.logger.parsing_start(self.__Slug, Response["id"])
 
 		else:
 			# Запись в лог ошибки.
-			self.__Logger.request_error(Response, "Unable to request title data.")
+			self.__SystemObjects.logger.request_error(Response, "Unable to request title data.")
 			# Обнуление ответа.
 			Response = None
 
@@ -593,7 +602,7 @@ class Parser:
 						# Запись информации о слайде.
 						content[BranchID][ChapterIndex]["slides"] = Slides
 						# Запись в лог информации: глава дополнена.
-						self.__SystemObjects.logger.chapter_amended(self.__Slug, content[BranchID][ChapterIndex]["id"], False)
+						self.__SystemObjects.logger.chapter_amended(self.__Slug, self.__Title["id"], content[BranchID][ChapterIndex]["id"], False)
 
 					# Вывод в консоль: прогресс дополнения.
 					PrintAmendingProgress(message, ProgressIndex, ChaptersToAmendCount)
@@ -601,7 +610,7 @@ class Parser:
 					sleep(self.__Settings["common"]["delay"])
 
 		# Запись в лог информации: количество дополненных глав.
-		self.__SystemObjects.logger.amending_end(self.__Slug, AmendedChaptersCount)
+		self.__SystemObjects.logger.amending_end(self.__Slug, self.__Title["id"], AmendedChaptersCount)
 
 		return content
 
@@ -657,7 +666,7 @@ class Parser:
 					# Получение списка слайдов главы.
 					Slides = self.__GetSlides(content[BranchID][ChapterIndex]["id"])
 					# Запись в лог информации: глава восстановлена.
-					self.__SystemObjects.logger.chapter_repaired(self.__Slug, chapter_id, content[BranchID][ChapterIndex]["is_paid"])
+					self.__SystemObjects.logger.chapter_repaired(self.__Slug, self.__Title["id"], chapter_id, content[BranchID][ChapterIndex]["is_paid"])
 					# Запись восстановленной главы.
 					content[BranchID][ChapterIndex]["slides"] = Slides
 

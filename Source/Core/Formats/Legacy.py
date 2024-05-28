@@ -40,7 +40,7 @@ class LegacyManga:
 		manga = ReplaceDictionaryKey(manga, "chapters", "content")
 		# Преобразование значений.
 		manga["format"] = "melon-manga"
-		manga["authors"] = manga["authors"].split(", ")
+		manga["authors"] = manga["authors"].split(", ") if manga["authors"] else list()
 		manga["type"] = Types[manga["type"]]
 		manga["status"] = Statuses[manga["status"]]
 
@@ -53,8 +53,9 @@ class LegacyManga:
 				Buffer = manga["content"][BranchID][ChapterIndex]
 				# Переименование ключей.
 				Buffer = ReplaceDictionaryKey(Buffer, "is-paid", "is_paid")
+				Buffer = ReplaceDictionaryKey(Buffer, "translator", "translators")
 				# Преобразование значений.
-				Buffer["translators"] = Buffer["translators"].split(", ")
+				Buffer["translators"] = Buffer["translators"].split(", ") if Buffer["translators"] else list()
 				# Сохранение изменений.
 				manga["content"][BranchID][ChapterIndex] = Buffer
 
@@ -110,8 +111,9 @@ class LegacyManga:
 				Buffer = manga["chapters"][BranchID][ChapterIndex]
 				# Переименование ключей.
 				Buffer = ReplaceDictionaryKey(Buffer, "is_paid", "is-paid")
+				Buffer = ReplaceDictionaryKey(Buffer, "translators", "translator")
 				# Преобразование значений.
-				Buffer["translators"] = ", ".join(Buffer["translators"])
+				Buffer["translator"] = ", ".join(Buffer["translator"]) if Buffer["translator"] else None
 				# Сохранение изменений.
 				manga["chapters"][BranchID][ChapterIndex] = Buffer
 

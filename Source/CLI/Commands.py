@@ -165,7 +165,7 @@ def com_parse(system_objects: Objects, command: CommandData):
 		#==========================================================================================#
 		Title.merge(system_objects, ParserSettings["common"]["titles_directory"], Filename)
 		Title.amend(Parser.amend, Message)
-		Title.download_covers(system_objects, ParserSettings["common"]["covers_directory"], Filename, Message)
+		Title.download_covers(system_objects, ParserSettings["common"]["covers_directory"], Filename, Message, ParserSettings["proxy"])
 		Title.save(system_objects, ParserSettings["common"]["titles_directory"], Filename, Legacy)
 
 	# Очистка консоли.

@@ -45,10 +45,11 @@ class Downloader:
 	# >>>>> ПУБЛИЧНЫЕ МЕТОДЫ <<<<< #
 	#==========================================================================================#
 	
-	def __init__(self, system_objects: Objects, exception: bool = False):
+	def __init__(self, system_objects: Objects, requestor: WebRequestor, exception: bool = False):
 		"""
 		Загрузчик изображений.
 			system_objects – коллекция системных объектов;
+			requestor – менеджер запросов;
 			exception – указывает, следует ли выбрасывать исключение.
 		"""
 
@@ -58,14 +59,17 @@ class Downloader:
 		self.__SystemObjects = system_objects
 		# Состояние: следует ли выбрасывать исключения.
 		self.__RaiseExceptions = exception
+		# Менеджер запросов.
+		self.__Requestor = requestor
 
-	def cover(self, url: str, site: str, directory: str, slug: str) -> str:
+	def cover(self, url: str, site: str, directory: str, slug: str, title_id: int) -> str:
 		"""
 		Скачивает обложку.
 			url – ссылка на изображение;
 			site – домен сайта для установка заголовка запроса Referer;
 			directory – путь к каталогу загрузки;
-			slug – алиас тайтла.
+			slug – алиас тайтла;
+			title_id – целочисленный идентификатор тайтла.
 		"""
 
 		# Описание загрузки.
@@ -80,19 +84,10 @@ class Downloader:
 		# Если файл не существует или включён режим перезаписи.
 		if not IsCoverExists or self.__SystemObjects.FORCE_MODE:
 
-			#---> Инициализация менеджера запросов.
-			#==========================================================================================#
-			Config = WebConfig()
-			Config.select_lib(WebLibs.curl_cffi)
-			Config.generate_user_agent("pc")
-			Config.curl_cffi.enable_http2(True)
-			Config.set_header("Referer", f"https://{site}/")
-			Requestor = WebRequestor(Config)
-
 			#---> Запрос данных.
 			#==========================================================================================#
 			# Выполнение запроса.
-			Response = Requestor.get(url)
+			Response = self.__Requestor.get(url)
 
 			# Если запрос успешен
 			if Response.status_code == 200:
@@ -105,11 +100,11 @@ class Downloader:
 					# Если обложка существовала и был включён режим перезаписи.
 					if IsCoverExists and self.__SystemObjects.FORCE_MODE:
 						# Запись в лог информации: обложка перезаписана.
-						self.__SystemObjects.logger.info(f"Title: \"{slug}\". Cover overwritten: \"{Filename}{Filetype}\".")
+						self.__SystemObjects.logger.info(f"Title: \"{slug}\" (ID: {title_id}). Cover overwritten: \"{Filename}{Filetype}\".")
 
 					else:
 						# Запись в лог информации: обложка скачана.
-						self.__SystemObjects.logger.info(f"Title: \"{slug}\". Cover downloaded: \"{Filename}{Filetype}\".")
+						self.__SystemObjects.logger.info(f"Title: \"{slug}\" (ID: {title_id}). Cover downloaded: \"{Filename}{Filetype}\".")
 						
 					# Изменение сообщения.
 					Status = "Done."
@@ -124,7 +119,7 @@ class Downloader:
 
 		else:
 			# Запись в лог информации: обложка уже существует.
-			self.__SystemObjects.logger.info(f"Title: \"{slug}\". Cover already exists: \"{Filename}{Filetype}\".")
+			self.__SystemObjects.logger.info(f"Title: \"{slug}\" (ID: {title_id}). Cover already exists: \"{Filename}{Filetype}\".")
 			# Изменение сообщения.
 			Status = "Skipped."
 
@@ -148,34 +143,24 @@ class Downloader:
 		elif filename == None: filename = self.__GetFilename(url)
 
 		# Если файл не существует или включён режим перезаписи.
-		if not os.path.exists(f"{directory}{filename}{Filetype}") or self.__SystemObjects.FORCE_MODE:
+		#if not os.path.exists(f"{directory}{filename}{Filetype}") or self.__SystemObjects.FORCE_MODE:
+		#---> Запрос данных.
+		#==========================================================================================#
+		# Выполнение запроса.
+		Response = self.__Requestor.get(url)
 
-			#---> Инициализация менеджера запросов.
-			#==========================================================================================#
-			Config = WebConfig()
-			Config.select_lib(WebLibs.curl_cffi)
-			Config.generate_user_agent("pc")
-			Config.curl_cffi.enable_http2(True)
-			Config.set_header("Referer", f"https://{site}/")
-			Requestor = WebRequestor(Config)
+		# Если запрос успешен
+		if Response.status_code == 200:
+			
+			# Открытие потока записи.
+			with open(f"{directory}{filename}{Filetype}", "wb") as FileWriter:
+				# Запись изображения.
+				FileWriter.write(Response.content)
+				# Переключение состояния.
+				IsSuccess = True
 
-			#---> Запрос данных.
-			#==========================================================================================#
-			# Выполнение запроса.
-			Response = Requestor.get(url)
-
-			# Если запрос успешен
-			if Response.status_code == 200:
-				
-				# Открытие потока записи.
-				with open(f"{directory}{filename}{Filetype}", "wb") as FileWriter:
-					# Запись изображения.
-					FileWriter.write(Response.content)
-					# Переключение состояния.
-					IsSuccess = True
-
-			else:
-				# Запись в лог ошибки запроса.
-				self.__SystemObjects.logger.request_error(Response, f"Unable to download image: \"{url}\".")
-				# Выброс исключения.
-				if self.__RaiseExceptions: raise Exception(f"Unable to download image: \"{url}\". Response code: {Response.status_code}.")
+		else:
+			# Запись в лог ошибки запроса.
+			self.__SystemObjects.logger.request_error(Response, f"Unable to download image: \"{url}\".")
+			# Выброс исключения.
+			if self.__RaiseExceptions: raise Exception(f"Unable to download image: \"{url}\". Response code: {Response.status_code}.")

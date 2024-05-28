@@ -3,8 +3,8 @@ from Source.CLI.Templates import PrintAmendingProgress, PrintStatus
 from Source.Core.Objects import Objects
 from Source.Core.Logger import Logger
 
+from dublib.WebRequestor import Protocols, WebConfig, WebLibs, WebRequestor
 from dublib.Methods import ReadJSON, RemoveRecurringSubstrings, Zerotify
-from dublib.WebRequestor import WebConfig, WebLibs, WebRequestor
 from time import sleep
 
 import urllib.parse
@@ -14,7 +14,7 @@ import urllib.parse
 #==========================================================================================#
 
 VERSION = "3.0.0"
-NAME = "yaoilib"
+NAME = "slashlib"
 SITE = "test-front.slashlib.me"
 STRUCT = Manga()
 
@@ -165,14 +165,15 @@ class Parser:
 		Config.select_lib(WebLibs.curl_cffi)
 		Config.generate_user_agent("pc")
 		Config.curl_cffi.enable_http2(True)
+		Config.set_header("Authorization", self.__Settings["custom"]["token"])
 		WebRequestorObject = WebRequestor(Config)
 		# Установка прокси.
-		if self.__Settings["proxy"]["enable"] == True: WebRequestorObject.add_proxy(
+		if self.__Settings["proxy"]["enable"]: WebRequestorObject.add_proxy(
 			Protocols.HTTPS,
-			host = Settings["proxy"]["host"],
-			port = Settings["proxy"]["port"],
-			login = Settings["proxy"]["login"],
-			password = Settings["proxy"]["password"]
+			host = self.__Settings["proxy"]["host"],
+			port = self.__Settings["proxy"]["port"],
+			login = self.__Settings["proxy"]["login"],
+			password = self.__Settings["proxy"]["password"]
 		)
 
 		return WebRequestorObject
@@ -441,7 +442,7 @@ class Parser:
 			# Парсинг ответа.
 			Response = Response.json["data"]
 			# Запись в лог информации: начало парсинга.
-			self.__SystemObjects.logger.parsing_start(self.__Slug)
+			self.__SystemObjects.logger.parsing_start(self.__Slug, Response["id"])
 
 		else:
 			# Запись в лог ошибки.
@@ -554,7 +555,7 @@ class Parser:
 						# Запись информации о слайде.
 						content[BranchID][ChapterIndex]["slides"] = Slides
 						# Запись в лог информации: глава дополнена.
-						self.__SystemObjects.logger.chapter_amended(self.__Slug, content[BranchID][ChapterIndex]["id"], False)
+						self.__SystemObjects.logger.chapter_amended(self.__Slug, self.__Title["id"], content[BranchID][ChapterIndex]["id"], False)
 
 					# Вывод в консоль: прогресс дополнения.
 					PrintAmendingProgress(message, ProgressIndex, ChaptersToAmendCount)
@@ -562,7 +563,7 @@ class Parser:
 					sleep(self.__Settings["common"]["delay"])
 
 		# Запись в лог информации: количество дополненных глав.
-		self.__SystemObjects.logger.amending_end(self.__Slug, AmendedChaptersCount)
+		self.__SystemObjects.logger.amending_end(self.__Slug, self.__Title["id"], AmendedChaptersCount)
 
 		return content
 
@@ -581,7 +582,7 @@ class Parser:
 		# Получение описания.
 		Data = self.__GetTitleData()
 		# Занесение данных.
-		self.__Title["site"] = "yaoilib.me"
+		self.__Title["site"] = SITE.replace("test-front.", "")
 		self.__Title["id"] = Data["id"]
 		self.__Title["slug"] = slug
 		self.__Title["ru_name"] = Data["rus_name"]
@@ -622,7 +623,7 @@ class Parser:
 						BranchID
 					)
 					# Запись в лог информации: глава восстановлена.
-					self.__SystemObjects.logger.chapter_repaired(self.__Slug, chapter_id, content[BranchID][ChapterIndex]["is_paid"])
+					self.__SystemObjects.logger.chapter_repaired(self.__Slug, self.__Title["id"], chapter_id, content[BranchID][ChapterIndex]["is_paid"])
 					# Запись восстановленной главы.
 					content[BranchID][ChapterIndex]["slides"] = Slides
 

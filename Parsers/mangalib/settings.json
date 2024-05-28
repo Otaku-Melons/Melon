@@ -4,9 +4,9 @@
 		"archives_directory": "",
 		"covers_directory": "",
 		"titles_directory": "",
-		"use_id_as_filename": true,
-		"sizing_images": true,
-		"legacy": true,
+		"use_id_as_filename": false,
+		"sizing_images": false,
+		"legacy": false,
 		"delay": 1
 	},
 	"proxy": {

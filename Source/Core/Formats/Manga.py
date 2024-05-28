@@ -2,6 +2,7 @@ from Source.Core.Formats.Legacy import LegacyManga
 from Source.Core.Downloader import Downloader
 from Source.Core.Objects import Objects
 
+from dublib.WebRequestor import Protocols, WebConfig, WebLibs, WebRequestor
 from dublib.Methods import Cls, ReadJSON, WriteJSON
 from time import sleep
 
@@ -132,6 +133,29 @@ class Manga:
 		# Запись данных.
 		self.__Manga["branches"] = list(Branches.values())
 
+	def __InitializeRequestor(self, proxy: dict) -> WebRequestor:
+		"""
+		Инициализирует модуль WEB-запросов.
+			proxy – данные о прокси.
+		"""
+
+		# Инициализация и настройка объекта.
+		Config = WebConfig()
+		Config.select_lib(WebLibs.curl_cffi)
+		Config.generate_user_agent("pc")
+		Config.curl_cffi.enable_http2(True)
+		WebRequestorObject = WebRequestor(Config)
+		# Установка прокси.
+		if proxy["enable"]: WebRequestorObject.add_proxy(
+			Protocols.HTTPS,
+			host = proxy["host"],
+			port = proxy["port"],
+			login = proxy["login"],
+			password = proxy["password"]
+		)
+
+		return WebRequestorObject
+
 	#==========================================================================================#
 	# >>>>> ПУБЛИЧНЫЕ МЕТОДЫ <<<<< #
 	#==========================================================================================#
@@ -154,15 +178,18 @@ class Manga:
 		# Дополнение содержимого.
 		self.__Manga["content"] = amending_method(self.__Manga["content"], message)
 
-	def download_covers(self, system_objects: Objects, output_dir: str, filename: str, message: str):
+	def download_covers(self, system_objects: Objects, output_dir: str, filename: str, message: str, proxy: dict):
 		"""
 		Скачивает обложки.
 			system_objects – коллекция системных объектов;
 			output_dir – директория хранения;
 			filename – используемое имя файла;
-			message – сообщение для внутреннего обработчика.
+			message – сообщение для внутреннего обработчика;
+			proxy – данные о прокси.
 		"""
 
+		# Менеджер запросов.
+		Requestor = self.__InitializeRequestor(proxy)
 		# Директория обложек.
 		CoversDirectory = f"{output_dir}/{filename}"
 		# Если директория обложек не существует, создать её.
@@ -177,7 +204,7 @@ class Manga:
 			# Вывод в консоль: загрузка обложки.
 			print(f"Downloading cover: \"{filename}\"... ", end = "")
 			# Загрузка обложки.
-			Result = Downloader(system_objects, exception = True).cover(self.__Manga["covers"][CoverIndex]["link"], self.__Manga["site"], CoversDirectory, self.__Manga["slug"])
+			Result = Downloader(system_objects, Requestor).cover(self.__Manga["covers"][CoverIndex]["link"], self.__Manga["site"], CoversDirectory, self.__Manga["slug"], self.__Manga["id"])
 			# Вывод в консоль: статус загрузки.
 			print(Result)
 			# Выжидание интервала.
@@ -221,12 +248,12 @@ class Manga:
 						MergedChaptersCount += 1
 
 			# Запись в лог информации: количество глав, для которых выполнено слияние.
-			system_objects.logger.info("Title: \"" + self.__Manga["slug"] + f"\". Merged chapters count: {MergedChaptersCount}.")
+			system_objects.logger.info("Title: \"" + self.__Manga["slug"] + f"\" (ID: " + str(self.__Manga["id"]) + "). Merged chapters count: {MergedChaptersCount}.")
 
 		# Если включён режим перезаписи.
 		elif system_objects.FORCE_MODE:
 			# Запись в лог информации: тайтл перезаписан.
-			system_objects.logger.info("Title: \"" + self.__Manga["slug"] + "\". Local data removed.")
+			system_objects.logger.info("Title: \"" + self.__Manga["slug"] + "\" (ID: " + str(self.__Manga["id"]) + "). Local data removed.")
 
 	def open(self, system_objects: Objects, output_dir: str, filename: str):
 		"""
@@ -267,7 +294,7 @@ class Manga:
 		# Сохранение описательного файла.
 		WriteJSON(f"{output_dir}/{filename}.json", self.__Manga)
 		# Запись в лог информации: данные сохранены.
-		system_objects.logger.info("Title: \"" + self.__Manga["slug"] + "\". Saved.")
+		system_objects.logger.info("Title: \"" + self.__Manga["slug"] + "\" (ID: " + str(self.__Manga["id"]) + "). Saved.")
 
 	#==========================================================================================#
 	# >>>>> ПУБЛИЧНЫЕ МЕТОДЫ УСТАНОВКИ СВОЙСТВ <<<<< #
