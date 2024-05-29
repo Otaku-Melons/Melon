@@ -200,6 +200,20 @@ class Logger:
 		# Запись в лог информации.
 		logging.info(f"Title: \"{slug}\" (ID: {title_id}). {Chapter} {chapter_id} repaired.")
 
+	def chapter_skipped(self, slug: str, title_id: int, chapter_id: int, is_paid: bool):
+		"""
+		Записывает в лог данные дополненной главы.
+			slug – алиас;
+			title_id – целочисленный идентификатор тайтла;
+			chapter_id – идентификатор главы;
+			is_paid – является ли глава платной.
+		"""
+
+		# Составление типа главы.
+		Chapter = "Paid chapter" if is_paid else "Chapter"
+		# Запись в лог информации.
+		logging.info(f"Title: \"{slug}\" (ID: {title_id}). {Chapter} {chapter_id} skipped.")
+
 	def covers_unstubbed(self, slug: str, title_id: int):
 		"""
 		Записывает в лог информацию об удалении обложек по причине того, что те являются заглушками.

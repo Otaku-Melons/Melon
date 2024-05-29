@@ -278,17 +278,17 @@ class Parser:
 			# Для каждой страницы ветви.
 			for BranchPage in range(0, int(ChaptersCount / 100) + 1):
 				# Выполнение запроса.
-				Response = self.__Requestor.get(f"https://api.remanga.org/api/titles/chapters/?branch_id={BranchID}&count={ChaptersCount}&ordering=-index&page=" + str(BranchPage + 1) + "&user_data=1")
+				Response = self.__Requestor.get(f"https://api.remanga.org/api/titles/chapters/?branch_id={BranchID}&count=100&ordering=-index&page=" + str(BranchPage + 1) + "&user_data=1")
 
 				# Если запрос успешен.
 				if Response.status_code == 200:
 					# Парсинг данных в JSON.
 					Data = Response.json["content"]
-
+					
 					# Для каждой главы.
 					for Chapter in Data:
 						# Если ветвь не существует, создать её.
-						if BranchID not in Content.keys(): Content[str(BranchID)] = list()
+						if str(BranchID) not in Content.keys(): Content[str(BranchID)] = list()
 						# Переводчики.
 						Translators = [sub["name"] for sub in Chapter["publishers"]]
 						# Буфер главы.
@@ -297,10 +297,21 @@ class Parser:
 							"volume": Chapter["tome"],
 							"number": float(Chapter["chapter"]) if "." in Chapter["chapter"] else int(Chapter["chapter"]),
 							"name": Zerotify(Chapter["name"]),
-							"is_paid": False,
+							"is_paid": Chapter["is_paid"],
+							"free-publication-date": None,
 							"translators": Translators,
 							"slides": []	
 						}
+
+						# Если включено добавление времени бесплатного времени публикации.
+						if self.__Settings["custom"]["add_free_publication_date"]:
+							# Если глава платная, записать время публикации.
+							if Buffer["is_paid"]: Buffer["free-publication-date"] = Chapter["pub_date"]
+
+						else:
+							# Удаление ключа. 
+							del Buffer["free-publication-date"]
+
 						# Запись главы.
 						Content[str(BranchID)].append(Buffer)
 
@@ -417,6 +428,11 @@ class Parser:
 
 				# Запись слайда. 
 				Slides.append(Buffer)
+
+		# Если глава является платной.
+		elif Response.status_code == 401:
+			# Запись в лог информации: глава пропущена.
+			self.__SystemObjects.logger.chapter_skipped(self.__Slug, self.__Title["id"], chapter_id, True)
 
 		else:
 			# Запись в лог ошибки.
@@ -602,7 +618,7 @@ class Parser:
 						# Запись информации о слайде.
 						content[BranchID][ChapterIndex]["slides"] = Slides
 						# Запись в лог информации: глава дополнена.
-						self.__SystemObjects.logger.chapter_amended(self.__Slug, self.__Title["id"], content[BranchID][ChapterIndex]["id"], False)
+						self.__SystemObjects.logger.chapter_amended(self.__Slug, self.__Title["id"], content[BranchID][ChapterIndex]["id"], content[BranchID][ChapterIndex]["is_paid"])
 
 					# Вывод в консоль: прогресс дополнения.
 					PrintAmendingProgress(message, ProgressIndex, ChaptersToAmendCount)

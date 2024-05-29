@@ -87,6 +87,7 @@ def repair(self, content: dict, chapter_id: int) -> dict:
 * amending_end
 * chapter_amended
 * chapter_repaired
+* chapter_skipped
 * covers_unstubbed
 * parsing_start
 * request_error

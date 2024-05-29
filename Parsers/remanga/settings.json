@@ -19,6 +19,7 @@
 	"custom": {
 		"token": "",
 		"ru_links": true,
-		"unstub": true
+		"unstub": true,
+		"add_free_publication_date": false
 	}
 }

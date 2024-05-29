@@ -189,7 +189,11 @@ class Parser:
 		"""
 
 		# Возрастной рейтинг.
-		Rating = int(data["ageRestriction"]["label"].split(" ")[0].replace("+", ""))
+		Rating = None
+		# Строковое представление.
+		RatingString = data["ageRestriction"]["label"].split(" ")[0].replace("+", "").replace("Нет", "")
+		# Если строковое представление состоит из цифр, конвертировать в число.
+		if RatingString.isdigit(): Rating = int(RatingString)
 
 		return Rating 
 
