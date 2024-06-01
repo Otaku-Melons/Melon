@@ -1,11 +1,13 @@
-from Parsers.hentailib.main import VERSION, STRUCT
-from Parsers.hentailib.main import Parser
+from Parsers.mangalib.main import VERSION, STRUCT
+from Parsers.mangalib.main import Parser
 
-import Parsers.hentailib.main as main 
+import Parsers.mangalib.main as main 
 
 #==========================================================================================#
 # >>>>> ОПРЕДЕЛЕНИЯ <<<<< #
 #==========================================================================================#
 
 NAME = "slashlib"
-main.SITE = "test-front.slashlib.me"
+SITE = "test-front.slashlib.me"
+main.NAME = NAME
+main.SITE = SITE

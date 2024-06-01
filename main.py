@@ -29,6 +29,8 @@ CommandsList = list()
 # Создание команды: get.
 Com = Command("get")
 Com.add_argument(ArgumentsTypes.URL, important = True)
+Com.add_flag_position(["f"])
+Com.add_flag_position(["s"])
 Com.add_key_position(["site"], ArgumentsTypes.All)
 Com.add_key_position(["fullname", "name"], ArgumentsTypes.All)
 Com.add_key_position(["dir"], ArgumentsTypes.All)

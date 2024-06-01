@@ -76,7 +76,6 @@ class LegacyManga:
 			"western_comic": "WESTERN_COMIC",
 			"russian_comic": "RUS_COMIC",
 			"indonesian_comic": "INDONESIAN_COMIC",
-			"manga": "MANGA",
 			"oel": "OEL"
 		}
 		Statuses = {
@@ -101,6 +100,10 @@ class LegacyManga:
 		manga["author"] = Zerotify(", ".join(manga["author"]))
 		manga["type"] = Types[manga["type"]]
 		manga["status"] = Statuses[manga["status"]]
+
+		# Приведение жанров и тегов в нижний регистр.
+		for Index in range(len(manga["genres"])): manga["genres"][Index] = manga["genres"][Index].lower()
+		for Index in range(len(manga["tags"])): manga["tags"][Index] = manga["tags"][Index].lower()
 
 		# Для каждой ветви.
 		for BranchID in manga["chapters"]:

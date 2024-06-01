@@ -1,3 +1,4 @@
+from Source.CLI.ParsersTable import ParsersTable
 from Source.Core.Downloader import Downloader
 from Source.Core.Objects import Objects
 
@@ -14,7 +15,7 @@ def com_get(system_objects: Objects, command: CommandData):
 	# Запись в лог информации: заголовок парсинга.
 	system_objects.logger.info("====== Downloading ======")
 	# Определение каталога и имени файла.
-	Directory = command.values["dir"] if "dir" in command.keys else None
+	Directory = command.values["dir"] if "dir" in command.keys else system_objects.temper.path
 	Filename = command.values["name"] if "name" in command.keys else None
 	if "fullname" in command.keys: Filename = command.values["fullname"]
 	FullName = True if "fullname" in command.keys else False
@@ -36,15 +37,32 @@ def com_list(system_objects: Objects):
 	# Список названий.
 	ParsersList = system_objects.manager.parsers_names
 	# Включение удаление лога.
-	system_objects.REMOVE_LOG = True 
+	system_objects.REMOVE_LOG = True
+	# Словарь для построения таблицы.
+	TableData = {
+		"NAME": [],
+		"VERSION": [],
+		"SITE": [],
+		"collect": [],
+		"get_updates": [],
+		"repair": []
+	}
 
 	# Для каждого парсера.
 	for Parser in ParsersList:
 		# Получение данных парсера.
 		Version = system_objects.manager.get_parser_version(Parser)
 		Site = system_objects.manager.get_parser_site(Parser)
-		# Вывод в консоль: название и версия парсера.
-		print(f"{Parser} ({Site}) – {Version}")
+		# Заполнение данных.
+		TableData["NAME"].append(Parser)
+		TableData["VERSION"].append(Version)
+		TableData["SITE"].append(Site)
+		TableData["collect"].append(system_objects.manager.check_method_collect(Parser))
+		TableData["get_updates"].append(system_objects.manager.check_method_get_updates(Parser))
+		TableData["repair"].append(system_objects.manager.check_method_repair(Parser))
+
+	# Вывод таблицы.
+	ParsersTable(TableData)
 
 def com_parse(system_objects: Objects, command: CommandData):
 	"""
@@ -58,7 +76,7 @@ def com_parse(system_objects: Objects, command: CommandData):
 	# Название парсера.
 	ParserName = command.values["use"]
 	# Инициализация парсера.
-	Parser = system_objects.manager.launch(ParserName, system_objects)
+	Parser = system_objects.manager.launch(ParserName)
 	# Настройки парсера.
 	ParserSettings = system_objects.manager.get_parser_settings(ParserName)
 	# Запись в лог информации: заголовок парсинга.

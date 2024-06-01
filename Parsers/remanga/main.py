@@ -221,8 +221,10 @@ class Parser:
 		Differences = None
 
 		try:
+			# Получение пути к каталогу временных файлов.
+			Temp = self.__SystemObjects.temper.get_parser_temp(NAME)
 			# Чтение изображений.
-			Pattern = io.imread(f"Parsers/{NAME}/Temp/cover")
+			Pattern = io.imread(f"{Temp}/cover")
 			Image = cv2.imread(pattern_path)
 			# Преобразование изображений в чёрно-белый формат.
 			Pattern = cv2.cvtColor(Pattern, cv2.COLOR_BGR2GRAY)
@@ -346,10 +348,10 @@ class Parser:
 
 		# Если включена фильтрация заглушек.
 		if self.__Settings["custom"]["unstub"]:
-			# Если каталог для временных файлов не существует, создать его.
-			if not os.path.exists(f"Parsers/{NAME}/Temp"): os.makedirs(f"Parsers/{NAME}/Temp")
+			# Получение пути к каталогу временных файлов.
+			Temp = self.__SystemObjects.temper.get_parser_temp(NAME)
 			# Скачивание обложки.
-			Downloader(self.__SystemObjects, self.__Requestor).image(Buffer["link"], SITE, directory = f"Parsers/{NAME}/Temp", filename = "cover", full_filename = True)
+			Downloader(self.__SystemObjects, self.__Requestor).image(Buffer["link"], SITE, directory = Temp, filename = "cover", full_filename = True)
 
 			# Если обложка является заглушкой.
 			if self.__CheckForStubs(Buffer["link"]):
@@ -388,7 +390,7 @@ class Parser:
 		# Описание.
 		Genres = list()
 		# Для каждого жанра записать имя.
-		for Genre in data["genres"]: Genres.append(Genre["name"].lower())
+		for Genre in data["genres"]: Genres.append(Genre["name"])
 
 		return Genres
 
@@ -473,7 +475,7 @@ class Parser:
 		# Описание.
 		Tags = list()
 		# Для каждого тега записать имя.
-		for Tag in data["categories"]: Tags.append(Tag["name"].lower())
+		for Tag in data["categories"]: Tags.append(Tag["name"])
 
 		return Tags
 

@@ -1,5 +1,6 @@
 from Source.Core.Manager import Manager
 from Source.Core.Logger import Logger
+from Source.Core.Temper import Temper
 
 class Objects:
 	"""Коллекция рабочих объектов."""
@@ -33,6 +34,12 @@ class Objects:
 
 		return self.__Manager
 
+	@property
+	def temper(self) -> Temper:
+		"""Дескриптор каталога временных файлов."""
+
+		return self.__Temper
+
 	#==========================================================================================#
 	# >>>>> МЕТОДЫ <<<<< #
 	#==========================================================================================#
@@ -42,6 +49,8 @@ class Objects:
 		#---> Генерация динамических свойств.
 		#==========================================================================================#
 		# Менеджер парсеров.
-		self.__Manager = Manager()
+		self.__Manager = Manager(self)
 		# Менеджер логов.
 		self.__Logger = Logger()
+		# Дескриптор каталога временных файлов.
+		self.__Temper = Temper()

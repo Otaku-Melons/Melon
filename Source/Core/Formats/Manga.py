@@ -127,11 +127,13 @@ class Manga:
 			# Если ветвь ещё не описана, создать для неё структуру.
 			if BranchID not in Branches.keys(): Branches[BranchID] = {
 				"id": int(BranchID),
-				"chapters-count": len(self.__Manga["content"][BranchID])
+				"chapters_count": len(self.__Manga["content"][BranchID])
 			}
 
 		# Запись данных.
 		self.__Manga["branches"] = list(Branches.values())
+		# Сортировка ветвей по количеству глав.
+		self.__Manga["branches"]= sorted(self.__Manga["branches"], key = lambda Value: Value["chapters_count"], reverse = True) 
 
 	def __InitializeRequestor(self, proxy: dict) -> WebRequestor:
 		"""
@@ -291,7 +293,9 @@ class Manga:
 			filename – имя файла;
 			legacy – указывает, нужно ли форматировать описательный файл в устаревший формат.
 		"""
-		
+
+		# Сортировка глав по возрастанию.
+		for BranchID in self.__Manga["content"].keys(): self.__Manga["content"][BranchID] = sorted(self.__Manga["content"][BranchID], key = lambda Value: (Value["volume"], Value["number"])) 
 		# Если требуется сохранение в устарвшем формате, конвертировать словарь.
 		if legacy: self.__Manga = LegacyManga.to_legacy(self.__Manga)
 		# Запись в лог информации: данные сконвертированы в устаревший формат.

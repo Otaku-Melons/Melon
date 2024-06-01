@@ -27,9 +27,16 @@ class Manager:
 
 	def __CheckParser(self, parser_name: str):
 		"""
-		Проверяет
+		Проверяет наличие парсера.
 			parser_name – название парсера.
 		"""
+
+		# Если парсер не существует.
+		if parser_name not in self.parsers_names:
+			# Запись в лог критической ошибки: нет такого парсера.
+			self.__SystemObjects.logger.critical(f"No parser \"{parser_name}\".")
+			# Выброс исключения.
+			raise Exception(f"No parser \"{parser_name}\".")
 
 	def __PutDefaultDirectories(self, settings: dict, parser_name: str):
 		"""
@@ -63,13 +70,114 @@ class Manager:
 	# >>>>> ПУБЛИЧНЫЕ МЕТОДЫ <<<<< #
 	#==========================================================================================#
 
-	def __init__(self):
-		"""Менеджер парсеров."""
+	def __init__(self, system_objects: "Objects"):
+		"""
+		Менеджер парсеров.
+			system_objects – коллекция системных объектов.
+		"""
 
 		#---> Генерация динамических свойств.
 		#==========================================================================================#
-		# 
-		pass
+		# Коллекция системных объектов.
+		self.__SystemObjects = system_objects
+
+	def launch(self, parser_name: str) -> any:
+		"""
+		Запускает парсер и возвращает его объект.
+			parser_name – название парсера.
+		"""
+
+		# Проверка наличия парсера.
+		self.__CheckParser(parser_name)
+		# Очистка временных файлов парсера.
+		self.__SystemObjects.temper.clear_parser_temp(parser_name)
+		# Инициализация парсера.
+		Module = importlib.import_module(f"Parsers.{parser_name}.main")
+		Parser = Module.Parser(self.__SystemObjects)
+		# Запись в лог информации: название и версия парсера.
+		self.__SystemObjects.logger.info(f"Parser: \"{Module.NAME}\" (version {Module.VERSION}).")
+
+		return Parser
+
+	#==========================================================================================#
+	# >>>>> ПУБЛИЧНЫЕ МЕТОДЫ ПРОВЕРКИ ИМПЛЕМЕНТАЦИЙ ПАРСЕРОВ <<<<< #
+	#==========================================================================================#
+
+	def check_method_collect(self, parser_name: str) -> bool:
+		"""
+		Проверяет, доступна ли в парсере имплементация метода collect.
+			parser_name – название парсера.
+		"""
+
+		# Проверка наличия парсера.
+		self.__CheckParser(parser_name)
+		# Инициализация парсера.
+		Module = importlib.import_module(f"Parsers.{parser_name}.main")
+		Parser = Module.Parser(self.__SystemObjects)
+		# Состояние: доступен ли метод.
+		IsImplemented = True
+
+		try:
+			# Проверка существования метода.
+			Parser.collect
+
+		except AttributeError:
+			# Переключение состояния.
+			IsImplemented = False
+
+		return IsImplemented
+
+	def check_method_get_updates(self, parser_name: str) -> bool:
+		"""
+		Проверяет, доступна ли в парсере имплементация метода get_updates.
+			parser_name – название парсера.
+		"""
+
+		# Проверка наличия парсера.
+		self.__CheckParser(parser_name)
+		# Инициализация парсера.
+		Module = importlib.import_module(f"Parsers.{parser_name}.main")
+		Parser = Module.Parser(self.__SystemObjects)
+		# Состояние: доступен ли метод.
+		IsImplemented = True
+
+		try:
+			# Проверка существования метода.
+			Parser.get_updates
+
+		except AttributeError:
+			# Переключение состояния.
+			IsImplemented = False
+
+		return IsImplemented
+
+	def check_method_repair(self, parser_name: str) -> bool:
+		"""
+		Проверяет, доступна ли в парсере имплементация метода repair.
+			parser_name – название парсера.
+		"""
+
+		# Проверка наличия парсера.
+		self.__CheckParser(parser_name)
+		# Инициализация парсера.
+		Module = importlib.import_module(f"Parsers.{parser_name}.main")
+		Parser = Module.Parser(self.__SystemObjects)
+		# Состояние: доступен ли метод.
+		IsImplemented = True
+
+		try:
+			# Проверка существования метода.
+			Parser.repair
+
+		except AttributeError:
+			# Переключение состояния.
+			IsImplemented = False
+
+		return IsImplemented
+
+	#==========================================================================================#
+	# >>>>> ПУБЛИЧНЫЕ МЕТОДЫ ПОЛУЧЕНИЯ ПАРАМЕТРОВ ПАРСЕРОВ <<<<< #
+	#==========================================================================================#
 
 	def get_parser_settings(self, parser_name: str) -> str:
 		"""
@@ -77,6 +185,8 @@ class Manager:
 			parser_name – название парсера.
 		"""
 
+		# Проверка наличия парсера.
+		self.__CheckParser(parser_name)
 		# Чтение настроек.
 		Settings = ReadJSON(f"Parsers/{parser_name}/settings.json")
 		# Устанавливает стандартные директории.
@@ -90,6 +200,8 @@ class Manager:
 			parser_name – название парсера.
 		"""
 
+		# Проверка наличия парсера.
+		self.__CheckParser(parser_name)
 		# Импорт парсера.
 		Module = importlib.import_module(f"Parsers.{parser_name}.main")
 
@@ -101,6 +213,8 @@ class Manager:
 			parser_name – название парсера.
 		"""
 
+		# Проверка наличия парсера.
+		self.__CheckParser(parser_name)
 		# Импорт парсера.
 		Module = importlib.import_module(f"Parsers.{parser_name}.main")
 
@@ -112,33 +226,9 @@ class Manager:
 			parser_name – название парсера.
 		"""
 
+		# Проверка наличия парсера.
+		self.__CheckParser(parser_name)
 		# Импорт парсера.
 		Module = importlib.import_module(f"Parsers.{parser_name}.main")
 
 		return Module.VERSION
-
-	def launch(self, parser_name: str, system_objects: "Objects") -> any:
-		"""
-		Запускает парсер и возвращает его объект.
-			parser_name – название парсера;
-			system_objects – коллекция системных объектов.
-		"""
-
-		# Объект парсера.
-		Parser = None
-
-		# Если парсер существует.
-		if parser_name in self.parsers_names:
-			# Инициализация парсера.
-			Module = importlib.import_module(f"Parsers.{parser_name}.main")
-			Parser = Module.Parser(system_objects)
-			# Запись в лог информации: название и версия парсера.
-			system_objects.logger.info(f"Parser: \"{Module.NAME}\" (version {Module.VERSION}).")
-
-		else:
-			# Запись в лог критической ошибки: нет такого парсера.
-			system_objects.logger.critical(f"No parser \"{parser_name}\".")
-			# Выброс исключения.
-			raise Exception(f"No parser \"{parser_name}\".")
-
-		return Parser
