@@ -630,6 +630,65 @@ class Parser:
 
 		return content
 
+	def get_updates(self, hours: int) -> list[str]:
+		"""
+		Возвращает список алиасов тайтлов, обновлённых на сервере за указанный период времени.
+			hours – количество часов, составляющих период для получения обновлений.
+		"""
+
+		# Список алиасов.
+		Updates = list()
+		# Промежуток времени для проверки обновлений (в миллисекундах).
+		UpdatesPeriod = hours * 3600000
+		# Состояние: достигнут ли конец проверяемого диапазона.
+		IsUpdatePeriodOut = False
+		# Счётчик страницы.
+		Page = 1
+		# Количество обновлённых тайтлов.
+		UpdatesCount = 0
+
+		# Проверка обновлений за указанный промежуток времени.
+		while not IsUpdatePeriodOut:
+			# Выполнение запроса.
+			Response = self.__Requestor.get(f"https://api.remanga.org/api/titles/last-chapters/?page={Page}&count=20")
+			
+			# Если запрос успешен.
+			if Response.status_code == 200:
+				# Парсинг ответа.
+				UpdatesPage = Response.json["content"]
+				
+				# Для каждой записи об обновлении.
+				for UpdateNote in UpdatesPage:
+					
+					# Если запись не выходит за пределы интервала.
+					if UpdateNote["upload_date"] < UpdatesPeriod:
+						# Сохранение алиаса обновлённого тайтла.
+						Updates.append(UpdateNote["dir"])
+						# Инкремент обновлённых тайтлов.
+						UpdatesCount += 1
+
+					else:
+						# Завершение цикла обновления.
+						IsUpdatePeriodOut = True
+
+			else:
+				# Завершение цикла обновления.
+				IsUpdatePeriodOut = True
+				# Запись в лог ошибки.
+				self.__SystemObjects.logger.request_error(Response, f"Unable to request updates page {Page}.")
+
+			# Если цикл завершён.
+			if not IsUpdatePeriodOut:
+				# Инкремент страницы.
+				Page += 1
+				# Выжидание указанного интервала.
+				sleep(self.__Settings["common"]["delay"])
+
+		# Запись в лог информации: количество собранных обновлений.
+		self.__SystemObjects.logger.updates_collected(len(Updates))
+
+		return Updates
+
 	def parse(self, slug: str, message: str = ""):
 		"""
 		Получает основные данные тайтла.

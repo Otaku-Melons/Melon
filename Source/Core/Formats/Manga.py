@@ -242,13 +242,18 @@ class Manga:
 				
 					# Если для главы с таким ID найдено локальное содержимое.
 					if self.__Manga["content"][BranchID][ChapterIndex]["id"] in LocalContent.keys():
-						# Запись информации о содержимом.
-						self.__Manga["content"][BranchID][ChapterIndex]["slides"] = LocalContent[self.__Manga["content"][BranchID][ChapterIndex]["id"]]
-						# Инкремент количества глав, для которых выполнено слияние.
-						MergedChaptersCount += 1
+						# Идентификатор главы.
+						ChapterID = self.__Manga["content"][BranchID][ChapterIndex]["id"]
+
+						# Если локальные данные не пустые.
+						if LocalContent[ChapterID]:
+							# Запись информации о содержимом.
+							self.__Manga["content"][BranchID][ChapterIndex]["slides"] = LocalContent[ChapterID]
+							# Инкремент количества глав, для которых выполнено слияние.
+							MergedChaptersCount += 1
 
 			# Запись в лог информации: количество глав, для которых выполнено слияние.
-			system_objects.logger.info("Title: \"" + self.__Manga["slug"] + f"\" (ID: " + str(self.__Manga["id"]) + "). Merged chapters count: {MergedChaptersCount}.")
+			system_objects.logger.info("Title: \"" + self.__Manga["slug"] + f"\" (ID: " + str(self.__Manga["id"]) + f"). Merged chapters count: {MergedChaptersCount}.")
 
 		# Если включён режим перезаписи.
 		elif system_objects.FORCE_MODE:

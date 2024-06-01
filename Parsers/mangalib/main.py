@@ -1,12 +1,11 @@
-from Source.Core.Formats.Manga import Manga
-
-from Parsers.hentailib.main import VERSION
+from Parsers.hentailib.main import VERSION, STRUCT
 from Parsers.hentailib.main import Parser
+
+import Parsers.hentailib.main as main 
 
 #==========================================================================================#
 # >>>>> ОПРЕДЕЛЕНИЯ <<<<< #
 #==========================================================================================#
 
 NAME = "mangalib"
-SITE = "test-front.mangalib.me"
-STRUCT = Manga()
+main.SITE = "test-front.mangalib.me"

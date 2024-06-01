@@ -42,11 +42,12 @@ CommandsList.append(Com)
 # Создание команды: parse.
 Com = Command("parse")
 Com.add_argument(ArgumentsTypes.All, important = True, layout_index = 1)
-Com.add_flag_position(["collection", "local"], layout_index = 1)
+Com.add_flag_position(["collection", "local", "updates"], layout_index = 1)
 Com.add_flag_position(["f"])
 Com.add_flag_position(["s"])
 Com.add_key_position(["use"], ArgumentsTypes.Text, important = True)
 Com.add_key_position(["from"], ArgumentsTypes.All)
+Com.add_key_position(["period"], ArgumentsTypes.Number)
 CommandsList.append(Com)
 
 # Создание команды: repair.

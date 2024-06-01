@@ -5,6 +5,7 @@ from Source.Core.Logger import Logger
 
 from dublib.WebRequestor import Protocols, WebConfig, WebLibs, WebRequestor
 from dublib.Methods import ReadJSON, RemoveRecurringSubstrings, Zerotify
+from datetime import datetime
 from time import sleep
 
 import urllib.parse
@@ -317,6 +318,18 @@ class Parser:
 
 		return Genres
 
+	def __GetSiteID(self) -> int:
+		"""Возвращает целочисленный идентификатор сайта."""
+
+		# ID сайта.
+		SiteID = None
+		# Проверка соответствий.
+		if "mangalib" in SITE: SiteID = 1
+		if "yaoilib" in SITE or "slashlib" in SITE: SiteID = 2
+		if "hentailib" in SITE: SiteID = 4
+		
+		return SiteID
+
 	def __GetServer(self) -> str:
 		"""Возвращает домен сервера хранения изображений."""
 
@@ -493,6 +506,17 @@ class Parser:
 
 		return Type
 
+	def __StringToDate(self, date_str: str) -> datetime:
+		"""
+		Преобразует строковое время в объектную реализацию.
+			date_str – строковая интерпретация.
+		"""
+
+		# Шаблон строки.
+		DatePattern = "%Y-%m-%dT%H:%M:%S.%fZ"
+
+		return datetime.strptime(date_str, DatePattern)
+
 	#==========================================================================================#
 	# >>>>> ПУБЛИЧНЫЕ МЕТОДЫ <<<<< #
 	#==========================================================================================#
@@ -570,6 +594,73 @@ class Parser:
 		self.__SystemObjects.logger.amending_end(self.__Slug, self.__Title["id"], AmendedChaptersCount)
 
 		return content
+
+	def get_updates(self, hours: int) -> list[str]:
+		"""
+		Возвращает список алиасов тайтлов, обновлённых на сервере за указанный период времени.
+			hours – количество часов, составляющих период для получения обновлений.
+		"""
+
+		# Список алиасов.
+		Updates = list()
+		# Промежуток времени для проверки обновлений (в секундах).
+		UpdatesPeriod = hours * 3600
+		# Состояние: достигнут ли конец проверяемого диапазона.
+		IsUpdatePeriodOut = False
+		# Счётчик страницы.
+		Page = 1
+		# Количество обновлённых тайтлов.
+		UpdatesCount = 0
+		# Заголовки.
+		Headers = {
+			"Site-Id": str(self.__GetSiteID())
+		}
+		# Текущая дата.
+		CurrentDate = datetime.utcnow()
+
+		# Проверка обновлений за указанный промежуток времени.
+		while not IsUpdatePeriodOut:
+			# Выполнение запроса.
+			Response = self.__Requestor.get(f"https://api.lib.social/api/latest-updates?page={Page}", headers = Headers)
+			
+			# Если запрос успешен.
+			if Response.status_code == 200:
+				# Парсинг ответа.
+				UpdatesPage = Response.json["data"]
+				
+				# Для каждой записи об обновлении.
+				for UpdateNote in UpdatesPage:
+					# Вычисление временной разницы между текущим моментом и временем публикации.
+					Delta = CurrentDate - self.__StringToDate(UpdateNote["last_item_at"])
+					
+					# Если запись не выходит за пределы интервала.
+					if Delta.seconds < UpdatesPeriod:
+						# Сохранение алиаса обновлённого тайтла.
+						Updates.append(UpdateNote["slug"])
+						# Инкремент обновлённых тайтлов.
+						UpdatesCount += 1
+
+					else:
+						# Завершение цикла обновления.
+						IsUpdatePeriodOut = True
+
+			else:
+				# Завершение цикла обновления.
+				IsUpdatePeriodOut = True
+				# Запись в лог ошибки.
+				self.__SystemObjects.logger.request_error(Response, f"Unable to request updates page {Page}.")
+
+			# Если цикл завершён.
+			if not IsUpdatePeriodOut:
+				# Инкремент страницы.
+				Page += 1
+				# Выжидание указанного интервала.
+				sleep(self.__Settings["common"]["delay"])
+
+		# Запись в лог информации: количество собранных обновлений.
+		self.__SystemObjects.logger.updates_collected(len(Updates))
+
+		return Updates
 
 	def parse(self, slug: str, message: str = ""):
 		"""

@@ -85,6 +85,15 @@ def com_parse(system_objects: Objects, command: CommandData):
 
 		# Запись в лог информации: количество тайтлов в коллекции.
 		system_objects.logger.collection_size(f"Titles in collection: {len(Slugs)}.")
+
+	# Если активирован флаг парсинга обновлений.
+	elif "updates" in command.flags:
+		# Период поиска обновлений.
+		Period = int(command.values["period"]) if "period" in command.keys else 24
+		# Вывод в консоль: идёт получение обновлений.
+		print("Collecting updates...")
+		# Получение обновлений.
+		Slugs = Parser.get_updates(Period)
 		
 	# Если активирован флаг обновления локальных файлов.
 	elif "local" in command.flags:
