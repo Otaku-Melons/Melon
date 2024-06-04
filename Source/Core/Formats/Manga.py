@@ -270,10 +270,21 @@ class Manga:
 			filename – имя файла.
 		"""
 
-		# Чтение описательного файла.
-		self.__Manga = ReadJSON(f"{output_dir}/{filename}.json")
-		# Если локальный описательный файл имеет устаревший формат, конвертировать его.
-		if self.__Manga["format"] != "melon-manga": self.__Manga = LegacyManga.from_legacy(self.__Manga)
+		# Путь к файлу.
+		Path = f"{output_dir}/{filename}.json"
+
+		# Если файл существует.
+		if os.path.exists(Path):
+			# Чтение описательного файла.
+			self.__Manga = ReadJSON(f"{output_dir}/{filename}.json")
+			# Если локальный описательный файл имеет устаревший формат, конвертировать его.
+			if self.__Manga["format"] != "melon-manga": self.__Manga = LegacyManga.from_legacy(self.__Manga)
+
+		else:
+			# Запись в лог критической ошибки: не удалось найти локальный файл.
+			system_objects.logger.critical("Couldn't read description file.")
+			# Выброс исключения.
+			raise FileNotFoundError(Path)
 
 	def repair(self, repairing_method: any, chapter_id: int):
 		"""

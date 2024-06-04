@@ -2,6 +2,7 @@ from Source.CLI.ParsersTable import ParsersTable
 from Source.Core.Downloader import Downloader
 from Source.Core.Objects import Objects
 
+from dublib.WebRequestor import Protocols, WebConfig, WebLibs, WebRequestor
 from dublib.Terminalyzer import CommandData
 from dublib.Methods import Cls
 
@@ -12,21 +13,48 @@ def com_get(system_objects: Objects, command: CommandData):
 		command – объект представления консольной команды.
 	"""
 
+	#---> Настройка логов.
+	#==========================================================================================#
+	# Выбор используемого парсера.
+	system_objects.logger.select_parser(command.values["use"])
 	# Запись в лог информации: заголовок парсинга.
 	system_objects.logger.info("====== Downloading ======")
+	# Вывод в консоль: загрузка.
+	print(f"URL: {command.arguments[0]}\nDownloading... ", end = "")
+
 	# Определение каталога и имени файла.
 	Directory = command.values["dir"] if "dir" in command.keys else system_objects.temper.path
 	Filename = command.values["name"] if "name" in command.keys else None
 	if "fullname" in command.keys: Filename = command.values["fullname"]
 	FullName = True if "fullname" in command.keys else False
-	# Вывод в консоль: загрузка.
-	print(f"URL: {command.arguments[0]}\nDownloading... ", end = "")
+	
+
+	# Получение данных парсера.
+	ParserName = command.values["use"]
+	ParserSettings = system_objects.manager.get_parser_settings(ParserName)
+	ParserSite = system_objects.manager.get_parser_site(ParserName)
+
+	# Инициализация загрузчика.
+	Config = WebConfig()
+	Config.select_lib(WebLibs.curl_cffi)
+	Config.generate_user_agent("pc")
+	Config.curl_cffi.enable_http2(True)
+	WebRequestorObject = WebRequestor(Config)
+	# Установка прокси.
+	if ParserSettings["proxy"]["enable"]: WebRequestorObject.add_proxy(
+		Protocols.HTTPS,
+		host = ParserSettings["proxy"]["host"],
+		port = ParserSettings["proxy"]["port"],
+		login = ParserSettings["proxy"]["login"],
+		password = ParserSettings["proxy"]["password"]
+	)
+
 	# Загрузка изображения.
-	Downloader(system_objects, exception = True).image(command.arguments[0], command.values["site"], Directory, Filename, FullName)
+	Result = Downloader(system_objects, WebRequestorObject, exception = True).image(command.arguments[0], ParserSite, Directory, Filename, FullName)
 	# Включение удаление лога.
 	system_objects.REMOVE_LOG = True 
 	# Вывод в консоль: завершение загрузки.
-	print("Done.")
+	print(Result)
 
 def com_list(system_objects: Objects):
 	"""
@@ -210,7 +238,7 @@ def com_repair(system_objects: Objects, command: CommandData):
 	# Название парсера.
 	ParserName = command.values["use"]
 	# Инициализация парсера.
-	Parser = system_objects.manager.launch(ParserName, system_objects)
+	Parser = system_objects.manager.launch(ParserName)
 	# Настройки парсера.
 	ParserSettings = system_objects.manager.get_parser_settings(ParserName)
 	# Запись в лог информации: заголовк восстановления.

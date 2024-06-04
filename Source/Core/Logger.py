@@ -128,7 +128,10 @@ class Logger:
 			text – данные.
 		"""
 
+		# Запись в лог критической ошибки.
 		logging.critical(text)
+		# Отправка отчёта.
+		self.__SendReport(text)
 
 	def error(self, text: str):
 		"""

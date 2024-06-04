@@ -204,6 +204,8 @@ class Manager:
 		self.__CheckParser(parser_name)
 		# Импорт парсера.
 		Module = importlib.import_module(f"Parsers.{parser_name}.main")
+		# Перезагрузка модуля (сбрасывает переопределённые переменные).
+		importlib.reload(Module)
 
 		return Module.SITE
 

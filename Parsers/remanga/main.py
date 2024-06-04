@@ -419,6 +419,8 @@ class Parser:
 					"index": SlideIndex + 1,
 					"link": Data["pages"][SlideIndex]["link"]
 				}
+				# Состояние: отфильтрован ли слайд.
+				IsFiltered = False
 				# Если указано настройками, русифицировать ссылку на слайд.
 				if self.__Settings["custom"]["ru_links"]: Buffer["link"] = self.__RusificateLink(Buffer["link"])
 
@@ -428,11 +430,13 @@ class Parser:
 					Buffer["width"] = Data["pages"][SlideIndex]["width"]
 					Buffer["height"] = Data["pages"][SlideIndex]["height"]
 
-				# Запись слайда. 
-				Slides.append(Buffer)
+				# Если включена фильтрация узких слайдов и высота меньше требуемой, отфильтровать слайд.
+				if self.__Settings["custom"]["min_height"] and Data["pages"][SlideIndex]["height"] <= self.__Settings["custom"]["min_height"]: IsFiltered = True
+				# Если слайд не отфильтрован, записать его.
+				if not IsFiltered: Slides.append(Buffer)
 
-		# Если глава является платной.
-		elif Response.status_code == 401:
+		# Если глава является платной или лицензированной.
+		elif Response.status_code in [401, 423]:
 			# Запись в лог информации: глава пропущена.
 			self.__SystemObjects.logger.chapter_skipped(self.__Slug, self.__Title["id"], chapter_id, True)
 

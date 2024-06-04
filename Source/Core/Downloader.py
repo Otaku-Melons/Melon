@@ -125,7 +125,7 @@ class Downloader:
 
 		return Status
 
-	def image(self, url: str, site: str, directory: str | None = None, filename: str | None = None, full_filename: bool = False):
+	def image(self, url: str, site: str, directory: str | None = None, filename: str | None = None, full_filename: bool = False) -> str:
 		"""
 		Скачивает изображение.
 			url – ссылка на изображение;
@@ -135,6 +135,9 @@ class Downloader:
 			full_filename – указывает, является ли имя файла полным.
 		"""
 
+		# Описание загрузки.
+		Status = None
+
 		#---> Определение параметров файла.
 		#==========================================================================================#
 		Filetype = self.__GetFiletype(url)
@@ -143,24 +146,31 @@ class Downloader:
 		elif filename == None: filename = self.__GetFilename(url)
 
 		# Если файл не существует или включён режим перезаписи.
-		#if not os.path.exists(f"{directory}{filename}{Filetype}") or self.__SystemObjects.FORCE_MODE:
-		#---> Запрос данных.
-		#==========================================================================================#
-		# Выполнение запроса.
-		Response = self.__Requestor.get(url)
+		if not os.path.exists(f"{directory}{filename}{Filetype}") or self.__SystemObjects.FORCE_MODE:
+			# Выполнение запроса.
+			Response = self.__Requestor.get(url, headers = {"Referer": f"https://{site}/"})
 
-		# Если запрос успешен
-		if Response.status_code == 200:
-			
-			# Открытие потока записи.
-			with open(f"{directory}{filename}{Filetype}", "wb") as FileWriter:
-				# Запись изображения.
-				FileWriter.write(Response.content)
-				# Переключение состояния.
-				IsSuccess = True
+			# Если запрос успешен
+			if Response.status_code == 200:
+				
+				# Открытие потока записи.
+				with open(f"{directory}{filename}{Filetype}", "wb") as FileWriter:
+					# Запись изображения.
+					FileWriter.write(Response.content)
+					# Переключение состояния.
+					IsSuccess = True
+					# Изменение статуса.
+					Status = "Done."
 
-		else:
-			# Запись в лог ошибки запроса.
-			self.__SystemObjects.logger.request_error(Response, f"Unable to download image: \"{url}\".")
-			# Выброс исключения.
-			if self.__RaiseExceptions: raise Exception(f"Unable to download image: \"{url}\". Response code: {Response.status_code}.")
+			else:
+				# Запись в лог ошибки запроса.
+				self.__SystemObjects.logger.request_error(Response, f"Unable to download image: \"{url}\".")
+				# Выброс исключения.
+				if self.__RaiseExceptions: raise Exception(f"Unable to download image: \"{url}\". Response code: {Response.status_code}.")
+
+		# Если файл уже существует.
+		elif os.path.exists(f"{directory}{filename}{Filetype}"):
+			# Изменение статуса.
+			Status = "Already exists."
+
+		return Status

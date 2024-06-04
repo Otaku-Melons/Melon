@@ -220,6 +220,8 @@ class Parser:
 		if Response.status_code == 200:
 			# Парсинг данных в JSON.
 			Data = Response.json["data"]
+			# Выжидание интервала.
+			sleep(self.__Settings["common"]["delay"])
 
 			# Для каждой главы.
 			for Chapter in Data:
@@ -351,6 +353,8 @@ class Parser:
 		if Response.status_code == 200:
 			# Парсинг данных в JSON.
 			Data = Response.json["data"]["imageServers"]
+			# Выжидание интервала.
+			sleep(self.__Settings["common"]["delay"])
 
 			# Для каждого сервера.
 			for ServerData in Data:
@@ -391,6 +395,8 @@ class Parser:
 		if Response.status_code == 200:
 			# Парсинг данных в JSON.
 			Data = Response.json["data"]["pages"]
+			# Выжидание интервала.
+			sleep(self.__Settings["common"]["delay"])
 
 			# Для каждого слайда.
 			for SlideIndex in range(len(Data)):
@@ -460,6 +466,8 @@ class Parser:
 			Response = Response.json["data"]
 			# Запись в лог информации: начало парсинга.
 			self.__SystemObjects.logger.parsing_start(self.__Slug, Response["id"])
+			# Выжидание интервала.
+			sleep(self.__Settings["common"]["delay"])
 
 		else:
 			# Запись в лог ошибки.
@@ -627,14 +635,14 @@ class Parser:
 			if Response.status_code == 200:
 				# Парсинг ответа.
 				UpdatesPage = Response.json["data"]
-				
+
 				# Для каждой записи об обновлении.
 				for UpdateNote in UpdatesPage:
 					# Вычисление временной разницы между текущим моментом и временем публикации.
 					Delta = CurrentDate - self.__StringToDate(UpdateNote["last_item_at"])
 					
 					# Если запись не выходит за пределы интервала.
-					if Delta.seconds < UpdatesPeriod:
+					if Delta.total_seconds() / 3600 <= hours:
 						# Сохранение алиаса обновлённого тайтла.
 						Updates.append(UpdateNote["slug"])
 						# Инкремент обновлённых тайтлов.
@@ -650,7 +658,7 @@ class Parser:
 				# Запись в лог ошибки.
 				self.__SystemObjects.logger.request_error(Response, f"Unable to request updates page {Page}.")
 
-			# Если цикл завершён.
+			# Если не все обновления получены.
 			if not IsUpdatePeriodOut:
 				# Инкремент страницы.
 				Page += 1
@@ -685,7 +693,7 @@ class Parser:
 		self.__Title["another_names"] = Data["otherNames"]
 		self.__Title["covers"] = self.__GetCovers(Data)
 		self.__Title["authors"] = self.__GetAuthors(Data)
-		self.__Title["publication_year"] = int(Data["releaseDate"])
+		self.__Title["publication_year"] = int(Data["releaseDate"]) if Data["releaseDate"] else None
 		self.__Title["description"] = self.__GetDescription(Data)
 		self.__Title["age_limit"] = self.__GetAgeLimit(Data)
 		self.__Title["type"] = self.__GetType(Data)
