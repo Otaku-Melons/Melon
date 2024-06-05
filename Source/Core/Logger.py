@@ -249,6 +249,15 @@ class Logger:
 		# Запись в лог ошибки.
 		self.error(f"{text} Response code: {response.status_code}.")
 
+	def titles_collected(self, titles_count: int):
+		"""
+		Записывает в лог количество собранных из каталога тайтлов.
+			titles_count – количество тайтлов.
+		"""
+
+		# Запись в лог информации.
+		logging.info(f"Titles collected: {titles_count}.")
+
 	def updates_collected(self, updates_count: int):
 		"""
 		Записывает в лог количество полученных обновлений.

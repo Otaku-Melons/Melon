@@ -59,8 +59,8 @@
 		"456": [
 			{
 				"id": 10,
-				"volume": 1,
-				"number": 1,
+				"volume": "1",
+				"number": "1",
 				"name": "Название главы",
 				"is-paid": false,
 				"translator": "Никнейм переводчика",

@@ -282,7 +282,7 @@ class Manga:
 
 		else:
 			# Запись в лог критической ошибки: не удалось найти локальный файл.
-			system_objects.logger.critical("Couldn't read description file.")
+			system_objects.logger.critical("Couldn't open file.")
 			# Выброс исключения.
 			raise FileNotFoundError(Path)
 

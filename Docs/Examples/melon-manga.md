@@ -58,8 +58,8 @@
 		"123456": [
 			{
 				"id": 1,
-				"volume": 1,
-				"number": 1,
+				"volume": "1",
+				"number": "1",
 				"name": "Название главы",
 				"is_paid": false,
 				"translators": [

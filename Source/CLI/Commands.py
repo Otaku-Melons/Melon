@@ -1,10 +1,56 @@
 from Source.CLI.ParsersTable import ParsersTable
 from Source.Core.Downloader import Downloader
+from Source.Core.Collector import Collector
 from Source.Core.Objects import Objects
 
 from dublib.WebRequestor import Protocols, WebConfig, WebLibs, WebRequestor
 from dublib.Terminalyzer import CommandData
 from dublib.Methods import Cls
+
+def com_collect(system_objects: Objects, command: CommandData):
+	"""
+	Собирает алиасы тайтлов из каталога и помещает их в список.
+		system_objects – коллекция системных объектов;
+		command – объект представления консольной команды.
+	"""
+
+	#---> Инициализация объектов.
+	#==========================================================================================#
+	# Название парсера.
+	ParserName = command.values["use"]
+	# Инициализация парсера.
+	Parser = system_objects.manager.launch(ParserName)
+	# Настройки парсера.
+	ParserSettings = system_objects.manager.get_parser_settings(ParserName)
+	# Инициализация менеджера коллекции.
+	CollectorObject = Collector(system_objects, ParserName)
+	# Получение фильтров и лимита страниц.
+	Filters = command.values["filters"] if "filters" in command.keys else None
+	PagesCount = int(command.values["pages"]) if "pages" in command.keys else None
+
+	#---> Вывод данных.
+	#==========================================================================================#
+	# Запись в лог информации: заголовк сбора.
+	system_objects.logger.info("====== Collecting ======")
+	# Очистка консоли.
+	Cls()
+	# Вывод в консоль: идёт сбор.
+	print("Collecting...")
+
+	#---> Получение коллекции.
+	#==========================================================================================#
+	# Парсинг каталога.
+	Collection = Parser.collect(filters = Filters, pages_count = PagesCount)
+	# Обновление и сохранение коллекци.
+	CollectorObject.append(Collection)
+	CollectorObject.save()
+	
+	#---> Завершающий этап.
+	#==========================================================================================#
+	# Включение удаление лога.
+	system_objects.REMOVE_LOG = True 
+	# Очистка консоли.
+	Cls()
 
 def com_get(system_objects: Objects, command: CommandData):
 	"""
@@ -120,7 +166,7 @@ def com_parse(system_objects: Objects, command: CommandData):
 		CurrentTitleIndex = 0
 		
 		# Открытие потока чтения.
-		with open(f"Source/Parsers/{ParserName}/Collection.txt", "r") as FileReader:
+		with open(f"Parsers/{ParserName}/Collection.txt", "r") as FileReader:
 			# Буфер чтения.
 			Buffer = FileReader.read().split("\n")
 			
@@ -130,7 +176,7 @@ def com_parse(system_objects: Objects, command: CommandData):
 				if Line.strip(): Slugs.append(Line)
 
 		# Запись в лог информации: количество тайтлов в коллекции.
-		system_objects.logger.collection_size(f"Titles in collection: {len(Slugs)}.")
+		system_objects.logger.info(f"Titles in collection: {len(Slugs)}.")
 
 	# Если активирован флаг парсинга обновлений.
 	elif "updates" in command.flags:
@@ -186,42 +232,45 @@ def com_parse(system_objects: Objects, command: CommandData):
 		# Сообщение для внутреннего обработчика.
 		Message = system_objects.MSG_SHUTDOWN + system_objects.MSG_FORCE_MODE + f"Parsing: {Index + 1} / {len(Slugs)}\nCurrent title: {Slugs[Index]}\n"
 
-		#---> Парсинг базовых данных.
-		#==========================================================================================#
-		Title = system_objects.manager.get_parser_struct(ParserName)
-		Parser.parse(Slugs[Index], Message)
-		Title.set_site(Parser.site)
-		Title.set_id(Parser.id)
-		Title.set_slug(Parser.slug)
-		Title.set_ru_name(Parser.ru_name)
-		Title.set_en_name(Parser.en_name)
-		Title.set_another_names(Parser.another_names)
-		Title.set_covers(Parser.covers)
-		Title.set_authors(Parser.authors)
-		Title.set_publication_year(Parser.publication_year)
-		Title.set_description(Parser.description)
-		Title.set_age_limit(Parser.age_limit)
-		Title.set_genres(Parser.genres)
-		Title.set_tags(Parser.tags)
-		Title.set_franchises(Parser.franchises)
-		Title.set_type(Parser.type)
-		Title.set_status(Parser.status)
-		Title.set_is_licensed(Parser.is_licensed)
-		Title.set_content(Parser.content)
+		try:
+			#---> Парсинг базовых данных.
+			#==========================================================================================#
+			Title = system_objects.manager.get_parser_struct(ParserName)
+			Parser.parse(Slugs[Index], Message)
+			Title.set_site(Parser.site)
+			Title.set_id(Parser.id)
+			Title.set_slug(Parser.slug)
+			Title.set_ru_name(Parser.ru_name)
+			Title.set_en_name(Parser.en_name)
+			Title.set_another_names(Parser.another_names)
+			Title.set_covers(Parser.covers)
+			Title.set_authors(Parser.authors)
+			Title.set_publication_year(Parser.publication_year)
+			Title.set_description(Parser.description)
+			Title.set_age_limit(Parser.age_limit)
+			Title.set_genres(Parser.genres)
+			Title.set_tags(Parser.tags)
+			Title.set_franchises(Parser.franchises)
+			Title.set_type(Parser.type)
+			Title.set_status(Parser.status)
+			Title.set_is_licensed(Parser.is_licensed)
+			Title.set_content(Parser.content)
 
-		#---> Получение дополнительных данных.
-		#==========================================================================================#
-		# Используемое имя файла.
-		Filename = Parser.id if ParserSettings["common"]["use_id_as_filename"] else Parser.slug
-		# Состояние: используется ли устаревший формат.
-		Legacy = True if ParserSettings["common"]["legacy"] else False
+			#---> Получение дополнительных данных.
+			#==========================================================================================#
+			# Используемое имя файла.
+			Filename = Parser.id if ParserSettings["common"]["use_id_as_filename"] else Parser.slug
+			# Состояние: используется ли устаревший формат.
+			Legacy = True if ParserSettings["common"]["legacy"] else False
 
-		#---> Обработка содержимого.
-		#==========================================================================================#
-		Title.merge(system_objects, ParserSettings["common"]["titles_directory"], Filename)
-		Title.amend(Parser.amend, Message)
-		Title.download_covers(system_objects, ParserSettings["common"]["covers_directory"], Filename, Message, ParserSettings["proxy"])
-		Title.save(system_objects, ParserSettings["common"]["titles_directory"], Filename, Legacy)
+			#---> Обработка содержимого.
+			#==========================================================================================#
+			Title.merge(system_objects, ParserSettings["common"]["titles_directory"], Filename)
+			Title.amend(Parser.amend, Message)
+			Title.download_covers(system_objects, ParserSettings["common"]["covers_directory"], Filename, Message, ParserSettings["proxy"])
+			Title.save(system_objects, ParserSettings["common"]["titles_directory"], Filename, Legacy)
+
+		except: pass
 
 	# Очистка консоли.
 	Cls()

@@ -13,7 +13,20 @@ def PrintAmendingProgress(message: str, current_state: int, max_state: int):
 	# Вывод в консоль: прогресс.
 	print(f"{message}\nAmending: {current_state} / {max_state}")
 
-def PrintStatus(message: str):
+def PrintCollectingStatus(page: int | None):
+	"""
+	Выводит в консоль прогресс сбора коллекции из каталога.
+		page – номер текущей страницы.
+	"""
+
+	# Очистка консоли.
+	Cls()
+	# Преобразование номера страницы в часть сообщения.
+	page = f" titles on page {page}" if page else ""
+	# Вывод в консоль: прогресс.
+	print(f"Collecting{page}...")
+
+def PrintParsingStatus(message: str):
 	"""
 	Выводит в консоль прогресс дополнение глав информацией о содержимом.
 		message – сообщение из внешнего обработчика.

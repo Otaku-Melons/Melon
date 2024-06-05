@@ -1,8 +1,8 @@
 from Source.Core.Formats.Manga import BaseStructs, Manga, Statuses, Types
-from Source.CLI.Templates import PrintAmendingProgress, PrintStatus
 from Source.Core.Downloader import Downloader
 from Source.Core.Objects import Objects
 from Source.Core.Logger import Logger
+from Source.CLI.Templates import *
 
 from dublib.WebRequestor import Protocols, WebConfig, WebLibs, WebRequestor
 from dublib.Methods import ReadJSON, RemoveRecurringSubstrings, Zerotify
@@ -296,8 +296,8 @@ class Parser:
 						# Буфер главы.
 						Buffer = {
 							"id": Chapter["id"],
-							"volume": Chapter["tome"],
-							"number": float(Chapter["chapter"]) if "." in Chapter["chapter"] else int(Chapter["chapter"]),
+							"volume": str(Chapter["tome"]),
+							"number": Chapter["chapter"],
 							"name": Zerotify(Chapter["name"]),
 							"is_paid": Chapter["is_paid"],
 							"free-publication-date": None,
@@ -636,6 +636,54 @@ class Parser:
 
 		return content
 
+	def collect(self, filters: str | None = None, pages_count: int | None = None) -> list[str]:
+		"""
+		Собирает список тайтлов по заданным параметром из каталога источника.
+			filters – строка из URI каталога, описывающая параметры запроса;
+			pages_count – количество запрашиваемых страниц.
+		"""
+
+		# Список тайтлов.
+		Slugs = list()
+		# Состояние: достигнута ли последняя страница католога.
+		IsLastPage = False		
+		# Текущая страница каталога.
+		Page = 1
+
+		# Пока не достигнута последняя страница или не получены все требуемые страницы.
+		while not IsLastPage:
+			# Выполнение запроса.
+			Response = self.__Requestor.get(f"https://api.remanga.org/api/search/catalog/?page={Page}&count=30&ordering=-id&{filters}")
+			
+			# Если запрос успешен.
+			if Response.status_code == 200:
+				# Вывод в консоль: прогресс сбора коллекции.
+				PrintCollectingStatus(Page)
+				# Парсинг ответа.
+				PageContent = Response.json["content"]
+				# Для каждой записи получить алиас.
+				for Note in PageContent: Slugs.append(Note["dir"])
+
+				# Если контента нет или достигнута последняя страница.
+				if not PageContent or pages_count and Page == pages_count:
+					# Завершение сбора.
+					IsLastPage = True
+					# Запись в лог информации: количество собранных тайтлов.
+					self.__SystemObjects.logger.titles_collected(len(Slugs))
+
+				# Выжидание интервала.
+				sleep(self.__Settings["common"]["delay"])
+				# Инкремент номера страницы.
+				Page += 1
+
+			else:
+				# Завершение сбора
+				self.__SystemObjects.logger.request_error(Response, "Unable to collect titles.")
+				# Выброс исключения.
+				raise Exception("Unable to collect titles.")
+
+		return Slugs
+
 	def get_updates(self, hours: int) -> list[str]:
 		"""
 		Возвращает список алиасов тайтлов, обновлённых на сервере за указанный период времени.
@@ -705,8 +753,8 @@ class Parser:
 		# Заполнение базовых данных.
 		self.__Title = BaseStructs().manga
 		self.__Slug = slug
-		# Вывод в лог: статус парсинга.
-		PrintStatus(message)
+		# Вывод в консоль: статус парсинга.
+		PrintParsingStatus(message)
 		# Получение описания.
 		Data = self.__GetTitleData()
 		# Занесение данных.

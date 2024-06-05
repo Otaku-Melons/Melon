@@ -46,6 +46,16 @@ def amend(self, content: dict | None = None, message: str = "") -> dict:
 		"""
 ```
 
+#### collect
+```Python
+def collect(self, filters: str | None = None, pages_count: int | None = None) -> list[str]:
+		"""
+		Собирает список тайтлов по заданным параметром из каталога источника.		
+			filters – строка из URI каталога, описывающая параметры запроса;
+			pages_count – количество запрашиваемых страниц.
+		"""
+```
+
 #### get_updates
 ```Python
 def get_updates(self, hours: int) -> list[str]:
@@ -85,9 +95,9 @@ def repair(self, content: dict, chapter_id: int) -> dict:
 
 Доступ к портам CLI осуществляется посредством обычного импорта из [Templates](/Source/CLI/Templates.py).
 
-
 * PrintAmendingProgress
-* PrintStatus
+* PrintCollectingStatus
+* PrintParsingStatus
 
 **Порты логов**
 
@@ -100,6 +110,7 @@ def repair(self, content: dict, chapter_id: int) -> dict:
 * covers_unstubbed
 * parsing_start
 * request_error
+* titles_collected
 * updates_collected
 
 Кроме того, доступ к логам можно осуществлять через имплементацию Melon, что позволяет последнему обрабатывать их при помощи файлов конфигурации (см. [Настройка логов](/Docs/LOGGER.md)).

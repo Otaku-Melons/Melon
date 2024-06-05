@@ -1,4 +1,4 @@
-from Source.CLI.Templates import PrintAmendingProgress, PrintStatus
+from Source.CLI.Templates import *
 
 from dublib.WebRequestor import Protocols, WebConfig, WebLibs, WebRequestor
 from Source.Core.Formats.Manga import Statuses, Types

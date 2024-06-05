@@ -26,6 +26,15 @@ SystemObjects.logger.info("Command: \"" + " ".join(sys.argv[1:len(sys.argv)]) + 
 # Список описаний обрабатываемых команд.
 CommandsList = list()
 
+# Создание команды: collect.
+Com = Command("collect")
+Com.add_flag_position(["f"])
+Com.add_flag_position(["s"])
+Com.add_key_position(["use"], ArgumentsTypes.Text, important = True)
+Com.add_key_position(["filters"], ArgumentsTypes.All)
+Com.add_key_position(["pages"], ArgumentsTypes.Number)
+CommandsList.append(Com)
+
 # Создание команды: get.
 Com = Command("get")
 Com.add_argument(ArgumentsTypes.URL, important = True)
@@ -68,17 +77,6 @@ CommandDataStruct = TerminalProcessor.check_commands(CommandsList)
 # Если не удалось определить команду, выбросить исключение.
 if CommandDataStruct == None: raise Exception("Unknown command.")
 
-# # Если не удалось найти парсер.
-# if CommandDataStruct.arguments[0] not in SystemObjects.manager.parsers_names:
-# 	# Запись в лог критической ошибки: парсер не найден.
-# 	SystemObjects.logger.critical(f"No parser named \"{CommandDataStruct.arguments[0]}\".")
-# 	# Выброс исключения.
-# 	raise Exception("Unkonwn parser.")
-
-# else:
-# 	# Запись в лог информации: название и версия парсера.
-# 	SystemObjects.logger.info(f"Parser: \"{CommandDataStruct.arguments[0]}\".")
-
 #==========================================================================================#
 # >>>>> ОБРАБОТКА НЕСПЕЦИФИЧЕСКИХ ФЛАГОВ <<<<< #
 #==========================================================================================#
@@ -104,6 +102,9 @@ if "s" in CommandDataStruct.flags:
 #==========================================================================================#
 # >>>>> ОБРАБОТКА КОММАНД <<<<< #
 #==========================================================================================#
+
+# Обработка команд: collect.
+if "collect" == CommandDataStruct.name: com_collect(SystemObjects, CommandDataStruct)
 
 # Обработка команд: get.
 if "get" == CommandDataStruct.name: com_get(SystemObjects, CommandDataStruct)

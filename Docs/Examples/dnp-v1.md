@@ -59,8 +59,8 @@
 		"123": [
 			{
 				"id": 10,
-				"volume": 1,
-				"number": 1,
+				"volume": "1",
+				"number": "1",
 				"name": "Название главы",
 				"type": "chapter",
 				"is-paid": false,

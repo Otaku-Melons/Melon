@@ -1,7 +1,7 @@
 from Source.Core.Formats.Manga import BaseStructs, Manga, Statuses, Types
-from Source.CLI.Templates import PrintAmendingProgress, PrintStatus
 from Source.Core.Objects import Objects
 from Source.Core.Logger import Logger
+from Source.CLI.Templates import *
 
 from dublib.WebRequestor import Protocols, WebConfig, WebLibs, WebRequestor
 from dublib.Methods import ReadJSON, RemoveRecurringSubstrings, Zerotify
@@ -239,8 +239,8 @@ class Parser:
 					# Буфер главы.
 					Buffer = {
 						"id": BranchData["id"],
-						"volume": float(Chapter["volume"]) if "." in Chapter["volume"] else int(Chapter["volume"]),
-						"number": float(Chapter["number"]) if "." in Chapter["number"] else int(Chapter["number"]),
+						"volume": Chapter["volume"],
+						"number": Chapter["number"],
 						"name": Zerotify(Chapter["name"]),
 						"is_paid": False,
 						"translators": Translators,
@@ -680,8 +680,8 @@ class Parser:
 		# Заполнение базовых данных.
 		self.__Title = BaseStructs().manga
 		self.__Slug = slug
-		# Вывод в лог: статус парсинга.
-		PrintStatus(message)
+		# Вывод в консоль: статус парсинга.
+		PrintParsingStatus(message)
 		# Получение описания.
 		Data = self.__GetTitleData()
 		# Занесение данных.
