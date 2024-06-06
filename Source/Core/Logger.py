@@ -75,6 +75,9 @@ class Logger:
 						parse_mode = "MarkdownV2"
 					)
 
+		# Отключение тихого режима.
+		self.__SilentMode = False
+
 	#==========================================================================================#
 	# >>>>> ПУБЛИЧНЫЕ МЕТОДЫ <<<<< #
 	#==========================================================================================#
@@ -88,10 +91,14 @@ class Logger:
 		self.__LogFilename = None
 		# Название парсера.
 		self.__ParserName = None
+		# Название точки CLI.
+		self.__PointName = None
 		# Текущие настройки логгирования.
 		self.__LoggerSettings = dict()
 		# Кэш описания ошибки.
 		self.__ErrorCache = None
+		# Состояние: включён ли тихий режим.
+		self.__SilentMode = False
 
 		#---> Настройка логов.
 		#==========================================================================================#
@@ -106,6 +113,15 @@ class Logger:
 		self.__LogFilename = self.__LogFilename.replace(":", "-")
 		# Установка конфигнурации.
 		logging.basicConfig(filename = self.__LogFilename, encoding = "utf-8", level = logging.INFO, format = "%(asctime)s %(levelname)s: %(message)s", datefmt = "%Y-%m-%d %H:%M:%S")		
+
+	def select_cli_point(self, point_name: str):
+		"""
+		Задаёт точку CLI для обработки фильтров логов.
+			point_name – название точки.
+		"""
+
+		# Сохранение названия.
+		self.__PointName = point_name
 
 	def select_parser(self, parser_name: str):
 		"""
@@ -130,8 +146,8 @@ class Logger:
 
 		# Запись в лог критической ошибки.
 		logging.critical(text)
-		# Отправка отчёта.
-		self.__SendReport(text)
+		# Если не включен тихий режим, отправить отчёт.
+		if not self.__SilentMode: self.__SendReport(text)
 
 	def error(self, text: str):
 		"""
@@ -141,8 +157,8 @@ class Logger:
 
 		# Запись в лог ошибки.
 		logging.error(text)
-		# Отправка отчёта.
-		self.__SendReport(text)
+		# Если не включен тихий режим, отправить отчёт.
+		if not self.__SilentMode: self.__SendReport(text)
 
 	def info(self, text: str):
 		"""
@@ -246,6 +262,8 @@ class Logger:
 
 		# Если не передано описание, использовать стандартное.
 		if not text: text = "Request error."
+		# Если ошибка игнорируется, включить тихий режим.
+		if response.status_code in self.__LoggerSettings["rules"][self.__PointName]["ignored_requests_errors"]: self.__SilentMode = True
 		# Запись в лог ошибки.
 		self.error(f"{text} Response code: {response.status_code}.")
 

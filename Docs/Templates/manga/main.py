@@ -9,6 +9,7 @@ from dublib.Methods import ReadJSON
 #==========================================================================================#
 
 VERSION = ""
+REPOS = ""
 NAME = ""
 SITE = ""
 STRUCT = Manga()

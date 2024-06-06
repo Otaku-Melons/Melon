@@ -61,15 +61,18 @@ class Collector:
 		# Добавление алиасов.
 		self.__Collection += slugs
 
-	def save(self):
-		"""Сохраняет коллекцию."""
+	def save(self, sort: bool = False):
+		"""
+		Сохраняет коллекцию.
+			sort – указывает, нужно ли сортировать алиасы в алфавитном порядке.
+		"""
 
 		# Фильтрация дублей методом конвертации в набор.
 		self.__Collection = list(set(self.__Collection))
+		# Если включена сортировка по алфавиту, выполнить её.
+		if sort: self.__Collection = sorted(self.__Collection)
 
 		# Открытие потока записи.
 		with open(self.__Path, "w") as FileWriter:
 			# Для каждого алиаса.
 			for Slug in self.__Collection: FileWriter.write(Slug + "\n")
-
-		

@@ -5,5 +5,19 @@
 		"chat_id": null,
 		"comment": "",
 		"attach_log": true
+	},
+	"rules": {
+		"collect": {
+			"ignored_requests_errors": []
+		},
+		"get": {
+			"ignored_requests_errors": []
+		},
+		"parse": {
+			"ignored_requests_errors": []
+		},
+		"repair": {
+			"ignored_requests_errors": []
+		}
 	}
 }

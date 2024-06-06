@@ -5,7 +5,9 @@ from Source.Core.Objects import Objects
 
 from dublib.WebRequestor import Protocols, WebConfig, WebLibs, WebRequestor
 from dublib.Terminalyzer import CommandData
-from dublib.Methods import Cls
+from dublib.Methods import Cls, ReadJSON
+
+import os
 
 def com_collect(system_objects: Objects, command: CommandData):
 	"""
@@ -14,8 +16,12 @@ def com_collect(system_objects: Objects, command: CommandData):
 		command – объект представления консольной команды.
 	"""
 
-	#---> Инициализация объектов.
+	input(command.name)
+
+	#---> Подготовительный этап.
 	#==========================================================================================#
+	# Установка названия точки CLI.
+	system_objects.logger.select_cli_point(command.name)
 	# Название парсера.
 	ParserName = command.values["use"]
 	# Инициализация парсера.
@@ -24,9 +30,10 @@ def com_collect(system_objects: Objects, command: CommandData):
 	ParserSettings = system_objects.manager.get_parser_settings(ParserName)
 	# Инициализация менеджера коллекции.
 	CollectorObject = Collector(system_objects, ParserName)
-	# Получение фильтров и лимита страниц.
+	# Получение параметров команды.
 	Filters = command.values["filters"] if "filters" in command.keys else None
 	PagesCount = int(command.values["pages"]) if "pages" in command.keys else None
+	Sort = True if "sort" in command.flags else False
 
 	#---> Вывод данных.
 	#==========================================================================================#
@@ -43,7 +50,7 @@ def com_collect(system_objects: Objects, command: CommandData):
 	Collection = Parser.collect(filters = Filters, pages_count = PagesCount)
 	# Обновление и сохранение коллекци.
 	CollectorObject.append(Collection)
-	CollectorObject.save()
+	CollectorObject.save(sort = Sort)
 	
 	#---> Завершающий этап.
 	#==========================================================================================#
@@ -59,27 +66,31 @@ def com_get(system_objects: Objects, command: CommandData):
 		command – объект представления консольной команды.
 	"""
 
-	#---> Настройка логов.
+	#---> Подготовительный этап.
 	#==========================================================================================#
-	# Выбор используемого парсера.
+	# Установка названия точки CLI.
+	system_objects.logger.select_cli_point(command.name)
+	# Получение данных парсера.
+	ParserName = command.values["use"]
+	ParserSettings = system_objects.manager.get_parser_settings(ParserName)
+	ParserSite = system_objects.manager.get_parser_site(ParserName)
+	# Получение параметров команды.
+	Directory = command.values["dir"] if "dir" in command.keys else system_objects.temper.path
+	Filename = command.values["name"] if "name" in command.keys else None
+	if "fullname" in command.keys: Filename = command.values["fullname"]
+	FullName = True if "fullname" in command.keys else False
+
+	#---> Вывод данных.
+	#==========================================================================================#
+	# Выбор в менеджере логов используемого парсера.
 	system_objects.logger.select_parser(command.values["use"])
 	# Запись в лог информации: заголовок парсинга.
 	system_objects.logger.info("====== Downloading ======")
 	# Вывод в консоль: загрузка.
 	print(f"URL: {command.arguments[0]}\nDownloading... ", end = "")
-
-	# Определение каталога и имени файла.
-	Directory = command.values["dir"] if "dir" in command.keys else system_objects.temper.path
-	Filename = command.values["name"] if "name" in command.keys else None
-	if "fullname" in command.keys: Filename = command.values["fullname"]
-	FullName = True if "fullname" in command.keys else False
 	
-
-	# Получение данных парсера.
-	ParserName = command.values["use"]
-	ParserSettings = system_objects.manager.get_parser_settings(ParserName)
-	ParserSite = system_objects.manager.get_parser_site(ParserName)
-
+	#---> Скачивание изображения.
+	#==========================================================================================#
 	# Инициализация загрузчика.
 	Config = WebConfig()
 	Config.select_lib(WebLibs.curl_cffi)
@@ -94,9 +105,11 @@ def com_get(system_objects: Objects, command: CommandData):
 		login = ParserSettings["proxy"]["login"],
 		password = ParserSettings["proxy"]["password"]
 	)
-
 	# Загрузка изображения.
 	Result = Downloader(system_objects, WebRequestorObject, exception = True).image(command.arguments[0], ParserSite, Directory, Filename, FullName)
+
+	#---> Завершающий этап.
+	#==========================================================================================#
 	# Включение удаление лога.
 	system_objects.REMOVE_LOG = True 
 	# Вывод в консоль: завершение загрузки.
@@ -145,6 +158,8 @@ def com_parse(system_objects: Objects, command: CommandData):
 		command – объект представления консольной команды.
 	"""
 
+	# Установка названия точки CLI.
+	system_objects.logger.select_cli_point(command.name)
 	# Очистка консоли.
 	Cls()
 	# Название парсера.
@@ -192,22 +207,19 @@ def com_parse(system_objects: Objects, command: CommandData):
 		# Вывод в консоль: идёт поиск тайтлов.
 		print("Scanning titles...")
 		# Получение списка файлов в директории.
-		Slugs = os.listdir(ParserSettings["common"]["titles_directory"])
+		LocalTitles = os.listdir(ParserSettings["common"]["titles_directory"])
 		# Фильтрация только файлов формата JSON.
-		Slugs = list(filter(lambda File: File.endswith(".json"), Slugs))
-			
+		LocalTitles = list(filter(lambda File: File.endswith(".json"), LocalTitles))
+		
 		# Для каждого алиаса.
-		for Slug in Slugs:
-
-			# Открытие локального описательного файла JSON.
-			with open(ParserSettings["common"]["titles_directory"] + "/" + Slug, encoding = "utf-8") as FileRead:
-				# JSON файл тайтла.
-				LocalTitle = json.load(FileRead)
-				# Помещение алиаса в список.
-				Slugs.append(LocalTitle["slug"])
+		for Slug in LocalTitles:
+			# Чтение тайтла.
+			Title = ReadJSON(ParserSettings["common"]["titles_directory"] + "/" + Slug) 
+			# Помещение алиаса тайтла в список.
+			Slugs.append(Title["slug"])
 
 		# Запись в лог информации: количество тайтлов для парсинга.
-		logging.info("Local titles to parsing: " + str(len(Slugs)) + ".")
+		system_objects.logger.info("Local titles to parsing: " + str(len(Slugs)) + ".")
 
 	else:
 		# Запись аргумента в качестве цели парсинга.
@@ -282,6 +294,8 @@ def com_repair(system_objects: Objects, command: CommandData):
 		command – объект представления консольной команды.
 	"""
 
+	# Установка названия точки CLI.
+	system_objects.logger.select_cli_point(command.name)
 	# Очистка консоли.
 	Cls()
 	# Название парсера.

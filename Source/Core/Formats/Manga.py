@@ -4,6 +4,7 @@ from Source.Core.Objects import Objects
 
 from dublib.WebRequestor import Protocols, WebConfig, WebLibs, WebRequestor
 from dublib.Methods import Cls, ReadJSON, WriteJSON
+from packaging.version import Version
 from time import sleep
 
 import enum
@@ -306,7 +307,7 @@ class Manga:
 		"""
 
 		# Сортировка глав по возрастанию.
-		for BranchID in self.__Manga["content"].keys(): self.__Manga["content"][BranchID] = sorted(self.__Manga["content"][BranchID], key = lambda Value: (Value["volume"], Value["number"])) 
+		for BranchID in self.__Manga["content"].keys(): self.__Manga["content"][BranchID] = sorted(self.__Manga["content"][BranchID], key = lambda Value: (Version(Value["volume"]), Version(Value["number"]))) 
 		# Если требуется сохранение в устарвшем формате, конвертировать словарь.
 		if legacy: self.__Manga = LegacyManga.to_legacy(self.__Manga)
 		# Запись в лог информации: данные сконвертированы в устаревший формат.
