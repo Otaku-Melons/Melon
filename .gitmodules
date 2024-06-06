@@ -1,0 +1,9 @@
+[submodule "Parsers/mangalib"]
+	path = Parsers/mangalib
+	url = https://github.com/DUB1401/mangalib
+[submodule "Parsers/hentailib"]
+	path = Parsers/hentailib
+	url = https://github.com/DUB1401/hentailib
+[submodule "Parsers/slashlib"]
+	path = Parsers/slashlib
+	url = https://github.com/DUB1401/slashlib
