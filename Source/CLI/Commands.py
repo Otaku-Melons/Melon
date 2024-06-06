@@ -2,6 +2,7 @@ from Source.CLI.ParsersTable import ParsersTable
 from Source.Core.Downloader import Downloader
 from Source.Core.Collector import Collector
 from Source.Core.Objects import Objects
+from Source.Core.Exceptions import *
 
 from dublib.WebRequestor import Protocols, WebConfig, WebLibs, WebRequestor
 from dublib.Terminalyzer import CommandData
@@ -282,7 +283,7 @@ def com_parse(system_objects: Objects, command: CommandData):
 			Title.download_covers(system_objects, ParserSettings["common"]["covers_directory"], Filename, Message, ParserSettings["proxy"])
 			Title.save(system_objects, ParserSettings["common"]["titles_directory"], Filename, Legacy)
 
-		except: pass
+		except TitleNotFound: pass
 
 	# Очистка консоли.
 	Cls()

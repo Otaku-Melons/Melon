@@ -89,7 +89,7 @@ def repair(self, content: dict, chapter_id: int) -> dict:
 
 Для выполнения запросов рекомендуется использовать библиотеку [dublib](https://github.com/DUB1401/dublib) и её модуль `WebRequestor`, но подойти могут и любые другие библиотеки, структура ответа которых мимикрирует под `requests.Response` (содержит _status_code_).
 
-### 3. Поддержка портов
+### 3. Поддержка портов и исключений
 
 Для работы с CLI, логами и временными файлами предоставляются так называемые порты, позволяющие выводить данные в унифицированном формате. Каждый парсер на разных этапах своей работы может использовать следующие порты:
 
@@ -105,15 +105,18 @@ def repair(self, content: dict, chapter_id: int) -> dict:
 
 Доступ к портам логов осуществляется из коллекции системных объектов `self.__SystemObjects.logger`.
 
-* amending_end
-* chapter_amended
-* chapter_repaired
-* chapter_skipped
-* covers_unstubbed
-* parsing_start
-* request_error
-* titles_collected
-* updates_collected
+* Этапы парсинга:
+	* amending_end
+	* chapter_amended
+	* chapter_repaired
+	* chapter_skipped
+	* covers_unstubbed
+	* parsing_start
+	* titles_collected
+	* updates_collected
+* Ошибки:
+	* request_error
+	* title_not_found
 
 Кроме того, доступ к логам можно осуществлять через имплементацию Melon, что позволяет последнему обрабатывать их при помощи файлов конфигурации (см. [Настройка логов](/Docs/LOGGER.md)).
 
@@ -123,6 +126,10 @@ self.__SystemObjects.logger.warning("Warning")
 self.__SystemObjects.logger.error("Error")
 self.__SystemObjects.logger.critical("Critical")
 ```
+
+В некоторых случаях парсер также обязан выбрасывать исключения, которые используются Melon для корректной обработки процесса получения контента.
+
+* TitleNotFound – тайтл не найден в источнике.
 
 **Порты временных файлов**
 

@@ -8,16 +8,24 @@
 	},
 	"rules": {
 		"collect": {
-			"ignored_requests_errors": []
+			"ignored_requests_errors": [],
+			"title_not_found": true,
+			"warnings": false
 		},
 		"get": {
-			"ignored_requests_errors": []
+			"ignored_requests_errors": [],
+			"title_not_found": true,
+			"warnings": false
 		},
 		"parse": {
-			"ignored_requests_errors": []
+			"ignored_requests_errors": [],
+			"title_not_found": true,
+			"warnings": false
 		},
 		"repair": {
-			"ignored_requests_errors": []
+			"ignored_requests_errors": [],
+			"title_not_found": true,
+			"warnings": false
 		}
 	}
 }

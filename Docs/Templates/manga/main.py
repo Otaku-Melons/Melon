@@ -1,7 +1,9 @@
+from Source.Core.Formats.Manga import BaseStructs, Manga, Statuses, Types
+from Source.Core.Objects import Objects
+from Source.Core.Exceptions import *
 from Source.CLI.Templates import *
 
 from dublib.WebRequestor import Protocols, WebConfig, WebLibs, WebRequestor
-from Source.Core.Formats.Manga import Statuses, Types
 from dublib.Methods import ReadJSON
 
 #==========================================================================================#

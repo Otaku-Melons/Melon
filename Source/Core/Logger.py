@@ -174,10 +174,42 @@ class Logger:
 			text – данные.
 		"""
 
+		# Запись в лог предупреждения.
 		logging.warning(text)
+		# Если включена отправка предупреждений, отослать отчёт.
+		if self.__LoggerSettings["rules"][self.__PointName]["warnings"]: self.__SendReport(text)
 
 	#==========================================================================================#
-	# >>>>> ШАБЛОНЫ ТИПОВ ЗАПИСЕЙ <<<<< #
+	# >>>>> ШАБЛОНЫ ОШИБОК <<<<< #
+	#==========================================================================================#
+
+	def request_error(self, response: WebResponse, text: str | None = None):
+		"""
+		Обрабатывает ошибку сети.
+			response – объект WEB-ответа;
+			text – описание ошибки.
+		"""
+
+		# Если не передано описание, использовать стандартное.
+		if not text: text = "Request error."
+		# Если ошибка игнорируется, включить тихий режим.
+		if response.status_code in self.__LoggerSettings["rules"][self.__PointName]["ignored_requests_errors"]: self.__SilentMode = True
+		# Запись в лог ошибки.
+		self.error(f"{text} Response code: {response.status_code}.")
+
+	def title_not_found(self, slug: str):
+		"""
+		Записывает в лог предупреждение о том, что тайтл не найден в источнике.
+			slug – алиас.
+		"""
+
+		# Если ошибка игнорируется, включить тихий режим.
+		if not self.__LoggerSettings["rules"][self.__PointName]["title_not_found"]: self.__SilentMode = True
+		# Запись в лог предупреждения.
+		self.error(f"Title: \"{slug}\". Not found.")
+
+	#==========================================================================================#
+	# >>>>> ШАБЛОНЫ ЗАПИСЕЙ <<<<< #
 	#==========================================================================================#
 
 	def amending_end(self, slug: str, title_id: int, chapters_cont: int):
@@ -252,20 +284,6 @@ class Logger:
 
 		# Запись в лог информации.
 		logging.info(f"Title: \"{slug}\" (ID: {title_id}). Parsing...")
-
-	def request_error(self, response: WebResponse, text: str | None = None):
-		"""
-		Обрабатывает ошибку сети.
-			response – объект WEB-ответа;
-			text – описание ошибки.
-		"""
-
-		# Если не передано описание, использовать стандартное.
-		if not text: text = "Request error."
-		# Если ошибка игнорируется, включить тихий режим.
-		if response.status_code in self.__LoggerSettings["rules"][self.__PointName]["ignored_requests_errors"]: self.__SilentMode = True
-		# Запись в лог ошибки.
-		self.error(f"{text} Response code: {response.status_code}.")
 
 	def titles_collected(self, titles_count: int):
 		"""
