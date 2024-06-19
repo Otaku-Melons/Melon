@@ -17,8 +17,6 @@ def com_collect(system_objects: Objects, command: CommandData):
 		command – объект представления консольной команды.
 	"""
 
-	input(command.name)
-
 	#---> Подготовительный этап.
 	#==========================================================================================#
 	# Установка названия точки CLI.
@@ -27,8 +25,6 @@ def com_collect(system_objects: Objects, command: CommandData):
 	ParserName = command.values["use"]
 	# Инициализация парсера.
 	Parser = system_objects.manager.launch(ParserName)
-	# Настройки парсера.
-	ParserSettings = system_objects.manager.get_parser_settings(ParserName)
 	# Инициализация менеджера коллекции.
 	CollectorObject = Collector(system_objects, ParserName)
 	# Получение параметров команды.
@@ -94,13 +90,12 @@ def com_get(system_objects: Objects, command: CommandData):
 	#==========================================================================================#
 	# Инициализация загрузчика.
 	Config = WebConfig()
-	Config.select_lib(WebLibs.curl_cffi)
+	Config.select_lib(WebLibs.requests)
 	Config.generate_user_agent("pc")
-	Config.curl_cffi.enable_http2(True)
 	WebRequestorObject = WebRequestor(Config)
 	# Установка прокси.
 	if ParserSettings["proxy"]["enable"]: WebRequestorObject.add_proxy(
-		Protocols.HTTPS,
+		Protocols.HTTP,
 		host = ParserSettings["proxy"]["host"],
 		port = ParserSettings["proxy"]["port"],
 		login = ParserSettings["proxy"]["login"],

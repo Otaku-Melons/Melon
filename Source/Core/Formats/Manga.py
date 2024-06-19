@@ -181,12 +181,12 @@ class Manga:
 		# Дополнение содержимого.
 		self.__Manga["content"] = amending_method(self.__Manga["content"], message)
 
-	def download_covers(self, system_objects: Objects, output_dir: str, filename: str, message: str, proxy: dict):
+	def download_covers(self, system_objects: Objects, output_dir: str, used_filename: str, message: str, proxy: dict):
 		"""
 		Скачивает обложки.
 			system_objects – коллекция системных объектов;
 			output_dir – директория хранения;
-			filename – используемое имя файла;
+			used_filename – используемое имя описательного файла;
 			message – сообщение для внутреннего обработчика;
 			proxy – данные о прокси.
 		"""
@@ -194,7 +194,7 @@ class Manga:
 		# Менеджер запросов.
 		Requestor = self.__InitializeRequestor(proxy)
 		# Директория обложек.
-		CoversDirectory = f"{output_dir}/{filename}"
+		CoversDirectory = f"{output_dir}/{used_filename}"
 		# Если директория обложек не существует, создать её.
 		if not os.path.exists(CoversDirectory): os.makedirs(CoversDirectory)
 		# Очистка консоли.
@@ -204,8 +204,10 @@ class Manga:
 
 		# Для каждой обложки.
 		for CoverIndex in range(len(self.__Manga["covers"])):
+			# Название файла.
+			Filename = self.__Manga["covers"][CoverIndex]["link"].split("/")[-1]
 			# Вывод в консоль: загрузка обложки.
-			print(f"Downloading cover: \"{filename}\"... ", end = "")
+			print(f"Downloading cover: \"{Filename}\"... ", end = "")
 			# Загрузка обложки.
 			Result = Downloader(system_objects, Requestor).cover(self.__Manga["covers"][CoverIndex]["link"], self.__Manga["site"], CoversDirectory, self.__Manga["slug"], self.__Manga["id"])
 			# Вывод в консоль: статус загрузки.
@@ -307,7 +309,7 @@ class Manga:
 		"""
 
 		# Сортировка глав по возрастанию.
-		for BranchID in self.__Manga["content"].keys(): self.__Manga["content"][BranchID] = sorted(self.__Manga["content"][BranchID], key = lambda Value: (Version(Value["volume"]), Version(Value["number"]))) 
+		for BranchID in self.__Manga["content"].keys(): self.__Manga["content"][BranchID] = sorted(self.__Manga["content"][BranchID], key = lambda Value: (list(map(int, Value["volume"].split("."))), list(map(int, Value["number"].split("."))))) 
 		# Если требуется сохранение в устарвшем формате, конвертировать словарь.
 		if legacy: self.__Manga = LegacyManga.to_legacy(self.__Manga)
 		# Запись в лог информации: данные сконвертированы в устаревший формат.
