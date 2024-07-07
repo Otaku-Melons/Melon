@@ -1,8 +1,8 @@
 from Source.Core.Objects import Objects
 from Source.CLI.Commands import *
 
-from dublib.Terminalyzer import ArgumentsTypes, Command, Terminalyzer
-from dublib.Methods import CheckPythonMinimalVersion, Cls, Shutdown
+from dublib.CLI.Terminalyzer import Command, ParametersTypes, Terminalyzer
+from dublib.Methods.System import CheckPythonMinimalVersion, Shutdown
 
 import sys
 
@@ -27,53 +27,65 @@ SystemObjects.logger.info("Command: \"" + " ".join(sys.argv[1:len(sys.argv)]) + 
 CommandsList = list()
 
 # Создание команды: collect.
-Com = Command("collect")
-Com.add_flag_position(["f"])
-Com.add_flag_position(["s"])
-Com.add_flag_position(["sort"])
-Com.add_key_position(["use"], ArgumentsTypes.Text, important = True)
-Com.add_key_position(["filters"], ArgumentsTypes.All)
-Com.add_key_position(["pages"], ArgumentsTypes.Number)
+Com = Command("collect", "Collect titles slugs into Collection.txt file.")
+ComPos = Com.create_position("PARSER", "Used parser.", important = True)
+ComPos.add_key("use", ParametersTypes.Text, "Parser name.")
+Com.add_flag("f", "Enable force mode.")
+Com.add_flag("s", "Shutdown PC after script finish.")
+Com.add_flag("sort", "Enable slugs sorting.")
+Com.add_key("filters", description = "Query string for filtering titles.")
+Com.add_key("pages", ParametersTypes.Number, "Count of pages to collecting.")
 CommandsList.append(Com)
 
 # Создание команды: get.
-Com = Command("get")
-Com.add_argument(ArgumentsTypes.URL, important = True)
-Com.add_flag_position(["f"])
-Com.add_flag_position(["s"])
-Com.add_key_position(["use"], ArgumentsTypes.Text, important = True)
-Com.add_key_position(["fullname", "name"], ArgumentsTypes.All)
-Com.add_key_position(["dir"], ArgumentsTypes.All)
+Com = Command("get", "Download image.")
+ComPos = Com.create_position("URL", "Image source.")
+ComPos.add_argument(ParametersTypes.URL, "Link to image.")
+ComPos = Com.create_position("PARSER", "Used parser.", important = True)
+ComPos.add_key("use", ParametersTypes.Text, "Parser name.")
+ComPos = Com.create_position("NAME", "Type of naming.")
+ComPos.add_key("fullname", description = "Full name of file.")
+ComPos.add_key("name", "Name of file without type.")
+Com.add_flag("f", "Enable force mode.")
+Com.add_flag("s", "Shutdown PC after script finish.")
+Com.add_key("dir", ParametersTypes.ValidPath, "Output directory.")
 CommandsList.append(Com)
 
 # Создание команды: list.
-Com = Command("list")
-Com.add_flag_position(["s"])
+Com = Command("list", "Print list of installed parsers.")
+Com.add_flag("s", "Shutdown PC after script finish.")
 CommandsList.append(Com)
 
 # Создание команды: parse.
-Com = Command("parse")
-Com.add_argument(ArgumentsTypes.All, important = True, layout_index = 1)
-Com.add_flag_position(["collection", "local", "updates"], layout_index = 1)
-Com.add_flag_position(["f"])
-Com.add_flag_position(["s"])
-Com.add_key_position(["use"], ArgumentsTypes.Text, important = True)
-Com.add_key_position(["from"], ArgumentsTypes.All)
-Com.add_key_position(["period"], ArgumentsTypes.Number)
+Com = Command("parse", "Start titles parsing.")
+ComPos = Com.create_position("TARGET", "Target for parsing.", important = True)
+ComPos.add_argument(description = "Title slug.")
+ComPos.add_flag("collection", "Parse slugs from Collection.txt file.")
+ComPos.add_flag("local", "Parse all locally saved titles.")
+ComPos.add_flag("updates", "Parse titles updated for last 24 hours.")
+ComPos = Com.create_position("PARSER", "Used parser.", important = True)
+ComPos.add_key("use", ParametersTypes.Text, "Parser name.")
+Com.add_key("period", ParametersTypes.Number, "Period in hours for parsing updates.")
+Com.add_flag("s", "Shutdown PC after script finish.")
 CommandsList.append(Com)
 
 # Создание команды: repair.
-Com = Command("repair")
-Com.add_argument(ArgumentsTypes.All, important = True)
-Com.add_key_position(["chapter"], ArgumentsTypes.All, important = True)
-Com.add_key_position(["use"], ArgumentsTypes.Text, important = True)
-Com.add_flag_position(["s"])
+Com = Command("repair", "Repair chapter content in locally saved title.")
+ComPos = Com.create_position("FILENAME", "Source file.", important = True)
+ComPos.add_argument(description = "Filename of locally saved title.")
+ComPos = Com.create_position("TARGET", "Target for repairing.", important = True)
+ComPos.add_key("chapter", ParametersTypes.Number, "Chapter ID.")
+ComPos = Com.create_position("PARSER", "Used parser.", important = True)
+ComPos.add_key("use", ParametersTypes.Text, "Parser name.")
+Com.add_flag("s", "Shutdown PC after script finish.")
 CommandsList.append(Com)
 
 # Инициализация обработчика консольных аргументов.
-TerminalProcessor = Terminalyzer()
+Analyzer = Terminalyzer()
+# Дополнительная настройка анализатора.
+Analyzer.enable_help(True)
 # Получение информации о проверке команд.
-CommandDataStruct = TerminalProcessor.check_commands(CommandsList)
+CommandDataStruct = Analyzer.check_commands(CommandsList)
 
 # Если не удалось определить команду, выбросить исключение.
 if CommandDataStruct == None: raise Exception("Unknown command.")

@@ -1,4 +1,4 @@
-from dublib.Methods import RemoveFolderContent
+from dublib.Methods.Filesystem import RemoveDirectoryContent
 
 import os
 
@@ -39,7 +39,7 @@ class Temper:
 		# Путь к каталогу. 
 		Path = f"{self.__Temp}/{parser_name}"
 		# Если каталог существует, очистить его.
-		if os.path.exists(Path): RemoveFolderContent(Path)
+		if os.path.exists(Path): RemoveDirectoryContent(Path)
 
 	def get_parser_temp(self, parser_name: str) -> str:
 		"""

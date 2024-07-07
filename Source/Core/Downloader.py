@@ -1,6 +1,6 @@
 from Source.Core.Objects import Objects
 
-from dublib.WebRequestor import WebConfig, WebLibs, WebRequestor
+from dublib.WebRequestor import WebRequestor
 
 import os
 
@@ -45,12 +45,13 @@ class Downloader:
 	# >>>>> ПУБЛИЧНЫЕ МЕТОДЫ <<<<< #
 	#==========================================================================================#
 	
-	def __init__(self, system_objects: Objects, requestor: WebRequestor, exception: bool = False):
+	def __init__(self, system_objects: Objects, requestor: WebRequestor, exception: bool = False, logging: bool = True):
 		"""
 		Загрузчик изображений.
 			system_objects – коллекция системных объектов;
 			requestor – менеджер запросов;
-			exception – указывает, следует ли выбрасывать исключение.
+			exception – указывает, следует ли выбрасывать исключение;
+			logging – указывает, нужно ли обрабатывать ошибку через системный объект логгирования.
 		"""
 
 		#---> Генерация динамических свойств.
@@ -61,6 +62,8 @@ class Downloader:
 		self.__RaiseExceptions = exception
 		# Менеджер запросов.
 		self.__Requestor = requestor
+		# Состояние: нужно ли обрабатывать ошибку через системный объект логгирования.
+		self.__Logging = logging
 
 	def cover(self, url: str, site: str, directory: str, slug: str, title_id: int) -> str:
 		"""
@@ -100,18 +103,18 @@ class Downloader:
 					# Если обложка существовала и был включён режим перезаписи.
 					if IsCoverExists and self.__SystemObjects.FORCE_MODE:
 						# Запись в лог информации: обложка перезаписана.
-						self.__SystemObjects.logger.info(f"Title: \"{slug}\" (ID: {title_id}). Cover overwritten: \"{Filename}{Filetype}\".")
+						if self.__Logging: self.__SystemObjects.logger.info(f"Title: \"{slug}\" (ID: {title_id}). Cover overwritten: \"{Filename}{Filetype}\".")
 
 					else:
 						# Запись в лог информации: обложка скачана.
-						self.__SystemObjects.logger.info(f"Title: \"{slug}\" (ID: {title_id}). Cover downloaded: \"{Filename}{Filetype}\".")
+						if self.__Logging: self.__SystemObjects.logger.info(f"Title: \"{slug}\" (ID: {title_id}). Cover downloaded: \"{Filename}{Filetype}\".")
 						
 					# Изменение сообщения.
 					Status = "Done."
 
 			else:
 				# Запись в лог ошибки запроса.
-				self.__SystemObjects.logger.request_error(Response, f"Unable to download cover: \"{Filename}{Filetype}\".")
+				if self.__Logging: self.__SystemObjects.logger.request_error(Response, f"Unable to download cover: \"{Filename}{Filetype}\".")
 				# Выброс исключения.
 				if self.__RaiseExceptions: raise Exception(f"Unable to download cover: \"{Filename}{Filetype}\". Response code: {Response.status_code}.")
 				# Изменение сообщения.
@@ -119,7 +122,7 @@ class Downloader:
 
 		else:
 			# Запись в лог информации: обложка уже существует.
-			self.__SystemObjects.logger.info(f"Title: \"{slug}\" (ID: {title_id}). Cover already exists: \"{Filename}{Filetype}\".")
+			if self.__Logging: self.__SystemObjects.logger.info(f"Title: \"{slug}\" (ID: {title_id}). Cover already exists: \"{Filename}{Filetype}\".")
 			# Изменение сообщения.
 			Status = "Skipped."
 
@@ -157,14 +160,14 @@ class Downloader:
 				with open(f"{directory}{filename}{Filetype}", "wb") as FileWriter:
 					# Запись изображения.
 					FileWriter.write(Response.content)
-					# Переключение состояния.
-					IsSuccess = True
 					# Изменение статуса.
 					Status = "Done."
 
 			else:
 				# Запись в лог ошибки запроса.
-				self.__SystemObjects.logger.request_error(Response, f"Unable to download image: \"{url}\".")
+				if self.__Logging: self.__SystemObjects.logger.request_error(Response, f"Unable to download image: \"{url}\".")
+				# Изменение статуса.
+				Status = f"Error! Response code: {Response.status_code}."
 				# Выброс исключения.
 				if self.__RaiseExceptions: raise Exception(f"Unable to download image: \"{url}\". Response code: {Response.status_code}.")
 

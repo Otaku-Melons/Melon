@@ -1,9 +1,7 @@
-from telebot.types import InputMediaDocument
 from dublib.WebRequestor import WebResponse
+from dublib.Methods.JSON import ReadJSON
 from dublib.Polyglot import Markdown
-from dublib.Methods import ReadJSON
 from datetime import datetime
-from time import sleep
 
 import logging
 import telebot

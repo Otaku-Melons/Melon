@@ -1,4 +1,4 @@
-from dublib.StyledPrinter import StyledPrinter, Styles, TextStyler
+from dublib.CLI.StyledPrinter import Styles, TextStyler
 from prettytable import PLAIN_COLUMNS, PrettyTable
 
 def ParsersTable(columns: dict[str, list], sort_by: str = "NAME"):

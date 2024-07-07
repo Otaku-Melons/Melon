@@ -3,8 +3,8 @@ from Source.Core.Downloader import Downloader
 from Source.Core.Objects import Objects
 
 from dublib.WebRequestor import Protocols, WebConfig, WebLibs, WebRequestor
-from dublib.Methods import Cls, ReadJSON, WriteJSON
-from packaging.version import Version
+from dublib.Methods.JSON import ReadJSON, WriteJSON
+from dublib.Methods.System import Clear
 from time import sleep
 
 import enum
@@ -198,7 +198,7 @@ class Manga:
 		# Если директория обложек не существует, создать её.
 		if not os.path.exists(CoversDirectory): os.makedirs(CoversDirectory)
 		# Очистка консоли.
-		Cls()
+		Clear()
 		# Вывод в консоль: сообщение из внешнего обработчика.
 		print(message)
 

@@ -1,4 +1,4 @@
-from dublib.Methods import ReplaceDictionaryKey, Zerotify
+from dublib.Methods.Data import ReplaceDictionaryKey, Zerotify
 
 class LegacyManga:
 	"""Устаревший формат манги."""

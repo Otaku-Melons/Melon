@@ -1,4 +1,4 @@
-from dublib.Methods import ReadJSON
+from dublib.Methods.JSON import ReadJSON
 
 import importlib
 import os
