@@ -66,6 +66,7 @@ ComPos.add_flag("updates", "Parse titles updated for last 24 hours.")
 ComPos = Com.create_position("PARSER", "Used parser.", important = True)
 ComPos.add_key("use", ParametersTypes.Text, "Parser name.")
 Com.add_key("period", ParametersTypes.Number, "Period in hours for parsing updates.")
+Com.add_flag("f", "Enable force mode.")
 Com.add_flag("s", "Shutdown PC after script finish.")
 CommandsList.append(Com)
 

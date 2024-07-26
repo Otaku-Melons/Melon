@@ -144,9 +144,9 @@ class Manga:
 
 		# Инициализация и настройка объекта.
 		Config = WebConfig()
-		Config.select_lib(WebLibs.curl_cffi)
-		Config.generate_user_agent("pc")
-		Config.curl_cffi.enable_http2(True)
+		Config.select_lib(WebLibs.requests)
+		Config.requests.enable_protocol_switching(True)
+		Config.set_tries_count(3)
 		WebRequestorObject = WebRequestor(Config)
 		# Установка прокси.
 		if proxy["enable"]: WebRequestorObject.add_proxy(
@@ -194,7 +194,7 @@ class Manga:
 		# Менеджер запросов.
 		Requestor = self.__InitializeRequestor(proxy)
 		# Директория обложек.
-		CoversDirectory = f"{output_dir}/{used_filename}"
+		CoversDirectory = f"{output_dir}/{used_filename}/"
 		# Если директория обложек не существует, создать её.
 		if not os.path.exists(CoversDirectory): os.makedirs(CoversDirectory)
 		# Очистка консоли.
@@ -209,9 +209,15 @@ class Manga:
 			# Вывод в консоль: загрузка обложки.
 			print(f"Downloading cover: \"{Filename}\"... ", end = "")
 			# Загрузка обложки.
-			Result = Downloader(system_objects, Requestor).cover(self.__Manga["covers"][CoverIndex]["link"], self.__Manga["site"], CoversDirectory, self.__Manga["slug"], self.__Manga["id"])
+			Result = Downloader(system_objects, Requestor).image(
+				url = self.__Manga["covers"][CoverIndex]["link"],
+				directory = CoversDirectory,
+				filename = self.__Manga["covers"][CoverIndex]["filename"],
+				is_full_filename = True,
+				referer = self.__Manga["site"]
+			)
 			# Вывод в консоль: статус загрузки.
-			print(Result)
+			print(Result.message)
 			# Выжидание интервала.
 			sleep(0.25)
 

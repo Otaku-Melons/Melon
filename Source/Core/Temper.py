@@ -1,4 +1,5 @@
 from dublib.Methods.Filesystem import RemoveDirectoryContent
+from dublib.Methods.Filesystem import NormalizePath
 
 import os
 
@@ -51,5 +52,7 @@ class Temper:
 		Path = f"{self.__Temp}/{parser_name}"
 		# Если каталог не существует, создать его.
 		if not os.path.exists(Path): os.makedirs(Path)
-
+		# Нормализация пути.
+		Path = NormalizePath(Path)
+		
 		return Path

@@ -8,6 +8,7 @@ from dublib.WebRequestor import Protocols, WebConfig, WebLibs, WebRequestor
 from dublib.CLI.Terminalyzer import ParsedCommandData
 from dublib.Methods.JSON import ReadJSON
 from dublib.Methods.System import Clear
+from curl_cffi import CurlHttpVersion
 
 import os
 
@@ -91,15 +92,12 @@ def com_get(system_objects: Objects, command: ParsedCommandData):
 	#==========================================================================================#
 	# Инициализация загрузчика.
 	Config = WebConfig()
-	Config.select_lib(WebLibs.curl_cffi)
-	Config.generate_user_agent("pc")
+	Config.select_lib(WebLibs.requests)
+	Config.requests.enable_protocol_switching(True)
 	WebRequestorObject = WebRequestor(Config)
-	# Состояние: выбрасывать ли исключения и обрабатывать ли ошибки при первой попытке.
-	IsShowProblems = True
+
 	# Установка прокси.
 	if ParserSettings["proxy"]["enable"]:
-		# Переключение состояния обработки проблем.
-		IsShowProblems = False
 		# Добавление прокси.
 		WebRequestorObject.add_proxy(
 			Protocols.HTTPS,
@@ -110,33 +108,20 @@ def com_get(system_objects: Objects, command: ParsedCommandData):
 		)
 
 	# Загрузка изображения.
-	Result = Downloader(system_objects, WebRequestorObject, exception = IsShowProblems, logging = IsShowProblems).image(command.arguments[0], ParserSite, Directory, Filename, FullName)
-	
-	# Если не удалось получить изображение с прокси.
-	if "Response code: 403." in Result and ParserSettings["proxy"]["enable"]:
-		# Запись в лог предупреждения: попытка загрузки по протоколу HTTP.
-		system_objects.logger.warning("Unable to download image with proxy via HTTPS. Trying HTTP...")
-		# Вывод в консоль: попытка использования прокси по HTTP.
-		print(f"{Result}\nTrying proxy over HTTP...")
-		# Инициализация нового загрузчика.
-		WebRequestorObject = WebRequestor(Config)
-		# Установка прокси.
-		if ParserSettings["proxy"]["enable"]: WebRequestorObject.add_proxy(
-			Protocols.HTTP,
-			host = ParserSettings["proxy"]["host"],
-			port = ParserSettings["proxy"]["port"],
-			login = ParserSettings["proxy"]["login"],
-			password = ParserSettings["proxy"]["password"]
-		)
-		# Загрузка изображения.
-		Result = Downloader(system_objects, WebRequestorObject, exception = True).image(command.arguments[0], ParserSite, Directory, Filename, FullName)
+	Result = Downloader(system_objects, WebRequestorObject).image(
+		url = command.arguments[0],
+		directory = Directory,
+		filename = Filename,
+		is_full_filename = FullName,
+		referer = ParserSite
+	)
 
 	#---> Завершающий этап.
 	#==========================================================================================#
 	# Включение удаление лога.
 	system_objects.REMOVE_LOG = True 
 	# Вывод в консоль: завершение загрузки.
-	print(Result)
+	print(Result.message)
 
 def com_list(system_objects: Objects):
 	"""
@@ -312,7 +297,7 @@ def com_parse(system_objects: Objects, command: ParsedCommandData):
 
 def com_repair(system_objects: Objects, command: ParsedCommandData):
 	"""
-	Выполняет парсинг тайтла.
+	Заново получает информацию о содержимом главы.
 		system_objects – коллекция системных объектов;
 		command – объект представления консольной команды.
 	"""

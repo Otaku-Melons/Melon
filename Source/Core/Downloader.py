@@ -1,5 +1,7 @@
 from Source.Core.Objects import Objects
 
+from dublib.Engine.Bus import ExecutionError, ExecutionStatus
+from dublib.Methods.Filesystem import NormalizePath
 from dublib.WebRequestor import WebRequestor
 
 import os
@@ -48,9 +50,9 @@ class Downloader:
 	def __init__(self, system_objects: Objects, requestor: WebRequestor, exception: bool = False, logging: bool = True):
 		"""
 		Загрузчик изображений.
-			system_objects – коллекция системных объектов;
-			requestor – менеджер запросов;
-			exception – указывает, следует ли выбрасывать исключение;
+			system_objects – коллекция системных объектов;\n
+			requestor – менеджер запросов;\n
+			exception – указывает, следует ли выбрасывать исключение;\n
 			logging – указывает, нужно ли обрабатывать ошибку через системный объект логгирования.
 		"""
 
@@ -65,93 +67,54 @@ class Downloader:
 		# Состояние: нужно ли обрабатывать ошибку через системный объект логгирования.
 		self.__Logging = logging
 
-	def cover(self, url: str, site: str, directory: str, slug: str, title_id: int) -> str:
-		"""
-		Скачивает обложку.
-			url – ссылка на изображение;
-			site – домен сайта для установка заголовка запроса Referer;
-			directory – путь к каталогу загрузки;
-			slug – алиас тайтла;
-			title_id – целочисленный идентификатор тайтла.
-		"""
-
-		# Описание загрузки.
-		Status = None
-
-		#---> Определение параметров файла.
-		#==========================================================================================#
-		Filetype = self.__GetFiletype(url)
-		Filename = self.__GetFilename(url)
-		IsCoverExists = os.path.exists(f"{directory}/{Filename}{Filetype}")
-
-		# Если файл не существует или включён режим перезаписи.
-		if not IsCoverExists or self.__SystemObjects.FORCE_MODE:
-
-			#---> Запрос данных.
-			#==========================================================================================#
-			# Выполнение запроса.
-			Response = self.__Requestor.get(url)
-
-			# Если запрос успешен
-			if Response.status_code == 200:
-				
-				# Открытие потока записи.
-				with open(f"{directory}/{Filename}{Filetype}", "wb") as FileWriter:
-					# Запись изображения.
-					FileWriter.write(Response.content)
-
-					# Если обложка существовала и был включён режим перезаписи.
-					if IsCoverExists and self.__SystemObjects.FORCE_MODE:
-						# Запись в лог информации: обложка перезаписана.
-						if self.__Logging: self.__SystemObjects.logger.info(f"Title: \"{slug}\" (ID: {title_id}). Cover overwritten: \"{Filename}{Filetype}\".")
-
-					else:
-						# Запись в лог информации: обложка скачана.
-						if self.__Logging: self.__SystemObjects.logger.info(f"Title: \"{slug}\" (ID: {title_id}). Cover downloaded: \"{Filename}{Filetype}\".")
-						
-					# Изменение сообщения.
-					Status = "Done."
-
-			else:
-				# Запись в лог ошибки запроса.
-				if self.__Logging: self.__SystemObjects.logger.request_error(Response, f"Unable to download cover: \"{Filename}{Filetype}\".")
-				# Выброс исключения.
-				if self.__RaiseExceptions: raise Exception(f"Unable to download cover: \"{Filename}{Filetype}\". Response code: {Response.status_code}.")
-				# Изменение сообщения.
-				Status = "Failure!"
-
-		else:
-			# Запись в лог информации: обложка уже существует.
-			if self.__Logging: self.__SystemObjects.logger.info(f"Title: \"{slug}\" (ID: {title_id}). Cover already exists: \"{Filename}{Filetype}\".")
-			# Изменение сообщения.
-			Status = "Skipped."
-
-		return Status
-
-	def image(self, url: str, site: str, directory: str | None = None, filename: str | None = None, full_filename: bool = False) -> str:
+	def image(
+			self,
+		   	url: str,
+			directory: str = "Temp",
+			filename: str | None = None,
+			is_full_filename: bool = False,
+			referer: str | None = None
+		) -> ExecutionStatus:
 		"""
 		Скачивает изображение.
-			url – ссылка на изображение;
-			site – домен сайта для установка заголовка запроса Referer;
-			directory – путь к каталогу загрузки;
-			filename – имя файла без расширения;
-			full_filename – указывает, является ли имя файла полным.
+			url – ссылка на изображение;\n
+			directory – путь к каталогу загрузки;\n
+			filename – имя файла;\n
+			is_full_filename – указывает, является ли имя файла полным;\n
+			referer – домен сайта для установка заголовка запроса Referer.
 		"""
 
-		# Описание загрузки.
-		Status = None
+		# Состояние загрузки.
+		Status = ExecutionStatus(0)
+		# Нормализация пути.
+		directory = NormalizePath(directory)
 
 		#---> Определение параметров файла.
 		#==========================================================================================#
-		Filetype = self.__GetFiletype(url)
-		directory = "" if directory == None else directory + "/"
-		if filename and full_filename: Filetype = ""
-		elif filename == None: filename = self.__GetFilename(url)
+		# Расширение файла.
+		Filetype = ""
+		# Если имя файла указано и не помечено как полное, получить расширение файла (с точкой).
+		if filename and not is_full_filename: Filetype = self.__GetFiletype(url)
+		# Если имя файла не указано, получить полное имя файла из URL.
+		elif not filename: filename = self.__GetFilename(url)
+
+		#---> Выполнение загрузки.
+		#==========================================================================================#
+		# Состояние: существует ли файл.
+		IsFileExists = os.path.exists(f"{directory}{filename}{Filetype}")
 
 		# Если файл не существует или включён режим перезаписи.
-		if not os.path.exists(f"{directory}{filename}{Filetype}") or self.__SystemObjects.FORCE_MODE:
+		if not IsFileExists or self.__SystemObjects.FORCE_MODE:
+			# Заголовки запроса.
+			Headers = None
+
+			# Если указан домен сайта, добавить его в заголовок.
+			if referer: Headers = {
+				"Referer": f"https://{referer}/"
+			}
+				
 			# Выполнение запроса.
-			Response = self.__Requestor.get(url, headers = {"Referer": f"https://{site}/"})
+			Response = self.__Requestor.get(url, headers = Headers)
 
 			# Если запрос успешен
 			if Response.status_code == 200:
@@ -161,19 +124,21 @@ class Downloader:
 					# Запись изображения.
 					FileWriter.write(Response.content)
 					# Изменение статуса.
-					Status = "Done."
+					Status = ExecutionStatus(200)
+					Status.message = "Done."
 
 			else:
 				# Запись в лог ошибки запроса.
 				if self.__Logging: self.__SystemObjects.logger.request_error(Response, f"Unable to download image: \"{url}\".")
 				# Изменение статуса.
-				Status = f"Error! Response code: {Response.status_code}."
+				Status = ExecutionError(Response.status_code)
+				Status.message = f"Error! Response code: {Response.status_code}."
 				# Выброс исключения.
 				if self.__RaiseExceptions: raise Exception(f"Unable to download image: \"{url}\". Response code: {Response.status_code}.")
 
 		# Если файл уже существует.
-		elif os.path.exists(f"{directory}{filename}{Filetype}"):
+		elif IsFileExists:
 			# Изменение статуса.
-			Status = "Already exists."
+			Status.message = "Already exists."
 
 		return Status
