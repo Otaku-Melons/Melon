@@ -39,7 +39,7 @@ class Collector:
 	def __init__(self, system_objects: Objects, parser_name: str):
 		"""
 		Менеджер коллекций.
-			system_objects – коллекция системных объектов;
+			system_objects – коллекция системных объектов;\n
 			parser_name – название парсера.
 		"""
 

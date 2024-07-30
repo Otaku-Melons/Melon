@@ -20,7 +20,37 @@ class Logger:
 		"""Считвает настройки логов для конкретного парсера."""
 
 		# Настройки.
-		Settings = dict()
+		Settings = {
+			"telebot": {
+				"enable": False,
+				"bot_token": "",
+				"chat_id": None,
+				"comment": "",
+				"attach_log": True
+			},
+			"rules": {
+				"collect": {
+					"ignored_requests_errors": [],
+					"title_not_found": True,
+					"warnings": False
+				},
+				"get": {
+					"ignored_requests_errors": [],
+					"title_not_found": True,
+					"warnings": False
+				},
+				"parse": {
+					"ignored_requests_errors": [],
+					"title_not_found": True,
+					"warnings": False
+				},
+				"repair": {
+					"ignored_requests_errors": [],
+					"title_not_found": True,
+					"warnings": False
+				}
+			}
+		}
 		# Если файл логов существует, прочитать его содержимое.
 		if os.path.exists(f"Parsers/{self.__ParserName}/logger.json"): Settings = ReadJSON(f"Parsers/{self.__ParserName}/logger.json")
 		
@@ -92,7 +122,7 @@ class Logger:
 		# Название точки CLI.
 		self.__PointName = None
 		# Текущие настройки логгирования.
-		self.__LoggerSettings = dict()
+		self.__LoggerSettings = None
 		# Кэш описания ошибки.
 		self.__ErrorCache = None
 		# Состояние: включён ли тихий режим.
@@ -104,13 +134,13 @@ class Logger:
 		if not os.path.exists("Logs"): os.makedirs("Logs")
 		# Получение текущей даты.
 		CurrentDate = datetime.now()
-		# Время запуска скрипта.
-		StartTime = time.time()
 		# Формирование пути к файлу лога.
 		self.__LogFilename = "Logs/" + str(CurrentDate)[:-7] + ".log"
 		self.__LogFilename = self.__LogFilename.replace(":", "-")
 		# Установка конфигнурации.
 		logging.basicConfig(filename = self.__LogFilename, encoding = "utf-8", level = logging.INFO, format = "%(asctime)s %(levelname)s: %(message)s", datefmt = "%Y-%m-%d %H:%M:%S")		
+		# Перенаправление вывода логов в файл.
+		logging.getLogger("dublib.WebRequestor").addHandler(logging.FileHandler(self.__LogFilename))
 
 	def select_cli_point(self, point_name: str):
 		"""
@@ -184,7 +214,7 @@ class Logger:
 	def request_error(self, response: WebResponse, text: str | None = None):
 		"""
 		Обрабатывает ошибку сети.
-			response – объект WEB-ответа;
+			response – объект WEB-ответа;\n
 			text – описание ошибки.
 		"""
 
@@ -213,8 +243,8 @@ class Logger:
 	def amending_end(self, slug: str, title_id: int, chapters_cont: int):
 		"""
 		Записывает в лог информацию о количестве дополненных глав.
-			slug – алиас;
-			title_id – целочисленный идентификатор тайтла;
+			slug – алиас;\n
+			title_id – целочисленный идентификатор тайтла;\n
 			chapters_cont – количество дополненных глав.
 		"""
 
@@ -224,9 +254,9 @@ class Logger:
 	def chapter_amended(self, slug: str, title_id: int, chapter_id: int, is_paid: bool):
 		"""
 		Записывает в лог данные дополненной главы.
-			slug – алиас;
-			title_id – целочисленный идентификатор тайтла;
-			chapter_id – идентификатор главы;
+			slug – алиас;\n
+			title_id – целочисленный идентификатор тайтла;\n
+			chapter_id – идентификатор главы;\n
 			is_paid – является ли глава платной.
 		"""
 
@@ -238,9 +268,9 @@ class Logger:
 	def chapter_repaired(self, slug: str, title_id: int, chapter_id: int, is_paid: bool):
 		"""
 		Записывает в лог данные дополненной главы.
-			slug – алиас;
-			title_id – целочисленный идентификатор тайтла;
-			chapter_id – идентификатор главы;
+			slug – алиас;\n
+			title_id – целочисленный идентификатор тайтла;\n
+			chapter_id – идентификатор главы;\n
 			is_paid – является ли глава платной.
 		"""
 
@@ -252,9 +282,9 @@ class Logger:
 	def chapter_skipped(self, slug: str, title_id: int, chapter_id: int, is_paid: bool):
 		"""
 		Записывает в лог данные дополненной главы.
-			slug – алиас;
-			title_id – целочисленный идентификатор тайтла;
-			chapter_id – идентификатор главы;
+			slug – алиас;\n
+			title_id – целочисленный идентификатор тайтла;\n
+			chapter_id – идентификатор главы;\n
 			is_paid – является ли глава платной.
 		"""
 
@@ -266,7 +296,7 @@ class Logger:
 	def covers_unstubbed(self, slug: str, title_id: int):
 		"""
 		Записывает в лог информацию об удалении обложек по причине того, что те являются заглушками.
-			title_id – целочисленный идентификатор тайтла;
+			title_id – целочисленный идентификатор тайтла;\n
 			slug – алиас.
 		"""
 
@@ -276,7 +306,7 @@ class Logger:
 	def parsing_start(self, slug: str, title_id: int):
 		"""
 		Записывает в лог сообщение об успешном парсинге данных тайтла.
-			title_id – целочисленный идентификатор тайтла;
+			title_id – целочисленный идентификатор тайтла;\n
 			slug – алиас.
 		"""
 

@@ -8,14 +8,28 @@ from dublib.WebRequestor import Protocols, WebConfig, WebLibs, WebRequestor
 from dublib.CLI.Terminalyzer import ParsedCommandData
 from dublib.Methods.JSON import ReadJSON
 from dublib.Methods.System import Clear
-from curl_cffi import CurlHttpVersion
 
 import os
+
+def com_build(system_objects: Objects, command: ParsedCommandData):
+	"""
+	Строит читаемый контент из описательного файла.
+		system_objects – коллекция системных объектов;\n
+		command – объект представления консольной команды.
+	"""
+
+	#---> Подготовительный этап.
+	#==========================================================================================#
+	# Установка названия точки CLI.
+	system_objects.logger.select_cli_point(command.name)
+
+	# Вывод в консоль: недоступно.
+	print("Builder not implemented yet.")
 
 def com_collect(system_objects: Objects, command: ParsedCommandData):
 	"""
 	Собирает алиасы тайтлов из каталога и помещает их в список.
-		system_objects – коллекция системных объектов;
+		system_objects – коллекция системных объектов;\n
 		command – объект представления консольной команды.
 	"""
 
@@ -61,7 +75,7 @@ def com_collect(system_objects: Objects, command: ParsedCommandData):
 def com_get(system_objects: Objects, command: ParsedCommandData):
 	"""
 	Скачивает изображение.
-		system_objects – коллекция системных объектов;
+		system_objects – коллекция системных объектов;\n
 		command – объект представления консольной команды.
 	"""
 
@@ -74,9 +88,11 @@ def com_get(system_objects: Objects, command: ParsedCommandData):
 	ParserSettings = system_objects.manager.get_parser_settings(ParserName)
 	ParserSite = system_objects.manager.get_parser_site(ParserName)
 	# Получение параметров команды.
+	Link = command.arguments[0]
 	Directory = command.get_key_value("dir") if command.check_key("dir") else system_objects.temper.path
 	Filename = command.get_key_value("name") if command.check_key("name") else None
 	FullName = command.check_key("fullname")
+	StandartDownloader = command.check_key("sid")
 	if FullName: Filename = command.get_key_value("fullname")
 
 	#---> Вывод данных.
@@ -90,38 +106,60 @@ def com_get(system_objects: Objects, command: ParsedCommandData):
 	
 	#---> Скачивание изображения.
 	#==========================================================================================#
-	# Инициализация загрузчика.
-	Config = WebConfig()
-	Config.select_lib(WebLibs.requests)
-	Config.requests.enable_protocol_switching(True)
-	WebRequestorObject = WebRequestor(Config)
+	# Результат загрузки.
+	ResultMessage = None
 
-	# Установка прокси.
-	if ParserSettings["proxy"]["enable"]:
-		# Добавление прокси.
-		WebRequestorObject.add_proxy(
-			Protocols.HTTPS,
-			host = ParserSettings["proxy"]["host"],
-			port = ParserSettings["proxy"]["port"],
-			login = ParserSettings["proxy"]["login"],
-			password = ParserSettings["proxy"]["password"]
-		)
+	# Если у парсера есть кастомный метод загрузки.
+	if system_objects.manager.check_method_image(ParserName) and not StandartDownloader:
+		# Запись в лог информации: использование кастомного загрузчика.
+		system_objects.logger.info("Using custom image downloader.")
+		# Инициализация парсера.
+		Parser = system_objects.manager.launch(ParserName)
+		# Скачивание изображения.
+		OriginalFilename = Parser.image(Link)
 
-	# Загрузка изображения.
-	Result = Downloader(system_objects, WebRequestorObject).image(
-		url = command.arguments[0],
-		directory = Directory,
-		filename = Filename,
-		is_full_filename = FullName,
-		referer = ParserSite
-	)
+		# Если скачивание и пермещение в целевой каталог успешно.
+		if OriginalFilename and Downloader(system_objects).move_from_temp(ParserName, Directory, OriginalFilename, Filename, FullName):
+			# Установка результата.
+			ResultMessage = "Done."
+			
+		else:
+			# Установка результата.
+			ResultMessage = "Custom downloader failed."
+
+	else:
+		# Инициализация загрузчика.
+		Config = WebConfig()
+		Config.select_lib(WebLibs.requests)
+		Config.requests.enable_proxy_protocol_switching(True)
+		WebRequestorObject = WebRequestor(Config)
+
+		# Установка прокси.
+		if ParserSettings["proxy"]["enable"]:
+			# Добавление прокси.
+			WebRequestorObject.add_proxy(
+				Protocols.HTTPS,
+				host = ParserSettings["proxy"]["host"],
+				port = ParserSettings["proxy"]["port"],
+				login = ParserSettings["proxy"]["login"],
+				password = ParserSettings["proxy"]["password"]
+			)
+
+		# Загрузка изображения.
+		ResultMessage = Downloader(system_objects, WebRequestorObject).image(
+			url = Link,
+			directory = Directory,
+			filename = Filename,
+			is_full_filename = FullName,
+			referer = ParserSite
+		).message
 
 	#---> Завершающий этап.
 	#==========================================================================================#
 	# Включение удаление лога.
-	system_objects.REMOVE_LOG = True 
+	system_objects.REMOVE_LOG = False 
 	# Вывод в консоль: завершение загрузки.
-	print(Result.message)
+	print(ResultMessage)
 
 def com_list(system_objects: Objects):
 	"""
@@ -135,12 +173,13 @@ def com_list(system_objects: Objects):
 	system_objects.REMOVE_LOG = True
 	# Словарь для построения таблицы.
 	TableData = {
-		"NAME": [],
-		"VERSION": [],
-		"SITE": [],
+		"НАЗВАНИЕ": [],
+		"ВЕРСИЯ": [],
+		"САЙТ": [],
 		"collect": [],
-		"get_updates": [],
-		"repair": []
+		"image": [],
+		"repair": [],
+		"updates": []
 	}
 
 	# Для каждого парсера.
@@ -149,12 +188,13 @@ def com_list(system_objects: Objects):
 		Version = system_objects.manager.get_parser_version(Parser)
 		Site = system_objects.manager.get_parser_site(Parser)
 		# Заполнение данных.
-		TableData["NAME"].append(Parser)
-		TableData["VERSION"].append(Version)
-		TableData["SITE"].append(Site)
+		TableData["НАЗВАНИЕ"].append(Parser)
+		TableData["ВЕРСИЯ"].append(Version)
+		TableData["САЙТ"].append(Site)
 		TableData["collect"].append(system_objects.manager.check_method_collect(Parser))
-		TableData["get_updates"].append(system_objects.manager.check_method_get_updates(Parser))
+		TableData["image"].append(system_objects.manager.check_method_image(Parser))
 		TableData["repair"].append(system_objects.manager.check_method_repair(Parser))
+		TableData["updates"].append(system_objects.manager.check_method_updates(Parser))
 
 	# Вывод таблицы.
 	ParsersTable(TableData)
@@ -162,7 +202,7 @@ def com_list(system_objects: Objects):
 def com_parse(system_objects: Objects, command: ParsedCommandData):
 	"""
 	Выполняет парсинг тайтла.
-		system_objects – коллекция системных объектов;
+		system_objects – коллекция системных объектов;\n
 		command – объект представления консольной команды.
 	"""
 
@@ -206,7 +246,7 @@ def com_parse(system_objects: Objects, command: ParsedCommandData):
 		# Вывод в консоль: идёт получение обновлений.
 		print("Collecting updates...")
 		# Получение обновлений.
-		Slugs = Parser.get_updates(Period)
+		Slugs = Parser.updates(Period)
 		
 	# Если активирован флаг обновления локальных файлов.
 	elif command.check_flag("local"):
@@ -298,7 +338,7 @@ def com_parse(system_objects: Objects, command: ParsedCommandData):
 def com_repair(system_objects: Objects, command: ParsedCommandData):
 	"""
 	Заново получает информацию о содержимом главы.
-		system_objects – коллекция системных объектов;
+		system_objects – коллекция системных объектов;\n
 		command – объект представления консольной команды.
 	"""
 

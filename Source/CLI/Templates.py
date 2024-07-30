@@ -3,8 +3,8 @@ from dublib.Methods.System import Clear
 def PrintAmendingProgress(message: str, current_state: int, max_state: int):
 	"""
 	Выводит в консоль прогресс дополнение глав информацией о содержимом.
-		message – сообщение из внешнего обработчика;
-		current_state – индекс текущей дополняемой главы;
+		message – сообщение из внешнего обработчика;\n
+		current_state – индекс текущей дополняемой главы;\n
 		max_state – количество глав, которые необходимо дополнить.
 	"""
 

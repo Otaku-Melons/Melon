@@ -145,7 +145,7 @@ class Manga:
 		# Инициализация и настройка объекта.
 		Config = WebConfig()
 		Config.select_lib(WebLibs.requests)
-		Config.requests.enable_protocol_switching(True)
+		Config.requests.enable_proxy_protocol_switching(True)
 		Config.set_tries_count(3)
 		WebRequestorObject = WebRequestor(Config)
 		# Установка прокси.
@@ -174,7 +174,7 @@ class Manga:
 	def amend(self, amending_method: any, message: str):
 		"""
 		Дополняет содержимое подробной информацией.
-			amending_method – указатель на метод из парсера для дополнения;
+			amending_method – указатель на метод из парсера для дополнения;\n
 			message – сообщение для внутреннего обработчика.
 		"""
 
@@ -184,10 +184,10 @@ class Manga:
 	def download_covers(self, system_objects: Objects, output_dir: str, used_filename: str, message: str, proxy: dict):
 		"""
 		Скачивает обложки.
-			system_objects – коллекция системных объектов;
-			output_dir – директория хранения;
-			used_filename – используемое имя описательного файла;
-			message – сообщение для внутреннего обработчика;
+			system_objects – коллекция системных объектов;\n
+			output_dir – директория хранения;\n
+			used_filename – используемое имя описательного файла;\n
+			message – сообщение для внутреннего обработчика;\n
 			proxy – данные о прокси.
 		"""
 
@@ -224,8 +224,8 @@ class Manga:
 	def merge(self, system_objects: Objects, output_dir: str, filename: str):
 		"""
 		Объединяет данные описательного файла и текущей структуры данных.
-			system_objects – коллекция системных объектов;
-			output_dir – директория хранения;
+			system_objects – коллекция системных объектов;\n
+			output_dir – директория хранения;\n
 			filename – имя файла.
 		"""
 
@@ -274,8 +274,8 @@ class Manga:
 	def open(self, system_objects: Objects, output_dir: str, filename: str):
 		"""
 		Считывает локальный описательный файл.
-			system_objects – коллекция системных объектов;
-			output_dir – директория хранения;
+			system_objects – коллекция системных объектов;\n
+			output_dir – директория хранения;\n
 			filename – имя файла.
 		"""
 
@@ -298,7 +298,7 @@ class Manga:
 	def repair(self, repairing_method: any, chapter_id: int):
 		"""
 		Заново получает данные о слайдах в главе.
-			repairing_method – указатель на метод из парсера для восстановления;
+			repairing_method – указатель на метод из парсера для восстановления;\n
 			chapter_id – идентификатор целевой главы.
 		"""
 
@@ -308,9 +308,9 @@ class Manga:
 	def save(self, system_objects: Objects, output_dir: str, filename: str, legacy: bool = False):
 		"""
 		Сохраняет данные манги в описательный файл.
-			system_objects – коллекция системных объектов;
-			output_dir – директория хранения;
-			filename – имя файла;
+			system_objects – коллекция системных объектов;\n
+			output_dir – директория хранения;\n
+			filename – имя файла;\n
 			legacy – указывает, нужно ли форматировать описательный файл в устаревший формат.
 		"""
 

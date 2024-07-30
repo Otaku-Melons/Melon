@@ -1,12 +1,12 @@
 from dublib.CLI.StyledPrinter import Styles, TextStyler
 from prettytable import PLAIN_COLUMNS, PrettyTable
 
-def ParsersTable(columns: dict[str, list], sort_by: str = "NAME"):
+def ParsersTable(columns: dict[str, list], sort_by: str = "НАЗВАНИЕ"):
 	# Инициализация таблицы.
 	TableObject = PrettyTable()
 	TableObject.set_style(PLAIN_COLUMNS)
 	# Колонки имплементаций.
-	Implementations = ["collect", "get_updates", "repair"]
+	Implementations = ["collect", "image", "repair", "updates"]
 	# Строки подстановки статусов.
 	ImplementationStatuses = {
 		True: TextStyler("true", text_color = Styles.Colors.Green),
@@ -14,9 +14,9 @@ def ParsersTable(columns: dict[str, list], sort_by: str = "NAME"):
 	}
 
 	# Для каждого сайта.
-	for SiteIndex in range(len(columns["SITE"])):
+	for SiteIndex in range(len(columns["САЙТ"])):
 		# Стилизация сайта курсивом.
-		columns["SITE"][SiteIndex] = TextStyler(columns["SITE"][SiteIndex], decorations = [Styles.Decorations.Italic])
+		columns["САЙТ"][SiteIndex] = TextStyler(columns["САЙТ"][SiteIndex], decorations = [Styles.Decorations.Italic])
 
 	# Для каждой колонки имплементации.
 	for ColumnName in Implementations:

@@ -1,5 +1,6 @@
 from Source.Core.Objects import Objects
 
+from dublib.WebRequestor import Protocols, WebConfig, WebLibs, WebRequestor
 from dublib.Engine.Bus import ExecutionError, ExecutionStatus
 from dublib.Methods.Filesystem import NormalizePath
 from dublib.WebRequestor import WebRequestor
@@ -24,7 +25,7 @@ class Downloader:
 		# Расширение фала.
 		Filetype = self.__GetFiletype(url)
 		# Удаление расширения.
-		Filename = Filename[:len(Filetype) * -1]
+		if Filetype: Filename = Filename[:len(Filetype) * -1]
 
 		return Filename
 
@@ -43,11 +44,35 @@ class Downloader:
 
 		return Filetype
 
+	def __InitializeRequestor(self, parser_name: str) -> WebRequestor:
+		"""
+		Инициализирует модуль WEB-запросов.
+			parser_name – название парсера.
+		"""
+
+		# Получение настроек парсера.
+		Settings = self.__SystemObjects.manager.get_parser_settings(parser_name)
+		# Инициализация и настройка объекта.
+		Config = WebConfig()
+		Config.select_lib(WebLibs.requests)
+		Config.set_tries_count(Settings["common"]["tries"])
+		Config.add_header("Authorization", Settings["custom"]["token"])
+		WebRequestorObject = WebRequestor(Config)
+
+		# Установка прокси.
+		if Settings["proxy"]["enable"]: WebRequestorObject.add_proxy(
+			Protocols.HTTPS,
+			host = Settings["proxy"]["host"],
+			port = Settings["proxy"]["port"],
+			login = Settings["proxy"]["login"],
+			password = Settings["proxy"]["password"]
+		)
+			
 	#==========================================================================================#
 	# >>>>> ПУБЛИЧНЫЕ МЕТОДЫ <<<<< #
 	#==========================================================================================#
 	
-	def __init__(self, system_objects: Objects, requestor: WebRequestor, exception: bool = False, logging: bool = True):
+	def __init__(self, system_objects: Objects, requestor: WebRequestor | None = None, exception: bool = False, logging: bool = True):
 		"""
 		Загрузчик изображений.
 			system_objects – коллекция системных объектов;\n
@@ -84,6 +109,8 @@ class Downloader:
 			referer – домен сайта для установка заголовка запроса Referer.
 		"""
 
+		# Если запросчик не инициализирован, выбросить исключение.
+		if not self.__Requestor: raise Exception("Requestor not initialized.")
 		# Состояние загрузки.
 		Status = ExecutionStatus(0)
 		# Нормализация пути.
@@ -94,9 +121,9 @@ class Downloader:
 		# Расширение файла.
 		Filetype = ""
 		# Если имя файла указано и не помечено как полное, получить расширение файла (с точкой).
-		if filename and not is_full_filename: Filetype = self.__GetFiletype(url)
-		# Если имя файла не указано, получить полное имя файла из URL.
-		elif not filename: filename = self.__GetFilename(url)
+		if not is_full_filename: Filetype = self.__GetFiletype(url)
+		# Если имя файла не указано, получить его из URL.
+		if not filename: filename = self.__GetFilename(url)
 
 		#---> Выполнение загрузки.
 		#==========================================================================================#
@@ -118,14 +145,25 @@ class Downloader:
 
 			# Если запрос успешен
 			if Response.status_code == 200:
-				
-				# Открытие потока записи.
-				with open(f"{directory}{filename}{Filetype}", "wb") as FileWriter:
-					# Запись изображения.
-					FileWriter.write(Response.content)
+
+				# Если получена последовательность байтов.
+				if len(Response.content):
+
+					# Открытие потока записи.
+					with open(f"{directory}{filename}{Filetype}", "wb") as FileWriter:
+						# Запись изображения.
+						FileWriter.write(Response.content)
+						# Изменение статуса.
+						Status = ExecutionStatus(200)
+						Status.value = filename + Filetype
+						Status.message = "Done."
+
+				else:
+					# Запись в лог ошибки запроса.
+					if self.__Logging: self.__SystemObjects.logger.error(Response, f"Image doesn't contain bytes: \"{url}\".")
 					# Изменение статуса.
-					Status = ExecutionStatus(200)
-					Status.message = "Done."
+					Status = ExecutionError(204)
+					Status.message = f"Error! Image doesn't contain bytes."
 
 			else:
 				# Запись в лог ошибки запроса.
@@ -142,3 +180,62 @@ class Downloader:
 			Status.message = "Already exists."
 
 		return Status
+	
+	def move_from_temp(self, parser_name: str, directory: str, original_filename: str, filename: str | None = None, is_full_filename: bool = True) -> bool:
+		"""
+		Перемещает изображение из временного каталога парсера в другое расположение.
+			parser_name – название парсера;\n
+			directory – путь к каталогу загрузки;\n
+			original_filename – имя файла во временном каталоге парсера;\n
+			filename – имя файла в целевом каталоге;\n
+			is_full_filename – указывает, является ли имя файла полным.
+		"""
+		
+		try:
+			# Оригинальное расположение.
+			OriginalPath = f"Temp/{parser_name}/" + original_filename
+			# Нормализация пути.
+			directory = NormalizePath(directory)
+			# Расширение файла.
+			Filetype = ""
+			
+			# Если имя файла указано и не помечено как полное.
+			if filename and not is_full_filename:
+				# Получение расширение файла (с точкой).
+				Filetype = self.__GetFiletype(original_filename)
+				# Очистка имени файла от расширения.
+				filename = self.__GetFilename(filename)
+				
+			# Если не указано имя файла, использовать оригинальное.
+			elif not filename: filename = original_filename
+
+			# Перемещение файла.
+			os.replace(OriginalPath, f"{directory}{filename}{Filetype}")
+
+		except: return False
+
+		return True
+	
+	def temp_image(self, parser_name: str, url: str, referer: str | None = None):
+		"""
+		Скачивает изображение во временный каталог парсера.
+			parser_name – название парсера;\n
+			url – ссылка на изображение;\n
+			referer – домен сайта для установка заголовка запроса Referer.
+		"""
+
+		# Если не указан загрузчик, инициализировать стандартный.
+		if not self.__Requestor: self.__Requestor = self.__InitializeRequestor(parser_name)
+		# Запоминание состояния логов.
+		Logging = self.__Logging
+		self.__Logging = False
+		# Загрузка изображения во временный каталог.
+		Result = self.image(
+			url = url,
+			directory = self.__SystemObjects.temper.get_parser_temp(parser_name),
+			referer = referer
+		)
+		# Возвращение состояния логов.
+		self.__Logging = Logging
+
+		return Result

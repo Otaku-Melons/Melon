@@ -1,4 +1,4 @@
-from dublib.Methods.JSON import ReadJSON
+from Source.Core.ParserSettings import ParserSettings
 
 import importlib
 import os
@@ -35,13 +35,15 @@ class Manager:
 		if parser_name not in self.parsers_names:
 			# Запись в лог критической ошибки: нет такого парсера.
 			self.__SystemObjects.logger.critical(f"No parser \"{parser_name}\".")
-			# Выброс исключения.
-			raise Exception(f"No parser \"{parser_name}\".")
+			# Вывод в консоль: парсер не найден.
+			print(f"No parser: \"{parser_name}\".")
+			# Завершение работы.
+			exit(-1)
 
 	def __PutDefaultDirectories(self, settings: dict, parser_name: str):
 		"""
 		Подстанавливает стандартные директории на пустые места.
-			settings – словарь настроек;
+			settings – словарь настроек;\n
 			parser_name – название парсера.
 		"""
 
@@ -127,9 +129,9 @@ class Manager:
 
 		return IsImplemented
 
-	def check_method_get_updates(self, parser_name: str) -> bool:
+	def check_method_image(self, parser_name: str) -> bool:
 		"""
-		Проверяет, доступна ли в парсере имплементация метода get_updates.
+		Проверяет, доступна ли в парсере имплементация метода image.
 			parser_name – название парсера.
 		"""
 
@@ -143,7 +145,7 @@ class Manager:
 
 		try:
 			# Проверка существования метода.
-			Parser.get_updates
+			Parser.image
 
 		except AttributeError:
 			# Переключение состояния.
@@ -175,11 +177,35 @@ class Manager:
 
 		return IsImplemented
 
+	def check_method_updates(self, parser_name: str) -> bool:
+		"""
+		Проверяет, доступна ли в парсере имплементация метода updates.
+			parser_name – название парсера.
+		"""
+
+		# Проверка наличия парсера.
+		self.__CheckParser(parser_name)
+		# Инициализация парсера.
+		Module = importlib.import_module(f"Parsers.{parser_name}.main")
+		Parser = Module.Parser(self.__SystemObjects)
+		# Состояние: доступен ли метод.
+		IsImplemented = True
+
+		try:
+			# Проверка существования метода.
+			Parser.updates
+
+		except AttributeError:
+			# Переключение состояния.
+			IsImplemented = False
+
+		return IsImplemented
+	
 	#==========================================================================================#
 	# >>>>> ПУБЛИЧНЫЕ МЕТОДЫ ПОЛУЧЕНИЯ ПАРАМЕТРОВ ПАРСЕРОВ <<<<< #
 	#==========================================================================================#
 
-	def get_parser_settings(self, parser_name: str) -> str:
+	def get_parser_settings(self, parser_name: str) -> ParserSettings:
 		"""
 		Возвращает словарь настроек парсера.
 			parser_name – название парсера.
@@ -188,7 +214,7 @@ class Manager:
 		# Проверка наличия парсера.
 		self.__CheckParser(parser_name)
 		# Чтение настроек.
-		Settings = ReadJSON(f"Parsers/{parser_name}/settings.json")
+		Settings = ParserSettings(parser_name, self.__SystemObjects.logger)
 		# Устанавливает стандартные директории.
 		self.__PutDefaultDirectories(Settings, parser_name)
 
