@@ -1,6 +1,7 @@
 from Source.CLI.ParsersTable import ParsersTable
 from Source.Core.Downloader import Downloader
 from Source.Core.Collector import Collector
+from Source.Core.Builder import Builder
 from Source.Core.Objects import Objects
 from Source.Core.Exceptions import *
 
@@ -22,9 +23,21 @@ def com_build(system_objects: Objects, command: ParsedCommandData):
 	#==========================================================================================#
 	# Установка названия точки CLI.
 	system_objects.logger.select_cli_point(command.name)
+	# Название парсера.
+	ParserName = command.get_key_value("use")
 
-	# Вывод в консоль: недоступно.
-	print("Builder not implemented yet.")
+	# Если указан неподдерживаемый парсер.
+	if ParserName != "remanga":
+		# Вывод в лог: преупреждение.
+		print("Only \"remanga\" parser supported.")
+		# Завершение работы.
+		exit(-1)
+
+	# Вывод в консоль: предупреждение.
+	input("Builder not fully implemented yet! Press ENTER to continue...")
+	# Построение ветви с наибольшим количеством глав.
+	BuilderObject = Builder({}, command.arguments[0])
+	BuilderObject.build_branch()
 
 def com_collect(system_objects: Objects, command: ParsedCommandData):
 	"""
@@ -135,15 +148,13 @@ def com_get(system_objects: Objects, command: ParsedCommandData):
 		WebRequestorObject = WebRequestor(Config)
 
 		# Установка прокси.
-		if ParserSettings["proxy"]["enable"]:
-			# Добавление прокси.
-			WebRequestorObject.add_proxy(
-				Protocols.HTTPS,
-				host = ParserSettings["proxy"]["host"],
-				port = ParserSettings["proxy"]["port"],
-				login = ParserSettings["proxy"]["login"],
-				password = ParserSettings["proxy"]["password"]
-			)
+		if ParserSettings.proxy.enable: WebRequestorObject.add_proxy(
+			Protocols.HTTP,
+			host = ParserSettings.proxy.host,
+			port = ParserSettings.proxy.port,
+			login = ParserSettings.proxy.login,
+			password = ParserSettings.proxy.password
+		)
 
 		# Загрузка изображения.
 		ResultMessage = Downloader(system_objects, WebRequestorObject).image(
@@ -173,9 +184,9 @@ def com_list(system_objects: Objects):
 	system_objects.REMOVE_LOG = True
 	# Словарь для построения таблицы.
 	TableData = {
-		"НАЗВАНИЕ": [],
-		"ВЕРСИЯ": [],
-		"САЙТ": [],
+		"NAME": [],
+		"VERSION": [],
+		"SITE": [],
 		"collect": [],
 		"image": [],
 		"repair": [],
@@ -188,9 +199,9 @@ def com_list(system_objects: Objects):
 		Version = system_objects.manager.get_parser_version(Parser)
 		Site = system_objects.manager.get_parser_site(Parser)
 		# Заполнение данных.
-		TableData["НАЗВАНИЕ"].append(Parser)
-		TableData["ВЕРСИЯ"].append(Version)
-		TableData["САЙТ"].append(Site)
+		TableData["NAME"].append(Parser)
+		TableData["VERSION"].append(Version)
+		TableData["SITE"].append(Site)
 		TableData["collect"].append(system_objects.manager.check_method_collect(Parser))
 		TableData["image"].append(system_objects.manager.check_method_image(Parser))
 		TableData["repair"].append(system_objects.manager.check_method_repair(Parser))
@@ -253,14 +264,14 @@ def com_parse(system_objects: Objects, command: ParsedCommandData):
 		# Вывод в консоль: идёт поиск тайтлов.
 		print("Scanning titles...")
 		# Получение списка файлов в директории.
-		LocalTitles = os.listdir(ParserSettings["common"]["titles_directory"])
+		LocalTitles = os.listdir(ParserSettings.common.titles_directory)
 		# Фильтрация только файлов формата JSON.
 		LocalTitles = list(filter(lambda File: File.endswith(".json"), LocalTitles))
 		
 		# Для каждого алиаса.
 		for Slug in LocalTitles:
 			# Чтение тайтла.
-			Title = ReadJSON(ParserSettings["common"]["titles_directory"] + "/" + Slug) 
+			Title = ReadJSON(ParserSettings.common.titles_directory + "/" + Slug) 
 			# Помещение алиаса тайтла в список.
 			Slugs.append(Title["slug"])
 
@@ -298,7 +309,8 @@ def com_parse(system_objects: Objects, command: ParsedCommandData):
 			Title.set_site(Parser.site)
 			Title.set_id(Parser.id)
 			Title.set_slug(Parser.slug)
-			Title.set_ru_name(Parser.ru_name)
+			Title.set_content_language(Parser.content_language)
+			Title.set_localized_name(Parser.localized_name)
 			Title.set_en_name(Parser.en_name)
 			Title.set_another_names(Parser.another_names)
 			Title.set_covers(Parser.covers)
@@ -317,16 +329,16 @@ def com_parse(system_objects: Objects, command: ParsedCommandData):
 			#---> Получение дополнительных данных.
 			#==========================================================================================#
 			# Используемое имя файла.
-			Filename = Parser.id if ParserSettings["common"]["use_id_as_filename"] else Parser.slug
+			Filename = Parser.id if ParserSettings.common.use_id_as_filename else Parser.slug
 			# Состояние: используется ли устаревший формат.
-			Legacy = True if ParserSettings["common"]["legacy"] else False
+			Legacy = True if ParserSettings.common.legacy else False
 
 			#---> Обработка содержимого.
 			#==========================================================================================#
-			Title.merge(system_objects, ParserSettings["common"]["titles_directory"], Filename)
+			Title.merge(system_objects, ParserSettings.common.titles_directory, Filename)
 			Title.amend(Parser.amend, Message)
-			Title.download_covers(system_objects, ParserSettings["common"]["covers_directory"], Filename, Message, ParserSettings["proxy"])
-			Title.save(system_objects, ParserSettings["common"]["titles_directory"], Filename, Legacy)
+			Title.download_covers(system_objects, ParserSettings.common.covers_directory, Filename, Message, ParserSettings["proxy"])
+			Title.save(system_objects, ParserSettings.common.titles_directory, Filename, Legacy)
 
 		except TitleNotFound: pass
 
@@ -357,17 +369,17 @@ def com_repair(system_objects: Objects, command: ParsedCommandData):
 	# Имя описательного файла.
 	Filename = Filename[:-5] if command.arguments[0].endswith(".json") else command.arguments[0]
 	# Состояние: используется ли устаревший формат.
-	Legacy = True if ParserSettings["common"]["legacy"] else False
+	Legacy = True if ParserSettings.common.legacy else False
 	# Вывод в консоль: идёт процесс восстановления главы.
 	print("Repairing...")
 
 	#---> Восстановление главы.
 	#==========================================================================================#
 	Title = system_objects.manager.get_parser_struct(ParserName)
-	Title.open(system_objects, ParserSettings["common"]["titles_directory"], Filename)
+	Title.open(system_objects, ParserSettings.common.titles_directory, Filename)
 	Parser.parse(Title.slug)
 	Title.repair(Parser.repair, int(command.get_key_value("chapter")))
-	Title.save(system_objects, ParserSettings["common"]["titles_directory"], Filename, Legacy)
+	Title.save(system_objects, ParserSettings.common.titles_directory, Filename, Legacy)
 
 	# Включение удаление лога.
 	system_objects.REMOVE_LOG = True 

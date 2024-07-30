@@ -28,8 +28,10 @@ class LegacyManga:
 			"ABANDONED": "dropped",
 			"COMPLETED": "completed"
 		}
+		# Добавление ключей.
+		manga["content_language"] = None
 		# Переименование ключей.
-		manga = ReplaceDictionaryKey(manga, "ru-name", "ru_name")
+		manga = ReplaceDictionaryKey(manga, "ru-name", "localized_name")
 		manga = ReplaceDictionaryKey(manga, "en-name", "en_name")
 		manga = ReplaceDictionaryKey(manga, "another-names", "another_names")
 		manga = ReplaceDictionaryKey(manga, "author", "authors")
@@ -85,8 +87,10 @@ class LegacyManga:
 			"dropped": "ABANDONED",
 			"completed": "COMPLETED"
 		}
+		# Удаление ключей.
+		del manga["content_language"]
 		# Переименование ключей.
-		manga = ReplaceDictionaryKey(manga, "ru_name", "ru-name")
+		manga = ReplaceDictionaryKey(manga, "localized_name", "ru-name")
 		manga = ReplaceDictionaryKey(manga, "en_name", "en-name")
 		manga = ReplaceDictionaryKey(manga, "another_names", "another-names")
 		manga = ReplaceDictionaryKey(manga, "authors", "author")

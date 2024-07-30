@@ -4,7 +4,7 @@ from Source.Core.Exceptions import *
 from Source.CLI.Templates import *
 
 from dublib.WebRequestor import Protocols, WebConfig, WebLibs, WebRequestor
-from dublib.Methods import ReadJSON
+from dublib.Methods.JSON import ReadJSON
 
 #==========================================================================================#
 # >>>>> ОПРЕДЕЛЕНИЯ <<<<< #
@@ -46,10 +46,16 @@ class Parser:
 		return self.__Title["slug"]
 
 	@property
-	def ru_name(self) -> str | None:
-		"""Название на русском."""
+	def content_language(self) -> str | None:
+		"""Код языка контента по стандарту ISO 639-3."""
 
-		return self.__Title["ru_name"]
+		return self.__Title["content_language"]
+
+	@property
+	def localized_name(self) -> str | None:
+		"""Локализованное название."""
+
+		return self.__Title["localized_name"]
 
 	@property
 	def en_name(self) -> str | None:
@@ -160,17 +166,16 @@ class Parser:
 
 		# Инициализация и настройка объекта.
 		Config = WebConfig()
-		Config.select_lib(WebLibs.curl_cffi)
-		Config.generate_user_agent("pc")
-		Config.curl_cffi.enable_http2(True)
+		Config.select_lib(WebLibs.requests)
 		WebRequestorObject = WebRequestor(Config)
+		
 		# Установка прокси.
-		if self.__Settings["proxy"]["enable"]: WebRequestorObject.add_proxy(
-			Protocols.HTTPS,
-			host = self.__Settings["proxy"]["host"],
-			port = self.__Settings["proxy"]["port"],
-			login = self.__Settings["proxy"]["login"],
-			password = self.__Settings["proxy"]["password"]
+		if self.__Settings.proxy.enable: WebRequestorObject.add_proxy(
+			Protocols.HTTP,
+			host = self.__Settings.proxy.host,
+			port = self.__Settings.proxy.port,
+			login = self.__Settings.proxy.login,
+			password = self.__Settings.proxy.password
 		)
 
 		return WebRequestorObject
@@ -191,10 +196,13 @@ class Parser:
 			system_objects – коллекция системных объектов.
 		"""
 
+		# Выбор парсера для системы логгирования.
+		system_objects.logger.select_parser(NAME)
+
 		#---> Генерация динамических свойств.
 		#==========================================================================================#
 		# Настройки парсера.
-		self.__Settings = ReadJSON(f"Parsers/{NAME}/settings.json")
+		self.__Settings = system_objects.manager.get_parser_settings(NAME)
 		# Менеджер WEB-запросов.
 		self.__Requestor = self.__InitializeRequestor()
 		# Структура данных.
@@ -203,9 +211,6 @@ class Parser:
 		self.__Slug = None
 		# Коллекция системных объектов.
 		self.__SystemObjects = system_objects
-
-		# Выбор парсера для системы логгирования.
-		self.__SystemObjects.logger.select_parser(NAME)
 
 	def amend(self, content: dict | None = None, message: str = "") -> dict:
 		"""

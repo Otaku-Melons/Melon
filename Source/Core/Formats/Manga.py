@@ -48,8 +48,9 @@ class BaseStructs:
 			"site": None,
 			"id": None,
 			"slug": None,
+			"content_language": None,
 
-			"ru_name": None,
+			"localized_name": None,
 			"en_name": None,
 			"another_names": [],
 			"covers": [],
@@ -353,13 +354,21 @@ class Manga:
 
 		self.__Manga["slug"] = slug
 
-	def set_ru_name(self, ru_name: str | None):
+	def set_content_language(self, content_language: str | None):
+		"""
+		Задаёт язык контента по стандарту ISO 639-3.
+			content_language – код языка.
+		"""
+
+		self.__Manga["content_language"] = content_language.lower() if content_language else None
+
+	def set_localized_name(self, localized_name: str | None):
 		"""
 		Задаёт главное название манги на русском.
 			ru_name – название на русском.
 		"""
 
-		self.__Manga["ru_name"] = ru_name
+		self.__Manga["localized_name"] = localized_name
 
 	def set_en_name(self, en_name: str | None):
 		"""

@@ -17,7 +17,7 @@
 
 ### 1. Выбор типа парсера
 
-Melon поддерживает два типа контента: манга и ранобэ. Шаблоны обоих типов располагаются в директории [Templates](/Docs/Templates). Вам необходимо выбрать требуемый шаблон и скопировать его в каталог [Parsers](/Parsers), назвав доменным именем ресурса (разрешены только символы латинского алфавита).
+Melon поддерживает два типа контента: манга и ранобэ. Шаблоны обоих типов располагаются в директории [Parser](/Docs/Examples/Parser). Вам необходимо выбрать требуемый шаблон и скопировать его в каталог [Parsers](/Parsers), назвав доменным именем ресурса (разрешены только символы латинского алфавита).
 
 Подставьте в определения в верхней части исполняемого файла данные парсера.
 
@@ -163,13 +163,13 @@ self.__SystemObjects.temper.clear_parser_temp(NAME)
 
 ```Python
 # Классический небезопасный режим.
-Settings["common"]["delay"]
-Settings["proxy"]["enabled"]
-Settings["custom"]["key"]
+self.__Settings["common"]["delay"]
+self.__Settings["proxy"]["enabled"]
+self.__Settings["custom"]["key"]
 # Доступ через объектные представления.
-Settings.common.delay
-Settings.proxy.enabled
-Settings.custom["key"]
+self.__Settings.common.delay
+self.__Settings.proxy.enabled
+self.__Settings.custom["key"]
 ```
 
 ### 4. Рекомендации

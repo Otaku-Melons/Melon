@@ -8,11 +8,6 @@ import logging
 import shutil
 import os
 
-# from Source.Core.Builder import Builder
-# b = Builder({}, "70104")
-# b.build_branch()
-# exit(0)
-
 #==========================================================================================#
 # >>>>> ИСКЛЮЧЕНИЯ <<<<< #
 #==========================================================================================#
@@ -29,6 +24,20 @@ class BuildTargetNotFound(Exception):
 
 		# Добавление данных в сообщение об ошибке.
 		self.__Message = f"Target \"{type}\" with value \"{value}\" not found."
+		# Обеспечение доступа к оригиналу наследованного свойства.
+		super().__init__(self.__Message) 
+			
+	def __str__(self):
+		return self.__Message
+
+class UnsupportedFormat(Exception):
+	"""Исключение: неподдерживаемый формат."""
+
+	def __init__(self):
+		"""Исключение: неподдерживаемый формат."""
+
+		# Добавление данных в сообщение об ошибке.
+		self.__Message = f"File format unsupported. Convert it to legacy."
 		# Обеспечение доступа к оригиналу наследованного свойства.
 		super().__init__(self.__Message) 
 			
@@ -180,10 +189,8 @@ class Builder:
 		# Состояние: использовать ли интервал.
 		self.__UseDelay = True
 	
-		# Создание папок в корневой директории.
-		MakeRootDirectories(["Output", "Temp"])
 		# Если формат не поддерживается, выбросить исключение.
-		if "format" not in self.__Title.keys() or self.__Title["format"].lower() not in ["dmp-v1", "rn-v2"]: raise Exception("бедаааа")
+		if "format" not in self.__Title.keys() or self.__Title["format"].lower() not in ["dmp-v1"]: raise UnsupportedFormat()
 		
 	def build_chapter(self, chapter_id: int, output: str | None = None, message: str = "") -> bool:
 		"""
@@ -209,9 +216,9 @@ class Builder:
 		# Если не указан выходной каталог.
 		if output == None:
 			# Использовать в качестве каталога алиас.
-			output = f"Output/{self.__Slug}"	
+			output = f"Output/remanga/archives/{self.__Slug}"	
 			# Если не создана, создать выходную директорию.
-			if os.path.exists(f"Output/{self.__Slug}") == False: os.makedirs(f"Output/{self.__Slug}")
+			if os.path.exists(f"Output/remanga/archives/{self.__Slug}") == False: os.makedirs(f"Output/remanga/archives/{self.__Slug}")
 
 		else:
 			# Удаление конечной косой черты.
@@ -271,9 +278,9 @@ class Builder:
 			# Обновление сообщения.
 			MessageText = message + "Chapter: " + str(ChapterIndex + 1) + " / " + str(len(Chapters)) + "\n"
 			# Если не создана, создать выходную директорию.
-			if os.path.exists(f"Output/{self.__Slug}/Том " + volume) == False: os.makedirs(f"Output/{self.__Slug}/Том " + volume)
+			if os.path.exists(f"Output/remanga/archives/{self.__Slug}/Том " + volume) == False: os.makedirs(f"Output/remanga/archives/{self.__Slug}/Том " + volume)
 			# Загрузка главы.
-			Result = self.build_chapter(Chapters[ChapterIndex]["id"], output = f"Output/{self.__Slug}/Том " + volume, message = MessageText)
+			Result = self.build_chapter(Chapters[ChapterIndex]["id"], output = f"Output/remanga/archives/{self.__Slug}/Том " + volume, message = MessageText)
 			# Если не удалось загрузить главу, выполнить инкремент ошибок.
 			if Result == False: ErrorsCount += 1
 			

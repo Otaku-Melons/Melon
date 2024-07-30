@@ -27,71 +27,73 @@ SystemObjects.logger.info("Command: \"" + " ".join(sys.argv[1:len(sys.argv)]) + 
 CommandsList = list()
 
 # Создание команды: build.
-Com = Command("build", "Строит читаемый контент из описательного файла.")
+Com = Command("build", "Build readable content.")
+ComPos = Com.create_position("FILENAME", "Source file.", important = True)
+ComPos.add_argument(description = "Filename of locally saved title.")
+ComPos = Com.create_position("PARSER", "Used parser.", important = True)
+ComPos.add_key("use", ParametersTypes.Text, "Parser name.")
 CommandsList.append(Com)
 
 # Создание команды: collect.
-Com = Command("collect", "Собирает алиасы тайтлов в файл Collection.txt.")
-ComPos = Com.create_position("PARSER", "Используемый парсер.", important = True)
-ComPos.add_key("use", ParametersTypes.Text, "Название парсера.")
-Com.add_flag("f", "Включает режим перезаписи.")
-Com.add_flag("s", "Выключает ПК после завершения работы.")
-Com.add_flag("sort", "Включает сортировку алиасов.")
-Com.add_key("filters", description = "Строка с запросом для фильтрации тайтлов.")
-Com.add_key("pages", ParametersTypes.Number, "Количество страниц каталога для сбора тайтлов.")
+Com = Command("collect", "Collect titles slugs into Collection.txt file.")
+ComPos = Com.create_position("PARSER", "Used parser.", important = True)
+ComPos.add_key("use", ParametersTypes.Text, "Parser name.")
+Com.add_flag("f", "Enable force mode.")
+Com.add_flag("s", "Shutdown PC after script finish.")
+Com.add_flag("sort", "Enable slugs sorting.")
+Com.add_key("filters", description = "Query string for filtering titles.")
+Com.add_key("pages", ParametersTypes.Number, "Count of pages to collecting.")
 CommandsList.append(Com)
 
 # Создание команды: get.
-Com = Command("get", "Скачивает изображение.")
-ComPos = Com.create_position("URL", "Источник.")
-ComPos.add_argument(ParametersTypes.URL, "Ссылка на изображение.")
-ComPos = Com.create_position("PARSER", "Используемый парсер.", important = True)
-ComPos.add_key("use", ParametersTypes.Text, "Название парсера.")
-ComPos = Com.create_position("NAME", "Способ именования.")
-ComPos.add_key("fullname", description = "Полное имя файла.")
-ComPos.add_key("name", description = "Имя файла без расширения.")
-Com.add_flag("f", "Включает режим перезаписи.")
-Com.add_flag("s", "Выключает ПК после завершения работы.")
-Com.add_flag("sid", "Отключает кастомные загрузчики изображений.")
-Com.add_key("dir", ParametersTypes.ValidPath, "Выходная директория.")
+Com = Command("get", "Download image.")
+ComPos = Com.create_position("URL", "Image source.")
+ComPos.add_argument(ParametersTypes.URL, "Link to image.")
+ComPos = Com.create_position("PARSER", "Used parser.", important = True)
+ComPos.add_key("use", ParametersTypes.Text, "Parser name.")
+ComPos = Com.create_position("NAME", "Type of naming.")
+ComPos.add_key("fullname", description = "Full name of file.")
+ComPos.add_key("name", "Name of file without type.")
+Com.add_flag("f", "Enable force mode.")
+Com.add_flag("s", "Shutdown PC after script finish.")
+Com.add_flag("sid", "Disable custom imege downloader.")
+Com.add_key("dir", ParametersTypes.ValidPath, "Output directory.")
 CommandsList.append(Com)
 
 # Создание команды: list.
-Com = Command("list", "Выводит список установленных парсеров.")
-Com.add_flag("s", "Выключает ПК после завершения работы.")
+Com = Command("list", "Print list of installed parsers.")
+Com.add_flag("s", "Shutdown PC after script finish.")
 CommandsList.append(Com)
 
 # Создание команды: parse.
-Com = Command("parse", "Запускает парсинг.")
-ComPos = Com.create_position("TARGET", "Цель для парсинга.", important = True)
-ComPos.add_argument(description = "Алиас тайтла.")
-ComPos.add_flag("collection", "Парсить алиасы из файла Collection.txt.")
-ComPos.add_flag("local", "Парсить все локально описанные файлы.")
-ComPos.add_flag("updates", "Парсить тайтлы, обновлённые на сайте за последние 24 часа.")
-ComPos.add_argument(ParametersTypes.URL, "Ссылка на изображение.")
-ComPos = Com.create_position("PARSER", "Используемый парсер.", important = True)
-ComPos.add_key("use", ParametersTypes.Text, "Название парсера.")
-Com.add_key("period", ParametersTypes.Number, "Период в часах для получения обновлений.")
-Com.add_flag("f", "Включает режим перезаписи.")
-Com.add_flag("s", "Выключает ПК после завершения работы.")
+Com = Command("parse", "Start titles parsing.")
+ComPos = Com.create_position("TARGET", "Target for parsing.", important = True)
+ComPos.add_argument(description = "Title slug.")
+ComPos.add_flag("collection", "Parse slugs from Collection.txt file.")
+ComPos.add_flag("local", "Parse all locally saved titles.")
+ComPos.add_flag("updates", "Parse titles updated for last 24 hours.")
+ComPos = Com.create_position("PARSER", "Used parser.", important = True)
+ComPos.add_key("use", ParametersTypes.Text, "Parser name.")
+Com.add_key("period", ParametersTypes.Number, "Period in hours for parsing updates.")
+Com.add_flag("f", "Enable force mode.")
+Com.add_flag("s", "Shutdown PC after script finish.")
 CommandsList.append(Com)
 
 # Создание команды: repair.
-Com = Command("repair", "Заново получает содержимое главы в локально описанном файле.")
-ComPos = Com.create_position("FILENAME", "Файл.", important = True)
-ComPos.add_argument(description = "Имя файла с расширением или без него.")
-ComPos = Com.create_position("TARGET", "Цель для восстановления.", important = True)
-ComPos.add_key("chapter", ParametersTypes.Number, "ID главы.")
-ComPos = Com.create_position("PARSER", "Используемый парсер.", important = True)
-ComPos.add_key("use", ParametersTypes.Text, "Название парсера.")
-Com.add_flag("s", "Выключает ПК после завершения работы.")
+Com = Command("repair", "Repair chapter content in locally saved title.")
+ComPos = Com.create_position("FILENAME", "Source file.", important = True)
+ComPos.add_argument(description = "Filename of locally saved title.")
+ComPos = Com.create_position("TARGET", "Target for repairing.", important = True)
+ComPos.add_key("chapter", ParametersTypes.Number, "Chapter ID.")
+ComPos = Com.create_position("PARSER", "Used parser.", important = True)
+ComPos.add_key("use", ParametersTypes.Text, "Parser name.")
+Com.add_flag("s", "Shutdown PC after script finish.")
 CommandsList.append(Com)
 
 # Инициализация обработчика консольных аргументов.
 Analyzer = Terminalyzer()
 # Дополнительная настройка анализатора.
 Analyzer.enable_help(True)
-Analyzer.help_translation.important_note = "\nОбязательные параметры помечены символом *."
 # Получение информации о проверке команд.
 CommandDataStruct = Analyzer.check_commands(CommandsList)
 
@@ -100,7 +102,7 @@ if CommandDataStruct == None:
 	# Удаление файла лога.
 	SystemObjects.logger.close(clean = True)
 	# Вывод в лог: ошибка распознания команды.
-	print("Неизвестная команда!")
+	print("Unknown command.")
 	# Выброс исключения.
 	exit(0)
 
@@ -130,19 +132,22 @@ if "s" in CommandDataStruct.flags:
 # >>>>> ОБРАБОТКА КОММАНД <<<<< #
 #==========================================================================================#
 
-# Обработка команд: collect.
+# Обработка команды: build.
+if "build" == CommandDataStruct.name: com_build(SystemObjects, CommandDataStruct)
+
+# Обработка команды: collect.
 if "collect" == CommandDataStruct.name: com_collect(SystemObjects, CommandDataStruct)
 
-# Обработка команд: get.
+# Обработка команды: get.
 if "get" == CommandDataStruct.name: com_get(SystemObjects, CommandDataStruct)
 
-# Обработка команд: list.
+# Обработка команды: list.
 if "list" == CommandDataStruct.name: com_list(SystemObjects)
 
-# Обработка команд: parse.
+# Обработка команды: parse.
 if "parse" == CommandDataStruct.name: com_parse(SystemObjects, CommandDataStruct)
 
-# Обработка команд: repair.
+# Обработка команды: repair.
 if "repair" == CommandDataStruct.name: com_repair(SystemObjects, CommandDataStruct)
 
 #==========================================================================================#

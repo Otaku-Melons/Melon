@@ -40,34 +40,6 @@ class Manager:
 			# Завершение работы.
 			exit(-1)
 
-	def __PutDefaultDirectories(self, settings: dict, parser_name: str):
-		"""
-		Подстанавливает стандартные директории на пустые места.
-			settings – словарь настроек;\n
-			parser_name – название парсера.
-		"""
-
-		# Если директория архивов не установлена.
-		if not settings["common"]["archives_directory"]:
-			# Установка директории.
-			settings["common"]["archives_directory"] = f"Output/{parser_name}/archives"
-			# Если директория не существует, создать её.
-			if not os.path.exists(f"Output/{parser_name}/archives"): os.makedirs(f"Output/{parser_name}/archives")
-
-		# Если директория обложек не установлена.
-		if not settings["common"]["covers_directory"]:
-			# Установка директории.
-			settings["common"]["covers_directory"] = f"Output/{parser_name}/covers"
-			# Если директория не существует, создать её.
-			if not os.path.exists(f"Output/{parser_name}/covers"): os.makedirs(f"Output/{parser_name}/covers")
-
-		# Если директория тайтлов не установлена.
-		if not settings["common"]["titles_directory"]:
-			# Установка директории.
-			settings["common"]["titles_directory"] = f"Output/{parser_name}/titles"
-			# Если директория не существует, создать её.
-			if not os.path.exists(f"Output/{parser_name}/titles"): os.makedirs(f"Output/{parser_name}/titles")
-
 	#==========================================================================================#
 	# >>>>> ПУБЛИЧНЫЕ МЕТОДЫ <<<<< #
 	#==========================================================================================#
@@ -207,7 +179,7 @@ class Manager:
 
 	def get_parser_settings(self, parser_name: str) -> ParserSettings:
 		"""
-		Возвращает словарь настроек парсера.
+		Возвращает контейнер настроек парсера.
 			parser_name – название парсера.
 		"""
 
@@ -215,8 +187,6 @@ class Manager:
 		self.__CheckParser(parser_name)
 		# Чтение настроек.
 		Settings = ParserSettings(parser_name, self.__SystemObjects.logger)
-		# Устанавливает стандартные директории.
-		self.__PutDefaultDirectories(Settings, parser_name)
 
 		return Settings
 

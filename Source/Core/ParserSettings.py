@@ -3,6 +3,8 @@ from Source.Core.Logger import Logger
 from dublib.Methods.JSON import ReadJSON
 from dublib.Methods.Data import Zerotify
 
+import os
+
 #==========================================================================================#
 # >>>>> ИСКЛЮЧЕНИЯ <<<<< #
 #==========================================================================================#
@@ -87,6 +89,33 @@ class Common:
 	# >>>>> МЕТОДЫ <<<<< #
 	#==========================================================================================#
 
+	def __PutDefaultDirectories(self, parser_name: str):
+		"""
+		Подстанавливает стандартные директории на пустые места.
+			parser_name – название парсера.
+		"""
+
+		# Если директория архивов не установлена.
+		if not self.__Settings["archives_directory"]:
+			# Установка директории.
+			self.__Settings["archives_directory"] = f"Output/{parser_name}/archives"
+			# Если директория не существует, создать её.
+			if not os.path.exists(f"Output/{parser_name}/archives"): os.makedirs(f"Output/{parser_name}/archives")
+
+		# Если директория обложек не установлена.
+		if not self.__Settings["covers_directory"]:
+			# Установка директории.
+			self.__Settings["covers_directory"] = f"Output/{parser_name}/covers"
+			# Если директория не существует, создать её.
+			if not os.path.exists(f"Output/{parser_name}/covers"): os.makedirs(f"Output/{parser_name}/covers")
+
+		# Если директория тайтлов не установлена.
+		if not self.__Settings["titles_directory"]:
+			# Установка директории.
+			self.__Settings["titles_directory"] = f"Output/{parser_name}/titles"
+			# Если директория не существует, создать её.
+			if not os.path.exists(f"Output/{parser_name}/titles"): os.makedirs(f"Output/{parser_name}/titles")
+
 	def __init__(self, parser_name: str, settings: dict, logger: Logger):
 		"""
 		Базовые настройки.
@@ -120,6 +149,9 @@ class Common:
 				if Key in settings["common"].keys() and type(self.__Settings[Key]) == type(settings["common"][Key]): self.__Settings[Key] = settings["common"][Key]
 				else: logger.warning(f"Setting \"{Key}\" has been reset to default.")
 
+			# Подстановка стандартных директорий.
+			self.__PutDefaultDirectories(parser_name)
+
 		else: raise BadSettings(parser_name)
 
 class Proxy:
@@ -130,10 +162,10 @@ class Proxy:
 	#==========================================================================================#
 
 	@property
-	def enabled(self) -> str:
+	def enable(self) -> str:
 		"""Указывает, нужно ли использовать прокси."""
 
-		return self.__Settings["enabled"]
+		return self.__Settings["enable"]
 	
 	@property
 	def host(self) -> str:
@@ -158,7 +190,6 @@ class Proxy:
 		"""Указывает, нужно ли пытаться определить размер изображений."""
 
 		return self.__Settings["password"]
-
 
 	#==========================================================================================#
 	# >>>>> МЕТОДЫ <<<<< #
@@ -257,7 +288,7 @@ class ParserSettings:
 		"""Тип настроек."""
 
 		return self.__Type
-	
+
 	#==========================================================================================#
 	# >>>>> МЕТОДЫ <<<<< #
 	#==========================================================================================#
