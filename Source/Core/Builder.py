@@ -155,7 +155,7 @@ class Builder:
 			
 		return Volumes
 
-	def __init__(self, settings: dict, title: str, message: str = ""):
+	def __init__(self, format: str, title: str, message: str = ""):
 		"""
 		Загрузчик контента.
 			settings – глобальные настройки;\n
@@ -172,8 +172,6 @@ class Builder:
 
 		#---> Генерация динамических свойств.
 		#==========================================================================================#
-		# Глобальные настройки.
-		self.__Settings = settings.copy()
 		# Запросчик.
 		self.__Requestor = WebRequestor(Config)
 		# Данные тайтла.
@@ -183,7 +181,7 @@ class Builder:
 		# Алиас тайтла.
 		self.__Slug = self.__Title["slug"]
 		# Выходной формат.
-		self.__Format = "zip"
+		self.__Format = format
 		# Состояние: фильтровать ли маленькие слайды.
 		self.__EnableFilter = True
 		# Состояние: использовать ли интервал.

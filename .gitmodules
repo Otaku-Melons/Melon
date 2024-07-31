@@ -7,3 +7,6 @@
 [submodule "Parsers/slashlib"]
 	path = Parsers/slashlib
 	url = https://github.com/DUB1401/slashlib
+[submodule "Parsers/remanga"]
+	path = Parsers/remanga
+	url = https://github.com/DUB1401/remanga

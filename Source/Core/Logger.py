@@ -5,7 +5,6 @@ from datetime import datetime
 
 import logging
 import telebot
-import time
 import sys
 import os
 
@@ -140,7 +139,7 @@ class Logger:
 		# Установка конфигнурации.
 		logging.basicConfig(filename = self.__LogFilename, encoding = "utf-8", level = logging.INFO, format = "%(asctime)s %(levelname)s: %(message)s", datefmt = "%Y-%m-%d %H:%M:%S")		
 		# Перенаправление вывода логов в файл.
-		logging.getLogger("dublib.WebRequestor").addHandler(logging.FileHandler(self.__LogFilename))
+		# logging.getLogger("dublib.WebRequestor").addHandler(logging.FileHandler(self.__LogFilename))
 
 	def select_cli_point(self, point_name: str):
 		"""

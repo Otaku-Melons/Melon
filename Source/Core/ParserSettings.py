@@ -181,15 +181,15 @@ class Proxy:
 	
 	@property
 	def login(self) -> str | None:
-		"""Указывает, нужно ли использовать ID в качестве имени описательного файла."""
+		"""Логин для авторизации прокси."""
 
-		return self.__Settings["login"]
+		return Zerotify(self.__Settings["login"])
 	
 	@property
 	def password(self) -> str | None:
-		"""Указывает, нужно ли пытаться определить размер изображений."""
+		"""Пароль для авторизации прокси."""
 
-		return self.__Settings["password"]
+		return Zerotify(self.__Settings["password"])
 
 	#==========================================================================================#
 	# >>>>> МЕТОДЫ <<<<< #
@@ -209,16 +209,14 @@ class Proxy:
 			"enable": False,
 			"host": "",
 			"port": 0,
-			"login": None,
-			"password": None
+			"login": "",
+			"password": ""
 		}
 
 		# Если настройки прокси определены.
 		if "proxy" in settings.keys():
-			# Преобразование настроек в обязательные типы.
+			# Если определён порт, конвертировать его в число.
 			if "port" in settings["proxy"].keys(): settings["proxy"]["port"] = int(settings["proxy"]["port"]) if settings["proxy"]["port"] else 0
-			if "login" in settings["proxy"].keys(): settings["proxy"]["login"] = Zerotify(settings["proxy"]["login"])
-			if "password" in settings["proxy"].keys(): settings["proxy"]["password"] = Zerotify(settings["proxy"]["password"])
 
 			# Для каждой настройки.
 			for Key in self.__Settings.keys():

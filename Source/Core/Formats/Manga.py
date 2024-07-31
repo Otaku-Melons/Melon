@@ -1,5 +1,6 @@
 from Source.Core.Formats.Legacy import LegacyManga
 from Source.Core.Downloader import Downloader
+from Source.Core.ParserSettings import Proxy
 from Source.Core.Objects import Objects
 
 from dublib.WebRequestor import Protocols, WebConfig, WebLibs, WebRequestor
@@ -137,7 +138,7 @@ class Manga:
 		# Сортировка ветвей по количеству глав.
 		self.__Manga["branches"]= sorted(self.__Manga["branches"], key = lambda Value: Value["chapters_count"], reverse = True) 
 
-	def __InitializeRequestor(self, proxy: dict) -> WebRequestor:
+	def __InitializeRequestor(self, proxy: Proxy) -> WebRequestor:
 		"""
 		Инициализирует модуль WEB-запросов.
 			proxy – данные о прокси.
@@ -149,13 +150,14 @@ class Manga:
 		Config.requests.enable_proxy_protocol_switching(True)
 		Config.set_tries_count(3)
 		WebRequestorObject = WebRequestor(Config)
+
 		# Установка прокси.
-		if proxy["enable"]: WebRequestorObject.add_proxy(
+		if proxy.enable: WebRequestorObject.add_proxy(
 			Protocols.HTTPS,
-			host = proxy["host"],
-			port = proxy["port"],
-			login = proxy["login"],
-			password = proxy["password"]
+			host = proxy.host,
+			port = proxy.port,
+			login = proxy.login,
+			password = proxy.password
 		)
 
 		return WebRequestorObject

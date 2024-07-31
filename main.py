@@ -32,6 +32,7 @@ ComPos = Com.create_position("FILENAME", "Source file.", important = True)
 ComPos.add_argument(description = "Filename of locally saved title.")
 ComPos = Com.create_position("PARSER", "Used parser.", important = True)
 ComPos.add_key("use", ParametersTypes.Text, "Parser name.")
+Com.add_flag("cbz", "Make *.CBZ archives.")
 CommandsList.append(Com)
 
 # Создание команды: collect.

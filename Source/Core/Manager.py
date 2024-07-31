@@ -54,6 +54,8 @@ class Manager:
 		#==========================================================================================#
 		# Коллекция системных объектов.
 		self.__SystemObjects = system_objects
+		# Настройки парсера.
+		self.__ParserSettings = None
 
 	def launch(self, parser_name: str) -> any:
 		"""
@@ -67,7 +69,7 @@ class Manager:
 		self.__SystemObjects.temper.clear_parser_temp(parser_name)
 		# Инициализация парсера.
 		Module = importlib.import_module(f"Parsers.{parser_name}.main")
-		Parser = Module.Parser(self.__SystemObjects)
+		Parser = Module.Parser(self.__SystemObjects, self.get_parser_settings(parser_name))
 		# Запись в лог информации: название и версия парсера.
 		self.__SystemObjects.logger.info(f"Parser: \"{Module.NAME}\" (version {Module.VERSION}).")
 
@@ -185,10 +187,10 @@ class Manager:
 
 		# Проверка наличия парсера.
 		self.__CheckParser(parser_name)
-		# Чтение настроек.
-		Settings = ParserSettings(parser_name, self.__SystemObjects.logger)
+		# Если настройки не прочитаны, прочитать.
+		if not self.__ParserSettings: self.__ParserSettings = ParserSettings(parser_name, self.__SystemObjects.logger)
 
-		return Settings
+		return self.__ParserSettings
 
 	def get_parser_site(self, parser_name: str) -> str:
 		"""

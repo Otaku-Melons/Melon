@@ -25,6 +25,8 @@ def com_build(system_objects: Objects, command: ParsedCommandData):
 	system_objects.logger.select_cli_point(command.name)
 	# Название парсера.
 	ParserName = command.get_key_value("use")
+	# Формат архива.
+	Format = "cbz" if command.check_flag("cbz") else "zip"
 
 	# Если указан неподдерживаемый парсер.
 	if ParserName != "remanga":
@@ -36,7 +38,7 @@ def com_build(system_objects: Objects, command: ParsedCommandData):
 	# Вывод в консоль: предупреждение.
 	input("Builder not fully implemented yet! Press ENTER to continue...")
 	# Построение ветви с наибольшим количеством глав.
-	BuilderObject = Builder({}, command.arguments[0])
+	BuilderObject = Builder(Format, command.arguments[0])
 	BuilderObject.build_branch()
 
 def com_collect(system_objects: Objects, command: ParsedCommandData):
@@ -295,12 +297,12 @@ def com_parse(system_objects: Objects, command: ParsedCommandData):
 		else:
 			# Запись в лог предупреждения: стартовый алиас не найден.
 			system_objects.logger.warning("No starting slug in collection. Ignored.")
-
+	
 	# Парсинг тайтлов.
 	for Index in range(StartIndex, len(Slugs)):
 		# Сообщение для внутреннего обработчика.
 		Message = system_objects.MSG_SHUTDOWN + system_objects.MSG_FORCE_MODE + f"Parsing: {Index + 1} / {len(Slugs)}\nCurrent title: {Slugs[Index]}\n"
-
+		
 		try:
 			#---> Парсинг базовых данных.
 			#==========================================================================================#
@@ -337,7 +339,7 @@ def com_parse(system_objects: Objects, command: ParsedCommandData):
 			#==========================================================================================#
 			Title.merge(system_objects, ParserSettings.common.titles_directory, Filename)
 			Title.amend(Parser.amend, Message)
-			Title.download_covers(system_objects, ParserSettings.common.covers_directory, Filename, Message, ParserSettings["proxy"])
+			Title.download_covers(system_objects, ParserSettings.common.covers_directory, Filename, Message, ParserSettings.proxy)
 			Title.save(system_objects, ParserSettings.common.titles_directory, Filename, Legacy)
 
 		except TitleNotFound: pass

@@ -1,4 +1,8 @@
 from Source.Core.Formats.Manga import BaseStructs, Manga, Statuses, Types
+from Source.Core.ParserSettings import ParserSettings
+from Source.Core.Objects import Objects
+from Source.CLI.Templates import *
+
 from Source.Core.Objects import Objects
 from Source.Core.Exceptions import *
 from Source.CLI.Templates import *
@@ -190,10 +194,11 @@ class Parser:
 	# >>>>> ПУБЛИЧНЫЕ МЕТОДЫ <<<<< #
 	#==========================================================================================#
 
-	def __init__(self, system_objects: Objects):
+	def __init__(self, system_objects: Objects, settings: ParserSettings):
 		"""
 		Модульный парсер.
-			system_objects – коллекция системных объектов.
+			system_objects – коллекция системных объектов;\n
+			settings – настройки парсера.
 		"""
 
 		# Выбор парсера для системы логгирования.
@@ -202,7 +207,7 @@ class Parser:
 		#---> Генерация динамических свойств.
 		#==========================================================================================#
 		# Настройки парсера.
-		self.__Settings = system_objects.manager.get_parser_settings(NAME)
+		self.__Settings = settings
 		# Менеджер WEB-запросов.
 		self.__Requestor = self.__InitializeRequestor()
 		# Структура данных.
