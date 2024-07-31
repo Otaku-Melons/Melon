@@ -89,7 +89,7 @@ class Manager:
 		self.__CheckParser(parser_name)
 		# Инициализация парсера.
 		Module = importlib.import_module(f"Parsers.{parser_name}.main")
-		Parser = Module.Parser(self.__SystemObjects)
+		Parser = Module.Parser(self.__SystemObjects, self.get_parser_settings(parser_name))
 		# Состояние: доступен ли метод.
 		IsImplemented = True
 
@@ -113,7 +113,7 @@ class Manager:
 		self.__CheckParser(parser_name)
 		# Инициализация парсера.
 		Module = importlib.import_module(f"Parsers.{parser_name}.main")
-		Parser = Module.Parser(self.__SystemObjects)
+		Parser = Module.Parser(self.__SystemObjects, self.get_parser_settings(parser_name))
 		# Состояние: доступен ли метод.
 		IsImplemented = True
 
@@ -137,7 +137,7 @@ class Manager:
 		self.__CheckParser(parser_name)
 		# Инициализация парсера.
 		Module = importlib.import_module(f"Parsers.{parser_name}.main")
-		Parser = Module.Parser(self.__SystemObjects)
+		Parser = Module.Parser(self.__SystemObjects, self.get_parser_settings(parser_name))
 		# Состояние: доступен ли метод.
 		IsImplemented = True
 
@@ -161,7 +161,7 @@ class Manager:
 		self.__CheckParser(parser_name)
 		# Инициализация парсера.
 		Module = importlib.import_module(f"Parsers.{parser_name}.main")
-		Parser = Module.Parser(self.__SystemObjects)
+		Parser = Module.Parser(self.__SystemObjects, self.get_parser_settings(parser_name))
 		# Состояние: доступен ли метод.
 		IsImplemented = True
 
