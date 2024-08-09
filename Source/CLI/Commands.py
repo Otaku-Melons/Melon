@@ -373,15 +373,33 @@ def com_repair(system_objects: Objects, command: ParsedCommandData):
 	# Состояние: используется ли устаревший формат.
 	Legacy = True if ParserSettings.common.legacy else False
 	# Вывод в консоль: идёт процесс восстановления главы.
-	print("Repairing...")
+	print("Repairing... ", end = None)
 
 	#---> Восстановление главы.
 	#==========================================================================================#
-	Title = system_objects.manager.get_parser_struct(ParserName)
-	Title.open(system_objects, ParserSettings.common.titles_directory, Filename)
-	Parser.parse(Title.slug)
-	Title.repair(Parser.repair, int(command.get_key_value("chapter")))
-	Title.save(system_objects, ParserSettings.common.titles_directory, Filename, Legacy)
+
+	try:
+		Title = system_objects.manager.get_parser_struct(ParserName)
+		Title.open(system_objects, ParserSettings.common.titles_directory, Filename)
+		Parser.parse(Title.slug)
+		Title.repair(Parser.repair, int(command.get_key_value("chapter")))
+		Title.save(system_objects, ParserSettings.common.titles_directory, Filename, Legacy)
+
+	except TitleNotFound:
+		# Вывод в консоль: тайт не найден.
+		print("Error! Title not found.")
+		# Завершение работы.
+		exit(-1)
+
+	except:
+		# Вывод в консоль: не удалось восстановить главу.
+		print("Error!")
+		# Завершение работы.
+		exit(-1)
+
+	else:
+		# Вывод в консоль: успешно.
+		print("Done.")
 
 	# Включение удаление лога.
 	system_objects.REMOVE_LOG = True 
