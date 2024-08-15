@@ -42,8 +42,9 @@ ComPos.add_key("use", ParametersTypes.Text, "Parser name.")
 Com.add_flag("f", "Enable force mode.")
 Com.add_flag("s", "Shutdown PC after script finish.")
 Com.add_flag("sort", "Enable slugs sorting.")
-Com.add_key("filters", description = "Query string for filtering titles.")
+Com.add_key("filters", description = "Query string for filtering titles (supporting optional).")
 Com.add_key("pages", ParametersTypes.Number, "Count of pages to collecting.")
+Com.add_key("period", ParametersTypes.Number, "Period in hours for parsing updates.")
 CommandsList.append(Com)
 
 # Создание команды: get.

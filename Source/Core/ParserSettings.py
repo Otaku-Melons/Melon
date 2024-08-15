@@ -1,5 +1,6 @@
 from Source.Core.Logger import Logger
 
+from dublib.Methods.Filesystem import NormalizePath
 from dublib.Methods.JSON import ReadJSON
 from dublib.Methods.Data import Zerotify
 
@@ -41,19 +42,19 @@ class Common:
 	def archives_directory(self) -> str:
 		"""Директория читаемого контента."""
 
-		return self.__Settings["archives_directory"]
+		return NormalizePath(self.__Settings["archives_directory"])
 	
 	@property
 	def covers_directory(self) -> str:
 		"""Директория обложек."""
 
-		return self.__Settings["covers_directory"]
+		return NormalizePath(self.__Settings["covers_directory"])
 	
 	@property
 	def titles_directory(self) -> str:
 		"""Директория описательных файлов."""
 
-		return self.__Settings["titles_directory"]
+		return NormalizePath(self.__Settings["titles_directory"])
 	
 	@property
 	def use_id_as_filename(self) -> bool:
@@ -74,10 +75,10 @@ class Common:
 		return self.__Settings["legacy"]
 	
 	@property
-	def tries(self) -> int:
-		"""Количество повторов запроса при ошибке."""
+	def retries(self) -> int:
+		"""Количество повторов запроса при неудачном выполнении."""
 
-		return self.__Settings["tries"]
+		return self.__Settings["retries"]
 	
 	@property
 	def delay(self) -> float:
@@ -134,7 +135,7 @@ class Common:
 			"use_id_as_filename": False,
 			"sizing_images": False,
 			"legacy": False,
-			"tries": 1,
+			"retries": 0,
 			"delay": 1.0
 		}
 
@@ -162,7 +163,7 @@ class Proxy:
 	#==========================================================================================#
 
 	@property
-	def enable(self) -> str:
+	def enable(self) -> bool:
 		"""Указывает, нужно ли использовать прокси."""
 
 		return self.__Settings["enable"]

@@ -1,9 +1,10 @@
 from Source.CLI.ParsersTable import ParsersTable
 from Source.Core.Downloader import Downloader
+from Source.Core.Builders import MangaBuilder
 from Source.Core.Collector import Collector
-from Source.Core.Builder import Builder
 from Source.Core.Objects import Objects
 from Source.Core.Exceptions import *
+from Source.Core.Formats import By
 
 from dublib.WebRequestor import Protocols, WebConfig, WebLibs, WebRequestor
 from dublib.CLI.Terminalyzer import ParsedCommandData
@@ -62,6 +63,7 @@ def com_collect(system_objects: Objects, command: ParsedCommandData):
 	Filters = command.get_key_value("filters") if command.check_key("filters") else None
 	PagesCount = int(command.get_key_value("pages")) if command.check_key("pages") else None
 	Sort = command.check_flag("sort")
+	Period = int(command.get_key_value("period")) if command.check_key("period") else None
 
 	#---> Вывод данных.
 	#==========================================================================================#
@@ -75,7 +77,7 @@ def com_collect(system_objects: Objects, command: ParsedCommandData):
 	#---> Получение коллекции.
 	#==========================================================================================#
 	# Парсинг каталога.
-	Collection = Parser.collect(filters = Filters, pages_count = PagesCount)
+	Collection = Parser.collect(filters = Filters, period = Period, pages = PagesCount)
 	# Обновление и сохранение коллекци.
 	CollectorObject.append(Collection)
 	CollectorObject.save(sort = Sort)
@@ -83,11 +85,11 @@ def com_collect(system_objects: Objects, command: ParsedCommandData):
 	#---> Завершающий этап.
 	#==========================================================================================#
 	# Включение удаление лога.
-	system_objects.REMOVE_LOG = True 
+	system_objects.REMOVE_LOG = False 
 	# Очистка консоли.
 	Clear()
 
-def com_get(system_objects: Objects, command: ParsedCommandData):
+def com_get(system_objects: Objects, command: ParsedCommandData, is_cli: bool = True):
 	"""
 	Скачивает изображение.
 		system_objects – коллекция системных объектов;\n
@@ -97,7 +99,7 @@ def com_get(system_objects: Objects, command: ParsedCommandData):
 	#---> Подготовительный этап.
 	#==========================================================================================#
 	# Установка названия точки CLI.
-	system_objects.logger.select_cli_point(command.name)
+	if is_cli: system_objects.logger.select_cli_point(command.name)
 	# Получение данных парсера.
 	ParserName = command.get_key_value("use")
 	ParserSettings = system_objects.manager.get_parser_settings(ParserName)
@@ -113,9 +115,9 @@ def com_get(system_objects: Objects, command: ParsedCommandData):
 	#---> Вывод данных.
 	#==========================================================================================#
 	# Выбор в менеджере логов используемого парсера.
-	system_objects.logger.select_parser(ParserName)
+	if is_cli: system_objects.logger.select_parser(ParserName)
 	# Запись в лог информации: заголовок парсинга.
-	system_objects.logger.info("====== Downloading ======")
+	if is_cli: system_objects.logger.info("====== Downloading ======")
 	# Вывод в консоль: загрузка.
 	print(f"URL: {command.arguments[0]}\nDownloading... ", end = "")
 	
@@ -127,7 +129,7 @@ def com_get(system_objects: Objects, command: ParsedCommandData):
 	# Если у парсера есть кастомный метод загрузки.
 	if system_objects.manager.check_method_image(ParserName) and not StandartDownloader:
 		# Запись в лог информации: использование кастомного загрузчика.
-		system_objects.logger.info("Using custom image downloader.")
+		if is_cli: system_objects.logger.info("Using custom image downloader.")
 		# Инициализация парсера.
 		Parser = system_objects.manager.launch(ParserName)
 		# Скачивание изображения.
@@ -146,12 +148,13 @@ def com_get(system_objects: Objects, command: ParsedCommandData):
 		# Инициализация загрузчика.
 		Config = WebConfig()
 		Config.select_lib(WebLibs.requests)
+		Config.set_tries_count(3)
 		Config.requests.enable_proxy_protocol_switching(True)
 		WebRequestorObject = WebRequestor(Config)
 
 		# Установка прокси.
 		if ParserSettings.proxy.enable: WebRequestorObject.add_proxy(
-			Protocols.HTTP,
+			Protocols.HTTPS,
 			host = ParserSettings.proxy.host,
 			port = ParserSettings.proxy.port,
 			login = ParserSettings.proxy.login,
@@ -173,6 +176,10 @@ def com_get(system_objects: Objects, command: ParsedCommandData):
 	system_objects.REMOVE_LOG = False 
 	# Вывод в консоль: завершение загрузки.
 	print(ResultMessage)
+	# Логическое состояние успешности.
+	ResultStatus = True if ResultMessage == "Done." else False
+
+	return ResultStatus
 
 def com_list(system_objects: Objects):
 	"""
@@ -191,8 +198,7 @@ def com_list(system_objects: Objects):
 		"SITE": [],
 		"collect": [],
 		"image": [],
-		"repair": [],
-		"updates": []
+		"repair": []
 	}
 
 	# Для каждого парсера.
@@ -207,7 +213,6 @@ def com_list(system_objects: Objects):
 		TableData["collect"].append(system_objects.manager.check_method_collect(Parser))
 		TableData["image"].append(system_objects.manager.check_method_image(Parser))
 		TableData["repair"].append(system_objects.manager.check_method_repair(Parser))
-		TableData["updates"].append(system_objects.manager.check_method_updates(Parser))
 
 	# Вывод таблицы.
 	ParsersTable(TableData)
@@ -259,7 +264,7 @@ def com_parse(system_objects: Objects, command: ParsedCommandData):
 		# Вывод в консоль: идёт получение обновлений.
 		print("Collecting updates...")
 		# Получение обновлений.
-		Slugs = Parser.updates(Period)
+		Slugs = Parser.collect(period = Period)
 		
 	# Если активирован флаг обновления локальных файлов.
 	elif command.check_flag("local"):
@@ -273,7 +278,7 @@ def com_parse(system_objects: Objects, command: ParsedCommandData):
 		# Для каждого алиаса.
 		for Slug in LocalTitles:
 			# Чтение тайтла.
-			Title = ReadJSON(ParserSettings.common.titles_directory + "/" + Slug) 
+			Title = ReadJSON(f"{ParserSettings.common.titles_directory}/{Slug}") 
 			# Помещение алиаса тайтла в список.
 			Slugs.append(Title["slug"])
 
@@ -342,7 +347,12 @@ def com_parse(system_objects: Objects, command: ParsedCommandData):
 			Title.download_covers(system_objects, ParserSettings.common.covers_directory, Filename, Message, ParserSettings.proxy)
 			Title.save(system_objects, ParserSettings.common.titles_directory, Filename, Legacy)
 
-		except TitleNotFound: pass
+		except TitleNotFound:
+			# Попытка получения ID из локальных данных.
+			Title = system_objects.manager.get_parser_struct(ParserName)
+			Title.open(system_objects, ParserSettings.common.titles_directory, Slugs[Index], By.Slug)
+			# Запись в лог ошибки: не удалось найти тайтл в источнике.
+			system_objects.logger.title_not_found(Slugs[Index], Title.id)
 
 		except TypeError: pass
 

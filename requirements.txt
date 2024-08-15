@@ -2,6 +2,6 @@
 pyTelegramBotAPI
 prettytable
 packaging
-dublib==0.10.3
+dublib==0.12.1
 # Parsers
 -r ./Parsers/remanga/requirements.txt

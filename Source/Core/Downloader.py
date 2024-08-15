@@ -128,7 +128,7 @@ class Downloader:
 		#---> Выполнение загрузки.
 		#==========================================================================================#
 		# Состояние: существует ли файл.
-		IsFileExists = os.path.exists(f"{directory}{filename}{Filetype}")
+		IsFileExists = os.path.exists(f"{directory}/{filename}{Filetype}")
 
 		# Если файл не существует или включён режим перезаписи.
 		if not IsFileExists or self.__SystemObjects.FORCE_MODE:
@@ -146,8 +146,8 @@ class Downloader:
 			# Если запрос успешен
 			if Response.status_code == 200:
 
-				# Если получена последовательность байтов.
-				if len(Response.content):
+				# Если получена значимая последовательность байтов.
+				if len(Response.content) > 1000:
 
 					# Открытие потока записи.
 					with open(f"{directory}{filename}{Filetype}", "wb") as FileWriter:
@@ -160,10 +160,10 @@ class Downloader:
 
 				else:
 					# Запись в лог ошибки запроса.
-					if self.__Logging: self.__SystemObjects.logger.error(Response, f"Image doesn't contain bytes: \"{url}\".")
+					if self.__Logging: self.__SystemObjects.logger.error(Response, f"Image doesn't contain enough bytes: \"{url}\".")
 					# Изменение статуса.
 					Status = ExecutionError(204)
-					Status.message = f"Error! Image doesn't contain bytes."
+					Status.message = f"Error! Image doesn't contain enough bytes."
 
 			else:
 				# Запись в лог ошибки запроса.

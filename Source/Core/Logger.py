@@ -207,6 +207,25 @@ class Logger:
 		if self.__LoggerSettings["rules"][self.__PointName]["warnings"]: self.__SendReport(text)
 
 	#==========================================================================================#
+	# >>>>> ШАБЛОНЫ ПРЕДУПРЕЖДЕНИЙ <<<<< #
+	#==========================================================================================#
+
+	def collect_filters_ignored(self):
+		"""Записывает в лог предупреждение: игнорирование фильтров."""
+
+		self.warning(f"Filters will be ignored.")
+
+	def collect_pages_ignored(self):
+		"""Записывает в лог предупреждение: игнорирование страниц."""
+
+		self.warning(f"Pages will be ignored.")
+
+	def collect_period_ignored(self):
+		"""Записывает в лог предупреждение: игнорирование периода."""
+
+		self.warning(f"Period will be ignored.")
+
+	#==========================================================================================#
 	# >>>>> ШАБЛОНЫ ОШИБОК <<<<< #
 	#==========================================================================================#
 
@@ -224,16 +243,18 @@ class Logger:
 		# Запись в лог ошибки.
 		self.error(f"{text} Response code: {response.status_code}.")
 
-	def title_not_found(self, slug: str):
+	def title_not_found(self, slug: str, id: int | None = None):
 		"""
 		Записывает в лог предупреждение о том, что тайтл не найден в источнике.
 			slug – алиас.
 		"""
 
+		# Определение записи ID.
+		NoteID = f" (ID: {id})" if id else ""
 		# Если ошибка игнорируется, включить тихий режим.
 		if not self.__LoggerSettings["rules"][self.__PointName]["title_not_found"]: self.__SilentMode = True
 		# Запись в лог предупреждения.
-		self.error(f"Title: \"{slug}\". Not found.")
+		self.error(f"Title: \"{slug}\"{NoteID}. Not found.")
 
 	#==========================================================================================#
 	# >>>>> ШАБЛОНЫ ЗАПИСЕЙ <<<<< #
@@ -292,6 +313,30 @@ class Logger:
 		# Запись в лог информации.
 		logging.info(f"Title: \"{slug}\" (ID: {title_id}). {Chapter} {chapter_id} skipped.")
 
+	def collect_filters(self, filters: str):
+		"""
+		Записывает в лог сообщение: используемые фильтры коллекции.
+			filters – фильтры.
+		"""
+
+		logging.info(f"Filters: \"{filters}\".")
+
+	def collect_pages(self, pages: int):
+		"""
+		Записывает в лог сообщение: используемые страницы коллекции.
+			pages – страницы.
+		"""
+
+		logging.info(f"Pages: {pages}.")
+
+	def collect_period(self, period: int):
+		"""
+		Записывает в лог сообщение: используемый период коллекции.
+			period – период.
+		"""
+
+		logging.info(f"Period: {period} hours.")
+
 	def covers_unstubbed(self, slug: str, title_id: int):
 		"""
 		Записывает в лог информацию об удалении обложек по причине того, что те являются заглушками.
@@ -320,15 +365,6 @@ class Logger:
 
 		# Запись в лог информации.
 		logging.info(f"Titles collected: {titles_count}.")
-
-	def updates_collected(self, updates_count: int):
-		"""
-		Записывает в лог количество полученных обновлений.
-			updates_count – количество обновлений.
-		"""
-
-		# Запись в лог информации.
-		logging.info(f"Updates found: {updates_count}.")
 
 	#==========================================================================================#
 	# >>>>> МЕТОДЫ УПРАВЛЕНИЯ ЛОГАМИ <<<<< #

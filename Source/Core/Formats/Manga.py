@@ -2,6 +2,7 @@ from Source.Core.Formats.Legacy import LegacyManga
 from Source.Core.Downloader import Downloader
 from Source.Core.ParserSettings import Proxy
 from Source.Core.Objects import Objects
+from . import By
 
 from dublib.WebRequestor import Protocols, WebConfig, WebLibs, WebRequestor
 from dublib.Methods.JSON import ReadJSON, WriteJSON
@@ -24,27 +25,11 @@ FORMAT_NAME = "melon-manga"
 class BaseStructs:
 	"""Контейнер базовых структур описательных файлов."""
 
-	#==========================================================================================#
-	# >>>>> СВОЙСТВА ТОЛЬКО ДЛЯ ЧТЕНИЯ <<<<< #
-	#==========================================================================================#
-
 	@property
 	def manga(self) -> dict:
 		"""Базовая структура описательного файла манги."""
 
-		return self.__MANGA_STRUCT
-
-	#==========================================================================================#
-	# >>>>> МЕТОДЫ <<<<< #
-	#==========================================================================================#
-
-	def __init__(self):
-		"""Контейнер базовых структур описательных файлов."""
-
-		#---> Генерация динамических свойств.
-		#==========================================================================================#
-		# Базовая структура описательного тайтла манги.
-		self.__MANGA_STRUCT = {
+		return {
 			"format": FORMAT_NAME,
 			"site": None,
 			"id": None,
@@ -72,6 +57,11 @@ class BaseStructs:
 			"branches": [],
 			"content": {} 
 		}
+	
+	def __init__(self):
+		"""Базовая структура описательного файла манги."""
+
+		pass
 
 class Statuses(enum.Enum):
 	"""Определения статусов манги."""
@@ -197,7 +187,7 @@ class Manga:
 		# Менеджер запросов.
 		Requestor = self.__InitializeRequestor(proxy)
 		# Директория обложек.
-		CoversDirectory = f"{output_dir}/{used_filename}/"
+		CoversDirectory = f"{output_dir}{used_filename}/"
 		# Если директория обложек не существует, создать её.
 		if not os.path.exists(CoversDirectory): os.makedirs(CoversDirectory)
 		# Очистка консоли.
@@ -242,12 +232,12 @@ class Manga:
 			LocalContent = dict()
 			# Количество глав, для которых выполнено слияние.
 			MergedChaptersCount = 0
-
+			
 			# Для каждой ветви.
 			for BranchID in LocalManga["content"]:
 				# Для каждого элемента записать информацию о содержимом.
 				for Chapter in LocalManga["content"][BranchID]: LocalContent[Chapter["id"]] = Chapter["slides"]
-				
+			
 			# Для каждой ветви.
 			for BranchID in self.__Manga["content"]:
 		
@@ -274,29 +264,90 @@ class Manga:
 			# Запись в лог информации: тайтл перезаписан.
 			system_objects.logger.info("Title: \"" + self.__Manga["slug"] + "\" (ID: " + str(self.__Manga["id"]) + "). Local data removed.")
 
-	def open(self, system_objects: Objects, output_dir: str, filename: str):
+	def open(self, system_objects: Objects, output_dir: str, identificator: int | str, selector_type: By = By.Filename):
 		"""
 		Считывает локальный описательный файл.
 			system_objects – коллекция системных объектов;\n
 			output_dir – директория хранения;\n
-			filename – имя файла.
+			identificator – идентификатор тайтла;\n
+			selector_type – тип указателя на тайтл.
 		"""
 
-		# Путь к файлу.
-		Path = f"{output_dir}/{filename}.json"
+		# Данные тайтла.
+		Data = None
 
-		# Если файл существует.
-		if os.path.exists(Path):
-			# Чтение описательного файла.
-			self.__Manga = ReadJSON(f"{output_dir}/{filename}.json")
+		# Если выполняется открутие по имени файла.
+		if selector_type == By.Filename:
+			# Путь к файлу.
+			Path = f"{output_dir}/{identificator}.json"
+
+			# Если файл существует.
+			if os.path.exists(Path):
+				# Чтение описательного файла.
+				Data = ReadJSON(f"{output_dir}/{identificator}.json")
+				
+			else:
+				# Запись в лог критической ошибки: не удалось найти локальный файл.
+				system_objects.logger.critical("Couldn't open file.")
+				# Выброс исключения.
+				raise FileNotFoundError(Path)
+
+		# Если выполняется открутие по алиасу.
+		if selector_type == By.Slug:
+			# Получение списка файлов в директории.
+			LocalTitles = os.listdir(output_dir)
+			# Фильтрация только файлов формата JSON.
+			LocalTitles = list(filter(lambda File: File.endswith(".json"), LocalTitles))
+
+			# Для каждого файла.
+			for File in LocalTitles:
+				# Путь к файлу.
+				Path = f"{output_dir}/{File}"
+
+				# Если файл существует.
+				if os.path.exists(Path):
+					# Чтение файла.
+					Buffer = ReadJSON(Path)
+
+					# Если тайтл по алиасу найден.
+					if Buffer["slug"] == identificator:
+						# Запись данных.
+						Data = Buffer
+						# Прерывание цикла.
+						break
+
+		# Если выполняется открутие по ID.
+		if selector_type == By.ID:
+			# Получение списка файлов в директории.
+			LocalTitles = os.listdir(output_dir)
+			# Фильтрация только файлов формата JSON.
+			LocalTitles = list(filter(lambda File: File.endswith(".json"), LocalTitles))
+
+			# Для каждого файла.
+			for File in LocalTitles:
+				# Путь к файлу.
+				Path = f"{output_dir}/{File}"
+
+				# Если файл существует.
+				if os.path.exists(Path):
+					# Чтение файла.
+					Buffer = ReadJSON(Path)
+
+					# Если тайтл по алиасу найден.
+					if Buffer["id"] == identificator:
+						# Запись данных.
+						Data = Buffer
+						# Прерывание цикла.
+						break
+
+		# Если удалось прочитать данные.
+		if Data:
+			# Сохранение данных.
+			self.__Manga = Data
 			# Если локальный описательный файл имеет устаревший формат, конвертировать его.
-			if self.__Manga["format"] != "melon-manga": self.__Manga = LegacyManga.from_legacy(self.__Manga)
-
-		else:
-			# Запись в лог критической ошибки: не удалось найти локальный файл.
-			system_objects.logger.critical("Couldn't open file.")
-			# Выброс исключения.
-			raise FileNotFoundError(Path)
+			if self.__Manga["format"] != "melon-manga": self.__Manga = LegacyManga.from_legacy(Data)
+			
+		else: raise FileNotFoundError(identificator)
 
 	def repair(self, repairing_method: any, chapter_id: int):
 		"""

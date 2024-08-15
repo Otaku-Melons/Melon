@@ -6,7 +6,7 @@ def ParsersTable(columns: dict[str, list], sort_by: str = "NAME"):
 	TableObject = PrettyTable()
 	TableObject.set_style(PLAIN_COLUMNS)
 	# Колонки имплементаций.
-	Implementations = ["collect", "image", "repair", "updates"]
+	Implementations = ["collect", "image", "repair"]
 	# Строки подстановки статусов.
 	ImplementationStatuses = {
 		True: TextStyler("true", text_color = Styles.Colors.Green),

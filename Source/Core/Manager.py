@@ -150,30 +150,6 @@ class Manager:
 			IsImplemented = False
 
 		return IsImplemented
-
-	def check_method_updates(self, parser_name: str) -> bool:
-		"""
-		Проверяет, доступна ли в парсере имплементация метода updates.
-			parser_name – название парсера.
-		"""
-
-		# Проверка наличия парсера.
-		self.__CheckParser(parser_name)
-		# Инициализация парсера.
-		Module = importlib.import_module(f"Parsers.{parser_name}.main")
-		Parser = Module.Parser(self.__SystemObjects, self.get_parser_settings(parser_name))
-		# Состояние: доступен ли метод.
-		IsImplemented = True
-
-		try:
-			# Проверка существования метода.
-			Parser.updates
-
-		except AttributeError:
-			# Переключение состояния.
-			IsImplemented = False
-
-		return IsImplemented
 	
 	#==========================================================================================#
 	# >>>>> ПУБЛИЧНЫЕ МЕТОДЫ ПОЛУЧЕНИЯ ПАРАМЕТРОВ ПАРСЕРОВ <<<<< #
@@ -207,7 +183,7 @@ class Manager:
 
 		return Module.SITE
 
-	def get_parser_struct(self, parser_name: str) -> str:
+	def get_parser_struct(self, parser_name: str) -> any:
 		"""
 		Возвращает объектную структуру выходных данных парсера.
 			parser_name – название парсера.
