@@ -138,7 +138,7 @@ class Manga:
 		Config = WebConfig()
 		Config.select_lib(WebLibs.requests)
 		Config.requests.enable_proxy_protocol_switching(True)
-		Config.set_tries_count(3)
+		Config.set_retries_count(2)
 		WebRequestorObject = WebRequestor(Config)
 
 		# Установка прокси.

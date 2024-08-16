@@ -148,7 +148,7 @@ def com_get(system_objects: Objects, command: ParsedCommandData, is_cli: bool = 
 		# Инициализация загрузчика.
 		Config = WebConfig()
 		Config.select_lib(WebLibs.requests)
-		Config.set_tries_count(3)
+		Config.set_retries_count(2)
 		Config.requests.enable_proxy_protocol_switching(True)
 		WebRequestorObject = WebRequestor(Config)
 

@@ -55,7 +55,7 @@ class Downloader:
 		# Инициализация и настройка объекта.
 		Config = WebConfig()
 		Config.select_lib(WebLibs.requests)
-		Config.set_tries_count(Settings["common"]["tries"])
+		Config.set_retries_count(Settings.common.retries)
 		Config.add_header("Authorization", Settings["custom"]["token"])
 		WebRequestorObject = WebRequestor(Config)
 
@@ -150,7 +150,7 @@ class Downloader:
 				if len(Response.content) > 1000:
 
 					# Открытие потока записи.
-					with open(f"{directory}{filename}{Filetype}", "wb") as FileWriter:
+					with open(f"{directory}/{filename}{Filetype}", "wb") as FileWriter:
 						# Запись изображения.
 						FileWriter.write(Response.content)
 						# Изменение статуса.
