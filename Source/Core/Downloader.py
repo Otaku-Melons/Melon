@@ -127,8 +127,10 @@ class Downloader:
 
 		#---> Выполнение загрузки.
 		#==========================================================================================#
+		# Путь к файлу.
+		Path = f"{directory}/{filename}{Filetype}"
 		# Состояние: существует ли файл.
-		IsFileExists = os.path.exists(f"{directory}/{filename}{Filetype}")
+		IsFileExists = os.path.exists(Path)
 
 		# Если файл не существует или включён режим перезаписи.
 		if not IsFileExists or self.__SystemObjects.FORCE_MODE:
@@ -150,7 +152,7 @@ class Downloader:
 				if len(Response.content) > 1000:
 
 					# Открытие потока записи.
-					with open(f"{directory}/{filename}{Filetype}", "wb") as FileWriter:
+					with open(Path, "wb") as FileWriter:
 						# Запись изображения.
 						FileWriter.write(Response.content)
 						# Изменение статуса.

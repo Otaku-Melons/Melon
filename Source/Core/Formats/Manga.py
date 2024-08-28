@@ -187,7 +187,7 @@ class Manga:
 		# Менеджер запросов.
 		Requestor = self.__InitializeRequestor(proxy)
 		# Директория обложек.
-		CoversDirectory = f"{output_dir}{used_filename}/"
+		CoversDirectory = f"{output_dir}/{used_filename}/"
 		# Если директория обложек не существует, создать её.
 		if not os.path.exists(CoversDirectory): os.makedirs(CoversDirectory)
 		# Очистка консоли.
