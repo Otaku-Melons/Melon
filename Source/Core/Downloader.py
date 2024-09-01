@@ -212,7 +212,7 @@ class Downloader:
 			elif not filename: filename = original_filename
 
 			# Перемещение файла.
-			os.replace(OriginalPath, f"{directory}{filename}{Filetype}")
+			os.replace(OriginalPath, f"{directory}/{filename}{Filetype}")
 
 		except: return False
 

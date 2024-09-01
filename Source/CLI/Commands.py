@@ -10,6 +10,7 @@ from dublib.WebRequestor import Protocols, WebConfig, WebLibs, WebRequestor
 from dublib.CLI.Terminalyzer import ParsedCommandData
 from dublib.Methods.JSON import ReadJSON
 from dublib.Methods.System import Clear
+from time import sleep
 
 import os
 
@@ -173,7 +174,7 @@ def com_get(system_objects: Objects, command: ParsedCommandData, is_cli: bool = 
 	#---> Завершающий этап.
 	#==========================================================================================#
 	# Включение удаление лога.
-	system_objects.REMOVE_LOG = False 
+	system_objects.REMOVE_LOG = True 
 	# Вывод в консоль: завершение загрузки.
 	print(ResultMessage)
 	# Логическое состояние успешности.
@@ -355,6 +356,8 @@ def com_parse(system_objects: Objects, command: ParsedCommandData):
 			system_objects.logger.title_not_found(Slugs[Index], Title.id)
 
 		except TypeError: pass
+
+		if Index != len(Slugs) - 1: sleep(ParserSettings.common.delay)
 
 	# Очистка консоли.
 	Clear()
