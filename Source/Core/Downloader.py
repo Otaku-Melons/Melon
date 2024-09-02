@@ -162,7 +162,7 @@ class Downloader:
 
 				else:
 					# Запись в лог ошибки запроса.
-					if self.__Logging: self.__SystemObjects.logger.error(Response, f"Image doesn't contain enough bytes: \"{url}\".")
+					if self.__Logging: self.__SystemObjects.logger.error(f"Image doesn't contain enough bytes: \"{url}\".")
 					# Изменение статуса.
 					Status = ExecutionError(204)
 					Status.message = f"Error! Image doesn't contain enough bytes."
