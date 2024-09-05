@@ -5,6 +5,7 @@ from dublib.Engine.Bus import ExecutionError, ExecutionStatus
 from dublib.Methods.Filesystem import NormalizePath
 from dublib.WebRequestor import WebRequestor
 
+import shutil
 import os
 
 class Downloader:
@@ -98,7 +99,8 @@ class Downloader:
 			directory: str = "Temp",
 			filename: str | None = None,
 			is_full_filename: bool = False,
-			referer: str | None = None
+			referer: str | None = None,
+			bad_image_stub: str | None = None
 		) -> ExecutionStatus:
 		"""
 		Скачивает изображение.
@@ -106,7 +108,8 @@ class Downloader:
 			directory – путь к каталогу загрузки;\n
 			filename – имя файла;\n
 			is_full_filename – указывает, является ли имя файла полным;\n
-			referer – домен сайта для установка заголовка запроса Referer.
+			referer – домен сайта для установка заголовка запроса Referer;\n
+			bad_image_stub – путь к файлу-заглушке битого изображения.
 		"""
 
 		# Если запросчик не инициализирован, выбросить исключение.
@@ -160,12 +163,22 @@ class Downloader:
 						Status.value = filename + Filetype
 						Status.message = "Done."
 
+				elif bad_image_stub:
+					# Копирование заглушки.
+					shutil.copy2(bad_image_stub, Path)
+					# Запись в лог предупреждения: установлена заглушка.
+					if self.__Logging: self.__SystemObjects.logger.warning(f"Image doesn't contain enough bytes: \"{url}\". Replaced by stub.")
+					# Изменение статуса.
+					Status = ExecutionError(200)
+					Status.value = bad_image_stub.split("/")[-1]
+					Status.message = "Bad image. Replaced by stub."
+
 				else:
 					# Запись в лог ошибки запроса.
 					if self.__Logging: self.__SystemObjects.logger.error(f"Image doesn't contain enough bytes: \"{url}\".")
 					# Изменение статуса.
 					Status = ExecutionError(204)
-					Status.message = f"Error! Image doesn't contain enough bytes."
+					Status.message = "Error! Image doesn't contain enough bytes."
 
 			else:
 				# Запись в лог ошибки запроса.
@@ -226,6 +239,8 @@ class Downloader:
 			referer – домен сайта для установка заголовка запроса Referer.
 		"""
 
+		# Получение настроек парсера.
+		Settings = self.__SystemObjects.manager.get_parser_settings(parser_name)
 		# Если не указан загрузчик, инициализировать стандартный.
 		if not self.__Requestor: self.__Requestor = self.__InitializeRequestor(parser_name)
 		# Запоминание состояния логов.
@@ -235,7 +250,8 @@ class Downloader:
 		Result = self.image(
 			url = url,
 			directory = self.__SystemObjects.temper.get_parser_temp(parser_name),
-			referer = referer
+			referer = referer,
+			bad_image_stub = Settings.common.bad_image_stub
 		)
 		# Возвращение состояния логов.
 		self.__Logging = Logging

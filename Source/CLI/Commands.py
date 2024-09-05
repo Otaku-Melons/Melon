@@ -168,7 +168,8 @@ def com_get(system_objects: Objects, command: ParsedCommandData, is_cli: bool = 
 			directory = Directory,
 			filename = Filename,
 			is_full_filename = FullName,
-			referer = ParserSite
+			referer = ParserSite,
+			bad_image_stub = ParserSettings.common.bad_image_stub
 		).message
 
 	#---> Завершающий этап.

@@ -45,6 +45,12 @@ class Common:
 		return NormalizePath(self.__Settings["archives_directory"])
 	
 	@property
+	def bad_image_stub(self) -> str | None:
+		"""Путь к заглушке плохого изображения."""
+
+		return NormalizePath(self.__Settings["bad_image_stub"])
+	
+	@property
 	def covers_directory(self) -> str:
 		"""Директория обложек."""
 
@@ -132,6 +138,7 @@ class Common:
 			"archives_directory": "",
 			"covers_directory": "",
 			"titles_directory": "",
+			"bad_image_stub": None,
 			"use_id_as_filename": False,
 			"sizing_images": False,
 			"legacy": False,
@@ -143,12 +150,17 @@ class Common:
 		if "common" in settings.keys():
 			# Если определён интервал, конвертировать его в число с плавающей запятой.
 			if "delay" in settings["common"].keys(): settings["common"]["delay"] = float(settings["common"]["delay"])
-
+			
 			# Для каждой настройки.
 			for Key in self.__Settings.keys():
-				# Если настройка определена и она нужного типа, записать её.
-				if Key in settings["common"].keys() and type(self.__Settings[Key]) == type(settings["common"][Key]): self.__Settings[Key] = settings["common"][Key]
+				# Если настройка определена, записать её.
+				if Key in settings["common"].keys(): self.__Settings[Key] = settings["common"][Key]
 				else: logger.warning(f"Setting \"{Key}\" has been reset to default.")
+
+			if self.__Settings["bad_image_stub"]:
+				BadImageStub = NormalizePath(self.__Settings["bad_image_stub"])
+				if not os.path.exists(BadImageStub): self.__Settings["bad_image_stub"] = None
+				else: self.__Settings["bad_image_stub"] = BadImageStub
 
 			# Подстановка стандартных директорий.
 			self.__PutDefaultDirectories(parser_name)
