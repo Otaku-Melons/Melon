@@ -48,7 +48,7 @@ class Common:
 	def bad_image_stub(self) -> str | None:
 		"""Путь к заглушке плохого изображения."""
 
-		return NormalizePath(self.__Settings["bad_image_stub"])
+		return NormalizePath(self.__Settings["bad_image_stub"]) if self.__Settings["bad_image_stub"] else None
 	
 	@property
 	def covers_directory(self) -> str:

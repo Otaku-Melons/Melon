@@ -1,5 +1,5 @@
 from Source.Core.Formats.Legacy import LegacyManga
-from Source.Core.Objects import Objects
+from Source.Core.SystemObjects import Objects
 
 from dublib.Methods.Filesystem import MakeRootDirectories, RemoveDirectoryContent
 from dublib.Methods.JSON import ReadJSON

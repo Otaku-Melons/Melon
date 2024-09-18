@@ -1,8 +1,8 @@
+from Source.Core.ImagesDownloader import ImagesDownloader
 from Source.CLI.ParsersTable import ParsersTable
-from Source.Core.Downloader import Downloader
 from Source.Core.Builders import MangaBuilder
 from Source.Core.Collector import Collector
-from Source.Core.Objects import Objects
+from Source.Core.SystemObjects import Objects
 from Source.Core.Exceptions import *
 from Source.Core.Formats import By
 
@@ -27,8 +27,11 @@ def com_build(system_objects: Objects, command: ParsedCommandData):
 	system_objects.logger.select_cli_point(command.name)
 	# Название парсера.
 	ParserName = command.get_key_value("use")
-	# Формат архива.
-	Format = "cbz" if command.check_flag("cbz") else "zip"
+	# Формат выходных файлов.
+	Format = "cbz" if command.check_flag("cbz") else None
+	Format = "zip" if command.check_flag("zip") else None
+	# Сообщение для внутреннего обработчика.
+	Message = system_objects.MSG_SHUTDOWN + system_objects.MSG_FORCE_MODE
 
 	# Если указан неподдерживаемый парсер.
 	if ParserName != "remanga":
@@ -39,9 +42,11 @@ def com_build(system_objects: Objects, command: ParsedCommandData):
 
 	# Вывод в консоль: предупреждение.
 	input("Builder not fully implemented yet! Press ENTER to continue...")
-	# Построение ветви с наибольшим количеством глав.
-	BuilderObject = Builder(Format, command.arguments[0])
-	BuilderObject.build_branch()
+	# Инициализация и настройка сборщика.
+	Builder = MangaBuilder(system_objects, com_get, command.arguments[0], Message)
+	# Настройка сборщика.
+	Builder.set_parameters(Format)
+	Builder.build_branch()
 
 def com_collect(system_objects: Objects, command: ParsedCommandData):
 	"""
@@ -135,9 +140,9 @@ def com_get(system_objects: Objects, command: ParsedCommandData, is_cli: bool = 
 		Parser = system_objects.manager.launch(ParserName)
 		# Скачивание изображения.
 		OriginalFilename = Parser.image(Link)
-
+		
 		# Если скачивание и пермещение в целевой каталог успешно.
-		if OriginalFilename and Downloader(system_objects).move_from_temp(ParserName, Directory, OriginalFilename, Filename, FullName):
+		if OriginalFilename and ImagesDownloader(system_objects, ParserName).move_from_temp(Directory, OriginalFilename, Filename, FullName):
 			# Установка результата.
 			ResultMessage = "Done."
 			
@@ -150,6 +155,7 @@ def com_get(system_objects: Objects, command: ParsedCommandData, is_cli: bool = 
 		Config = WebConfig()
 		Config.select_lib(WebLibs.requests)
 		Config.set_retries_count(2)
+		Config.add_header("Referer", f"https://{ParserSite}/")
 		Config.requests.enable_proxy_protocol_switching(True)
 		WebRequestorObject = WebRequestor(Config)
 
@@ -163,19 +169,17 @@ def com_get(system_objects: Objects, command: ParsedCommandData, is_cli: bool = 
 		)
 
 		# Загрузка изображения.
-		ResultMessage = Downloader(system_objects, WebRequestorObject).image(
+		ResultMessage = ImagesDownloader(system_objects, ParserName, WebRequestorObject).image(
 			url = Link,
 			directory = Directory,
 			filename = Filename,
 			is_full_filename = FullName,
-			referer = ParserSite,
-			bad_image_stub = ParserSettings.common.bad_image_stub
 		).message
 
 	#---> Завершающий этап.
 	#==========================================================================================#
 	# Включение удаление лога.
-	system_objects.REMOVE_LOG = True 
+	system_objects.REMOVE_LOG = False 
 	# Вывод в консоль: завершение загрузки.
 	print(ResultMessage)
 	# Логическое состояние успешности.

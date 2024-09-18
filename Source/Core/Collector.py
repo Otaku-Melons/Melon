@@ -1,4 +1,4 @@
-from Source.Core.Objects import Objects
+from Source.Core.SystemObjects import Objects
 
 import os
 
