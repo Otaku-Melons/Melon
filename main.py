@@ -12,12 +12,6 @@ import sys
 
 CheckPythonMinimalVersion(3, 10)
 
-Objects = SystemObjects()
-
-Objects.logger.info("====== Preparing to starting ======")
-Objects.logger.info(f"Starting with Python {sys.version_info.major}.{sys.version_info.minor}.{sys.version_info.micro} on {sys.platform}.")
-Objects.logger.info("Command: \"" + " ".join(sys.argv[1:len(sys.argv)]) + "\".")
-
 #==========================================================================================#
 # >>>>> НАСТРОЙКА ОБРАБОТЧИКА КОМАНД <<<<< #
 #==========================================================================================#
@@ -88,6 +82,12 @@ Analyzer = Terminalyzer()
 Analyzer.enable_help(True)
 CommandDataStruct = Analyzer.check_commands(CommandsList)
 
+Objects = SystemObjects()
+Objects.select_parser(CommandDataStruct.get_key_value("use"))
+Objects.logger.info("====== Preparing to starting ======")
+Objects.logger.info(f"Starting with Python {sys.version_info.major}.{sys.version_info.minor}.{sys.version_info.micro} on {sys.platform}.")
+Objects.logger.info("Command: \"" + " ".join(sys.argv[1:len(sys.argv)]) + "\".")
+
 if CommandDataStruct == None:
 	Objects.logger.close(clean = True)
 	print("Unknown command.")
@@ -107,12 +107,9 @@ if "s" in CommandDataStruct.flags:
 	Objects.logger.info("Computer will be turned off after script is finished!")
 	Objects.MSG_SHUTDOWN = "Computer will be turned off after script is finished!\n"
 
-if CommandDataStruct.check_key("use"): Objects.PARSER_NAME = CommandDataStruct.get_key_value("use")
-
 #==========================================================================================#
 # >>>>> ОБРАБОТКА КОММАНД <<<<< #
 #==========================================================================================#
-
 
 if "build" == CommandDataStruct.name: com_build(Objects, CommandDataStruct)
 if "collect" == CommandDataStruct.name: com_collect(Objects, CommandDataStruct)

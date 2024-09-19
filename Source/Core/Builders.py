@@ -1,5 +1,4 @@
-from Source.Core.Formats.Legacy import LegacyManga
-from Source.Core.SystemObjects import Objects
+from Source.Core.SystemObjects import SystemObjects
 
 from dublib.Methods.Filesystem import MakeRootDirectories, RemoveDirectoryContent
 from dublib.Methods.JSON import ReadJSON
@@ -173,7 +172,7 @@ class MangaBuilder:
 	# >>>>> ПУБЛИЧНЫЕ МЕТОДЫ <<<<< #
 	#==========================================================================================#
 
-	def __init__(self, system_objects: Objects, get_method: any, parser_name: str, file: str, message: str | None = None):
+	def __init__(self, system_objects: SystemObjects, get_method: any, parser_name: str, file: str, message: str | None = None):
 		"""
 		Сборщик контента: манга.
 			system_objects – коллекция системных объектов;\n

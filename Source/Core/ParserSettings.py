@@ -1,31 +1,11 @@
-from Source.Core.Logger import Logger
+from Source.Core.SystemObjects.Logger import Logger
+from Source.Core.Exceptions import BadSettings
 
 from dublib.Methods.Filesystem import NormalizePath
 from dublib.Methods.JSON import ReadJSON
 from dublib.Methods.Data import Zerotify
 
 import os
-
-#==========================================================================================#
-# >>>>> ИСКЛЮЧЕНИЯ <<<<< #
-#==========================================================================================#
-
-class BadSettings(Exception):
-	"""Исключение: неверно определены настройки парсера."""
-
-	def __init__(self, parser_name: str):
-		"""
-		Исключение: неверно определены настройки парсера.
-			parser_name – название парсера.
-		"""
-
-		# Добавление данных в сообщение об ошибке.
-		self.__Message = f"Error during parsing \"{parser_name}\" settings."
-		# Обеспечение доступа к оригиналу наследованного свойства.
-		super().__init__(self.__Message) 
-			
-	def __str__(self):
-		return self.__Message
 
 #==========================================================================================#
 # >>>>> КАТЕГОРИИ НАСТРОЕК <<<<< #

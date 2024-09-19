@@ -14,7 +14,6 @@ class Temper:
 	def path(self) -> list[str]:
 		"""Путь к корню каталога временных файлов."""
 
-		# Если каталог не существует, создать его.
 		if not os.path.exists(self.__Temp): os.makedirs(self.__Temp)
 
 		return self.__Temp
@@ -28,31 +27,33 @@ class Temper:
 
 		#---> Генерация динамических свойств.
 		#==========================================================================================#
-		# Путь к корню каталога временных файлов.
 		self.__Temp = "Temp"
+		self.__ParserName = None
 
-	def clear_parser_temp(self, parser_name: str):
+	def clear_parser_temp(self, parser_name: str | None = None):
 		"""
 		Очищает выделенный для конкретного парсера каталог временных файлов.
 			parser_name – название парсера.
 		"""
 
-		# Путь к каталогу. 
+		if not parser_name: parser_name = self.__ParserName
 		Path = f"{self.__Temp}/{parser_name}"
-		# Если каталог существует, очистить его.
 		if os.path.exists(Path): RemoveDirectoryContent(Path)
 
-	def get_parser_temp(self, parser_name: str) -> str:
+	def get_parser_temp(self, parser_name: str | None = None) -> str:
 		"""
 		Возвращает путь к выделенному для конкретного парсера каталогу временных файлов.
 			parser_name – название парсера.
 		"""
 
-		# Путь к каталогу. 
+		if not parser_name: parser_name = self.__ParserName
 		Path = f"{self.__Temp}/{parser_name}"
-		# Если каталог не существует, создать его.
 		if not os.path.exists(Path): os.makedirs(Path)
-		# Нормализация пути.
 		Path = NormalizePath(Path)
 		
 		return Path
+	
+	def select_parser(self, parser_name: str):
+		"""Задаёт имя используемого парсера."""
+
+		self.__ParserName = parser_name

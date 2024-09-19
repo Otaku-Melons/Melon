@@ -1,3 +1,5 @@
+from Source.Core.Formats import BaseChapter, BaseTitle
+
 from dublib.WebRequestor import WebResponse
 from dublib.Methods.JSON import ReadJSON
 from dublib.Polyglot import Markdown
@@ -18,7 +20,6 @@ class Logger:
 	def __ReadSettings(self) -> dict:
 		"""Считвает настройки логов для конкретного парсера."""
 
-		# Настройки.
 		Settings = {
 			"telebot": {
 				"enable": False,
@@ -50,7 +51,6 @@ class Logger:
 				}
 			}
 		}
-		# Если файл логов существует, прочитать его содержимое.
 		if os.path.exists(f"Parsers/{self.__ParserName}/logger.json"): Settings = ReadJSON(f"Parsers/{self.__ParserName}/logger.json")
 		
 		return Settings
@@ -61,32 +61,20 @@ class Logger:
 			description – описание ошибки.
 		"""
 
-		# Если заданы настройки и включено получение отчётов через Telegram.
 		if self.__LoggerSettings and "telebot" in self.__LoggerSettings.keys() and self.__LoggerSettings["telebot"]["enable"]:
-			# Токен бота.
 			Token = self.__LoggerSettings["telebot"]["bot_token"]
-			# Экранирование описания.
 			description = Markdown(description).escaped_text
-			# Инициализация бота.
 			Bot = telebot.TeleBot(Token)
-			# Очистка параметров запуска.
 			LaunchArguments = list(sys.argv)
 			LaunchArguments.pop(0)
-			# Команда запуска.
 			Command = Markdown(" ".join(LaunchArguments)).escaped_text
-			# Комментарий.
 			Comment = ("*Comment:* " + self.__LoggerSettings["telebot"]["comment"] + "\n") if self.__LoggerSettings["telebot"]["comment"] else ""
-			# Описание ошибки.
 			Message = f"*Parser:* {self.__ParserName}\n{Comment}*Command:* `{Command}`\n\n_{description}_"
 
-			# Если сообщение не кэшировано.
 			if Message != self.__ErrorCache:
-				# Кэширование сообщения.
 				self.__ErrorCache = Message
 
-				# Если нужно прикрепить файл лога.
 				if self.__LoggerSettings["telebot"]["attach_log"]:
-					# Отправка лога с данными.
 					Bot.send_document(
 						self.__LoggerSettings["telebot"]["chat_id"],
 						document = open(self.__LogFilename, "rb"), 
@@ -95,14 +83,12 @@ class Logger:
 					)
 
 				else:
-					# Отправка сообщения.
 					Bot.send_message(
 						self.__LoggerSettings["telebot"]["chat_id"],
 						Message,
 						parse_mode = "MarkdownV2"
 					)
 
-		# Отключение тихого режима.
 		self.__SilentMode = False
 
 	#==========================================================================================#
@@ -114,32 +100,20 @@ class Logger:
 		
 		#---> Генерация динамических свойств.
 		#==========================================================================================#
-		# Путь к файлу лога.
 		self.__LogFilename = None
-		# Название парсера.
 		self.__ParserName = None
-		# Название точки CLI.
 		self.__PointName = None
-		# Текущие настройки логгирования.
 		self.__LoggerSettings = None
-		# Кэш описания ошибки.
 		self.__ErrorCache = None
-		# Состояние: включён ли тихий режим.
 		self.__SilentMode = False
 
 		#---> Настройка логов.
 		#==========================================================================================#
-		# Если каталог логов не существует, создать его.
 		if not os.path.exists("Logs"): os.makedirs("Logs")
-		# Получение текущей даты.
 		CurrentDate = datetime.now()
-		# Формирование пути к файлу лога.
 		self.__LogFilename = "Logs/" + str(CurrentDate)[:-7] + ".log"
 		self.__LogFilename = self.__LogFilename.replace(":", "-")
-		# Установка конфигнурации.
-		logging.basicConfig(filename = self.__LogFilename, encoding = "utf-8", level = logging.INFO, format = "%(asctime)s %(levelname)s: %(message)s", datefmt = "%Y-%m-%d %H:%M:%S")		
-		# Перенаправление вывода логов в файл.
-		# logging.getLogger("dublib.WebRequestor").addHandler(logging.FileHandler(self.__LogFilename))
+		logging.basicConfig(filename = self.__LogFilename, encoding = "utf-8", level = logging.INFO, format = "%(asctime)s %(levelname)s: %(message)s", datefmt = "%Y-%m-%d %H:%M:%S")
 
 	def select_cli_point(self, point_name: str):
 		"""
@@ -147,7 +121,6 @@ class Logger:
 			point_name – название точки.
 		"""
 
-		# Сохранение названия.
 		self.__PointName = point_name
 
 	def select_parser(self, parser_name: str):
@@ -156,9 +129,7 @@ class Logger:
 			parser_name – название парсера.
 		"""
 
-		# Сохранение названия.
 		self.__ParserName = parser_name
-		# Чтение настроек логов.
 		self.__LoggerSettings = self.__ReadSettings()
 
 	#==========================================================================================#
@@ -171,9 +142,7 @@ class Logger:
 			text – данные.
 		"""
 
-		# Запись в лог критической ошибки.
 		logging.critical(text)
-		# Если не включен тихий режим, отправить отчёт.
 		if not self.__SilentMode: self.__SendReport(text)
 
 	def error(self, text: str):
@@ -182,9 +151,7 @@ class Logger:
 			text – данные.
 		"""
 
-		# Запись в лог ошибки.
 		logging.error(text)
-		# Если не включен тихий режим, отправить отчёт.
 		if not self.__SilentMode: self.__SendReport(text)
 
 	def info(self, text: str):
@@ -201,9 +168,7 @@ class Logger:
 			text – данные.
 		"""
 
-		# Запись в лог предупреждения.
 		logging.warning(text)
-		# Если включена отправка предупреждений, отослать отчёт.
 		if self.__LoggerSettings["rules"][self.__PointName]["warnings"]: self.__SendReport(text)
 
 	#==========================================================================================#
@@ -236,82 +201,62 @@ class Logger:
 			text – описание ошибки.
 		"""
 
-		# Если не передано описание, использовать стандартное.
 		if not text: text = "Request error."
-		# Если ошибка игнорируется, включить тихий режим.
 		if response.status_code in self.__LoggerSettings["rules"][self.__PointName]["ignored_requests_errors"]: self.__SilentMode = True
-		# Запись в лог ошибки.
 		self.error(f"{text} Response code: {response.status_code}.")
 
-	def title_not_found(self, slug: str, id: int | None = None):
+	def title_not_found(self, title: BaseTitle):
 		"""
 		Записывает в лог предупреждение о том, что тайтл не найден в источнике.
-			slug – алиас.
+			title – данные тайтла.
 		"""
 
-		# Определение записи ID.
-		NoteID = f" (ID: {id})" if id else ""
-		# Если ошибка игнорируется, включить тихий режим.
+		NoteID = f" (ID: {id})" if title.id else ""
 		if not self.__LoggerSettings["rules"][self.__PointName]["title_not_found"]: self.__SilentMode = True
-		# Запись в лог предупреждения.
-		self.error(f"Title: \"{slug}\"{NoteID}. Not found.")
+		self.error(f"Title: \"{title.slug}\"{NoteID}. Not found.")
 
 	#==========================================================================================#
 	# >>>>> ШАБЛОНЫ ЗАПИСЕЙ <<<<< #
 	#==========================================================================================#
 
-	def amending_end(self, slug: str, title_id: int, chapters_cont: int):
+	def amending_end(self, title: BaseTitle, amended_chapter_count: int):
 		"""
 		Записывает в лог информацию о количестве дополненных глав.
-			slug – алиас;\n
-			title_id – целочисленный идентификатор тайтла;\n
-			chapters_cont – количество дополненных глав.
+			title – данные тайтла;\n
+			amended_chapter_count – количество дополненных глав.
 		"""
 
-		# Запись в лог информации.
-		logging.info(f"Title: \"{slug}\" (ID: {title_id}). Amended chapters count: {chapters_cont}.")
+		logging.info(f"Title: \"{title.slug}\" (ID: {title.id}). Amended chapters count: {amended_chapter_count}.")
 
-	def chapter_amended(self, slug: str, title_id: int, chapter_id: int, is_paid: bool):
+	def chapter_amended(self, title: BaseTitle, chapter: BaseChapter):
 		"""
-		Записывает в лог данные дополненной главы.
-			slug – алиас;\n
-			title_id – целочисленный идентификатор тайтла;\n
-			chapter_id – идентификатор главы;\n
-			is_paid – является ли глава платной.
+		Записывает в лог отчёт о дополнении главы.
+			title – данные тайтла;\n
+			chapter – данные главы.
 		"""
 
-		# Составление типа главы.
-		Chapter = "Paid chapter" if is_paid else "Chapter"
-		# Запись в лог информации.
-		logging.info(f"Title: \"{slug}\" (ID: {title_id}). {Chapter} {chapter_id} amended.")
+		ChapterNote = "Paid chapter" if chapter.is_paid else "Chapter"
+		logging.info(f"Title: \"{title.slug}\" (ID: {title.id}). {ChapterNote} {chapter.id} amended.")
 
-	def chapter_repaired(self, slug: str, title_id: int, chapter_id: int, is_paid: bool):
+	def chapter_repaired(self, title: BaseTitle, chapter: BaseChapter):
 		"""
-		Записывает в лог данные дополненной главы.
-			slug – алиас;\n
-			title_id – целочисленный идентификатор тайтла;\n
-			chapter_id – идентификатор главы;\n
-			is_paid – является ли глава платной.
+		Записывает в лог отчёт о восстановлении главы.
+			title – данные тайтла;\n
+			chapter – данные главы.
 		"""
 
-		# Составление типа главы.
-		Chapter = "Paid chapter" if is_paid else "Chapter"
-		# Запись в лог информации.
-		logging.info(f"Title: \"{slug}\" (ID: {title_id}). {Chapter} {chapter_id} repaired.")
+		ChapterNote = "Paid chapter" if chapter.is_paid else "Chapter"
+		logging.info(f"Title: \"{title.slug}\" (ID: {title.id}). {ChapterNote} {chapter.id} repaired.")
 
-	def chapter_skipped(self, slug: str, title_id: int, chapter_id: int, is_paid: bool):
+	def chapter_skipped(self, title: BaseTitle, chapter: BaseChapter):
 		"""
-		Записывает в лог данные дополненной главы.
-			slug – алиас;\n
-			title_id – целочисленный идентификатор тайтла;\n
-			chapter_id – идентификатор главы;\n
-			is_paid – является ли глава платной.
+		Записывает в лог отчёт о пропуске главы.
+			title – данные тайтла;\n
+			chapter – данные главы.
 		"""
 
-		# Составление типа главы.
-		Chapter = "Paid chapter" if is_paid else "Chapter"
-		# Запись в лог информации.
-		logging.info(f"Title: \"{slug}\" (ID: {title_id}). {Chapter} {chapter_id} skipped.")
+		ChapterNote = "Paid chapter" if chapter.is_paid else "Chapter"
+		logging.info(f"Title: \"{title.slug}\" (ID: {title.id}). {ChapterNote} {chapter.id} skipped.")
 
 	def collect_filters(self, filters: str):
 		"""
@@ -337,34 +282,29 @@ class Logger:
 
 		logging.info(f"Period: {period} hours.")
 
-	def covers_unstubbed(self, slug: str, title_id: int):
+	def covers_unstubbed(self, title: BaseTitle):
 		"""
 		Записывает в лог информацию об удалении обложек по причине того, что те являются заглушками.
-			title_id – целочисленный идентификатор тайтла;\n
-			slug – алиас.
+			title – данные тайтла.
 		"""
 
-		# Запись в лог информации.
-		logging.info(f"Title: \"{slug}\" (ID: {title_id}). Stubs detected. Covers downloading will be skipped.")
+		logging.info(f"Title: \"{title.slug}\" (ID: {title.id}). Stubs detected. Covers downloading will be skipped.")
 
-	def parsing_start(self, slug: str, title_id: int):
+	def parsing_start(self, title: BaseTitle):
 		"""
 		Записывает в лог сообщение об успешном парсинге данных тайтла.
-			title_id – целочисленный идентификатор тайтла;\n
-			slug – алиас.
+			title – данные тайтла.
 		"""
 
-		# Запись в лог информации.
-		logging.info(f"Title: \"{slug}\" (ID: {title_id}). Parsing...")
+		logging.info(f"Title: \"{title.slug}\" (ID: {title.id}). Parsing...")
 
-	def titles_collected(self, titles_count: int):
+	def titles_collected(self, collected_titles_count: int):
 		"""
 		Записывает в лог количество собранных из каталога тайтлов.
 			titles_count – количество тайтлов.
 		"""
 
-		# Запись в лог информации.
-		logging.info(f"Titles collected: {titles_count}.")
+		logging.info(f"Titles collected: {collected_titles_count}.")
 
 	#==========================================================================================#
 	# >>>>> МЕТОДЫ УПРАВЛЕНИЯ ЛОГАМИ <<<<< #
@@ -376,9 +316,6 @@ class Logger:
 			clean – Указывает, нужно ли удалить файл лога.
 		"""
 
-		# Запись в лог: заголовок конца лога.
 		logging.info("====== End ======")
-		# Отключение логов.
 		logging.shutdown()
-		# Если указано и файл существует, удалить его.
 		if clean and os.path.exists(self.__LogFilename): os.remove(self.__LogFilename)

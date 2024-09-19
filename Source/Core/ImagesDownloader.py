@@ -86,8 +86,8 @@ class ImagesDownloader:
 		#---> Генерация динамических свойств.
 		#==========================================================================================#
 		self.__SystemObjects = system_objects
-		self.__ParserSettings = self.__SystemObjects.manager.get_parser_settings(self.__SystemObjects.PARSER_NAME)
-		self.__Requestor = requestor or self.__InitializeRequestor(self.__SystemObjects.PARSER_NAME)
+		self.__ParserSettings = self.__SystemObjects.manager.get_parser_settings()
+		self.__Requestor = requestor or self.__InitializeRequestor()
 		self.__Logging = logging
 
 	def image(self, url: str, directory: str | None = "", filename: str | None = None, is_full_filename: bool = False) -> ExecutionStatus:
@@ -102,7 +102,7 @@ class ImagesDownloader:
 		Status = ExecutionStatus(0)
 		if directory == None: directory = ""
 		directory = NormalizePath(directory)
-		IsStubUsed = bool(self.__ParserSettings.common.bad_image_stub) if self.__ParserName else False
+		IsStubUsed = bool(self.__ParserSettings.common.bad_image_stub) if self.__ParserSettings.common.bad_image_stub else False
 
 		#---> Определение параметров файла.
 		#==========================================================================================#

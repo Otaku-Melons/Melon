@@ -1,4 +1,4 @@
-from Source.Core.SystemObjects import Objects
+from Source.Core.SystemObjects import SystemObjects
 
 import os
 
@@ -12,22 +12,15 @@ class Collector:
 	def __ReadCollection(self) -> list[str]:
 		"""Читает коллекцию."""
 
-		# Коллекция.
 		Collection = list()
 		
-		# Если файл коллекции существует и не включён режим перезаписи.
 		if os.path.exists(self.__Path) and not self.__SystemObjects.FORCE_MODE:
 			
-			# Открытие потока чтения.
 			with open(self.__Path, "r") as FileReader:
-				# Буфер чтения.
 				Buffer = FileReader.read().split("\n")
 
-				# Для каждой строки.
 				for Line in Buffer:
-					# Очистка краевых символов.
 					Line = Line.strip()
-					# Если строка не пустая, добавить её в список алиасов.
 					if Line: Collection.append(Line)
 
 		return Collection
@@ -36,20 +29,16 @@ class Collector:
 	# >>>>> ПУБЛИЧНЫЕ МЕТОДЫ <<<<< #
 	#==========================================================================================#
 
-	def __init__(self, system_objects: Objects, parser_name: str):
+	def __init__(self, system_objects: SystemObjects):
 		"""
 		Менеджер коллекций.
-			system_objects – коллекция системных объектов;\n
-			parser_name – название парсера.
+			system_objects – коллекция системных объектов.
 		"""
 
 		#---> Генерация динамических свойств.
 		#==========================================================================================#
-		# Коллекция системных объектов.
 		self.__SystemObjects = system_objects
-		# Путь к файлу коллекции.
-		self.__Path = f"Parsers/{parser_name}/Collection.txt"
-		# Коллекция алиасов.
+		self.__Path = f"Parsers/{system_objects.parser_name}/Collection.txt"
 		self.__Collection = self.__ReadCollection()
 
 	def append(self, slugs: list[str]):
@@ -58,7 +47,7 @@ class Collector:
 			slugs – список алиасов.
 		"""
 
-		# Добавление алиасов.
+		self.__SystemObjects.logger.titles_collected(len(slugs))
 		self.__Collection += slugs
 
 	def save(self, sort: bool = False):
@@ -67,12 +56,8 @@ class Collector:
 			sort – указывает, нужно ли сортировать алиасы в алфавитном порядке.
 		"""
 
-		# Фильтрация дублей методом конвертации в набор.
 		self.__Collection = list(set(self.__Collection))
-		# Если включена сортировка по алфавиту, выполнить её.
 		if sort: self.__Collection = sorted(self.__Collection)
 
-		# Открытие потока записи.
 		with open(self.__Path, "w") as FileWriter:
-			# Для каждого алиаса.
 			for Slug in self.__Collection: FileWriter.write(Slug + "\n")
