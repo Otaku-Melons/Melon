@@ -1,7 +1,7 @@
 from . import BaseChapter, BaseBranch, BaseTitle, By, Statuses
 from Source.Core.ImagesDownloader import ImagesDownloader
-from Source.CLI.Templates import PrintParsingStatus
 from Source.Core.SystemObjects import SystemObjects
+from Source.Core.Exceptions import ChapterNotFound
 
 from dublib.WebRequestor import Protocols, WebConfig, WebLibs, WebRequestor
 from dublib.Methods.Data import ReplaceDictionaryKey, Zerotify
@@ -367,6 +367,14 @@ class Manga(BaseTitle):
 	# >>>>> ПРИВАТНЫЕ МЕТОДЫ <<<<< #
 	#==========================================================================================#
 
+	def __CalculateEmptyChapters(self) -> int:
+		"""Подсчитывает количество глав без контента во всех ветвях."""
+
+		EmptyChaptersCount = 0
+		for Branch in self.__Branches: EmptyChaptersCount += Branch.empty_chapters_count
+
+		return EmptyChaptersCount
+
 	def __CheckStringsList(self, data: list[str]):
 		"""
 		Проверяет, содержит ли список только строки.
@@ -375,6 +383,28 @@ class Manga(BaseTitle):
 
 		for Element in data:
 			if type(Element) != str: raise TypeError(Element)
+
+	def __FindChapterByID(self, chapter_id: int) -> tuple[Branch, Chapter] | None:
+		"""
+		Возвращает данные ветви и главы для указанного ID.
+			chapter_id – уникальный идентификатор главы.
+		"""
+
+		BranchResult = None
+		ChapterResult = None
+
+		for CurrentBranch in self.__Branches:
+
+			for CurrentChapter in CurrentBranch.chapters:
+
+				if CurrentChapter.id == chapter_id:
+					BranchResult = CurrentBranch
+					ChapterResult = CurrentChapter
+					break
+
+		Result = (BranchResult, ChapterResult) if ChapterResult else None
+
+		return Result
 
 	def __InitializeRequestor(self) -> WebRequestor:
 		"""
@@ -398,6 +428,17 @@ class Manga(BaseTitle):
 		)
 
 		return WebRequestorObject
+
+	def __PrintAmendingProgress(self, message: str, current_state: int, max_state: int):
+		"""
+		Выводит в консоль прогресс дополнение глав информацией о содержимом.
+			message – сообщение из внешнего обработчика;\n
+			current_state – индекс текущей дополняемой главы;\n
+			max_state – количество глав, которые необходимо дополнить.
+		"""
+
+		Clear()
+		print(f"{message}\nAmending: {current_state} / {max_state}")
 
 	def __UpdateBranchesInfo(self):
 		"""Обновляет информацию о ветвях."""
@@ -424,6 +465,7 @@ class Manga(BaseTitle):
 		self.__Branches: list[Branch] = list()
 		self.__UsedFilename = None
 		self.__IsLegacy = True if self.__ParserSettings .common.legacy else False
+		self.__Parser = None
 
 		self._Title = {
 			"format": "melon-manga",
@@ -454,14 +496,32 @@ class Manga(BaseTitle):
 			"content": {} 
 		}
 
-	def amend(self, amending_method: any, message: str):
+	def amend(self, message: str):
 		"""
 		Дополняет содержимое подробной информацией.
-			amending_method – метод из парсера для дополнения;\n
 			message – сообщение для внутреннего обработчика.
 		"""
 
-		amending_method(message)
+		ChaptersToAmendCount = self.__CalculateEmptyChapters()
+		AmendedChaptersCount = 0
+		ProgressIndex = 0
+
+		for CurrentBranch in self.__Branches:
+
+			for CurrentChapter in CurrentBranch.chapters:
+
+				if not CurrentChapter.slides:
+					ProgressIndex += 1
+					self.__Parser.amend(CurrentBranch, CurrentChapter)
+
+					if CurrentChapter.slides:
+						AmendedChaptersCount += 1
+						self.__SystemObjects.logger.chapter_amended(self, CurrentChapter)
+
+					self.__PrintAmendingProgress(message, ProgressIndex, ChaptersToAmendCount)
+					sleep(self.__ParserSettings.common.delay)
+
+		self.__SystemObjects.logger.amending_end(self, AmendedChaptersCount)
 
 	def download_covers(self, message: str):
 		"""
@@ -490,16 +550,16 @@ class Manga(BaseTitle):
 	def merge(self):
 		"""Объединяет данные описательного файла и текущей структуры данных."""
 
-		Directory = self.__ParserSettings.common.titles_directory
-
-		if os.path.exists(f"{Directory}/{self.__UsedFilename}.json") and not self.__SystemObjects.FORCE_MODE:
-			LocalManga = ReadJSON(f"{Directory}/{self.__UsedFilename}.json")
+		Path = f"{self.__ParserSettings.common.titles_directory}/{self.__UsedFilename}.json"
+		
+		if os.path.exists(Path) and not self.__SystemObjects.FORCE_MODE:
+			LocalManga = ReadJSON(Path)
 			if LocalManga["format"] != "melon-manga": LocalManga = self.__FromLegacy(LocalManga)
 			LocalContent = dict()
 			MergedChaptersCount = 0
 			
 			for BranchID in LocalManga["content"]:
-				for Chapter in LocalManga["content"][BranchID]: LocalContent[Chapter["id"]] = Chapter["slides"]
+				for CurrentChapter in LocalManga["content"][BranchID]: LocalContent[CurrentChapter["id"]] = CurrentChapter["slides"]
 			
 			for BranchID in self._Title["content"]:
 		
@@ -516,6 +576,19 @@ class Manga(BaseTitle):
 
 		elif self.__SystemObjects.FORCE_MODE:
 			self.__SystemObjects.logger.info("Title: \"" + self._Title["slug"] + "\" (ID: " + str(self._Title["id"]) + "). Local data removed.")
+
+		self.__Branches = list()
+
+		for CurrentBranchID in self._Title["content"].keys():
+			BranchID = int(CurrentBranchID)
+			NewBranch = Branch(BranchID)
+
+			for ChapterData in self._Title["content"][CurrentBranchID]:
+				NewChapter = Chapter(self.__SystemObjects)
+				NewChapter.set_dict(ChapterData)
+				NewBranch.add_chapter(NewChapter)
+
+			self.add_branch(NewBranch)
 
 	def open(self, identificator: int | str, selector_type: By = By.Filename):
 		"""
@@ -571,33 +644,36 @@ class Manga(BaseTitle):
 			
 		else: raise FileNotFoundError(identificator)
 
-	def parse(self, parsing_method: any, message: str | None = None):
+	def parse(self, message: str | None = None):
 		"""
 		Получает основные данные тайтла.
-			parsing_method – метод из парсера;\n
 			message – сообщение для внутреннего обработчика.
 		"""
 		
+		Clear()
 		message = message or ""
-		if message: PrintParsingStatus(message)
-		parsing_method()
-		self.__UsedFilename = self.id if self.__ParserSettings.common.use_id_as_filename else self.slug
+		if message: print(f"{message}\nParsing data...")
+		self.__Parser.parse()
+		self.__UsedFilename = str(self.id) if self.__ParserSettings.common.use_id_as_filename else self.slug
 
-	def repair(self, repairing_method: any, chapter_id: int):
+	def repair(self, chapter_id: int):
 		"""
 		Восстанавливает содержимое главы, заново получая его из источника.
-			repairing_method – метод из парсера для восстановления;\n
-			chapter_id – идентификатор целевой главы.
+			chapter_id – уникальный идентификатор целевой главы.
 		"""
 
-		repairing_method(chapter_id)
+		SearchResult = self.__FindChapterByID(chapter_id)
+		if not SearchResult: raise ChapterNotFound(chapter_id)
+
+		BranchData: Branch = SearchResult[0]
+		ChapterData: Chapter = SearchResult[1]
+		ChapterData.clear_slides()
+		self.__Parser.amend(BranchData, ChapterData)
+
+		if ChapterData.slides: self.__SystemObjects.logger.chapter_repaired(self, ChapterData)
 
 	def save(self):
 		"""Сохраняет данные манги в описательный файл."""
-
-		Content = dict()
-		for CurrentBranch in self.__Branches: Content[str(CurrentBranch.id)] = CurrentBranch.to_list()
-		self._Title["content"] = Content
 
 		for BranchID in self._Title["content"].keys(): self._Title["content"][BranchID] = sorted(self._Title["content"][BranchID], key = lambda Value: (list(map(int, Value["volume"].split("."))), list(map(int, Value["number"].split("."))))) 
 		
@@ -605,8 +681,14 @@ class Manga(BaseTitle):
 			self._Title = self.__ToLegacy(self._Title)
 			self.__SystemObjects.logger.info("Title: \"" + self._Title["slug"] + "\". Converted to legacy format.")
 
+
 		WriteJSON(f"{self.__ParserSettings.common.titles_directory}/{self.__UsedFilename}.json", self._Title)
 		self.__SystemObjects.logger.info("Title: \"" + self._Title["slug"] + "\" (ID: " + str(self._Title["id"]) + "). Saved.")
+
+	def set_parser(self, parser: any):
+		"""Задаёт парсер для вызова методов."""
+
+		self.__Parser = parser
 
 	#==========================================================================================#
 	# >>>>> МЕТОДЫ УСТАНОВКИ СВОЙСТВ <<<<< #
@@ -682,6 +764,8 @@ class Manga(BaseTitle):
 		"""
 
 		if branch not in self.__Branches: self.__Branches.append(branch)
+		self._Title["content"] = dict()
+		for CurrentBranch in self.__Branches: self._Title["content"][str(CurrentBranch.id)] = CurrentBranch.to_list()
 		self.__UpdateBranchesInfo()
 
 	def set_site(self, site: str):

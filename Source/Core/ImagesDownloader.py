@@ -183,7 +183,7 @@ class ImagesDownloader:
 
 		Result = self.image(
 			url = url,
-			directory = self.__SystemObjects.temper.get_parser_temp(self.__SystemObjects.PARSER_NAME),
+			directory = self.__SystemObjects.temper.get_parser_temp(),
 		)
 
 		return Zerotify(Result.value)

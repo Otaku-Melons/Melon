@@ -13,9 +13,22 @@ class BadSettings(Exception):
 			parser_name – название парсера.
 		"""
 
-		# Добавление данных в сообщение об ошибке.
 		self.__Message = f"Error during parsing \"{parser_name}\" settings."
-		# Обеспечение доступа к оригиналу наследованного свойства.
+		super().__init__(self.__Message) 
+			
+	def __str__(self):
+		return self.__Message
+
+class ChapterNotFound(Exception):
+	"""Исключение: глава не найдена."""
+
+	def __init__(self, chapter: int):
+		"""
+		Исключение: глава не найдена.
+			chapter – идентификатор главы.
+		"""
+
+		self.__Message = f"Chapter {chapter} not found."
 		super().__init__(self.__Message) 
 			
 	def __str__(self):
@@ -30,9 +43,7 @@ class TitleNotFound(Exception):
 			title – данные тайтла.
 		"""
 
-		# Добавление данных в сообщение об ошибке.
 		self.__Message = f"Title \"{title.slug}\" not found."
-		# Обеспечение доступа к оригиналу наследованного свойства.
 		super().__init__(self.__Message) 
 			
 	def __str__(self):

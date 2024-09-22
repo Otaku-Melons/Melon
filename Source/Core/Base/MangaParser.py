@@ -1,7 +1,8 @@
-from Source.Core.Formats.Manga import Chapter, Manga
+from Source.Core.Formats.Manga import Chapter, Branch, Manga
 from Source.Core.SystemObjects import SystemObjects
 
 from dublib.WebRequestor import Protocols, WebConfig, WebLibs, WebRequestor
+from dublib.Methods.System import Clear
 
 #==========================================================================================#
 # >>>>> ОПРЕДЕЛЕНИЯ <<<<< #
@@ -33,31 +34,19 @@ class MangaParser:
 	# >>>>> НАСЛЕДУЕМЫЕ МЕТОДЫ <<<<< #
 	#==========================================================================================#
 
-	def _CalculateEmptyChapters(self) -> int:
-		"""Подсчитывает количество глав без контента во всех ветвях."""
-
-		EmptyChaptersCount = 0
-		for Branch in self._Title.branches: EmptyChaptersCount += Branch.empty_chapters_count
-
-		return EmptyChaptersCount
-
-	def _FindChapterByID(self, chapter_id: int) -> Chapter | None:
+	def _PrintCollectingStatus(self, page: int | None):
 		"""
-		Возвращает главу с указанным ID.
-			chapter_id – уникальный идентификатор главы.
+		Выводит в консоль прогресс сбора коллекции из каталога.
+			page – номер текущей страницы.
 		"""
 
-		SearchResult = None
+		Clear()
+		page = f" titles on page {page}" if page else ""
+		print(f"Collecting{page}...")
 
-		for Branch in self._Title.branches:
-
-			for CurrentChapter in Branch.chapters:
-
-				if CurrentChapter.id == chapter_id:
-					SearchResult = CurrentChapter
-					break
-
-		return SearchResult
+	#==========================================================================================#
+	# >>>>> ПЕРЕОПРЕДЕЛЯЕМЫЕ <<<<< #
+	#==========================================================================================#
 
 	def _InitializeRequestor(self) -> WebRequestor:
 		"""Инициализирует модуль WEB-запросов."""
@@ -102,10 +91,11 @@ class MangaParser:
 
 		self._PostInitMethod()
 
-	def amend(self, message: str = ""):
+	def amend(self, branch: Branch, chapter: Chapter):
 		"""
-		Дополняет каждую главу в кажой ветви информацией о содержимом.
-			message – сообщение для портов CLI.
+		Дополняет главу дайными о слайдах.
+			branch – данные ветви;\n
+			chapter – данные главы.
 		"""
 
 		pass

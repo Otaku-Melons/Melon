@@ -64,6 +64,7 @@ class Manager:
 		self.__SystemObjects.temper.clear_parser_temp(parser_name)
 		Module = importlib.import_module(f"Parsers.{parser_name}.main")
 		Parser = Module.Parser(self.__SystemObjects, title)
+		title.set_parser(Parser)
 		self.__SystemObjects.logger.info(f"Parser: \"{Module.NAME}\" (version {Module.VERSION}).")
 
 		return Parser
@@ -171,6 +172,17 @@ class Manager:
 		Module = importlib.import_module(f"Parsers.{parser_name}.main")
 
 		return Module.TYPE
+	
+	def get_parser_type_name(self, parser_name: str | None = None) -> str:
+		"""
+		Возвращает название типа контента парсера.
+			parser_name – название парсера.
+		"""
+
+		parser_name = self.__CheckParser(parser_name)
+		Module = importlib.import_module(f"Parsers.{parser_name}.main")
+
+		return Module.TYPE.__name__.lower()
 
 	def get_parser_version(self, parser_name: str | None = None) -> str:
 		"""

@@ -1,7 +1,7 @@
 from Source.Core.ImagesDownloader import ImagesDownloader
 from Source.Core.SystemObjects import SystemObjects
-from Source.CLI.ParsersTable import ParsersTable
 from Source.Core.Builders import MangaBuilder
+from Source.CLI.Templates import ParsersTable
 from Source.Core.Collector import Collector
 from Source.Core.Exceptions import *
 from Source.Core.Formats import By
@@ -111,11 +111,8 @@ def com_get(system_objects: SystemObjects, command: ParsedCommandData, is_cli: b
 		Parser = system_objects.manager.launch(ParserName)
 		OriginalFilename = Parser.image(Link)
 		
-		if OriginalFilename and ImagesDownloader(system_objects, ParserName).move_from_temp(Directory, OriginalFilename, Filename, FullName):
-			ResultMessage = "Done."
-			
-		else:
-			ResultMessage = "Custom downloader failed."
+		if OriginalFilename and ImagesDownloader(system_objects).move_from_temp(Directory, OriginalFilename, Filename, FullName): ResultMessage = "Done."	
+		else: ResultMessage = "Custom downloader failed."
 
 	else:
 		Config = WebConfig()
@@ -133,7 +130,7 @@ def com_get(system_objects: SystemObjects, command: ParsedCommandData, is_cli: b
 			password = ParserSettings.proxy.password
 		)
 
-		ResultMessage = ImagesDownloader(system_objects, ParserName, WebRequestorObject).image(
+		ResultMessage = ImagesDownloader(system_objects, WebRequestorObject).image(
 			url = Link,
 			directory = Directory,
 			filename = Filename,
@@ -158,21 +155,24 @@ def com_list(system_objects: SystemObjects):
 	TableData = {
 		"NAME": [],
 		"VERSION": [],
+		"TYPE": [],
 		"SITE": [],
 		"collect": [],
 		"image": [],
-		"repair": []
+		"apps": []
 	}
 
 	for Parser in ParsersList:
 		Version = system_objects.manager.get_parser_version(Parser)
 		Site = system_objects.manager.get_parser_site(Parser)
+		Type = system_objects.manager.get_parser_type_name(Parser)
 		TableData["NAME"].append(Parser)
 		TableData["VERSION"].append(Version)
+		TableData["TYPE"].append(Type)
 		TableData["SITE"].append(Site)
 		TableData["collect"].append(system_objects.manager.check_method_collect(Parser))
 		TableData["image"].append(system_objects.manager.check_method_image(Parser))
-		TableData["repair"].append(system_objects.manager.check_method_repair(Parser))
+		TableData["apps"].append(False)
 
 	ParsersTable(TableData)
 	system_objects.REMOVE_LOG = True
@@ -235,15 +235,15 @@ def com_parse(system_objects: SystemObjects, command: ParsedCommandData):
 		Message = system_objects.MSG_SHUTDOWN + system_objects.MSG_FORCE_MODE + f"Parsing: {Index + 1} / {len(Slugs)}\nCurrent title: {Slugs[Index]}\n"
 		
 		try:
-			Title.parse(Parser.parse, Message)
+			Title.parse(Message)
 			Title.merge()
-			Title.amend(Parser.amend, Message)
+			Title.amend(Message)
 			Title.download_covers(Message)
 			Title.save()
 
 		except TitleNotFound:
 			Title.open(Slugs[Index], By.Slug)
-			system_objects.logger.title_not_found(Slugs[Index], Title.id)
+			system_objects.logger.title_not_found(Title)
 
 		if Index != len(Slugs) - 1: sleep(ParserSettings.common.delay)
 
@@ -272,8 +272,8 @@ def com_repair(system_objects: SystemObjects, command: ParsedCommandData):
 
 	try:
 		Title.open(Filename)
-		Title.parse(Parser.parse)
-		Title.repair(Parser.repair, command.get_key_value("chapter"))
+		Title.parse()
+		Title.repair(command.get_key_value("chapter"))
 		Title.save()
 
 	except TitleNotFound:

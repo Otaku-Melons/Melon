@@ -1,38 +1,33 @@
-from dublib.Methods.System import Clear
+from dublib.CLI.StyledPrinter import Styles, TextStyler
+from prettytable import PLAIN_COLUMNS, PrettyTable
 
-def PrintAmendingProgress(message: str, current_state: int, max_state: int):
+def ParsersTable(columns: dict[str, list], sort_by: str = "NAME"):
 	"""
-	Выводит в консоль прогресс дополнение глав информацией о содержимом.
-		message – сообщение из внешнего обработчика;\n
-		current_state – индекс текущей дополняемой главы;\n
-		max_state – количество глав, которые необходимо дополнить.
-	"""
-
-	# Очистка консоли.
-	Clear()
-	# Вывод в консоль: прогресс.
-	print(f"{message}\nAmending: {current_state} / {max_state}")
-
-def PrintCollectingStatus(page: int | None):
-	"""
-	Выводит в консоль прогресс сбора коллекции из каталога.
-		page – номер текущей страницы.
+	Выводит в консоль форматированную таблицу установленных парсеров.
+		columns – данные для вывода;\n
+		sort_by – название колонки для сортировки.
 	"""
 
-	# Очистка консоли.
-	Clear()
-	# Преобразование номера страницы в часть сообщения.
-	page = f" titles on page {page}" if page else ""
-	# Вывод в консоль: прогресс.
-	print(f"Collecting{page}...")
+	TableObject = PrettyTable()
+	TableObject.set_style(PLAIN_COLUMNS)
+	Implementations = ["collect", "image", "apps"]
+	ImplementationStatuses = {
+		True: TextStyler("true", text_color = Styles.Colors.Green),
+		False: TextStyler("false", text_color = Styles.Colors.Red)
+	}
 
-def PrintParsingStatus(message: str):
-	"""
-	Выводит в консоль прогресс дополнение глав информацией о содержимом.
-		message – сообщение из внешнего обработчика.
-	"""
+	for SiteIndex in range(len(columns["SITE"])):
+		columns["SITE"][SiteIndex] = TextStyler(columns["SITE"][SiteIndex], decorations = [Styles.Decorations.Italic])
 
-	# Очистка консоли.
-	Clear()
-	# Вывод в консоль: прогресс.
-	print(f"{message}\nParsing data...")
+	for ColumnName in Implementations:
+
+		for StatusIndex in range(len(columns[ColumnName])):
+			columns[ColumnName][StatusIndex] = ImplementationStatuses[columns[ColumnName][StatusIndex]]
+
+	for ColumnName in columns.keys():
+		Buffer = TextStyler(ColumnName, decorations = [Styles.Decorations.Bold])
+		TableObject.add_column(Buffer, columns[ColumnName])
+
+	TableObject.align = "l"
+	TableObject.sortby = TextStyler(sort_by, decorations = [Styles.Decorations.Bold])
+	print(TableObject)
