@@ -7,8 +7,15 @@ from datetime import datetime
 
 import logging
 import telebot
+import enum
 import sys
 import os
+
+class LoggerRules(enum.Enum):
+	Save = 0
+	SaveIfHasErrors = 1
+	SaveIfHasWarnings = 2
+	Remove = 3
 
 class Logger:
 	"""Менеджер логов."""
@@ -107,6 +114,10 @@ class Logger:
 		self.__ErrorCache = None
 		self.__SilentMode = False
 
+		self.__LoggerRules = LoggerRules.Save
+		self.__IsLogHasError = False
+		self.__IsLogHasWarning = False
+
 		#---> Настройка логов.
 		#==========================================================================================#
 		if not os.path.exists("Logs"): os.makedirs("Logs")
@@ -132,6 +143,15 @@ class Logger:
 		self.__ParserName = parser_name
 		self.__LoggerSettings = self.__ReadSettings()
 
+	def set_rule(self, rule: int | LoggerRules):
+		"""
+		Задаёт правило обработки логов.
+			rule – индекс правила или само правило.
+		"""
+
+		if type(rule) == int: self.__LoggerRules = LoggerRules(rule)
+		else: self.__LoggerRules = rule
+
 	#==========================================================================================#
 	# >>>>> БАЗОВЫЕ ТИПЫ ЗАПИСЕЙ <<<<< #
 	#==========================================================================================#
@@ -142,6 +162,7 @@ class Logger:
 			text – данные.
 		"""
 
+		self.__IsLogHasError = True
 		logging.critical(text)
 		if not self.__SilentMode: self.__SendReport(text)
 
@@ -151,6 +172,7 @@ class Logger:
 			text – данные.
 		"""
 
+		self.__IsLogHasError = True
 		logging.error(text)
 		if not self.__SilentMode: self.__SendReport(text)
 
@@ -168,6 +190,7 @@ class Logger:
 			text – данные.
 		"""
 
+		self.__IsLogHasWarning = True
 		logging.warning(text)
 		if self.__LoggerSettings["rules"][self.__PointName]["warnings"]: self.__SendReport(text)
 
@@ -211,7 +234,7 @@ class Logger:
 			title – данные тайтла.
 		"""
 
-		NoteID = f" (ID: {id})" if title.id else ""
+		NoteID = f" (ID: {title.id})" if title.id else ""
 		if not self.__LoggerSettings["rules"][self.__PointName]["title_not_found"]: self.__SilentMode = True
 		self.error(f"Title: \"{title.slug}\"{NoteID}. Not found.")
 
@@ -310,12 +333,16 @@ class Logger:
 	# >>>>> МЕТОДЫ УПРАВЛЕНИЯ ЛОГАМИ <<<<< #
 	#==========================================================================================#
 
-	def close(self, clean: bool = False):
-		"""
-		Закрывает логи.
-			clean – Указывает, нужно ли удалить файл лога.
-		"""
+	def close(self):
+		"""Закрывает логи."""
 
 		logging.info("====== End ======")
 		logging.shutdown()
-		if clean and os.path.exists(self.__LogFilename): os.remove(self.__LogFilename)
+
+		IsClean = False
+
+		if self.__LoggerRules == LoggerRules.Remove: IsClean = True
+		if self.__LoggerRules == LoggerRules.SaveIfHasErrors and not self.__IsLogHasError: IsClean = True
+		if self.__LoggerRules == LoggerRules.SaveIfHasWarnings and not self.__IsLogHasWarning and not self.__IsLogHasError: IsClean = True
+
+		if IsClean and os.path.exists(self.__LogFilename): os.remove(self.__LogFilename)

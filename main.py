@@ -122,6 +122,6 @@ if "repair" == CommandDataStruct.name: com_repair(Objects, CommandDataStruct)
 # >>>>> ЗАВЕРШЕНИЕ РАБОТЫ <<<<< #
 #==========================================================================================#
 
-if Objects.REMOVE_LOG: Objects.logger.close(clean = True)
-else: Objects.logger.close()
+Objects.logger.close()
 if Objects.SHUTDOWN: Shutdown()
+exit(Objects.EXIT_CODE)

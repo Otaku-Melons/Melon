@@ -663,7 +663,10 @@ class Manga(BaseTitle):
 		"""
 
 		SearchResult = self.__FindChapterByID(chapter_id)
-		if not SearchResult: raise ChapterNotFound(chapter_id)
+
+		if not SearchResult:
+			self.__SystemObjects.logger.title_not_found(self)
+			raise ChapterNotFound(chapter_id)
 
 		BranchData: Branch = SearchResult[0]
 		ChapterData: Chapter = SearchResult[1]

@@ -1,5 +1,5 @@
+from Source.Core.SystemObjects.Logger import Logger, LoggerRules
 from Source.Core.SystemObjects.Manager import Manager
-from Source.Core.SystemObjects.Logger import Logger
 from Source.Core.SystemObjects.Temper import Temper
 
 class SystemObjects:
@@ -10,8 +10,9 @@ class SystemObjects:
 	#==========================================================================================#
 
 	FORCE_MODE = False
-	REMOVE_LOG = False
 	SHUTDOWN = False
+
+	EXIT_CODE = 0
 
 	MSG_FORCE_MODE = ""
 	MSG_SHUTDOWN = ""

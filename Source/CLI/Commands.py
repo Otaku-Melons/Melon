@@ -1,5 +1,5 @@
+from Source.Core.SystemObjects import SystemObjects, LoggerRules
 from Source.Core.ImagesDownloader import ImagesDownloader
-from Source.Core.SystemObjects import SystemObjects
 from Source.Core.Builders import MangaBuilder
 from Source.CLI.Templates import ParsersTable
 from Source.Core.Collector import Collector
@@ -23,20 +23,34 @@ def com_build(system_objects: SystemObjects, command: ParsedCommandData):
 
 	#---> Подготовительный этап.
 	#==========================================================================================#
+	Clear()
 	system_objects.logger.select_cli_point(command.name)
+
+	input("Builder not fully implemented yet! Press ENTER to continue...")
+	
+	#---> Получение и обработка предварительных данных.
+	#==========================================================================================#
 	ParserName = command.get_key_value("use")
 	Format = "cbz" if command.check_flag("cbz") else None
 	Format = "zip" if command.check_flag("zip") else None
 	Message = system_objects.MSG_SHUTDOWN + system_objects.MSG_FORCE_MODE
 
+	#---> Обработка команды.
+	#==========================================================================================#
+
 	if ParserName != "remanga":
 		print("Only \"remanga\" parser supported.")
 		exit(-1)
-
-	input("Builder not fully implemented yet! Press ENTER to continue...")
+	
 	Builder = MangaBuilder(system_objects, com_get, command.arguments[0], Message)
 	Builder.set_parameters(Format)
 	Builder.build_branch()
+
+	#---> Вывод отчёта.
+	#==========================================================================================#
+	Clear()
+	print("Builded.")
+	system_objects.logger.set_rule(LoggerRules.SaveIfHasWarnings) 
 
 def com_collect(system_objects: SystemObjects, command: ParsedCommandData):
 	"""
@@ -50,33 +64,38 @@ def com_collect(system_objects: SystemObjects, command: ParsedCommandData):
 	Clear()
 	system_objects.logger.select_cli_point(command.name)
 
+	#---> Получение и обработка предварительных данных.
+	#==========================================================================================#
 	Title = system_objects.manager.get_parser_type()
 	Title = Title(system_objects)
 
 	Parser = system_objects.manager.launch(Title)
 	CollectorObject = Collector(system_objects)
+
 	Filters = command.get_key_value("filters") if command.check_key("filters") else None
 	PagesCount = int(command.get_key_value("pages")) if command.check_key("pages") else None
 	Sort = command.check_flag("sort")
 	Period = int(command.get_key_value("period")) if command.check_key("period") else None
 
-	#---> Вывод данных.
-	#==========================================================================================#
+	CollectedTitlesCount = 0
+
 	system_objects.logger.info("====== Collecting ======")
 	print("Collecting... ")
 
-	#---> Получение коллекции.
+	#---> Обработка команды.
 	#==========================================================================================#
 	Collection = Parser.collect(filters = Filters, period = Period, pages = PagesCount)
+	CollectedTitlesCount = len(Collection)
 	CollectorObject.append(Collection)
 	CollectorObject.save(sort = Sort)
-	Clear()
-
-	#---> Завершающий этап.
+	
+	#---> Вывод отчёта.
 	#==========================================================================================#
-	system_objects.REMOVE_LOG = False 
+	Clear()
+	print(f"Collected slugs: {CollectedTitlesCount}")
+	system_objects.logger.set_rule(LoggerRules.SaveIfHasWarnings) 
 
-def com_get(system_objects: SystemObjects, command: ParsedCommandData, is_cli: bool = True):
+def com_get(system_objects: SystemObjects, command: ParsedCommandData, is_cli: bool = True) -> bool:
 	"""
 	Скачивает изображение.
 		system_objects – коллекция системных объектов;\n
@@ -85,7 +104,11 @@ def com_get(system_objects: SystemObjects, command: ParsedCommandData, is_cli: b
 
 	#---> Подготовительный этап.
 	#==========================================================================================#
+	Clear()
 	if is_cli: system_objects.logger.select_cli_point(command.name)
+
+	#---> Получение и обработка предварительных данных.
+	#==========================================================================================#
 	ParserName = command.get_key_value("use")
 	ParserSettings = system_objects.manager.get_parser_settings(ParserName)
 	ParserSite = system_objects.manager.get_parser_site(ParserName)
@@ -95,16 +118,14 @@ def com_get(system_objects: SystemObjects, command: ParsedCommandData, is_cli: b
 	FullName = command.check_key("fullname")
 	StandartDownloader = command.check_key("sid")
 	if FullName: Filename = command.get_key_value("fullname")
+	ResultMessage = None
 
-	#---> Вывод данных.
-	#==========================================================================================#
 	if is_cli: system_objects.logger.select_parser(ParserName)
 	if is_cli: system_objects.logger.info("====== Downloading ======")
 	print(f"URL: {command.arguments[0]}\nDownloading... ", end = "")
 	
-	#---> Скачивание изображения.
+	#---> Обработка команды.
 	#==========================================================================================#
-	ResultMessage = None
 
 	if system_objects.manager.check_method_image(ParserName) and not StandartDownloader:
 		if is_cli: system_objects.logger.info("Using custom image downloader.")
@@ -137,21 +158,29 @@ def com_get(system_objects: SystemObjects, command: ParsedCommandData, is_cli: b
 			is_full_filename = FullName,
 		).message
 
-	#---> Завершающий этап.
-	#==========================================================================================#
-	system_objects.REMOVE_LOG = False 
-	print(ResultMessage)
 	ResultStatus = True if ResultMessage == "Done." else False
+
+	#---> Вывод отчёта.
+	#==========================================================================================#
+	print(ResultMessage)
+	system_objects.logger.set_rule(LoggerRules.SaveIfHasWarnings) 
 
 	return ResultStatus
 
-def com_list(system_objects: SystemObjects):
+def com_list(system_objects: SystemObjects, command: ParsedCommandData):
 	"""
 	Выводит список парсеров в консоль.
-		system_objects – коллекция системных объектов.
+		system_objects – коллекция системных объектов;\n
+		command – объект представления консольной команды.
 	"""
 
-	ParsersList = system_objects.manager.all_parsers_names
+	#---> Подготовительный этап.
+	#==========================================================================================#
+	Clear()
+	system_objects.logger.select_cli_point(command.name)
+
+	#---> Получение и обработка предварительных данных.
+	#==========================================================================================#
 	TableData = {
 		"NAME": [],
 		"VERSION": [],
@@ -162,7 +191,10 @@ def com_list(system_objects: SystemObjects):
 		"apps": []
 	}
 
-	for Parser in ParsersList:
+	#---> Обработка команды.
+	#==========================================================================================#
+
+	for Parser in system_objects.manager.all_parsers_names:
 		Version = system_objects.manager.get_parser_version(Parser)
 		Site = system_objects.manager.get_parser_site(Parser)
 		Type = system_objects.manager.get_parser_type_name(Parser)
@@ -174,8 +206,11 @@ def com_list(system_objects: SystemObjects):
 		TableData["image"].append(system_objects.manager.check_method_image(Parser))
 		TableData["apps"].append(False)
 
+	#---> Вывод отчёта.
+	#==========================================================================================#
+	Clear()
 	ParsersTable(TableData)
-	system_objects.REMOVE_LOG = True
+	system_objects.logger.set_rule(LoggerRules.SaveIfHasWarnings) 
 
 def com_parse(system_objects: SystemObjects, command: ParsedCommandData):
 	"""
@@ -184,18 +219,29 @@ def com_parse(system_objects: SystemObjects, command: ParsedCommandData):
 		command – объект представления консольной команды.
 	"""
 
+	#---> Подготовительный этап.
+	#==========================================================================================#
 	Clear()
 	system_objects.logger.select_cli_point(command.name)
 
+	#---> Получение и обработка предварительных данных.
+	#==========================================================================================#
 	Title = system_objects.manager.get_parser_type()
 	Title = Title(system_objects)
 	Title.set_slug(command.arguments[0])
 
 	Parser = system_objects.manager.launch(Title)
-	ParserSettings = system_objects.manager.get_parser_settings()
-	system_objects.logger.info("====== Parsing ======")
+	ParserSettings = system_objects.manager.parser_settings
+
 	Slugs = list()
 	StartIndex = 0
+	ParsedTitlesCount = 0
+	ErrorsCount = 0
+
+	system_objects.logger.info("====== Parsing ======")
+
+	#---> Обработка команды.
+	#==========================================================================================#
 	
 	if command.check_flag("collection"):
 		
@@ -214,7 +260,7 @@ def com_parse(system_objects: SystemObjects, command: ParsedCommandData):
 		
 	elif command.check_flag("local"):
 		print("Scanning titles...")
-		LocalTitles = os.listdir(ParserSettings.common.titles_directory)
+		LocalTitles = os.listdir(system_objects.manager.parser_settings.common.titles_directory)
 		LocalTitles = list(filter(lambda File: File.endswith(".json"), LocalTitles))
 		
 		for Slug in LocalTitles:
@@ -240,14 +286,20 @@ def com_parse(system_objects: SystemObjects, command: ParsedCommandData):
 			Title.amend(Message)
 			Title.download_covers(Message)
 			Title.save()
+			ParsedTitlesCount += 1
 
 		except TitleNotFound:
 			Title.open(Slugs[Index], By.Slug)
+			ErrorsCount += 1
 			system_objects.logger.title_not_found(Title)
 
 		if Index != len(Slugs) - 1: sleep(ParserSettings.common.delay)
 
+	#---> Вывод отчёта.
+	#==========================================================================================#
 	Clear()
+	print(f"Titles parsed: {ParsedTitlesCount}\nErrors: {ErrorsCount}")
+	system_objects.logger.set_rule(LoggerRules.SaveIfHasWarnings) 
 
 def com_repair(system_objects: SystemObjects, command: ParsedCommandData):
 	"""
@@ -256,18 +308,23 @@ def com_repair(system_objects: SystemObjects, command: ParsedCommandData):
 		command – объект представления консольной команды.
 	"""
 
-
+	#---> Подготовительный этап.
+	#==========================================================================================#
+	Clear()
 	system_objects.logger.select_cli_point(command.name)
 
+	#---> Получение и обработка предварительных данных.
+	#==========================================================================================#
 	Title = system_objects.manager.get_parser_type()
 	Title = Title(system_objects)
 
-	Parser = system_objects.manager.launch(Title)
 	system_objects.logger.info("====== Repairing ======")
 	print("Repairing... ", end = "")
-	Filename = Filename[:-5] if command.arguments[0].endswith(".json") else command.arguments[0]
 
-	#---> Восстановление главы.
+	Filename = Filename[:-5] if command.arguments[0].endswith(".json") else command.arguments[0]
+	ResultMessage = "Done."
+
+	#---> Обработка команды.
 	#==========================================================================================#
 
 	try:
@@ -276,11 +333,11 @@ def com_repair(system_objects: SystemObjects, command: ParsedCommandData):
 		Title.repair(command.get_key_value("chapter"))
 		Title.save()
 
-	except TitleNotFound:
-		print("Error! Title not found.")
-		exit(-1)
+	except TitleNotFound: ResultMessage = "Error! Title not found."
+	except ChapterNotFound: ResultMessage = "Error! Chapter not found."
 
-	else:
-		print("Done.")
-
-	system_objects.REMOVE_LOG = True 
+	#---> Вывод отчёта.
+	#==========================================================================================#
+	Clear()
+	print(ResultMessage)
+	system_objects.logger.set_rule(LoggerRules.SaveIfHasWarnings) 
