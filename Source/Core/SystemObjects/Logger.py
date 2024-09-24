@@ -1,7 +1,7 @@
 from Source.Core.Formats import BaseChapter, BaseTitle
 
+from dublib.Methods.JSON import ReadJSON, WriteJSON
 from dublib.WebRequestor import WebResponse
-from dublib.Methods.JSON import ReadJSON
 from dublib.Polyglot import Markdown
 from datetime import datetime
 
@@ -25,7 +25,7 @@ class Logger:
 	#==========================================================================================#
 
 	def __ReadSettings(self) -> dict:
-		"""Считвает настройки логов для конкретного парсера."""
+		"""Считвает настройки логов для конкретного парсера или создаёт файл при их отсутствии."""
 
 		Settings = {
 			"telebot": {
@@ -35,30 +35,37 @@ class Logger:
 				"comment": "",
 				"attach_log": True
 			},
-			"rules": {
+			"commands": {
 				"collect": {
+					"rule": LoggerRules.SaveIfHasErrors,
 					"ignored_requests_errors": [],
 					"title_not_found": True,
 					"warnings": False
 				},
 				"get": {
+					"rule": LoggerRules.Remove,
 					"ignored_requests_errors": [],
 					"title_not_found": True,
 					"warnings": False
 				},
 				"parse": {
+					"rule": LoggerRules.Save,
 					"ignored_requests_errors": [],
 					"title_not_found": True,
 					"warnings": False
 				},
 				"repair": {
+					"rule": LoggerRules.SaveIfHasErrors,
 					"ignored_requests_errors": [],
 					"title_not_found": True,
 					"warnings": False
 				}
 			}
 		}
-		if os.path.exists(f"Parsers/{self.__ParserName}/logger.json"): Settings = ReadJSON(f"Parsers/{self.__ParserName}/logger.json")
+		Path = f"Parsers/{self.__ParserName}/logger.json"
+
+		if os.path.exists(Path): Settings = ReadJSON(Path)
+		else: WriteJSON(Path, Settings)
 		
 		return Settings
 
@@ -192,7 +199,7 @@ class Logger:
 
 		self.__IsLogHasWarning = True
 		logging.warning(text)
-		if self.__LoggerSettings["rules"][self.__PointName]["warnings"]: self.__SendReport(text)
+		if self.__LoggerSettings["commands"][self.__PointName]["warnings"]: self.__SendReport(text)
 
 	#==========================================================================================#
 	# >>>>> ШАБЛОНЫ ПРЕДУПРЕЖДЕНИЙ <<<<< #
@@ -225,7 +232,7 @@ class Logger:
 		"""
 
 		if not text: text = "Request error."
-		if response.status_code in self.__LoggerSettings["rules"][self.__PointName]["ignored_requests_errors"]: self.__SilentMode = True
+		if response.status_code in self.__LoggerSettings["commands"][self.__PointName]["ignored_requests_errors"]: self.__SilentMode = True
 		self.error(f"{text} Response code: {response.status_code}.")
 
 	def title_not_found(self, title: BaseTitle):
@@ -235,7 +242,7 @@ class Logger:
 		"""
 
 		NoteID = f" (ID: {title.id})" if title.id else ""
-		if not self.__LoggerSettings["rules"][self.__PointName]["title_not_found"]: self.__SilentMode = True
+		if not self.__LoggerSettings["commands"][self.__PointName]["title_not_found"]: self.__SilentMode = True
 		self.error(f"Title: \"{title.slug}\"{NoteID}. Not found.")
 
 	#==========================================================================================#
@@ -335,6 +342,8 @@ class Logger:
 
 	def close(self):
 		"""Закрывает логи."""
+
+		self.set_rule(self.__LoggerSettings["commands"][self.__PointName]["rule"])
 
 		logging.info("====== End ======")
 		logging.shutdown()

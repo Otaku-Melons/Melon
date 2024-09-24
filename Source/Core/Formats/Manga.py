@@ -642,7 +642,7 @@ class Manga(BaseTitle):
 			self._Title = Data
 			if self._Title["format"] != "melon-manga": self._Title = self.__FromLegacy(Data)
 			
-		else: raise FileNotFoundError(identificator)
+		else: raise FileNotFoundError(identificator + ".json")
 
 	def parse(self, message: str | None = None):
 		"""

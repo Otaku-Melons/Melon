@@ -18,6 +18,12 @@ class Manager:
 		if "Templates" in Parsers: Parsers.remove("Templates")
 
 		return Parsers
+	
+	@property
+	def parser_settings(self) -> ParserSettings:
+		"""Настройки используемого парсера."""
+
+		return self.get_parser_settings()
 
 	#==========================================================================================#
 	# >>>>> ПРИВАТНЫЕ МЕТОДЫ <<<<< #

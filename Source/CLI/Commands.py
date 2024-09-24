@@ -50,7 +50,6 @@ def com_build(system_objects: SystemObjects, command: ParsedCommandData):
 	#==========================================================================================#
 	Clear()
 	print("Builded.")
-	system_objects.logger.set_rule(LoggerRules.SaveIfHasWarnings) 
 
 def com_collect(system_objects: SystemObjects, command: ParsedCommandData):
 	"""
@@ -93,7 +92,6 @@ def com_collect(system_objects: SystemObjects, command: ParsedCommandData):
 	#==========================================================================================#
 	Clear()
 	print(f"Collected slugs: {CollectedTitlesCount}")
-	system_objects.logger.set_rule(LoggerRules.SaveIfHasWarnings) 
 
 def com_get(system_objects: SystemObjects, command: ParsedCommandData, is_cli: bool = True) -> bool:
 	"""
@@ -163,7 +161,6 @@ def com_get(system_objects: SystemObjects, command: ParsedCommandData, is_cli: b
 	#---> Вывод отчёта.
 	#==========================================================================================#
 	print(ResultMessage)
-	system_objects.logger.set_rule(LoggerRules.SaveIfHasWarnings) 
 
 	return ResultStatus
 
@@ -210,7 +207,6 @@ def com_list(system_objects: SystemObjects, command: ParsedCommandData):
 	#==========================================================================================#
 	Clear()
 	ParsersTable(TableData)
-	system_objects.logger.set_rule(LoggerRules.SaveIfHasWarnings) 
 
 def com_parse(system_objects: SystemObjects, command: ParsedCommandData):
 	"""
@@ -289,7 +285,12 @@ def com_parse(system_objects: SystemObjects, command: ParsedCommandData):
 			ParsedTitlesCount += 1
 
 		except TitleNotFound:
-			Title.open(Slugs[Index], By.Slug)
+
+			try:
+				Title.open(Slugs[Index], By.Slug)
+
+			except: pass
+
 			ErrorsCount += 1
 			system_objects.logger.title_not_found(Title)
 
@@ -299,7 +300,6 @@ def com_parse(system_objects: SystemObjects, command: ParsedCommandData):
 	#==========================================================================================#
 	Clear()
 	print(f"Titles parsed: {ParsedTitlesCount}\nErrors: {ErrorsCount}")
-	system_objects.logger.set_rule(LoggerRules.SaveIfHasWarnings) 
 
 def com_repair(system_objects: SystemObjects, command: ParsedCommandData):
 	"""
@@ -318,6 +318,8 @@ def com_repair(system_objects: SystemObjects, command: ParsedCommandData):
 	Title = system_objects.manager.get_parser_type()
 	Title = Title(system_objects)
 
+	Parser = system_objects.manager.launch(Title)
+
 	system_objects.logger.info("====== Repairing ======")
 	print("Repairing... ", end = "")
 
@@ -333,11 +335,16 @@ def com_repair(system_objects: SystemObjects, command: ParsedCommandData):
 		Title.repair(command.get_key_value("chapter"))
 		Title.save()
 
-	except TitleNotFound: ResultMessage = "Error! Title not found."
-	except ChapterNotFound: ResultMessage = "Error! Chapter not found."
+	except TitleNotFound:
+		ResultMessage = "Error! Title not found."
+		system_objects.logger.title_not_found(Title)
+		system_objects.EXIT_CODE = -1
+
+	except ChapterNotFound:
+		ResultMessage = "Error! Chapter not found."
+		system_objects.EXIT_CODE = -1
 
 	#---> Вывод отчёта.
 	#==========================================================================================#
 	Clear()
 	print(ResultMessage)
-	system_objects.logger.set_rule(LoggerRules.SaveIfHasWarnings) 

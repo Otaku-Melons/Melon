@@ -175,15 +175,19 @@ class ImagesDownloader:
 
 		return True
 	
-	def temp_image(self, url: str) -> str | None:
+	def temp_image(self, url: str, filename: str | None = None, is_full_filename: bool = True) -> str | None:
 		"""
 		Скачивает изображение во временный каталог парсера.
-			url – ссылка на изображение.
+			url – ссылка на изображение;\n
+			filename – имя файла;\n
+			is_full_filename – указывает, является ли имя файла полным.
 		"""
 
 		Result = self.image(
 			url = url,
 			directory = self.__SystemObjects.temper.get_parser_temp(),
+			filename = filename,
+			is_full_filename = is_full_filename
 		)
 
 		return Zerotify(Result.value)
