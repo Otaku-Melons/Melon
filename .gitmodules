@@ -3,10 +3,10 @@
 	url = https://github.com/Otaku-Melons/mangalib
 [submodule "Parsers/hentailib"]
 	path = Parsers/hentailib
-	url = https://github.com/DUB1401/hentailib
+	url = https://github.com/Otaku-Melons/hentailib
 [submodule "Parsers/slashlib"]
 	path = Parsers/slashlib
-	url = https://github.com/DUB1401/slashlib
+	url = https://github.com/Otaku-Melons/slashlib
 [submodule "Parsers/remanga"]
 	path = Parsers/remanga
-	url = https://github.com/DUB1401/remanga
+	url = https://github.com/Otaku-Melons/remanga
