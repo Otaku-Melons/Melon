@@ -1,6 +1,6 @@
 [submodule "Parsers/mangalib"]
 	path = Parsers/mangalib
-	url = https://github.com/DUB1401/mangalib
+	url = https://github.com/Otaku-Melons/mangalib
 [submodule "Parsers/hentailib"]
 	path = Parsers/hentailib
 	url = https://github.com/DUB1401/hentailib
