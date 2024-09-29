@@ -37,25 +37,29 @@ class Logger:
 			},
 			"commands": {
 				"collect": {
-					"rule": LoggerRules.SaveIfHasErrors,
+					"rule": LoggerRules.SaveIfHasErrors.value,
 					"ignored_requests_errors": [],
 					"title_not_found": True,
 					"warnings": False
 				},
 				"get": {
-					"rule": LoggerRules.Remove,
+					"rule": LoggerRules.Remove.value,
 					"ignored_requests_errors": [],
 					"title_not_found": True,
 					"warnings": False
 				},
+				"list": {
+					"rule": LoggerRules.Remove.value,
+					"warnings": False
+				},
 				"parse": {
-					"rule": LoggerRules.Save,
+					"rule": LoggerRules.Save.value,
 					"ignored_requests_errors": [],
 					"title_not_found": True,
 					"warnings": False
 				},
 				"repair": {
-					"rule": LoggerRules.SaveIfHasErrors,
+					"rule": LoggerRules.SaveIfHasErrors.value,
 					"ignored_requests_errors": [],
 					"title_not_found": True,
 					"warnings": False
@@ -65,7 +69,7 @@ class Logger:
 		Path = f"Parsers/{self.__ParserName}/logger.json"
 
 		if os.path.exists(Path): Settings = ReadJSON(Path)
-		else: WriteJSON(Path, Settings)
+		elif self.__ParserName: WriteJSON(Path, Settings)
 		
 		return Settings
 
@@ -121,7 +125,7 @@ class Logger:
 		self.__ErrorCache = None
 		self.__SilentMode = False
 
-		self.__LoggerRules = LoggerRules.Save
+		self.__LoggerRules = None
 		self.__IsLogHasError = False
 		self.__IsLogHasWarning = False
 
@@ -343,7 +347,7 @@ class Logger:
 	def close(self):
 		"""Закрывает логи."""
 
-		self.set_rule(self.__LoggerSettings["commands"][self.__PointName]["rule"])
+		if not self.__LoggerRules: self.set_rule(self.__LoggerSettings["commands"][self.__PointName]["rule"])
 
 		logging.info("====== End ======")
 		logging.shutdown()

@@ -4,12 +4,10 @@ from Source.Core.SystemObjects import SystemObjects
 from Source.Core.Exceptions import ChapterNotFound
 
 from dublib.WebRequestor import Protocols, WebConfig, WebLibs, WebRequestor
-from dublib.Methods.Data import ReplaceDictionaryKey, Zerotify
 from dublib.Methods.JSON import ReadJSON, WriteJSON
 from dublib.Methods.System import Clear
 from time import sleep
 
-import enum
 import os
 
 #==========================================================================================#
@@ -24,10 +22,10 @@ class Chapter(BaseChapter):
 	#==========================================================================================#
 
 	@property
-	def slides(self) -> list[dict]:
-		"""Список слайдов."""
+	def paragraphs(self) -> list[str]:
+		"""Список абзацев."""
 
-		return self._Chapter["slides"]
+		return self._Chapter["paragraphs"]
 	
 	#==========================================================================================#
 	# >>>>> МЕТОДЫ <<<<< #
@@ -49,34 +47,21 @@ class Chapter(BaseChapter):
 			"name": None,
 			"is_paid": None,
 			"translators": [],
-			"slides": []	
+			"paragraphs": []	
 		}
 
-	def add_slide(self, link: str, width: int | None = None, height: int | None = None):
+	def add_paragraph(self, paragraph: str):
 		"""
-		Добавляет данные о слайде.
-			link – ссылка на слайд;\n
-			width – ширина слайда;\n
-			height – высота слайда.
+		Добавляет абзац.
+			paragraph – абзац в формате HTML.
 		"""
 
-		SlideInfo = {
-			"index": len(self._Chapter["slides"]) + 1,
-			"link": link,
-			"width": width,
-			"height": height
-		}
+		self._Chapter["paragraphs"].append(paragraph)
 
-		if not self._SystemObjects.manager.get_parser_settings().common.sizing_images: 
-			del SlideInfo["width"]
-			del SlideInfo["height"]
+	def clear_paragraphs(self):
+		"""Удаляет содержимое главы."""
 
-		self._Chapter["slides"].append(SlideInfo)
-
-	def clear_slides(self):
-		"""Удаляет данные слайдов."""
-
-		self._Chapter["slides"] = list()
+		self._Chapter["paragraphs"] = list()
 
 class Branch(BaseBranch):
 	"""Ветвь."""
@@ -145,23 +130,12 @@ class Branch(BaseBranch):
 
 		if not IsSuccess: raise KeyError(id)
 
-class Types(enum.Enum):
-	"""Определения типов манги."""
-
-	manga = "manga"
-	manhwa = "manhwa"
-	manhua = "manhua"
-	oel = "oel"
-	western_comic = "western_comic"
-	russian_comic = "russian_comic"
-	indonesian_comic = "indonesian_comic"
-
 #==========================================================================================#
 # >>>>> ОСНОВНОЙ КЛАСС <<<<< #
 #==========================================================================================#
 
-class Manga(BaseTitle):
-	"""Манга."""
+class Ranobe(BaseTitle):
+	"""Ранобэ."""
 
 	#==========================================================================================#
 	# >>>>> СВОЙСТВА <<<<< #
@@ -190,7 +164,7 @@ class Manga(BaseTitle):
 		"""Язык контента по стандарту ISO 639-3."""
 
 		return self._Title["content_language"]
-	
+
 	@property
 	def covers(self) -> list[dict]:
 		"""Список описаний обложки."""
@@ -240,10 +214,10 @@ class Manga(BaseTitle):
 		return self._Title["franchises"]
 
 	@property
-	def type(self) -> Types | None:
-		"""Тип тайтла."""
+	def original_language(self) -> str | None:
+		"""Оригинальный язык контента по стандарту ISO 639-3."""
 
-		return self._Title["type"]
+		return self._Title["original_language"]
 
 	@property
 	def status(self) -> Statuses | None:
@@ -262,112 +236,6 @@ class Manga(BaseTitle):
 		"""Список ветвей тайтла."""
 
 		return self.__Branches
-
-	#==========================================================================================#
-	# >>>>> LEGACY-КОНВЕРТЕРЫ <<<<< #
-	#==========================================================================================#
-
-	def __FromLegacy(self, manga: dict) -> dict:
-		"""
-		Форматирует мангу из устаревшего формата.
-			manga – словарное описание манги.
-		"""
-
-		Types = {
-			"UNKNOWN": None,
-			"MANGA": "manga",
-			"MANHWA": "manhwa",
-			"MANHUA": "manhua",
-			"WESTERN_COMIC": "western_comic",
-			"RUS_COMIC": "russian_comic",
-			"INDONESIAN_COMIC": "indonesian_comic",
-			"MANGA": "manga",
-			"OEL": "oel"
-		}
-		Statuses = {
-			"UNKNOWN": None,
-			"ANNOUNCED": "announced",
-			"ONGOING": "ongoing",
-			"ABANDONED": "dropped",
-			"COMPLETED": "completed"
-		}
-		manga["content_language"] = None
-		manga = ReplaceDictionaryKey(manga, "ru-name", "localized_name")
-		manga = ReplaceDictionaryKey(manga, "en-name", "eng_name")
-		manga = ReplaceDictionaryKey(manga, "another-names", "another_names")
-		manga = ReplaceDictionaryKey(manga, "author", "authors")
-		manga = ReplaceDictionaryKey(manga, "publication-year", "publication_year")
-		manga = ReplaceDictionaryKey(manga, "age-rating", "age_limit")
-		manga = ReplaceDictionaryKey(manga, "is-licensed", "is_licensed")
-		manga = ReplaceDictionaryKey(manga, "series", "franchises")
-		manga = ReplaceDictionaryKey(manga, "chapters", "content")
-		manga["format"] = "melon-manga"
-		manga["authors"] = manga["authors"].split(", ") if manga["authors"] else list()
-		manga["type"] = Types[manga["type"]]
-		manga["status"] = Statuses[manga["status"]]
-
-		for BranchID in manga["content"]:
-
-			for ChapterIndex in range(len(manga["content"][BranchID])):
-				Buffer = manga["content"][BranchID][ChapterIndex]
-				Buffer = ReplaceDictionaryKey(Buffer, "is-paid", "is_paid")
-				Buffer = ReplaceDictionaryKey(Buffer, "translator", "translators")
-				Buffer["translators"] = Buffer["translators"].split(", ") if Buffer["translators"] else list()
-				manga["content"][BranchID][ChapterIndex] = Buffer
-
-		return manga
-
-	def __ToLegacy(self, manga: dict) -> dict:
-		"""
-		Форматирует мангу в устаревший формат.
-			manga – словарное описание манги.
-		"""
-
-		Types = {
-			None: "UNKNOWN",
-			"manga": "MANGA",
-			"manhwa": "MANHWA",
-			"manhua": "MANHUA",
-			"western_comic": "WESTERN_COMIC",
-			"russian_comic": "RUS_COMIC",
-			"indonesian_comic": "INDONESIAN_COMIC",
-			"oel": "OEL"
-		}
-		Statuses = {
-			None: "UNKNOWN",
-			"announced": "ANNOUNCED",
-			"ongoing": "ONGOING",
-			"dropped": "ABANDONED",
-			"completed": "COMPLETED"
-		}
-		del manga["content_language"]
-		manga = ReplaceDictionaryKey(manga, "localized_name", "ru-name")
-		manga = ReplaceDictionaryKey(manga, "eng_name", "en-name")
-		manga = ReplaceDictionaryKey(manga, "another_names", "another-names")
-		manga = ReplaceDictionaryKey(manga, "authors", "author")
-		manga = ReplaceDictionaryKey(manga, "publication_year", "publication-year")
-		manga = ReplaceDictionaryKey(manga, "age_limit", "age-rating")
-		manga = ReplaceDictionaryKey(manga, "is_licensed", "is-licensed")
-		manga = ReplaceDictionaryKey(manga, "franchises", "series")
-		manga = ReplaceDictionaryKey(manga, "content", "chapters")
-		manga["format"] = "dmp-v1"
-		manga["author"] = Zerotify(", ".join(manga["author"]))
-		manga["type"] = Types[manga["type"]]
-		manga["status"] = Statuses[manga["status"]]
-
-		for Index in range(len(manga["genres"])): manga["genres"][Index] = manga["genres"][Index].lower()
-		for Index in range(len(manga["tags"])): manga["tags"][Index] = manga["tags"][Index].lower()
-
-		for BranchID in manga["chapters"]:
-
-			for ChapterIndex in range(len(manga["chapters"][BranchID])):
-				Buffer = manga["chapters"][BranchID][ChapterIndex]
-				Buffer = ReplaceDictionaryKey(Buffer, "is_paid", "is-paid")
-				Buffer = ReplaceDictionaryKey(Buffer, "translators", "translator")
-				Buffer["translator"] = ", ".join(Buffer["translator"]) if Buffer["translator"] else None
-				manga["chapters"][BranchID][ChapterIndex] = Buffer
-
-		return manga
 
 	#==========================================================================================#
 	# >>>>> ПРИВАТНЫЕ МЕТОДЫ <<<<< #
@@ -490,7 +358,7 @@ class Manga(BaseTitle):
 			"description": None,
 			"age_limit": None,
 
-			"type": None,
+			"original_language": None,
 			"status": None,
 			"is_licensed": None,
 			
@@ -516,11 +384,11 @@ class Manga(BaseTitle):
 
 			for CurrentChapter in CurrentBranch.chapters:
 
-				if not CurrentChapter.slides:
+				if CurrentChapter.is_empty:
 					ProgressIndex += 1
 					self.__Parser.amend(CurrentBranch, CurrentChapter)
 
-					if CurrentChapter.slides:
+					if CurrentChapter.paragraphs:
 						AmendedChaptersCount += 1
 						self.__SystemObjects.logger.chapter_amended(self, CurrentChapter)
 
@@ -903,14 +771,14 @@ class Manga(BaseTitle):
 		self.__CheckStringsList(franchises)
 		self._Title["franchises"] = franchises
 
-	def set_type(self, type: Types | None):
+	def set_original_language(self, original_language: str | None):
 		"""
-		Задаёт типп манги.
-			type – тип.
+		Задаёт оригинальный язык контента по стандарту ISO 639-3.
+			original_language – код языка.
 		"""
 
-		if type: self._Title["type"] = type.value
-		else: self._Title["type"] = None
+		if type(original_language) == str and len(original_language) != 3: raise TypeError(original_language)
+		self._Title["original_language"] = original_language.lower() if original_language else None
 
 	def set_status(self, status: Statuses | None):
 		"""

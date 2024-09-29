@@ -37,6 +37,16 @@ class BaseChapter:
 		return self._Chapter["id"]
 	
 	@property
+	def is_empty(self) -> bool:
+		"""Состояние: содержит ли глава контент."""
+
+		IsEmpty = True
+		if "slides" in self._Chapter.keys() and self._Chapter["slides"]: IsEmpty = False
+		elif "paragraphs" in self._Chapter.keys() and self._Chapter["paragraphs"]: IsEmpty = False
+
+		return IsEmpty
+
+	@property
 	def volume(self) -> str | None:
 		"""Номер тома."""
 
@@ -124,7 +134,7 @@ class BaseChapter:
 		"""
 
 		NoneType = type(None)
-		ImportantKeys = ["id", "volume", "number", "name", "is_paid", "translators", "slides"]
+		ImportantKeys = ["id", "volume", "number", "name", "is_paid", "translators"]
 		ImportantKeysTypes = [
 			[int, NoneType],
 			[str, NoneType],
@@ -212,7 +222,12 @@ class BaseBranch:
 		EmptyChaptersCount = 0
 
 		for CurrentChapter in self._Chapters:
-			if not CurrentChapter.slides: EmptyChaptersCount += 1
+
+			try:
+				if not CurrentChapter.slides: EmptyChaptersCount += 1
+
+			except AttributeError:
+				if not CurrentChapter.paragraphs: EmptyChaptersCount += 1
 
 		return EmptyChaptersCount
 

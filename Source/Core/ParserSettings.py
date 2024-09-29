@@ -61,6 +61,12 @@ class Common:
 		return self.__Settings["legacy"]
 	
 	@property
+	def pretty(self) -> bool:
+		"""Состояние: включено ли улучшение качества контента."""
+
+		return self.__Settings["pretty"]
+	
+	@property
 	def retries(self) -> int:
 		"""Количество повторов запроса при неудачном выполнении."""
 
@@ -119,6 +125,7 @@ class Common:
 			"covers_directory": "",
 			"titles_directory": "",
 			"bad_image_stub": None,
+			"pretty": False,
 			"use_id_as_filename": False,
 			"sizing_images": False,
 			"legacy": False,

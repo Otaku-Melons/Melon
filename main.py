@@ -114,7 +114,7 @@ if "s" in CommandDataStruct.flags:
 if "build" == CommandDataStruct.name: com_build(Objects, CommandDataStruct)
 if "collect" == CommandDataStruct.name: com_collect(Objects, CommandDataStruct)
 if "get" == CommandDataStruct.name: com_get(Objects, CommandDataStruct)
-if "list" == CommandDataStruct.name: com_list(Objects)
+if "list" == CommandDataStruct.name: com_list(Objects, CommandDataStruct)
 if "parse" == CommandDataStruct.name: com_parse(Objects, CommandDataStruct)
 if "repair" == CommandDataStruct.name: com_repair(Objects, CommandDataStruct)
 
