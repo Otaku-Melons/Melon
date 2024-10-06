@@ -4,8 +4,11 @@ from Source.Core.SystemObjects import SystemObjects
 from Source.Core.Exceptions import ChapterNotFound
 
 from dublib.WebRequestor import Protocols, WebConfig, WebLibs, WebRequestor
+from dublib.Methods.Data import RemoveRecurringSubstrings
 from dublib.Methods.JSON import ReadJSON, WriteJSON
 from dublib.Methods.System import Clear
+from dublib.Polyglot import HTML
+from bs4 import BeautifulSoup
 from time import sleep
 
 import os
@@ -28,18 +31,52 @@ class Chapter(BaseChapter):
 		return self._Chapter["paragraphs"]
 	
 	#==========================================================================================#
-	# >>>>> МЕТОДЫ <<<<< #
+	# >>>>> ПРИВАТНЫЕ МЕТОДЫ <<<<< #
 	#==========================================================================================#
 
-	def __init__(self, system_objects: SystemObjects):
+	def __GetLocalizedChapterWord(self) -> str | None:
+		"""Возвращает слово в нижнем регистре, обозначающее главу."""
+
+		Language = self.__Title.content_language
+		Words = {
+			None: None,
+			"rus": "глава",
+			"eng": "chapter"
+		}
+		Word = None
+		if Language in Words.keys(): Word = Words[Language]
+
+		return Word
+
+	def __TryGetName(self, paragraph: str):
+		"""
+		Пытается получить название главы из абзаца.
+			paragraph – абзац.
+		"""
+
+		if not self.name:
+			LocalizedChapterWord = self.__GetLocalizedChapterWord()
+			ChapterCounterLength = len(f"{LocalizedChapterWord} {self.number}")
+			paragraph = paragraph[ChapterCounterLength:]
+			paragraph = paragraph.strip()
+			self.set_name(paragraph)
+
+	#==========================================================================================#
+	# >>>>> ПУБЛИЧНЫЕ МЕТОДЫ <<<<< #
+	#==========================================================================================#
+
+	def __init__(self, system_objects: SystemObjects, title: "Ranobe"):
 		"""
 		Глава.
-			system_objects – коллекция системных объектов.
+			system_objects – коллекция системных объектов;\n
+			title – данные тайтла.
 		"""
 
 		#---> Генерация динамических свойств.
 		#==========================================================================================#
-		self._SystemObjects = system_objects
+		self.__SystemObjects = system_objects
+		self.__Title = title
+
 		self._Chapter = {
 			"id": None,
 			"volume": None,
@@ -49,6 +86,7 @@ class Chapter(BaseChapter):
 			"translators": [],
 			"paragraphs": []	
 		}
+		self.__ParserSettings = system_objects.manager.parser_settings
 
 	def add_paragraph(self, paragraph: str):
 		"""
@@ -56,12 +94,77 @@ class Chapter(BaseChapter):
 			paragraph – абзац в формате HTML.
 		"""
 
-		self._Chapter["paragraphs"].append(paragraph)
+		IsCorrect = True
+		
+		if self.__ParserSettings.common.pretty:
+
+			#---> Редактирование абзаца.
+			#==========================================================================================#
+			paragraph = paragraph.strip()
+			Tag = BeautifulSoup(paragraph, "html.parser").find("p")
+			
+			if Tag.text:
+				Align = ""
+				InnerHTML = Tag.decode_contents().strip()
+				if Tag.has_attr("align"): Align = " align=\"" + Tag["align"] + "\""
+				InnerHTML = HTML(InnerHTML)
+				InnerHTML.replace_tag("em", "i")
+				InnerHTML.replace_tag("strong", "b")
+				InnerHTML.unescape()
+				Tag = BeautifulSoup(f"<p{Align}>{InnerHTML.text}</p>", "html.parser")
+
+			paragraph = str(Tag)
+			paragraph = paragraph.replace("\u00A0", " ")
+			paragraph = RemoveRecurringSubstrings(paragraph, " ")
+			paragraph = paragraph.replace(" \n", "\n")
+			paragraph = paragraph.replace("\n ", "\n")
+
+			#---> Определение валидности абзаца.
+			#==========================================================================================#
+			
+			if not Tag.text.strip():
+				IsCorrect = False
+
+			elif len(self._Chapter["paragraphs"]) < 4:
+				Paragraph = Tag.text.rstrip(".!?…").lower()
+				ChapterName = self.name.rstrip(".!?…").lower() if self.name else None
+				LocalizedName = self.__Title.localized_name.rstrip(".!?…").lower() if self.__Title.localized_name else None
+				LocalizedChapterWord = self.__GetLocalizedChapterWord()
+
+				if ChapterName and Paragraph == ChapterName: IsCorrect = False
+				elif LocalizedName and Paragraph == LocalizedName: IsCorrect = False
+				elif LocalizedChapterWord and f"{LocalizedChapterWord} {self.number}" in Paragraph:
+					IsCorrect = False
+					self.__TryGetName(Tag.text)
+
+		if IsCorrect: self._Chapter["paragraphs"].append(paragraph)
 
 	def clear_paragraphs(self):
 		"""Удаляет содержимое главы."""
 
 		self._Chapter["paragraphs"] = list()
+
+	def set_name(self, name: str | None):
+		"""
+		Задаёт название главы.
+			name – название главы.
+		"""
+
+		if not name:
+			self._Chapter["name"] = None
+			return
+
+		if name.endswith("..."):
+			name = name.rstrip(".")
+			name += "…"
+
+		else: 
+			name = name.rstrip(".")
+
+		name = name.replace("\u00A0", " ")
+		name = name.lstrip(":")
+		name = name.strip()
+		self._Chapter["name"] = name
 
 class Branch(BaseBranch):
 	"""Ветвь."""
@@ -338,7 +441,6 @@ class Ranobe(BaseTitle):
 		self.__ParserSettings = self.__SystemObjects.manager.get_parser_settings()
 		self.__Branches: list[Branch] = list()
 		self.__UsedFilename = None
-		self.__IsLegacy = True if self.__ParserSettings .common.legacy else False
 		self.__Parser = None
 
 		self._Title = {
@@ -383,7 +485,6 @@ class Ranobe(BaseTitle):
 		for CurrentBranch in self.__Branches:
 
 			for CurrentChapter in CurrentBranch.chapters:
-
 				if CurrentChapter.is_empty:
 					ProgressIndex += 1
 					self.__Parser.amend(CurrentBranch, CurrentChapter)
@@ -428,12 +529,11 @@ class Ranobe(BaseTitle):
 		
 		if os.path.exists(Path) and not self.__SystemObjects.FORCE_MODE:
 			LocalManga = ReadJSON(Path)
-			if LocalManga["format"] != "melon-manga": LocalManga = self.__FromLegacy(LocalManga)
 			LocalContent = dict()
 			MergedChaptersCount = 0
 			
 			for BranchID in LocalManga["content"]:
-				for CurrentChapter in LocalManga["content"][BranchID]: LocalContent[CurrentChapter["id"]] = CurrentChapter["slides"]
+				for CurrentChapter in LocalManga["content"][BranchID]: LocalContent[CurrentChapter["id"]] = CurrentChapter["paragraphs"]
 			
 			for BranchID in self._Title["content"]:
 		
@@ -443,7 +543,7 @@ class Ranobe(BaseTitle):
 						ChapterID = self._Title["content"][BranchID][ChapterIndex]["id"]
 
 						if LocalContent[ChapterID]:
-							self._Title["content"][BranchID][ChapterIndex]["slides"] = LocalContent[ChapterID]
+							self._Title["content"][BranchID][ChapterIndex]["paragraphs"] = LocalContent[ChapterID]
 							MergedChaptersCount += 1
 
 			self.__SystemObjects.logger.info("Title: \"" + self._Title["slug"] + f"\" (ID: " + str(self._Title["id"]) + f"). Merged chapters count: {MergedChaptersCount}.")
@@ -458,7 +558,7 @@ class Ranobe(BaseTitle):
 			NewBranch = Branch(BranchID)
 
 			for ChapterData in self._Title["content"][CurrentBranchID]:
-				NewChapter = Chapter(self.__SystemObjects)
+				NewChapter = Chapter(self.__SystemObjects, self)
 				NewChapter.set_dict(ChapterData)
 				NewBranch.add_chapter(NewChapter)
 
@@ -512,10 +612,7 @@ class Ranobe(BaseTitle):
 						Data = Buffer
 						break
 
-		if Data:
-			self._Title = Data
-			if self._Title["format"] != "melon-manga": self._Title = self.__FromLegacy(Data)
-			
+		if Data: self._Title = Data
 		else: raise FileNotFoundError(identificator + ".json")
 
 	def parse(self, message: str | None = None):
@@ -553,12 +650,6 @@ class Ranobe(BaseTitle):
 		"""Сохраняет данные манги в описательный файл."""
 
 		for BranchID in self._Title["content"].keys(): self._Title["content"][BranchID] = sorted(self._Title["content"][BranchID], key = lambda Value: (list(map(int, Value["volume"].split("."))), list(map(int, Value["number"].split("."))))) 
-		
-		if self.__IsLegacy:
-			self._Title = self.__ToLegacy(self._Title)
-			self.__SystemObjects.logger.info("Title: \"" + self._Title["slug"] + "\". Converted to legacy format.")
-
-
 		WriteJSON(f"{self.__ParserSettings.common.titles_directory}/{self.__UsedFilename}.json", self._Title)
 		self.__SystemObjects.logger.info("Title: \"" + self._Title["slug"] + "\" (ID: " + str(self._Title["id"]) + "). Saved.")
 

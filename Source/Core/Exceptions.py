@@ -33,6 +33,18 @@ class ChapterNotFound(Exception):
 			
 	def __str__(self):
 		return self.__Message
+	
+class ParsingError(Exception):
+	"""Исключение: ошибка парсинга."""
+
+	def __init__(self):
+		"""Исключение: ошибка парсинга."""
+
+		self.__Message = "Unable to get title data."
+		super().__init__(self.__Message) 
+			
+	def __str__(self):
+		return self.__Message
 
 class TitleNotFound(Exception):
 	"""Исключение: тайтл не найден в источнике."""

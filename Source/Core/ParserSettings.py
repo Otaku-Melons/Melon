@@ -88,25 +88,16 @@ class Common:
 			parser_name – название парсера.
 		"""
 
-		# Если директория архивов не установлена.
 		if not self.__Settings["archives_directory"]:
-			# Установка директории.
 			self.__Settings["archives_directory"] = f"Output/{parser_name}/archives"
-			# Если директория не существует, создать её.
 			if not os.path.exists(f"Output/{parser_name}/archives"): os.makedirs(f"Output/{parser_name}/archives")
 
-		# Если директория обложек не установлена.
 		if not self.__Settings["covers_directory"]:
-			# Установка директории.
 			self.__Settings["covers_directory"] = f"Output/{parser_name}/covers"
-			# Если директория не существует, создать её.
 			if not os.path.exists(f"Output/{parser_name}/covers"): os.makedirs(f"Output/{parser_name}/covers")
 
-		# Если директория тайтлов не установлена.
 		if not self.__Settings["titles_directory"]:
-			# Установка директории.
 			self.__Settings["titles_directory"] = f"Output/{parser_name}/titles"
-			# Если директория не существует, создать её.
 			if not os.path.exists(f"Output/{parser_name}/titles"): os.makedirs(f"Output/{parser_name}/titles")
 
 	def __init__(self, parser_name: str, settings: dict, logger: Logger):
@@ -119,7 +110,6 @@ class Common:
 
 		#---> Генерация динамических свойств.
 		#==========================================================================================#
-		# Настройки.
 		self.__Settings = {
 			"archives_directory": "",
 			"covers_directory": "",
@@ -133,14 +123,10 @@ class Common:
 			"delay": 1.0
 		}
 
-		# Если общие настройки определены.
 		if "common" in settings.keys():
-			# Если определён интервал, конвертировать его в число с плавающей запятой.
 			if "delay" in settings["common"].keys(): settings["common"]["delay"] = float(settings["common"]["delay"])
 			
-			# Для каждой настройки.
 			for Key in self.__Settings.keys():
-				# Если настройка определена, записать её.
 				if Key in settings["common"].keys(): self.__Settings[Key] = settings["common"][Key]
 				else: logger.warning(f"Setting \"{Key}\" has been reset to default.")
 
@@ -149,7 +135,6 @@ class Common:
 				if not os.path.exists(BadImageStub): self.__Settings["bad_image_stub"] = None
 				else: self.__Settings["bad_image_stub"] = BadImageStub
 
-			# Подстановка стандартных директорий.
 			self.__PutDefaultDirectories(parser_name)
 
 		else: raise BadSettings(parser_name)
@@ -204,7 +189,6 @@ class Proxy:
 
 		#---> Генерация динамических свойств.
 		#==========================================================================================#
-		# Настройки.
 		self.__Settings = {
 			"enable": False,
 			"host": "",
@@ -213,14 +197,10 @@ class Proxy:
 			"password": ""
 		}
 
-		# Если настройки прокси определены.
 		if "proxy" in settings.keys():
-			# Если определён порт, конвертировать его в число.
 			if "port" in settings["proxy"].keys(): settings["proxy"]["port"] = int(settings["proxy"]["port"]) if settings["proxy"]["port"] else 0
 
-			# Для каждой настройки.
 			for Key in self.__Settings.keys():
-				# Если настройка определена и она нужного типа, записать её.
 				if Key in settings["proxy"].keys() and type(self.__Settings[Key]) == type(settings["proxy"][Key]): self.__Settings[Key] = settings["proxy"][Key]
 				else: logger.warning(f"Proxy setting \"{Key}\" has been reset to default.")
 
@@ -236,9 +216,7 @@ class Custom:
 
 		#---> Генерация динамических свойств.
 		#==========================================================================================#
-		# Настройки.
 		self.__Settings = settings["custom"] if "custom" in settings.keys() else dict()
-		# Менеджер логов.
 		self.__Logger = logger
 
 	def __getitem__(self, key: str) -> any:
@@ -247,7 +225,6 @@ class Custom:
 			key – ключ настройки.
 		"""
 
-		# Если ключ не найден, отправить в лог предупреждение.
 		if key not in self.__Settings.keys(): self.__Logger.warning(f"No custom setting: \"{key}\".")
 		
 		return self.__Settings[key]
@@ -280,12 +257,6 @@ class ParserSettings:
 		"""Данные прокси."""
 
 		return self.__Proxy
-	
-	@property
-	def type(self) -> str:
-		"""Тип настроек."""
-
-		return self.__Type
 
 	#==========================================================================================#
 	# >>>>> МЕТОДЫ <<<<< #
@@ -299,13 +270,8 @@ class ParserSettings:
 
 		#---> Генерация динамических свойств.
 		#==========================================================================================#
-		# Настройки.
 		self.__Settings = ReadJSON(f"Parsers/{parser_name}/settings.json")
-		# Менеджер логов.
 		self.__Logger = logger
-		# Тип настроек.
-		self.__Type = self.__Settings["type"]
-		# Контейнеры категорий настроек.
 		self.__Common = Common(parser_name, self.__Settings, logger)
 		self.__Proxy = Proxy(self.__Settings, logger)
 		self.__Custom = Custom(self.__Settings, logger)
@@ -316,7 +282,6 @@ class ParserSettings:
 			category – название категории.
 		"""
 
-		# Если категория не найдена, отправить в лог предупреждение.
 		if category not in self.__Settings.keys(): self.__Logger.warning(f"No settings category: \"{category}\".")
 		
 		return self.__Settings[category].copy()

@@ -1,4 +1,5 @@
 from Source.Core.Formats import BaseChapter, BaseTitle
+from Source.Core.Exceptions import ParsingError
 
 from dublib.Methods.JSON import ReadJSON, WriteJSON
 from dublib.WebRequestor import WebResponse
@@ -177,15 +178,17 @@ class Logger:
 		logging.critical(text)
 		if not self.__SilentMode: self.__SendReport(text)
 
-	def error(self, text: str):
+	def error(self, text: str, exception: bool = True):
 		"""
 		Записывает в лог ошибку.
-			text – данные.
+			text – данные;\n
+			exception – указывает, нужно ли выбрасывать исключение.
 		"""
 
 		self.__IsLogHasError = True
 		logging.error(text)
 		if not self.__SilentMode: self.__SendReport(text)
+		if exception: raise ParsingError()
 
 	def info(self, text: str):
 		"""
@@ -228,16 +231,17 @@ class Logger:
 	# >>>>> ШАБЛОНЫ ОШИБОК <<<<< #
 	#==========================================================================================#
 
-	def request_error(self, response: WebResponse, text: str | None = None):
+	def request_error(self, response: WebResponse, text: str | None = None, exception: bool = True):
 		"""
 		Обрабатывает ошибку сети.
 			response – объект WEB-ответа;\n
-			text – описание ошибки.
+			text – описание ошибки;\n
+			exception – указывает, выбрасывать ли исключение.
 		"""
 
 		if not text: text = "Request error."
 		if response.status_code in self.__LoggerSettings["commands"][self.__PointName]["ignored_requests_errors"]: self.__SilentMode = True
-		self.error(f"{text} Response code: {response.status_code}.")
+		self.error(f"{text} Response code: {response.status_code}.", exception = exception)
 
 	def title_not_found(self, title: BaseTitle):
 		"""

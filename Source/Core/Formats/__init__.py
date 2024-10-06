@@ -132,7 +132,8 @@ class BaseChapter:
 		Задаёт словарь, используемый в качестве хранилища данных главы.
 			dictionary – словарь данных главы.
 		"""
-
+		
+		dictionary = dictionary.copy()
 		NoneType = type(None)
 		ImportantKeys = ["id", "volume", "number", "name", "is_paid", "translators"]
 		ImportantKeysTypes = [
@@ -149,7 +150,7 @@ class BaseChapter:
 			if ImportantKeys[KeyIndex] not in dictionary.keys(): raise KeyError(ImportantKeys[KeyIndex])
 			if type(dictionary[ImportantKeys[KeyIndex]]) not in ImportantKeysTypes[KeyIndex]: raise TypeError(ImportantKeys[KeyIndex])
 		
-		self._Chapter = dictionary.copy()
+		self._Chapter = dictionary
 
 	def set_id(self, id: int | None):
 		"""
@@ -167,7 +168,7 @@ class BaseChapter:
 
 		self._Chapter["is_paid"] = is_paid
 
-	def set_name(self, name: int | None):
+	def set_name(self, name: str | None):
 		"""
 		Задаёт название главы.
 			name – название главы.
@@ -194,7 +195,7 @@ class BaseChapter:
 	def to_dict(self) -> dict:
 		"""Возвращает словарь данных главы."""
 
-		return self._Chapter.copy()
+		return self._Chapter
 	
 class BaseBranch:
 	"""Базовая ветвь."""

@@ -1,5 +1,5 @@
-from Source.Core.SystemObjects import SystemObjects, LoggerRules
 from Source.Core.ImagesDownloader import ImagesDownloader
+from Source.Core.SystemObjects import SystemObjects
 from Source.Core.Builders import MangaBuilder
 from Source.CLI.Templates import ParsersTable
 from Source.Core.Collector import Collector
@@ -184,8 +184,7 @@ def com_list(system_objects: SystemObjects, command: ParsedCommandData):
 		"TYPE": [],
 		"SITE": [],
 		"collect": [],
-		"image": [],
-		"apps": []
+		"image": []
 	}
 
 	#---> Обработка команды.
@@ -201,7 +200,6 @@ def com_list(system_objects: SystemObjects, command: ParsedCommandData):
 		TableData["SITE"].append(Site)
 		TableData["collect"].append(system_objects.manager.check_method_collect(Parser))
 		TableData["image"].append(system_objects.manager.check_method_image(Parser))
-		TableData["apps"].append(False)
 
 	#---> Вывод отчёта.
 	#==========================================================================================#
@@ -294,6 +292,9 @@ def com_parse(system_objects: SystemObjects, command: ParsedCommandData):
 			ErrorsCount += 1
 			system_objects.logger.title_not_found(Title)
 
+		except ParsingError:
+			ErrorsCount += 1
+
 		if Index != len(Slugs) - 1: sleep(ParserSettings.common.delay)
 
 	#---> Вывод отчёта.
@@ -343,6 +344,9 @@ def com_repair(system_objects: SystemObjects, command: ParsedCommandData):
 	except ChapterNotFound:
 		ResultMessage = "Error! Chapter not found."
 		system_objects.EXIT_CODE = -1
+
+	except ParsingError:
+			ErrorsCount += 1
 
 	#---> Вывод отчёта.
 	#==========================================================================================#

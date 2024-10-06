@@ -10,7 +10,7 @@ def ParsersTable(columns: dict[str, list], sort_by: str = "NAME"):
 
 	TableObject = PrettyTable()
 	TableObject.set_style(PLAIN_COLUMNS)
-	Implementations = ["collect", "image", "apps"]
+	Implementations = ["collect", "image"]
 	ImplementationStatuses = {
 		True: TextStyler("true", text_color = Styles.Colors.Green),
 		False: TextStyler("false", text_color = Styles.Colors.Red)

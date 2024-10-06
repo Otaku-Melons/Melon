@@ -470,7 +470,7 @@ class Manga(BaseTitle):
 		self.__ParserSettings = self.__SystemObjects.manager.get_parser_settings()
 		self.__Branches: list[Branch] = list()
 		self.__UsedFilename = None
-		self.__IsLegacy = True if self.__ParserSettings .common.legacy else False
+		self.__IsLegacy = True if self.__ParserSettings.common.legacy else False
 		self.__Parser = None
 
 		self._Title = {
