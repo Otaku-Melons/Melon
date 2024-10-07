@@ -95,6 +95,7 @@ class Chapter(BaseChapter):
 		"""
 
 		IsCorrect = True
+		paragraph = self.__ParserSettings.filters.text.clear(paragraph)
 		
 		if self.__ParserSettings.common.pretty:
 

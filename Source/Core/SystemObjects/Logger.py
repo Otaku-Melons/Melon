@@ -363,3 +363,6 @@ class Logger:
 		if self.__LoggerRules == LoggerRules.SaveIfHasWarnings and not self.__IsLogHasWarning and not self.__IsLogHasError: IsClean = True
 
 		if IsClean and os.path.exists(self.__LogFilename): os.remove(self.__LogFilename)
+
+		try: os.rmdir("Logs")
+		except: pass

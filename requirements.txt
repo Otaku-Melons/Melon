@@ -5,3 +5,4 @@ packaging
 dublib==0.13.0
 # Parsers
 -r ./Parsers/remanga/requirements.txt
+-r ./Parsers/renovels/requirements.txt

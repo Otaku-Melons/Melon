@@ -6,6 +6,124 @@ from dublib.Methods.JSON import ReadJSON
 from dublib.Methods.Data import Zerotify
 
 import os
+import re
+
+#==========================================================================================#
+# >>>>> ДОПОЛНИТЕЛЬНЫЕ СТРУКТУРЫ ДАННЫХ <<<<< #
+#==========================================================================================#
+
+class TextFilters:
+	"""Фильтры текста."""
+
+	#==========================================================================================#
+	# >>>>> СВОЙСТВА <<<<< #
+	#==========================================================================================#
+
+	@property
+	def regexs(self) -> list[str]:
+		"""Список регулярных выражений фильтрации."""
+
+		return self.__Regexs
+	
+	@property
+	def strings(self) -> list[str]:
+		"""Список удаляемых строк."""
+
+		return self.__Strings
+
+	#==========================================================================================#
+	# >>>>> ПУБЛИЧНЫЕ МЕТОДЫ <<<<< #
+	#==========================================================================================#
+
+	def __init__(self, data: dict):
+
+		#---> Генерация динамических свойств.
+		#==========================================================================================#
+		self.__Regexs = list()
+		self.__Strings = list()
+
+		if "text_regexs" in data.keys() and type(data["text_regexs"]) == list: self.__Regexs = data["text_regexs"]
+		if "text_strings" in data.keys() and type(data["text_strings"]) == list: self.__Strings = data["text_strings"]
+
+	def clear(self, text: str) -> str:
+		"""
+		Очищает текст согласно фильтрам.
+			text – текст.
+		"""
+
+		for Regex in self.__Regexs: text = re.sub(Regex, "", text)
+		for String in self.__Strings: text = text.replace(String, "")
+
+		return text
+
+class ImageFilters:
+	"""Фильтры изображений."""
+
+	#==========================================================================================#
+	# >>>>> СВОЙСТВА <<<<< #
+	#==========================================================================================#
+
+	@property
+	def md5(self) -> list[str]:
+		"""Список MD5-хэшей нежелательных изображений."""
+
+		return self.__Data["image_md5"]
+
+	@property
+	def min_height(self) -> int | None:
+		"""Минимальная высота изображения."""
+
+		return self.__Data["image_min_height"]
+	
+	@property
+	def min_width(self) -> int | None:
+		"""Минимальная ширина изображения."""
+
+		return self.__Data["image_min_width"]
+	
+	@property
+	def max_height(self) -> int | None:
+		"""Максимальная высота изображения."""
+
+		return self.__Data["image_max_height"]
+	
+	@property
+	def max_width(self) -> int | None:
+		"""Максимальная ширина изображения."""
+
+		return self.__Data["image_max_width"]
+	
+	#==========================================================================================#
+	# >>>>> ПУБЛИЧНЫЕ МЕТОДЫ <<<<< #
+	#==========================================================================================#
+
+	def __init__(self, data: dict):
+
+		#---> Генерация динамических свойств.
+		#==========================================================================================#
+		self.__Data = dict()
+
+		if "image_md5" not in self.__Data.keys() or type(self.__Data["image_md5"]) != list: self.__Data["image_md5"] = list()
+		Keys = ["image_min_height", "image_min_width", "image_max_height", "image_max_width"]
+
+		for Key in Keys:
+			if Key not in self.__Data.keys() or type(self.__Data[Key]) != int: self.__Data[Key] = None
+
+	def check_sizes(self, width: int, height: int) -> bool:
+		"""
+		Проверяет, выходит ли размер изображения за пределы разрешённых значений.
+			width – ширина;\n
+			height – высота.
+		"""
+
+		IsFiltered = False
+
+		if self.min_width and width < self.min_width: IsFiltered = True
+		if self.min_height and height < self.min_height: IsFiltered = True
+		if self.max_width and height > self.max_width: IsFiltered = True
+		if self.max_height and height > self.max_height: IsFiltered = True
+
+		return IsFiltered
 
 #==========================================================================================#
 # >>>>> КАТЕГОРИИ НАСТРОЕК <<<<< #
@@ -139,6 +257,33 @@ class Common:
 
 		else: raise BadSettings(parser_name)
 
+class Filters:
+	"""Фильтры контента."""
+
+	#==========================================================================================#
+	# >>>>> СВОЙСТВА <<<<< #
+	#==========================================================================================#
+
+	@property
+	def text(self) -> TextFilters:
+		"""Фильтры текста."""
+
+		return self.__TextFilters
+	
+	@property
+	def image(self) -> ImageFilters:
+		"""Фильтры изображений."""
+
+		return self.__ImageFilters
+	
+	def __init__(self, settings: dict):
+
+		#---> Генерация динамических свойств.
+		#==========================================================================================#
+		if "filters" not in settings.keys() or type(settings["filters"]) != dict: settings["filters"] = dict()
+		self.__TextFilters = TextFilters(settings["filters"])
+		self.__ImageFilters = ImageFilters(settings["filters"])
+
 class Proxy:
 	"""Настройки прокси."""
 
@@ -247,6 +392,12 @@ class ParserSettings:
 		return self.__Common
 	
 	@property
+	def filters(self) -> Filters:
+		"""Фильтры контента."""
+
+		return self.__Filters
+
+	@property
 	def custom(self) -> Custom:
 		"""Собственные настройки парсера."""
 
@@ -273,6 +424,7 @@ class ParserSettings:
 		self.__Settings = ReadJSON(f"Parsers/{parser_name}/settings.json")
 		self.__Logger = logger
 		self.__Common = Common(parser_name, self.__Settings, logger)
+		self.__Filters = Filters(self.__Settings)
 		self.__Proxy = Proxy(self.__Settings, logger)
 		self.__Custom = Custom(self.__Settings, logger)
 

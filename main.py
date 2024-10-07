@@ -83,15 +83,17 @@ Analyzer.enable_help(True)
 CommandDataStruct = Analyzer.check_commands(CommandsList)
 
 Objects = SystemObjects()
-Objects.select_parser(CommandDataStruct.get_key_value("use"))
 Objects.logger.info("====== Preparing to starting ======")
 Objects.logger.info(f"Starting with Python {sys.version_info.major}.{sys.version_info.minor}.{sys.version_info.micro} on {sys.platform}.")
 Objects.logger.info("Command: \"" + " ".join(sys.argv[1:len(sys.argv)]) + "\".")
 
 if CommandDataStruct == None:
-	Objects.logger.close(clean = True)
+	Objects.logger.set_rule(3)
+	Objects.logger.close()
 	print("Unknown command.")
 	exit(0)
+
+else: Objects.select_parser(CommandDataStruct.get_key_value("use"))
 
 #==========================================================================================#
 # >>>>> ОБРАБОТКА НЕСПЕЦИФИЧЕСКИХ ФЛАГОВ <<<<< #

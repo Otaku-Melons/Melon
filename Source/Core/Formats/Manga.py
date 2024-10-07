@@ -60,6 +60,7 @@ class Chapter(BaseChapter):
 			height – высота слайда.
 		"""
 
+		ParserSettings = self._SystemObjects.manager.parser_settings
 		SlideInfo = {
 			"index": len(self._Chapter["slides"]) + 1,
 			"link": link,
@@ -67,7 +68,10 @@ class Chapter(BaseChapter):
 			"height": height
 		}
 
-		if not self._SystemObjects.manager.get_parser_settings().common.sizing_images: 
+		if width and height and ParserSettings.filters.image.check_sizes(width, height):
+			return
+
+		if not ParserSettings.common.sizing_images: 
 			del SlideInfo["width"]
 			del SlideInfo["height"]
 
