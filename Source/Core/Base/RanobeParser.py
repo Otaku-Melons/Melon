@@ -74,11 +74,11 @@ class RanobeParser:
 	# >>>>> ПУБЛИЧНЫЕ МЕТОДЫ <<<<< #
 	#==========================================================================================#
 
-	def __init__(self, system_objects: SystemObjects, title: Ranobe):
+	def __init__(self, system_objects: SystemObjects, title: Ranobe | None = None):
 		"""
 		Базовый парсер манги.
 			system_objects – коллекция системных объектов;\n
-			settings – настройки парсера.
+			title – данные тайтла.
 		"""
 
 		#---> Генерация динамических свойств.
@@ -104,3 +104,11 @@ class RanobeParser:
 		"""Получает основные данные тайтла."""
 
 		pass
+
+	def set_title(self, title: Ranobe):
+		"""
+		Задаёт данные тайтла.
+			title – данные тайтла.
+		"""
+
+		self._Title = title

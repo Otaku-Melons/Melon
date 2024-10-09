@@ -74,11 +74,11 @@ class MangaParser:
 	# >>>>> ПУБЛИЧНЫЕ МЕТОДЫ <<<<< #
 	#==========================================================================================#
 
-	def __init__(self, system_objects: SystemObjects, title: Manga):
+	def __init__(self, system_objects: SystemObjects, title: Manga | None = None):
 		"""
 		Базовый парсер манги.
 			system_objects – коллекция системных объектов;\n
-			settings – настройки парсера.
+			title – данные тайтла.
 		"""
 
 		#---> Генерация динамических свойств.
@@ -86,7 +86,7 @@ class MangaParser:
 		self._SystemObjects = system_objects
 		self._Title = title
 
-		self._Settings = self._SystemObjects.manager.get_parser_settings()
+		self._Settings = self._SystemObjects.manager.parser_settings
 		self._Requestor = self._InitializeRequestor()
 
 		self._PostInitMethod()
@@ -104,3 +104,11 @@ class MangaParser:
 		"""Получает основные данные тайтла."""
 
 		pass
+
+	def set_title(self, title: Manga):
+		"""
+		Задаёт данные тайтла.
+			title – данные тайтла.
+		"""
+
+		self._Title = title

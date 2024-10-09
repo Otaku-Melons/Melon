@@ -60,17 +60,15 @@ class Manager:
 		self.__ParserSettings = None
 		self.__ParserName = None
 
-	def launch(self, title: "Manga", parser_name: str | None = None) -> any:
+	def launch(self, parser_name: str | None = None) -> any:
 		"""
 		Запускает парсер и возвращает его объект.
 			parser_name – название парсера.
 		"""
 
 		parser_name = self.__CheckParser(parser_name)
-		self.__SystemObjects.temper.clear_parser_temp(parser_name)
 		Module = importlib.import_module(f"Parsers.{parser_name}.main")
-		Parser = Module.Parser(self.__SystemObjects, title)
-		title.set_parser(Parser)
+		Parser = Module.Parser(self.__SystemObjects)
 		self.__SystemObjects.logger.info(f"Parser: \"{Module.NAME}\" (version {Module.VERSION}).")
 
 		return Parser

@@ -1,5 +1,3 @@
-from Source.Core.SystemObjects import SystemObjects
-
 from dublib.WebRequestor import Protocols, WebConfig, WebLibs, WebRequestor
 from dublib.Engine.Bus import ExecutionError, ExecutionStatus
 from dublib.Methods.Filesystem import NormalizePath
@@ -50,32 +48,28 @@ class ImagesDownloader:
 
 		return Filetype
 
-	def __InitializeRequestor(self, parser_name: str) -> WebRequestor:
-		"""
-		Инициализирует модуль WEB-запросов.
-			parser_name – название парсера.
-		"""
+	def __InitializeRequestor(self) -> WebRequestor:
+		"""Инициализирует модуль WEB-запросов."""
 
-		Settings = self.__SystemObjects.manager.get_parser_settings(parser_name)
 		Config = WebConfig()
 		Config.select_lib(WebLibs.requests)
-		Config.set_retries_count(Settings.common.retries)
-		Config.add_header("Authorization", Settings["custom"]["token"])
+		Config.set_retries_count(self.__ParserSettings.common.retries)
+		Config.add_header("Authorization", self.__ParserSettings["custom"]["token"])
 		WebRequestorObject = WebRequestor(Config)
 
-		if Settings["proxy"]["enable"]: WebRequestorObject.add_proxy(
+		if self.__ParserSettings["proxy"]["enable"]: WebRequestorObject.add_proxy(
 			Protocols.HTTPS,
-			host = Settings["proxy"]["host"],
-			port = Settings["proxy"]["port"],
-			login = Settings["proxy"]["login"],
-			password = Settings["proxy"]["password"]
+			host = self.__ParserSettings["proxy"]["host"],
+			port = self.__ParserSettings["proxy"]["port"],
+			login = self.__ParserSettings["proxy"]["login"],
+			password = self.__ParserSettings["proxy"]["password"]
 		)
 			
 	#==========================================================================================#
 	# >>>>> ПУБЛИЧНЫЕ МЕТОДЫ <<<<< #
 	#==========================================================================================#
 	
-	def __init__(self, system_objects: SystemObjects, requestor: WebRequestor | None = None, logging: bool = True):
+	def __init__(self, system_objects: "SystemObjects", requestor: WebRequestor | None = None, logging: bool = True):
 		"""
 		Загрузчик изображений.
 			system_objects – коллекция системных объектов;\n
@@ -86,7 +80,7 @@ class ImagesDownloader:
 		#---> Генерация динамических свойств.
 		#==========================================================================================#
 		self.__SystemObjects = system_objects
-		self.__ParserSettings = self.__SystemObjects.manager.get_parser_settings()
+		self.__ParserSettings = self.__SystemObjects.manager.parser_settings
 		self.__Requestor = requestor or self.__InitializeRequestor()
 		self.__Logging = logging
 
@@ -114,7 +108,7 @@ class ImagesDownloader:
 		#==========================================================================================#
 		Path = f"{directory}/{filename}{Filetype}"
 		IsFileExists = os.path.exists(Path)
-
+		
 		if not IsFileExists or self.__SystemObjects.FORCE_MODE:
 			Response = self.__Requestor.get(url)
 			
@@ -145,8 +139,10 @@ class ImagesDownloader:
 				Status = ExecutionError(Response.status_code)
 				Status.message = f"Error! Response code: {Response.status_code}."
 
-		elif IsFileExists: Status.message = "Already exists."
-
+		elif IsFileExists:
+			Status.value = filename + Filetype
+			Status.message = "Already exists."
+		
 		return Status
 	
 	def move_from_temp(self, directory: str, original_filename: str, filename: str | None = None, is_full_filename: bool = True) -> bool:
@@ -159,7 +155,7 @@ class ImagesDownloader:
 		"""
 		
 		try:
-			OriginalPath = f"Temp/{self.__SystemObjects.PARSER_NAME}/" + original_filename
+			OriginalPath = f"Temp/{self.__SystemObjects.parser_name}/" + original_filename
 			directory = NormalizePath(directory)
 			Filetype = ""
 			
@@ -175,7 +171,7 @@ class ImagesDownloader:
 
 		return True
 	
-	def temp_image(self, url: str, filename: str | None = None, is_full_filename: bool = True) -> str | None:
+	def temp_image(self, url: str, filename: str | None = None, is_full_filename: bool = False) -> str | None:
 		"""
 		Скачивает изображение во временный каталог парсера.
 			url – ссылка на изображение;\n
@@ -185,7 +181,7 @@ class ImagesDownloader:
 
 		Result = self.image(
 			url = url,
-			directory = self.__SystemObjects.temper.get_parser_temp(),
+			directory = self.__SystemObjects.temper.parser_temp,
 			filename = filename,
 			is_full_filename = is_full_filename
 		)

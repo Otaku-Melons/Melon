@@ -9,6 +9,46 @@ import os
 import re
 
 #==========================================================================================#
+# >>>>> СТАНДАРТНЫЕ НАСТРОЙКИ <<<<< #
+#==========================================================================================#
+
+Settings = {
+	"common": {
+		"archives_directory": "",
+		"covers_directory": "",
+		"titles_directory": "",
+		"bad_image_stub": "",
+		"pretty": True,
+		"use_id_as_filename": False,
+		"sizing_images": False,
+		"legacy": False,
+		"retries": 1,
+		"delay": 1
+	},
+	"filters": {
+		"text_regexs": [],
+		"text_strings": [],
+		"image_md5": [],
+		"image_min_height": None,
+		"image_min_width": None,
+		"image_max_height": None,
+		"image_max_width": None
+	},
+	"proxy": {
+		"enable": False,
+		"host": "",
+		"port": "",
+		"login": "",
+		"password": ""
+	},
+	"custom": {
+		"token": "",
+		"unstub": False,
+		"add_free_publication_date": False
+	}
+}
+
+#==========================================================================================#
 # >>>>> ДОПОЛНИТЕЛЬНЫЕ СТРУКТУРЫ ДАННЫХ <<<<< #
 #==========================================================================================#
 
@@ -140,25 +180,25 @@ class Common:
 	def archives_directory(self) -> str:
 		"""Директория читаемого контента."""
 
-		return NormalizePath(self.__Settings["archives_directory"])
+		return self.__Settings["archives_directory"]
 	
 	@property
 	def bad_image_stub(self) -> str | None:
 		"""Путь к заглушке плохого изображения."""
 
-		return NormalizePath(self.__Settings["bad_image_stub"]) if self.__Settings["bad_image_stub"] else None
+		return self.__Settings["bad_image_stub"]
 	
 	@property
 	def covers_directory(self) -> str:
 		"""Директория обложек."""
 
-		return NormalizePath(self.__Settings["covers_directory"])
+		return self.__Settings["covers_directory"]
 	
 	@property
 	def titles_directory(self) -> str:
 		"""Директория описательных файлов."""
 
-		return NormalizePath(self.__Settings["titles_directory"])
+		return self.__Settings["titles_directory"]
 	
 	@property
 	def use_id_as_filename(self) -> bool:
@@ -206,17 +246,14 @@ class Common:
 			parser_name – название парсера.
 		"""
 
-		if not self.__Settings["archives_directory"]:
-			self.__Settings["archives_directory"] = f"Output/{parser_name}/archives"
-			if not os.path.exists(f"Output/{parser_name}/archives"): os.makedirs(f"Output/{parser_name}/archives")
+		if not self.__Settings["archives_directory"]: self.__Settings["archives_directory"] = f"Output/{parser_name}/archives"
+		else: self.__Settings["archives_directory"] = NormalizePath(self.__Settings["archives_directory"])
 
-		if not self.__Settings["covers_directory"]:
-			self.__Settings["covers_directory"] = f"Output/{parser_name}/covers"
-			if not os.path.exists(f"Output/{parser_name}/covers"): os.makedirs(f"Output/{parser_name}/covers")
+		if not self.__Settings["covers_directory"]: self.__Settings["covers_directory"] = f"Output/{parser_name}/covers"
+		else: self.__Settings["covers_directory"] = NormalizePath(self.__Settings["covers_directory"])
 
-		if not self.__Settings["titles_directory"]:
-			self.__Settings["titles_directory"] = f"Output/{parser_name}/titles"
-			if not os.path.exists(f"Output/{parser_name}/titles"): os.makedirs(f"Output/{parser_name}/titles")
+		if not self.__Settings["titles_directory"]: self.__Settings["titles_directory"] = f"Output/{parser_name}/titles"
+		else: self.__Settings["titles_directory"] = NormalizePath(self.__Settings["titles_directory"])
 
 	def __init__(self, parser_name: str, settings: dict, logger: Logger):
 		"""
@@ -248,10 +285,12 @@ class Common:
 				if Key in settings["common"].keys(): self.__Settings[Key] = settings["common"][Key]
 				else: logger.warning(f"Setting \"{Key}\" has been reset to default.")
 
-			if self.__Settings["bad_image_stub"]:
+			if self.__Settings["bad_image_stub"] != None:
 				BadImageStub = NormalizePath(self.__Settings["bad_image_stub"])
 				if not os.path.exists(BadImageStub): self.__Settings["bad_image_stub"] = None
 				else: self.__Settings["bad_image_stub"] = BadImageStub
+
+			elif not self.__Settings["bad_image_stub"]: self.__Settings["bad_image_stub"] = None
 
 			self.__PutDefaultDirectories(parser_name)
 
@@ -410,7 +449,35 @@ class ParserSettings:
 		return self.__Proxy
 
 	#==========================================================================================#
-	# >>>>> МЕТОДЫ <<<<< #
+	# >>>>> ПРИВАТНЫЕ МЕТОДЫ <<<<< #
+	#==========================================================================================#
+
+	def __ReadSettings(self, parser_name: str) -> dict:
+		"""
+		Считывает настройки в порядке приоритета.
+			parser_name – название парсера.
+		"""
+
+		ParserSettingsDict = None
+		Paths = [
+			f"Configs/{parser_name}/settings.json",
+			f"Parsers/{parser_name}/settings.json"
+		]
+
+		for Path in Paths:
+
+			if os.path.exists(Path):
+				ParserSettingsDict = ReadJSON(Path)
+				break
+
+		if not ParserSettingsDict:
+			self.__Logger.warning("Settings dropped to default values.")
+			ParserSettingsDict = Settings.copy()
+
+		return ParserSettingsDict
+
+	#==========================================================================================#
+	# >>>>> ПУБЛИЧНЫЕ МЕТОДЫ <<<<< #
 	#==========================================================================================#
 
 	def __init__(self, parser_name: str, logger: Logger):
@@ -421,8 +488,8 @@ class ParserSettings:
 
 		#---> Генерация динамических свойств.
 		#==========================================================================================#
-		self.__Settings = ReadJSON(f"Parsers/{parser_name}/settings.json")
 		self.__Logger = logger
+		self.__Settings = self.__ReadSettings(parser_name)
 		self.__Common = Common(parser_name, self.__Settings, logger)
 		self.__Filters = Filters(self.__Settings)
 		self.__Proxy = Proxy(self.__Settings, logger)

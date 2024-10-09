@@ -12,11 +12,59 @@ import enum
 import sys
 import os
 
+#==========================================================================================#
+# >>>>> ВСПОМОГАТЕЛЬНЫЕ СТРУКТУРЫ ДАННЫХ <<<<< #
+#==========================================================================================#
+
 class LoggerRules(enum.Enum):
 	Save = 0
 	SaveIfHasErrors = 1
 	SaveIfHasWarnings = 2
 	Remove = 3
+
+#==========================================================================================#
+# >>>>> СТАНДАРТНЫЕ НАСТРОЙКИ <<<<< #
+#==========================================================================================#
+
+Settings = {
+	"telebot": {
+		"enable": False,
+		"bot_token": "",
+		"chat_id": None,
+		"comment": "",
+		"attach_log": True
+	},
+	"commands": {
+		"collect": {
+			"rule": LoggerRules.SaveIfHasErrors.value,
+			"ignored_requests_errors": [],
+			"title_not_found": True,
+			"warnings": False
+		},
+		"get": {
+			"rule": LoggerRules.Remove.value,
+			"ignored_requests_errors": [],
+			"title_not_found": True,
+			"warnings": False
+		},
+		"parse": {
+			"rule": LoggerRules.Save.value,
+			"ignored_requests_errors": [],
+			"title_not_found": True,
+			"warnings": False
+		},
+		"repair": {
+			"rule": LoggerRules.SaveIfHasErrors.value,
+			"ignored_requests_errors": [],
+			"title_not_found": True,
+			"warnings": False
+		}
+	}
+}
+
+#==========================================================================================#
+# >>>>> ОСНОВНОЙ КЛАСС <<<<< #
+#==========================================================================================#
 
 class Logger:
 	"""Менеджер логов."""
@@ -27,52 +75,25 @@ class Logger:
 
 	def __ReadSettings(self) -> dict:
 		"""Считвает настройки логов для конкретного парсера или создаёт файл при их отсутствии."""
-
-		Settings = {
-			"telebot": {
-				"enable": False,
-				"bot_token": "",
-				"chat_id": None,
-				"comment": "",
-				"attach_log": True
-			},
-			"commands": {
-				"collect": {
-					"rule": LoggerRules.SaveIfHasErrors.value,
-					"ignored_requests_errors": [],
-					"title_not_found": True,
-					"warnings": False
-				},
-				"get": {
-					"rule": LoggerRules.Remove.value,
-					"ignored_requests_errors": [],
-					"title_not_found": True,
-					"warnings": False
-				},
-				"list": {
-					"rule": LoggerRules.Remove.value,
-					"warnings": False
-				},
-				"parse": {
-					"rule": LoggerRules.Save.value,
-					"ignored_requests_errors": [],
-					"title_not_found": True,
-					"warnings": False
-				},
-				"repair": {
-					"rule": LoggerRules.SaveIfHasErrors.value,
-					"ignored_requests_errors": [],
-					"title_not_found": True,
-					"warnings": False
-				}
-			}
-		}
-		Path = f"Parsers/{self.__ParserName}/logger.json"
-
-		if os.path.exists(Path): Settings = ReadJSON(Path)
-		elif self.__ParserName: WriteJSON(Path, Settings)
 		
-		return Settings
+		LoggerSettingsDict = None
+
+		if self.__ParserName:
+			Paths = [
+				f"Configs/{self.__ParserName}/logger.json",
+				f"Parsers/{self.__ParserName}/logger.json"
+			]
+
+			for Path in Paths:
+
+				if os.path.exists(Path):
+					LoggerSettingsDict = ReadJSON(Path)
+					break
+
+		if not LoggerSettingsDict:
+			LoggerSettingsDict = Settings.copy()
+
+		return LoggerSettingsDict
 
 	def __SendReport(self, description: str):
 		"""
@@ -178,7 +199,7 @@ class Logger:
 		logging.critical(text)
 		if not self.__SilentMode: self.__SendReport(text)
 
-	def error(self, text: str, exception: bool = True):
+	def error(self, text: str, exception: bool = False):
 		"""
 		Записывает в лог ошибку.
 			text – данные;\n
@@ -206,7 +227,11 @@ class Logger:
 
 		self.__IsLogHasWarning = True
 		logging.warning(text)
-		if self.__LoggerSettings["commands"][self.__PointName]["warnings"]: self.__SendReport(text)
+
+		try: 
+			if self.__LoggerSettings["commands"][self.__PointName]["warnings"]: self.__SendReport(text)
+			
+		except KeyError: pass
 
 	#==========================================================================================#
 	# >>>>> ШАБЛОНЫ ПРЕДУПРЕЖДЕНИЙ <<<<< #
@@ -351,7 +376,8 @@ class Logger:
 	def close(self):
 		"""Закрывает логи."""
 
-		if not self.__LoggerRules: self.set_rule(self.__LoggerSettings["commands"][self.__PointName]["rule"])
+		if not self.__LoggerRules and self.__PointName and self.__PointName in self.__LoggerSettings["commands"].keys(): self.set_rule(self.__LoggerSettings["commands"][self.__PointName]["rule"])
+		else: self.set_rule(LoggerRules.Remove)
 
 		logging.info("====== End ======")
 		logging.shutdown()

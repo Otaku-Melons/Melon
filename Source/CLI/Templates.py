@@ -30,4 +30,6 @@ def ParsersTable(columns: dict[str, list], sort_by: str = "NAME"):
 
 	TableObject.align = "l"
 	TableObject.sortby = TextStyler(sort_by, decorations = [Styles.Decorations.Bold])
-	print(TableObject)
+	TableObject = str(TableObject).strip()
+	Link = TextStyler("https://github.com/Otaku-Melons", decorations = [Styles.Decorations.Underlined])
+	print(TableObject if TableObject else f"Parsers not installed. See {Link} for more info.")

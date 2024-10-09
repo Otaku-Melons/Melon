@@ -3,6 +3,7 @@ from Source.CLI.Commands import *
 
 from dublib.CLI.Terminalyzer import Command, ParametersTypes, Terminalyzer
 from dublib.Methods.System import CheckPythonMinimalVersion, Shutdown
+from dublib.Methods.Filesystem import MakeRootDirectories
 
 import sys
 
@@ -11,6 +12,7 @@ import sys
 #==========================================================================================#
 
 CheckPythonMinimalVersion(3, 10)
+MakeRootDirectories(["Parsers"])
 
 #==========================================================================================#
 # >>>>> НАСТРОЙКА ОБРАБОТЧИКА КОМАНД <<<<< #
@@ -21,13 +23,13 @@ CommandsList = list()
 Com = Command("build", "Build readable content.")
 ComPos = Com.create_position("FILENAME", "Source file.", important = True)
 ComPos.add_argument(description = "Filename of locally saved title.")
-ComPos = Com.create_position("PARSER", "Used parser.", important = True)
+ComPos = Com.create_position("PARSER", "Name of parser.", important = True)
 ComPos.add_key("use", ParametersTypes.Text, "Parser name.")
 Com.add_flag("cbz", "Make *.CBZ archives.")
 CommandsList.append(Com)
 
 Com = Command("collect", "Collect titles slugs into Collection.txt file.")
-ComPos = Com.create_position("PARSER", "Used parser.", important = True)
+ComPos = Com.create_position("PARSER", "Name of parser.", important = True)
 ComPos.add_key("use", ParametersTypes.Text, "Parser name.")
 Com.add_flag("f", "Enable force mode.")
 Com.add_flag("s", "Shutdown PC after script finish.")
@@ -40,7 +42,7 @@ CommandsList.append(Com)
 Com = Command("get", "Download image.")
 ComPos = Com.create_position("URL", "Image source.")
 ComPos.add_argument(ParametersTypes.URL, "Link to image.")
-ComPos = Com.create_position("PARSER", "Used parser.", important = True)
+ComPos = Com.create_position("PARSER", "Name of parser.", important = True)
 ComPos.add_key("use", ParametersTypes.Text, "Parser name.")
 ComPos = Com.create_position("NAME", "Type of naming.")
 ComPos.add_key("fullname", description = "Full name of file.")
@@ -49,6 +51,14 @@ Com.add_flag("f", "Enable force mode.")
 Com.add_flag("s", "Shutdown PC after script finish.")
 Com.add_flag("sid", "Disable custom imege downloader.")
 Com.add_key("dir", ParametersTypes.ValidPath, "Output directory.")
+CommandsList.append(Com)
+
+Com = Command("install", "Install parsers.")
+ComPos = Com.create_position("PARSER", "Name of parser.", important = True)
+ComPos.add_argument(ParametersTypes.Text, "Name of parser.")
+ComPos.add_flag("all", "Install all parsers.")
+Com.add_flag("f", "Enable force mode.")
+Com.add_flag("ssh", "Use SSH mode for repositories cloning.")
 CommandsList.append(Com)
 
 Com = Command("list", "Print list of installed parsers.")
@@ -61,10 +71,10 @@ ComPos.add_argument(description = "Title slug.")
 ComPos.add_flag("collection", "Parse slugs from Collection.txt file.")
 ComPos.add_flag("local", "Parse all locally saved titles.")
 ComPos.add_flag("updates", "Parse titles updated for last 24 hours.")
-ComPos = Com.create_position("PARSER", "Used parser.", important = True)
+ComPos = Com.create_position("PARSER", "Name of parser.", important = True)
 ComPos.add_key("use", ParametersTypes.Text, "Parser name.")
 Com.add_key("period", ParametersTypes.Number, "Period in hours for parsing updates.")
-Com.add_flag("f", "Enable force mode.")
+
 Com.add_flag("s", "Shutdown PC after script finish.")
 CommandsList.append(Com)
 
@@ -73,9 +83,16 @@ ComPos = Com.create_position("FILENAME", "Source file.", important = True)
 ComPos.add_argument(description = "Filename of locally saved title.")
 ComPos = Com.create_position("TARGET", "Target for repairing.", important = True)
 ComPos.add_key("chapter", ParametersTypes.Number, "Chapter ID.")
-ComPos = Com.create_position("PARSER", "Used parser.", important = True)
+ComPos = Com.create_position("PARSER", "Name of parser.", important = True)
 ComPos.add_key("use", ParametersTypes.Text, "Parser name.")
 Com.add_flag("s", "Shutdown PC after script finish.")
+CommandsList.append(Com)
+
+Com = Command("uninstall", "Uninstall parsers.")
+ComPos = Com.create_position("PARSER", "Name of parser.", important = True)
+ComPos.add_argument(ParametersTypes.Text, "Name of parser.")
+ComPos.add_flag("all", "Uninstall all parsers.")
+Com.add_flag("f", "Also remove configs.")
 CommandsList.append(Com)
 
 Analyzer = Terminalyzer()
@@ -113,12 +130,8 @@ if "s" in CommandDataStruct.flags:
 # >>>>> ОБРАБОТКА КОММАНД <<<<< #
 #==========================================================================================#
 
-if "build" == CommandDataStruct.name: com_build(Objects, CommandDataStruct)
-if "collect" == CommandDataStruct.name: com_collect(Objects, CommandDataStruct)
-if "get" == CommandDataStruct.name: com_get(Objects, CommandDataStruct)
-if "list" == CommandDataStruct.name: com_list(Objects, CommandDataStruct)
-if "parse" == CommandDataStruct.name: com_parse(Objects, CommandDataStruct)
-if "repair" == CommandDataStruct.name: com_repair(Objects, CommandDataStruct)
+try: exec(f"com_{CommandDataStruct.name}(Objects, CommandDataStruct)")
+except KeyboardInterrupt: exit(0)
 
 #==========================================================================================#
 # >>>>> ЗАВЕРШЕНИЕ РАБОТЫ <<<<< #

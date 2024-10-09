@@ -34,6 +34,18 @@ class ChapterNotFound(Exception):
 	def __str__(self):
 		return self.__Message
 	
+class GitNotInstalled(Exception):
+	"""Исключение: Git не установлен."""
+
+	def __init__(self):
+		"""Исключение: Git не установлен."""
+
+		self.__Message = "https://git-scm.com/book/en/v2/Getting-Started-Installing-Git"
+		super().__init__(self.__Message) 
+			
+	def __str__(self):
+		return self.__Message
+
 class ParsingError(Exception):
 	"""Исключение: ошибка парсинга."""
 

@@ -38,7 +38,7 @@ class Collector:
 		#---> Генерация динамических свойств.
 		#==========================================================================================#
 		self.__SystemObjects = system_objects
-		self.__Path = system_objects.temper.get_parser_temp() + "/Collection.txt"
+		self.__Path = system_objects.temper.parser_temp + "/Collection.txt"
 		self.__Collection = self.__ReadCollection()
 
 	def append(self, slugs: list[str]):
