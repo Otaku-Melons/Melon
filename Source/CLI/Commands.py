@@ -370,7 +370,7 @@ def com_repair(system_objects: SystemObjects, command: ParsedCommandData):
 		system_objects.EXIT_CODE = -1
 
 	except ParsingError:
-		ResultMessage = "Error! Unable access titile data."
+		ResultMessage = "Error! Unable access title data."
 		system_objects.EXIT_CODE = -1
 
 	#---> Вывод отчёта.
