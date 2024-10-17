@@ -74,6 +74,7 @@ ComPos.add_flag("updates", "Parse titles updated for last 24 hours.")
 ComPos = Com.create_position("PARSER", "Name of parser.", important = True)
 ComPos.add_key("use", ParametersTypes.Text, "Parser name.")
 Com.add_key("period", ParametersTypes.Number, "Period in hours for parsing updates.")
+Com.add_key("from", description = "Skip titles before this slug.")
 
 Com.add_flag("s", "Shutdown PC after script finish.")
 CommandsList.append(Com)

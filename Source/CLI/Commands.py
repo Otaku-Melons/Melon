@@ -290,7 +290,7 @@ def com_parse(system_objects: SystemObjects, command: ParsedCommandData):
 
 	else: Slugs.append(command.arguments[0])
 		
-	if command.check_flag("from"):
+	if command.check_key("from"):
 		system_objects.logger.info("Processing will be started from slug: \"" + command.get_key_value("from") + "\".")
 			
 		if command.get_key_value("from") in Slugs: StartIndex = Slugs.index(command.get_key_value("from"))

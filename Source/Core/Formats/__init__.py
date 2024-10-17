@@ -665,7 +665,7 @@ class BaseTitle:
 	def save(self):
 		"""Сохраняет данные тайтла."""
 
-		for BranchID in self._Title["content"].keys(): self._Title["content"][BranchID] = sorted(self._Title["content"][BranchID], key = lambda Value: (list(map(int, Value["volume"].split("."))), list(map(int, Value["number"].split("."))))) 
+		for BranchID in self._Title["content"].keys(): self._Title["content"][BranchID] = sorted(self._Title["content"][BranchID], key = lambda Value: (list(map(int, Value["volume"].split("."))), list(map(int, Value["number"].split(".")))))
 		self._CheckStandartPath(self._ParserSettings.common.titles_directory)
 		WriteJSON(f"{self._ParserSettings.common.titles_directory}/{self._UsedFilename}.json", self._Title)
 		self._SystemObjects.logger.info(f"Title: \"{self.slug}\" (ID: {self.id}). Saved.")
@@ -750,7 +750,6 @@ class BaseTitle:
 		"""
 
 		if branch not in self._Branches: self._Branches.append(branch)
-		self._Title["content"] = dict()
 		for CurrentBranch in self._Branches: self._Title["content"][str(CurrentBranch.id)] = CurrentBranch.to_list()
 		self._UpdateBranchesInfo()
 
