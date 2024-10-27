@@ -40,7 +40,7 @@ pip install -r requirements.txt
 main.py help
 
 # Подробная информация о конкретной команде.
-main.py help command
+main.py help [COMMAND]
 ```
 
 # Настройки
@@ -83,11 +83,6 @@ ___
 "sizing_images": false
 ```
 Указывает, следует ли пытаться найти данные о разрешении изображений и заносить их в описательный файл.
-___
-```JSON
-"legacy": false
-```
-Включает режим совместимости с устаревшими форматами [DMP-V1](/Docs/Examples/dmp-v1.md) и [DNP-V1](/Docs/Examples/dnp-v1.md).
 ___
 ```JSON
 "retries": 1

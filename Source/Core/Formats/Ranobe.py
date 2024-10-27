@@ -14,7 +14,7 @@ import os
 #==========================================================================================#
 
 class Chapter(BaseChapter):
-	"""Глава."""
+	"""Глава ранобэ."""
 
 	#==========================================================================================#
 	# >>>>> СВОЙСТВА <<<<< #
@@ -63,7 +63,7 @@ class Chapter(BaseChapter):
 
 	def __init__(self, system_objects: SystemObjects, title: "Ranobe"):
 		"""
-		Глава.
+		Глава ранобэ.
 			system_objects – коллекция системных объектов;\n
 			title – данные тайтла.
 		"""
@@ -83,6 +83,9 @@ class Chapter(BaseChapter):
 			"paragraphs": []	
 		}
 		self._ParserSettings = system_objects.manager.parser_settings
+
+		self._SetParagraphsMethod = self.set_paragraphs
+		self._SetSlidesMethod = self._Pass
 
 	def add_paragraph(self, paragraph: str):
 		"""
@@ -107,6 +110,8 @@ class Chapter(BaseChapter):
 				InnerHTML = HTML(InnerHTML)
 				InnerHTML.replace_tag("em", "i")
 				InnerHTML.replace_tag("strong", "b")
+				InnerHTML.replace_tag("strike", "s")
+				InnerHTML.replace_tag("del", "s")
 				InnerHTML.unescape()
 				Tag = BeautifulSoup(f"<p{Align}>{InnerHTML.text}</p>", "html.parser")
 
@@ -162,6 +167,14 @@ class Chapter(BaseChapter):
 		name = name.lstrip(":")
 		name = name.strip()
 		self._Chapter["name"] = name
+
+	def set_paragraphs(self, paragraphs: list[str]):
+		"""
+		Задаёт список абзацев.
+			slides – список абзацев.
+		"""
+
+		for Paragraph in paragraphs: self.add_paragraph(Paragraph)
 
 class Branch(BaseBranch):
 	"""Ветвь."""

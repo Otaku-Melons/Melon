@@ -1,8 +1,8 @@
 from Source.Core.Formats import BaseChapter, BaseTitle
 from Source.Core.Exceptions import ParsingError
 
-from dublib.Methods.JSON import ReadJSON, WriteJSON
 from dublib.WebRequestor import WebResponse
+from dublib.Methods.JSON import ReadJSON
 from dublib.Polyglot import Markdown
 from datetime import datetime
 
@@ -17,50 +17,173 @@ import os
 #==========================================================================================#
 
 class LoggerRules(enum.Enum):
+	"""Правила очистки логов."""
+
 	Save = 0
 	SaveIfHasErrors = 1
 	SaveIfHasWarnings = 2
 	Remove = 3
 
 #==========================================================================================#
-# >>>>> СТАНДАРТНЫЕ НАСТРОЙКИ <<<<< #
+# >>>>> КОНТЕЙНЕРЫ НАСТРОЕК <<<<< #
 #==========================================================================================#
 
-Settings = {
-	"telebot": {
-		"enable": False,
-		"bot_token": "",
-		"chat_id": None,
-		"comment": "",
-		"attach_log": True
-	},
-	"commands": {
-		"collect": {
-			"rule": LoggerRules.SaveIfHasErrors.value,
+class Command:
+	"""Фильтры вывода команды."""
+
+	@property
+	def rule(self) -> LoggerRules:
+		"""Правило обработки логов."""
+
+		return self.__Data["rule"]
+	
+	@property
+	def ignored_requests_errors(self) -> list[any]:
+		"""Список игнорируемых кодов ошибок запросов."""
+
+		return self.__Data["ignored_requests_errors"]
+	
+	@property
+	def warnings(self) -> LoggerRules:
+		"""Указывает, стоит ли обращать внимание на предупреждения при обработке ошибок."""
+
+		return self.__Data["rule"]
+	
+	@property
+	def title_not_found(self) -> LoggerRules:
+		"""Указывает, стоит ли обращать внимание на ошибки типа: TitleNotFound."""
+
+		return self.__Data["title_not_found"]
+
+	def __init__(self, data: dict | None = None):
+		"""
+		Фильтры вывода команды.
+			data – словарь фильтров для парсинга.
+		"""
+
+		Default = {
+			"rule": LoggerRules.Remove,
+			"warnings": True,
+
 			"ignored_requests_errors": [],
-			"title_not_found": True,
-			"warnings": False
-		},
-		"get": {
-			"rule": LoggerRules.Remove.value,
-			"ignored_requests_errors": [],
-			"title_not_found": True,
-			"warnings": False
-		},
-		"parse": {
-			"rule": LoggerRules.Save.value,
-			"ignored_requests_errors": [],
-			"title_not_found": True,
-			"warnings": False
-		},
-		"repair": {
-			"rule": LoggerRules.SaveIfHasErrors.value,
-			"ignored_requests_errors": [],
-			"title_not_found": True,
-			"warnings": False
+			"title_not_found": True
 		}
-	}
-}
+
+		#---> Генерация динамических свойств.
+		#==========================================================================================#
+		self.__Data = data or dict()
+
+		for Key in Default.keys():
+			if Key not in self.__Data.keys(): self.__Data[Key] = Default[Key]
+
+class CommandsSettings:
+	"""Фильтры вывода команд."""
+
+	def __init__(self, data: dict | None = None):
+		"""
+		Настройки бота Telegram
+			data – словарь настроек для парсинга.
+		"""
+
+		#---> Генерация динамических свойств.
+		#==========================================================================================#
+		self.__Filters = dict()
+
+		for Key in data.keys(): self.__Filters[Key] = Command(data[Key])
+
+	def __getitem__(self, command: str) -> Command:
+		"""Возвращает контейнер фильтров вывода."""
+
+		if command in self.__Filters.keys(): return self.__Filters[command]
+
+		return Command()
+
+class TelebotSettings:
+	"""Настройки бота Telegram."""
+
+	@property 
+	def enable(self) -> bool:
+		"""Состояние: включена ли отправка отчётов в Telegram."""
+
+		return self.__Data["enable"]
+	
+	@property 
+	def bot_token(self) -> str | None:
+		"""Токен бота Telegram."""
+
+		return self.__Data["bot_token"]
+	
+	@property 
+	def chat_id(self) -> int | None:
+		"""Идентификатор чата Telegram."""
+
+		return self.__Data["chat_id"]
+	
+	@property 
+	def comment(self) -> str | None:
+		"""Комментарий для отчёта."""
+
+		return self.__Data["comment"]
+	
+	@property 
+	def attach_log(self) -> bool:
+		"""Указывает, нужно ли прикреплять лог к отчёту."""
+
+		return self.__Data["attach_log"]
+	
+	def __init__(self, data: dict | None = None):
+		"""
+		Настройки бота Telegram
+			data – словарь настроек для парсинга.
+		"""
+
+		#---> Генерация динамических свойств.
+		#==========================================================================================#
+		self.__Data = data or {
+			"enable": False,
+			"bot_token": None,
+			"chat_id": None,
+			"comment": None,
+			"attach_log": True
+		}
+
+class LoggerSettings:
+	"""Настройки логов."""
+
+	@property 
+	def commands(self) -> CommandsSettings:
+		"""Фильтры вывода команд."""
+
+		return self.__Commands
+	@property 
+	def telebot(self) -> TelebotSettings:
+		"""Настройки бота Telegram."""
+
+		return self.__Telebot
+
+	def __init__(self, data: dict | None = None):
+		"""
+		Настройки логов.
+			data – словарь настроек для парсинга.
+		"""
+
+		#---> Генерация динамических свойств.
+		#==========================================================================================#
+		self.__Data = data or {
+			"telebot": {},
+			"commands": {}
+		}
+
+		self.__Telebot = None
+		self.__Commands = None
+
+		#---> Парсинг настроек.
+		#==========================================================================================#
+		for Key in ["telebot", "commands"]:
+			if Key not in self.__Data.keys(): self.__Data[Key] = dict()
+
+		self.__Telebot = TelebotSettings(self.__Data["telebot"])
+		self.__Commands = CommandsSettings(self.__Data["commands"])
 
 #==========================================================================================#
 # >>>>> ОСНОВНОЙ КЛАСС <<<<< #
@@ -73,27 +196,16 @@ class Logger:
 	# >>>>> ПРИВАТНЫЕ МЕТОДЫ <<<<< #
 	#==========================================================================================#
 
-	def __ReadSettings(self) -> dict:
-		"""Считвает настройки логов для конкретного парсера или создаёт файл при их отсутствии."""
+	def __ReadSettings(self) -> LoggerSettings:
+		"""Считвает настройки логов для конкретного парсера."""
 		
-		LoggerSettingsDict = None
+		LoggerSettingsObject = LoggerSettings()
 
 		if self.__ParserName:
-			Paths = [
-				f"Configs/{self.__ParserName}/logger.json",
-				f"Parsers/{self.__ParserName}/logger.json"
-			]
+			Path = f"Configs/{self.__ParserName}/logger.json"
+			if os.path.exists(Path): LoggerSettingsObject = LoggerSettings(ReadJSON(Path))
 
-			for Path in Paths:
-
-				if os.path.exists(Path):
-					LoggerSettingsDict = ReadJSON(Path)
-					break
-
-		if not LoggerSettingsDict:
-			LoggerSettingsDict = Settings.copy()
-
-		return LoggerSettingsDict
+		return LoggerSettingsObject
 
 	def __SendReport(self, description: str):
 		"""
@@ -101,22 +213,22 @@ class Logger:
 			description – описание ошибки.
 		"""
 
-		if self.__LoggerSettings and "telebot" in self.__LoggerSettings.keys() and self.__LoggerSettings["telebot"]["enable"]:
-			Token = self.__LoggerSettings["telebot"]["bot_token"]
+		if self.__LoggerSettings.telebot.enable:
+			Token = self.__LoggerSettings.telebot.bot_token
 			description = Markdown(description).escaped_text
 			Bot = telebot.TeleBot(Token)
 			LaunchArguments = list(sys.argv)
 			LaunchArguments.pop(0)
 			Command = Markdown(" ".join(LaunchArguments)).escaped_text
-			Comment = ("*Comment:* " + self.__LoggerSettings["telebot"]["comment"] + "\n") if self.__LoggerSettings["telebot"]["comment"] else ""
+			Comment = ("*Comment:* " + self.__LoggerSettings.telebot.comment + "\n") if self.__LoggerSettings.telebot.comment else ""
 			Message = f"*Parser:* {self.__ParserName}\n{Comment}*Command:* `{Command}`\n\n_{description}_"
 
 			if Message != self.__ErrorCache:
 				self.__ErrorCache = Message
 
-				if self.__LoggerSettings["telebot"]["attach_log"]:
+				if self.__LoggerSettings.telebot.attach_log:
 					Bot.send_document(
-						self.__LoggerSettings["telebot"]["chat_id"],
+						self.__LoggerSettings.telebot.chat_id,
 						document = open(self.__LogFilename, "rb"), 
 						caption = Message,
 						parse_mode = "MarkdownV2"
@@ -124,7 +236,7 @@ class Logger:
 
 				else:
 					Bot.send_message(
-						self.__LoggerSettings["telebot"]["chat_id"],
+						self.__LoggerSettings.telebot.chat_id,
 						Message,
 						parse_mode = "MarkdownV2"
 					)
@@ -140,14 +252,14 @@ class Logger:
 		
 		#---> Генерация динамических свойств.
 		#==========================================================================================#
+		self.__LoggerSettings = LoggerSettings()
+
 		self.__LogFilename = None
 		self.__ParserName = None
 		self.__PointName = None
-		self.__LoggerSettings = None
 		self.__ErrorCache = None
 		self.__SilentMode = False
-
-		self.__LoggerRules = None
+		self.__LoggerRule = LoggerRules.Save
 		self.__IsLogHasError = False
 		self.__IsLogHasWarning = False
 
@@ -182,8 +294,8 @@ class Logger:
 			rule – индекс правила или само правило.
 		"""
 
-		if type(rule) == int: self.__LoggerRules = LoggerRules(rule)
-		else: self.__LoggerRules = rule
+		if type(rule) == int: self.__LoggerRule = LoggerRules(rule)
+		else: self.__LoggerRule = rule
 
 	#==========================================================================================#
 	# >>>>> БАЗОВЫЕ ТИПЫ ЗАПИСЕЙ <<<<< #
@@ -229,7 +341,7 @@ class Logger:
 		logging.warning(text)
 
 		try: 
-			if self.__LoggerSettings["commands"][self.__PointName]["warnings"]: self.__SendReport(text)
+			if self.__LoggerSettings.commands[self.__PointName].warnings: self.__SendReport(text)
 			
 		except KeyError: pass
 
@@ -265,7 +377,7 @@ class Logger:
 		"""
 
 		if not text: text = "Request error."
-		if response.status_code in self.__LoggerSettings["commands"][self.__PointName]["ignored_requests_errors"]: self.__SilentMode = True
+		if response.status_code in self.__LoggerSettings.commands[self.__PointName].ignored_requests_errors: self.__SilentMode = True
 		self.error(f"{text} Response code: {response.status_code}.", exception = exception)
 
 	def title_not_found(self, title: BaseTitle):
@@ -275,7 +387,7 @@ class Logger:
 		"""
 
 		NoteID = f" (ID: {title.id})" if title.id else ""
-		if not self.__LoggerSettings["commands"][self.__PointName]["title_not_found"]: self.__SilentMode = True
+		if not self.__LoggerSettings.commands[self.__PointName].title_not_found: self.__SilentMode = True
 		self.error(f"Title: \"{title.slug}\"{NoteID}. Not found.")
 
 	#==========================================================================================#
@@ -289,7 +401,7 @@ class Logger:
 			amended_chapter_count – количество дополненных глав.
 		"""
 
-		logging.info(f"Title: \"{title.slug}\" (ID: {title.id}). Amended chapters count: {amended_chapter_count}.")
+		self.info(f"Title: \"{title.slug}\" (ID: {title.id}). Amended chapters count: {amended_chapter_count}.")
 
 	def chapter_amended(self, title: BaseTitle, chapter: BaseChapter):
 		"""
@@ -299,7 +411,7 @@ class Logger:
 		"""
 
 		ChapterNote = "Paid chapter" if chapter.is_paid else "Chapter"
-		logging.info(f"Title: \"{title.slug}\" (ID: {title.id}). {ChapterNote} {chapter.id} amended.")
+		self.info(f"Title: \"{title.slug}\" (ID: {title.id}). {ChapterNote} {chapter.id} amended.")
 
 	def chapter_repaired(self, title: BaseTitle, chapter: BaseChapter):
 		"""
@@ -309,7 +421,7 @@ class Logger:
 		"""
 
 		ChapterNote = "Paid chapter" if chapter.is_paid else "Chapter"
-		logging.info(f"Title: \"{title.slug}\" (ID: {title.id}). {ChapterNote} {chapter.id} repaired.")
+		self.info(f"Title: \"{title.slug}\" (ID: {title.id}). {ChapterNote} {chapter.id} repaired.")
 
 	def chapter_skipped(self, title: BaseTitle, chapter: BaseChapter):
 		"""
@@ -319,7 +431,7 @@ class Logger:
 		"""
 
 		ChapterNote = "Paid chapter" if chapter.is_paid else "Chapter"
-		logging.info(f"Title: \"{title.slug}\" (ID: {title.id}). {ChapterNote} {chapter.id} skipped.")
+		self.info(f"Title: \"{title.slug}\" (ID: {title.id}). {ChapterNote} {chapter.id} skipped.")
 
 	def collect_filters(self, filters: str):
 		"""
@@ -327,7 +439,7 @@ class Logger:
 			filters – фильтры.
 		"""
 
-		logging.info(f"Filters: \"{filters}\".")
+		self.info(f"Filters: \"{filters}\".")
 
 	def collect_pages(self, pages: int):
 		"""
@@ -335,7 +447,7 @@ class Logger:
 			pages – страницы.
 		"""
 
-		logging.info(f"Pages: {pages}.")
+		self.info(f"Pages: {pages}.")
 
 	def collect_period(self, period: int):
 		"""
@@ -343,7 +455,7 @@ class Logger:
 			period – период.
 		"""
 
-		logging.info(f"Period: {period} hours.")
+		self.info(f"Period: {period} hours.")
 
 	def covers_unstubbed(self, title: BaseTitle):
 		"""
@@ -351,7 +463,7 @@ class Logger:
 			title – данные тайтла.
 		"""
 
-		logging.info(f"Title: \"{title.slug}\" (ID: {title.id}). Stubs detected. Covers downloading will be skipped.")
+		self.info(f"Title: \"{title.slug}\" (ID: {title.id}). Stubs detected. Covers downloading will be skipped.")
 
 	def parsing_start(self, title: BaseTitle):
 		"""
@@ -359,7 +471,7 @@ class Logger:
 			title – данные тайтла.
 		"""
 
-		logging.info(f"Title: \"{title.slug}\" (ID: {title.id}). Parsing...")
+		self.info(f"Title: \"{title.slug}\" (ID: {title.id}). Parsing...")
 
 	def titles_collected(self, collected_titles_count: int):
 		"""
@@ -367,7 +479,7 @@ class Logger:
 			titles_count – количество тайтлов.
 		"""
 
-		logging.info(f"Titles collected: {collected_titles_count}.")
+		self.info(f"Titles collected: {collected_titles_count}.")
 
 	#==========================================================================================#
 	# >>>>> МЕТОДЫ УПРАВЛЕНИЯ ЛОГАМИ <<<<< #
@@ -376,17 +488,16 @@ class Logger:
 	def close(self):
 		"""Закрывает логи."""
 
-		if not self.__LoggerRules and self.__PointName and self.__PointName in self.__LoggerSettings["commands"].keys(): self.set_rule(self.__LoggerSettings["commands"][self.__PointName]["rule"])
-		else: self.set_rule(LoggerRules.Remove)
+		if not self.__LoggerRule: self.set_rule(self.__LoggerSettings.commands[self.__PointName].rule)
 
-		logging.info("====== End ======")
+		self.info("====== End ======")
 		logging.shutdown()
 
 		IsClean = False
 
-		if self.__LoggerRules == LoggerRules.Remove: IsClean = True
-		if self.__LoggerRules == LoggerRules.SaveIfHasErrors and not self.__IsLogHasError: IsClean = True
-		if self.__LoggerRules == LoggerRules.SaveIfHasWarnings and not self.__IsLogHasWarning and not self.__IsLogHasError: IsClean = True
+		if self.__LoggerRule == LoggerRules.Remove: IsClean = True
+		if self.__LoggerRule == LoggerRules.SaveIfHasErrors and not self.__IsLogHasError: IsClean = True
+		if self.__LoggerRule == LoggerRules.SaveIfHasWarnings and not self.__IsLogHasWarning and not self.__IsLogHasError: IsClean = True
 
 		if IsClean and os.path.exists(self.__LogFilename): os.remove(self.__LogFilename)
 

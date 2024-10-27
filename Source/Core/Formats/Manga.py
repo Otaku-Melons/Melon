@@ -2,8 +2,7 @@ from . import BaseChapter, BaseBranch, BaseTitle, By, Statuses
 from Source.Core.SystemObjects import SystemObjects
 from Source.Core.Exceptions import ChapterNotFound
 
-from dublib.Methods.Data import ReplaceDictionaryKey, Zerotify
-from dublib.Methods.JSON import ReadJSON, WriteJSON
+from dublib.Methods.JSON import ReadJSON
 
 import enum
 import os
@@ -13,7 +12,7 @@ import os
 #==========================================================================================#
 
 class Chapter(BaseChapter):
-	"""Глава."""
+	"""Глава манги."""
 
 	#==========================================================================================#
 	# >>>>> СВОЙСТВА <<<<< #
@@ -31,13 +30,14 @@ class Chapter(BaseChapter):
 
 	def __init__(self, system_objects: SystemObjects):
 		"""
-		Глава.
+		Глава манги.
 			system_objects – коллекция системных объектов.
 		"""
 
 		#---> Генерация динамических свойств.
 		#==========================================================================================#
 		self._SystemObjects = system_objects
+
 		self._Chapter = {
 			"id": None,
 			"volume": None,
@@ -47,6 +47,9 @@ class Chapter(BaseChapter):
 			"translators": [],
 			"slides": []	
 		}
+
+		self._SetParagraphsMethod = self._Pass
+		self._SetSlidesMethod = self.set_slides
 
 	def add_slide(self, link: str, width: int | None = None, height: int | None = None):
 		"""
@@ -77,6 +80,19 @@ class Chapter(BaseChapter):
 		"""Удаляет данные слайдов."""
 
 		self._Chapter["slides"] = list()
+
+	def set_slides(self, slides: list[dict]):
+		"""
+		Задаёт список слайдов.
+			slides – список словарей, описывающих слайды.
+		"""
+
+		for Slide in slides:
+			Link = Slide["link"]
+			Width = Slide["width"] if "width" in Slide.keys() else None
+			Height = Slide["height"] if "height" in Slide.keys() else None
+
+			self.add_slide(Link, Width, Height)
 
 class Branch(BaseBranch):
 	"""Ветвь."""
@@ -174,112 +190,6 @@ class Manga(BaseTitle):
 		return self._Title["type"]
 
 	#==========================================================================================#
-	# >>>>> LEGACY-КОНВЕРТЕРЫ <<<<< #
-	#==========================================================================================#
-
-	def __FromLegacy(self, manga: dict) -> dict:
-		"""
-		Форматирует мангу из устаревшего формата.
-			manga – словарное описание манги.
-		"""
-
-		Types = {
-			"UNKNOWN": None,
-			"MANGA": "manga",
-			"MANHWA": "manhwa",
-			"MANHUA": "manhua",
-			"WESTERN_COMIC": "western_comic",
-			"RUS_COMIC": "russian_comic",
-			"INDONESIAN_COMIC": "indonesian_comic",
-			"MANGA": "manga",
-			"OEL": "oel"
-		}
-		Statuses = {
-			"UNKNOWN": None,
-			"ANNOUNCED": "announced",
-			"ONGOING": "ongoing",
-			"ABANDONED": "dropped",
-			"COMPLETED": "completed"
-		}
-		manga["content_language"] = None
-		manga = ReplaceDictionaryKey(manga, "ru-name", "localized_name")
-		manga = ReplaceDictionaryKey(manga, "en-name", "eng_name")
-		manga = ReplaceDictionaryKey(manga, "another-names", "another_names")
-		manga = ReplaceDictionaryKey(manga, "author", "authors")
-		manga = ReplaceDictionaryKey(manga, "publication-year", "publication_year")
-		manga = ReplaceDictionaryKey(manga, "age-rating", "age_limit")
-		manga = ReplaceDictionaryKey(manga, "is-licensed", "is_licensed")
-		manga = ReplaceDictionaryKey(manga, "series", "franchises")
-		manga = ReplaceDictionaryKey(manga, "chapters", "content")
-		manga["format"] = "melon-manga"
-		manga["authors"] = manga["authors"].split(", ") if manga["authors"] else list()
-		manga["type"] = Types[manga["type"]]
-		manga["status"] = Statuses[manga["status"]]
-
-		for BranchID in manga["content"]:
-
-			for ChapterIndex in range(len(manga["content"][BranchID])):
-				Buffer = manga["content"][BranchID][ChapterIndex]
-				Buffer = ReplaceDictionaryKey(Buffer, "is-paid", "is_paid")
-				Buffer = ReplaceDictionaryKey(Buffer, "translator", "translators")
-				Buffer["translators"] = Buffer["translators"].split(", ") if Buffer["translators"] else list()
-				manga["content"][BranchID][ChapterIndex] = Buffer
-
-		return manga
-
-	def __ToLegacy(self, manga: dict) -> dict:
-		"""
-		Форматирует мангу в устаревший формат.
-			manga – словарное описание манги.
-		"""
-
-		Types = {
-			None: "UNKNOWN",
-			"manga": "MANGA",
-			"manhwa": "MANHWA",
-			"manhua": "MANHUA",
-			"western_comic": "WESTERN_COMIC",
-			"russian_comic": "RUS_COMIC",
-			"indonesian_comic": "INDONESIAN_COMIC",
-			"oel": "OEL"
-		}
-		Statuses = {
-			None: "UNKNOWN",
-			"announced": "ANNOUNCED",
-			"ongoing": "ONGOING",
-			"dropped": "ABANDONED",
-			"completed": "COMPLETED"
-		}
-		del manga["content_language"]
-		manga = ReplaceDictionaryKey(manga, "localized_name", "ru-name")
-		manga = ReplaceDictionaryKey(manga, "eng_name", "en-name")
-		manga = ReplaceDictionaryKey(manga, "another_names", "another-names")
-		manga = ReplaceDictionaryKey(manga, "authors", "author")
-		manga = ReplaceDictionaryKey(manga, "publication_year", "publication-year")
-		manga = ReplaceDictionaryKey(manga, "age_limit", "age-rating")
-		manga = ReplaceDictionaryKey(manga, "is_licensed", "is-licensed")
-		manga = ReplaceDictionaryKey(manga, "franchises", "series")
-		manga = ReplaceDictionaryKey(manga, "content", "chapters")
-		manga["format"] = "dmp-v1"
-		manga["author"] = Zerotify(", ".join(manga["author"]))
-		manga["type"] = Types[manga["type"]]
-		manga["status"] = Statuses[manga["status"]]
-
-		for Index in range(len(manga["genres"])): manga["genres"][Index] = manga["genres"][Index].lower()
-		for Index in range(len(manga["tags"])): manga["tags"][Index] = manga["tags"][Index].lower()
-
-		for BranchID in manga["chapters"]:
-
-			for ChapterIndex in range(len(manga["chapters"][BranchID])):
-				Buffer = manga["chapters"][BranchID][ChapterIndex]
-				Buffer = ReplaceDictionaryKey(Buffer, "is_paid", "is-paid")
-				Buffer = ReplaceDictionaryKey(Buffer, "translators", "translator")
-				Buffer["translator"] = ", ".join(Buffer["translator"]) if Buffer["translator"] else None
-				manga["chapters"][BranchID][ChapterIndex] = Buffer
-
-		return manga
-
-	#==========================================================================================#
 	# >>>>> ПЕРЕОПРЕДЕЛЯЕМЫЕ МЕТОДЫ <<<<< #
 	#==========================================================================================#
 
@@ -326,7 +236,6 @@ class Manga(BaseTitle):
 		
 		if os.path.exists(Path) and not self._SystemObjects.FORCE_MODE:
 			LocalManga = ReadJSON(Path)
-			if LocalManga["format"] != "melon-manga": LocalManga = self.__FromLegacy(LocalManga)
 			LocalContent = dict()
 			MergedChaptersCount = 0
 			
@@ -362,60 +271,6 @@ class Manga(BaseTitle):
 
 			self.add_branch(NewBranch)
 
-	def open(self, identificator: int | str, selector_type: By = By.Filename):
-		"""
-		Считывает локальный описательный файл.
-			identificator – идентификатор тайтла;\n
-			selector_type – тип указателя на тайтл.
-		"""
-
-		Data = None
-		Directory = self._ParserSettings.common.titles_directory
-
-		if selector_type == By.Filename:
-			Path = f"{Directory}/{identificator}.json"
-
-			if os.path.exists(Path):
-				Data = ReadJSON(f"{Directory}/{identificator}.json")
-				
-			else:
-				self._SystemObjects.logger.critical("Couldn't open file.")
-				raise FileNotFoundError(Path)
-
-		if selector_type == By.Slug:
-			LocalTitles = os.listdir(Directory)
-			LocalTitles = list(filter(lambda File: File.endswith(".json"), LocalTitles))
-
-			for File in LocalTitles:
-				Path = f"{Directory}/{File}"
-
-				if os.path.exists(Path):
-					Buffer = ReadJSON(Path)
-
-					if Buffer["slug"] == identificator:
-						Data = Buffer
-						break
-
-		if selector_type == By.ID:
-			LocalTitles = os.listdir(Directory)
-			LocalTitles = list(filter(lambda File: File.endswith(".json"), LocalTitles))
-
-			for File in LocalTitles:
-				Path = f"{Directory}/{File}"
-
-				if os.path.exists(Path):
-					Buffer = ReadJSON(Path)
-
-					if Buffer["id"] == identificator:
-						Data = Buffer
-						break
-
-		if Data:
-			self._Title = Data
-			if self._Title["format"] != "melon-manga": self._Title = self.__FromLegacy(Data)
-			
-		else: raise FileNotFoundError(identificator + ".json")
-
 	def repair(self, chapter_id: int):
 		"""
 		Восстанавливает содержимое главы, заново получая его из источника.
@@ -434,19 +289,6 @@ class Manga(BaseTitle):
 		self._Parser.amend(BranchData, ChapterData)
 
 		if ChapterData.slides: self._SystemObjects.logger.chapter_repaired(self, ChapterData)
-
-	def save(self):
-		"""Сохраняет данные манги в описательный файл."""
-
-		for BranchID in self._Title["content"].keys(): self._Title["content"][BranchID] = sorted(self._Title["content"][BranchID], key = lambda Value: (list(map(int, Value["volume"].split("."))), list(map(int, Value["number"].split("."))))) 
-		
-		if self._IsLegacy:
-			self._Title = self.__ToLegacy(self._Title)
-			self._SystemObjects.logger.info("Title: \"" + self._Title["slug"] + "\". Converted to legacy format.")
-
-		self._CheckStandartPath(self._ParserSettings.common.titles_directory)
-		WriteJSON(f"{self._ParserSettings.common.titles_directory}/{self._UsedFilename}.json", self._Title)
-		self._SystemObjects.logger.info(f"Title: \"{self.slug}\" (ID: {self.id}). Saved.")
 
 	#==========================================================================================#
 	# >>>>> ПУБЛИЧНЫЕ МЕТОДЫ УСТАНОВКИ СВОЙСТВ <<<<< #

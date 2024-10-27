@@ -2,6 +2,7 @@ from Source.Core.ImagesDownloader import ImagesDownloader
 
 from dublib.WebRequestor import Protocols, WebConfig, WebLibs, WebRequestor
 from dublib.Methods.JSON import WriteJSON
+from dublib.Methods.Data import Zerotify
 from dublib.Methods.System import Clear
 from time import sleep
 
@@ -85,6 +86,29 @@ class BaseChapter:
 		return self._Chapter["translators"]
 	
 	#==========================================================================================#
+	# >>>>> ПРИВАТНЫЕ МЕТОДЫ <<<<< #
+	#==========================================================================================#
+
+	def __PrettyNumber(self, number: str | None) -> str | None:
+		"""Преобразует номер главы или тома в корректное значение."""
+
+		if number == None: number = ""
+		if "-" in number: number = number.split("-")[0]
+		number = number.strip("\t .\n")
+		number = Zerotify(number)
+
+		return number
+
+	#==========================================================================================#
+	# >>>>> НАСЛЕДУЕМЫЕ МЕТОДЫ <<<<< #
+	#==========================================================================================#
+
+	def _Pass(self, value: any):
+		"""Ничего не делает."""
+
+		pass
+
+	#==========================================================================================#
 	# >>>>> МЕТОДЫ <<<<< #
 	#==========================================================================================#
 
@@ -101,6 +125,9 @@ class BaseChapter:
 			"is_paid": None,
 			"translators": []
 		}
+
+		self._SetParagraphsMethod = self._Pass
+		self._SetSlidesMethod = self._Pass
 
 	def __getitem__(self, key: str) -> bool | int | list | str | None:
 		"""
@@ -125,7 +152,7 @@ class BaseChapter:
 			translator – ник переводчика.
 		"""
 
-		self._Chapter["translator"].append(translator)
+		if translator: self._Chapter["translators"].append(translator)
 
 	def remove_extra_data(self, key: str):
 		"""
@@ -137,28 +164,31 @@ class BaseChapter:
 
 	def set_dict(self, dictionary: dict):
 		"""
-		Задаёт словарь, используемый в качестве хранилища данных главы.
+		Перебирает ключи в переданном словаре для автоматической подстановки значений в поля данных главы.
 			dictionary – словарь данных главы.
 		"""
 		
 		dictionary = dictionary.copy()
-		NoneType = type(None)
-		ImportantKeys = ["id", "volume", "number", "name", "is_paid", "translators"]
-		ImportantKeysTypes = [
-			[int, NoneType],
-			[str, NoneType],
-			[str, NoneType],
-			[str, NoneType],
-			[bool, NoneType],
-			[list],
-			[list]
-		]
+		KeyMethods = {
+			"id": self.set_id,
+			"volume": self.set_volume,
+			"name": self.set_name,
+			"is_paid": self.set_is_paid,
+			"translators": self.set_translators,
+			"slides": self._SetSlidesMethod,
+			"paragraphs": self._SetParagraphsMethod
+		}
 
-		for KeyIndex in range(len(ImportantKeys)):
-			if ImportantKeys[KeyIndex] not in dictionary.keys(): raise KeyError(ImportantKeys[KeyIndex])
-			if type(dictionary[ImportantKeys[KeyIndex]]) not in ImportantKeysTypes[KeyIndex]: raise TypeError(ImportantKeys[KeyIndex])
-		
-		self._Chapter = dictionary
+		for Key in KeyMethods.keys():
+			
+			if Key in dictionary.keys():
+				Value = dictionary[Key]
+				KeyMethods[Key](Value)
+				del dictionary[Key]
+
+		for Key in dictionary.keys():
+			Value = dictionary[Key]
+			self.add_extra_data(Key, Value)
 
 	def set_id(self, id: int | None):
 		"""
@@ -189,8 +219,16 @@ class BaseChapter:
 		Задаёт номер главы.
 			number – номер главы.
 		"""
+		
+		self._Chapter["number"] = self.__PrettyNumber(number)
 
-		self._Chapter["number"] = str(number)
+	def set_translators(self, translators: list[str]):
+		"""
+		Задаёт переводчиков.
+			translators – список ников переводчика.
+		"""
+
+		for Translator in translators: self.add_translator(Translator)
 
 	def set_volume(self, volume: str | None):
 		"""
@@ -198,7 +236,7 @@ class BaseChapter:
 			volume – номер тома.
 		"""
 
-		self._Chapter["volume"] = str(volume)
+		self._Chapter["volume"] = self.__PrettyNumber(volume)
 
 	def to_dict(self) -> dict:
 		"""Возвращает словарь данных главы."""
@@ -637,6 +675,7 @@ class BaseTitle:
 		
 		Clear()
 		print(message)
+		DownloadedCoversCount = 0
 
 		for CoverIndex in range(len(self._Title["covers"])):
 			Filename = self._Title["covers"][CoverIndex]["link"].split("/")[-1]
@@ -647,8 +686,12 @@ class BaseTitle:
 				filename = self._Title["covers"][CoverIndex]["filename"],
 				is_full_filename = True
 			)
+			
+			if Result.code == 200: DownloadedCoversCount += 1
 			print(Result.message)
 			sleep(0.25)
+
+		self._SystemObjects.logger.info(f"Title: \"{self.slug}\" (ID: {self.id}). Covers downloaded: {DownloadedCoversCount}.")
 
 	def parse(self, message: str | None = None):
 		"""
@@ -665,7 +708,12 @@ class BaseTitle:
 	def save(self):
 		"""Сохраняет данные тайтла."""
 
-		for BranchID in self._Title["content"].keys(): self._Title["content"][BranchID] = sorted(self._Title["content"][BranchID], key = lambda Value: (list(map(int, Value["volume"].split("."))), list(map(int, Value["number"].split(".")))))
+		try:
+			for BranchID in self._Title["content"].keys(): self._Title["content"][BranchID] = sorted(self._Title["content"][BranchID], key = lambda Value: (list(map(int, Value["volume"].split("."))), list(map(int, Value["number"].split(".")))))
+
+		except:
+			self._SystemObjects.logger.warning(f"Title: \"{self.slug}\" (ID: {self.id}). Error occurs during sorting chapters.")
+
 		self._CheckStandartPath(self._ParserSettings.common.titles_directory)
 		WriteJSON(f"{self._ParserSettings.common.titles_directory}/{self._UsedFilename}.json", self._Title)
 		self._SystemObjects.logger.info(f"Title: \"{self.slug}\" (ID: {self.id}). Saved.")
