@@ -61,15 +61,18 @@ def com_collect(system_objects: SystemObjects, command: ParsedCommandData):
 
 	#---> Подготовительный этап.
 	#==========================================================================================#
-	Clear()
 	system_objects.logger.select_cli_point(command.name)
 
 	#---> Получение и обработка предварительных данных.
 	#==========================================================================================#
 	Title = system_objects.manager.get_parser_type()
 	Title = Title(system_objects)
+	Parser = system_objects.manager.launch()
 
-	Parser = system_objects.manager.launch(Title)
+	if not system_objects.manager.check_method_collect():
+		print("Parser doesn't support " + TextStyler("collect", decorations = [Styles.Decorations.Bold]) + " method.")
+		return
+
 	CollectorObject = Collector(system_objects)
 
 	Filters = command.get_key_value("filters") if command.check_key("filters") else None
@@ -91,7 +94,6 @@ def com_collect(system_objects: SystemObjects, command: ParsedCommandData):
 	
 	#---> Вывод отчёта.
 	#==========================================================================================#
-	Clear()
 	print(f"Collected slugs: {CollectedTitlesCount}")
 
 def com_get(system_objects: SystemObjects, command: ParsedCommandData, is_cli: bool = True) -> bool:
@@ -218,15 +220,27 @@ def com_list(system_objects: SystemObjects, command: ParsedCommandData):
 	#==========================================================================================#
 
 	for Parser in system_objects.manager.all_parsers_names:
-		Version = system_objects.manager.get_parser_version(Parser)
-		Site = system_objects.manager.get_parser_site(Parser)
-		Type = system_objects.manager.get_parser_type_name(Parser)
-		TableData["NAME"].append(Parser)
-		TableData["VERSION"].append(Version)
-		TableData["TYPE"].append(Type)
-		TableData["SITE"].append(Site)
-		TableData["collect"].append(system_objects.manager.check_method_collect(Parser))
-		TableData["image"].append(system_objects.manager.check_method_image(Parser))
+
+		try:
+			Version = system_objects.manager.get_parser_version(Parser)
+			Site = system_objects.manager.get_parser_site(Parser)
+			Type = system_objects.manager.get_parser_type_name(Parser)
+
+		except:
+			TableData["NAME"].append(Parser)
+			TableData["VERSION"].append("")
+			TableData["TYPE"].append("")
+			TableData["SITE"].append("")
+			TableData["collect"].append(None)
+			TableData["image"].append(None)
+
+		else:
+			TableData["NAME"].append(Parser)
+			TableData["VERSION"].append(Version)
+			TableData["TYPE"].append(Type)
+			TableData["SITE"].append(Site)
+			TableData["collect"].append(system_objects.manager.check_method_collect(Parser))
+			TableData["image"].append(system_objects.manager.check_method_image(Parser))
 
 	#---> Вывод отчёта.
 	#==========================================================================================#

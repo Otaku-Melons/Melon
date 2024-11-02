@@ -82,7 +82,7 @@ class Manager:
 	# >>>>> ПУБЛИЧНЫЕ МЕТОДЫ ПРОВЕРКИ ИМПЛЕМЕНТАЦИЙ ПАРСЕРОВ <<<<< #
 	#==========================================================================================#
 
-	def check_method_collect(self, parser_name: str | None = None) -> bool:
+	def check_method_collect(self, parser_name: str | None = None) -> bool | None:
 		"""
 		Проверяет, доступна ли в парсере имплементация метода collect.
 			parser_name – название парсера.
@@ -93,11 +93,9 @@ class Manager:
 		Parser = Module.Parser(self.__SystemObjects, self.get_parser_settings(parser_name))
 		IsImplemented = True
 
-		try:
-			Parser.collect
-
-		except AttributeError:
-			IsImplemented = False
+		try: Parser.collect
+		except AttributeError: IsImplemented = False
+		except: IsImplemented = None
 
 		return IsImplemented
 
@@ -112,30 +110,9 @@ class Manager:
 		Parser = Module.Parser(self.__SystemObjects, self.get_parser_settings(parser_name))
 		IsImplemented = True
 
-		try:
-			Parser.image
-
-		except AttributeError:
-			IsImplemented = False
-
-		return IsImplemented
-
-	def check_method_repair(self, parser_name: str | None = None) -> bool:
-		"""
-		Проверяет, доступна ли в парсере имплементация метода repair.
-			parser_name – название парсера.
-		"""
-
-		parser_name = self.__CheckParser(parser_name)
-		Module = importlib.import_module(f"Parsers.{parser_name}.main")
-		Parser = Module.Parser(self.__SystemObjects, self.get_parser_settings(parser_name))
-		IsImplemented = True
-
-		try:
-			Parser.repair
-
-		except AttributeError:
-			IsImplemented = False
+		try: Parser.image
+		except AttributeError: IsImplemented = False
+		except: IsImplemented = None
 
 		return IsImplemented
 	

@@ -1,4 +1,4 @@
-from . import BaseChapter, BaseBranch, BaseTitle, By, Statuses
+from . import ChaptersTypes, BaseChapter, BaseBranch, BaseTitle, By, Statuses
 from Source.Core.SystemObjects import SystemObjects
 from Source.Core.Exceptions import ChapterNotFound
 
@@ -75,9 +75,11 @@ class Chapter(BaseChapter):
 
 		self._Chapter = {
 			"id": None,
+			"slug": None,
 			"volume": None,
 			"number": None,
 			"name": None,
+			"type": None,
 			"is_paid": None,
 			"translators": [],
 			"paragraphs": []	

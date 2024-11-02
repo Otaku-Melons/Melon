@@ -20,6 +20,18 @@ class By(enum.Enum):
 	Slug = 1
 	ID = 2
 
+class ChaptersTypes(enum.Enum):
+	"""Определения типов глав."""
+
+	afterword = "afterword"
+	art = "art"
+	chapter = "chapter"
+	epilogue = "epilogue"
+	extra = "extra"
+	glossary = "glossary"
+	prologue = "prologue"
+	trash = "trash"
+
 class Statuses(enum.Enum):
 	"""Определения статусов."""
 
@@ -44,6 +56,12 @@ class BaseChapter:
 		"""Уникальный идентификатор главы."""
 
 		return self._Chapter["id"]
+	
+	@property
+	def slug(self) -> str | None:
+		"""Алиас главы."""
+
+		return self._Chapter["slug"]
 	
 	@property
 	def is_empty(self) -> bool:
@@ -73,6 +91,12 @@ class BaseChapter:
 
 		return self._Chapter["name"]
 	
+	@property
+	def type(self) -> ChaptersTypes | None:
+		"""Тип главы."""
+
+		return ChaptersTypes[self._Chapter["type"]]
+
 	@property
 	def is_paid(self) -> bool | None:
 		"""Состояние: платная ли глава."""
@@ -119,9 +143,11 @@ class BaseChapter:
 		#==========================================================================================#
 		self._Chapter = {
 			"id": None,
+			"slug": None,
 			"volume": None,
 			"number": None,
 			"name": None,
+			"type": None,
 			"is_paid": None,
 			"translators": []
 		}
@@ -229,6 +255,23 @@ class BaseChapter:
 		"""
 
 		for Translator in translators: self.add_translator(Translator)
+
+	def set_slug(self, slug: str | None):
+		"""
+		Задаёт алиас главы.
+			slug – алиас.
+		"""
+
+		self._Chapter["slug"] = slug
+
+	def set_type(self, type: ChaptersTypes | None):
+		"""
+		Задаёт тип главы.
+			type – тип.
+		"""
+
+		if type: self._Chapter["type"] = type.value
+		else: self._Chapter["type"] = None
 
 	def set_volume(self, volume: str | None):
 		"""
@@ -531,29 +574,6 @@ class BaseTitle:
 
 		return Result
 
-	def _InitializeRequestor(self) -> WebRequestor:
-		"""
-		Инициализирует модуль WEB-запросов.
-			proxy – данные о прокси.
-		"""
-
-		ParserSettings = self._SystemObjects.manager.get_parser_settings()
-		Config = WebConfig()
-		Config.select_lib(WebLibs.requests)
-		Config.requests.enable_proxy_protocol_switching(True)
-		Config.set_retries_count(1)
-		WebRequestorObject = WebRequestor(Config)
-
-		if ParserSettings.proxy.enable: WebRequestorObject.add_proxy(
-			Protocols.HTTPS,
-			host = ParserSettings.proxy.host,
-			port = ParserSettings.proxy.port,
-			login = ParserSettings.proxy.login,
-			password = ParserSettings.proxy.password
-		)
-
-		return WebRequestorObject
-
 	def _PrintAmendingProgress(self, message: str, current_state: int, max_state: int):
 		"""
 		Выводит в консоль прогресс дополнение глав информацией о содержимом.
@@ -667,7 +687,6 @@ class BaseTitle:
 			message – сообщение для внутреннего обработчика.
 		"""
 
-		Requestor = self._InitializeRequestor()
 		self._CheckStandartPath(self._ParserSettings.common.covers_directory)
 
 		CoversDirectory = f"{self._ParserSettings.common.covers_directory}/{self._UsedFilename}/"
@@ -676,11 +695,11 @@ class BaseTitle:
 		Clear()
 		print(message)
 		DownloadedCoversCount = 0
-
+		
 		for CoverIndex in range(len(self._Title["covers"])):
 			Filename = self._Title["covers"][CoverIndex]["link"].split("/")[-1]
 			print(f"Downloading cover: \"{Filename}\"... ", end = "")
-			Result = ImagesDownloader(self._SystemObjects, Requestor).image(
+			Result = ImagesDownloader(self._SystemObjects).image(
 				url = self._Title["covers"][CoverIndex]["link"],
 				directory = CoversDirectory,
 				filename = self._Title["covers"][CoverIndex]["filename"],
@@ -765,7 +784,7 @@ class BaseTitle:
 			author – автор.
 		"""
 
-		if author not in self._Title["authors"]: self._Title["authors"].append(author)
+		if author and author not in self._Title["authors"]: self._Title["authors"].append(author)
 
 	def add_genre(self, genre: str):
 		"""
@@ -888,7 +907,7 @@ class BaseTitle:
 			description – описание.
 		"""
 
-		self._Title["description"] = description
+		self._Title["description"] = Zerotify(description)
 
 	def set_age_limit(self, age_limit: int | None):
 		"""

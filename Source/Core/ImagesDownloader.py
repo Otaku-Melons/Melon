@@ -53,6 +53,7 @@ class ImagesDownloader:
 
 		Config = WebConfig()
 		Config.select_lib(WebLibs.requests)
+		Config.generate_user_agent()
 		Config.set_retries_count(self.__ParserSettings.common.retries)
 		Config.add_header("Authorization", self.__ParserSettings["custom"]["token"])
 		WebRequestorObject = WebRequestor(Config)
@@ -64,6 +65,8 @@ class ImagesDownloader:
 			login = self.__ParserSettings["proxy"]["login"],
 			password = self.__ParserSettings["proxy"]["password"]
 		)
+			
+		return WebRequestorObject
 			
 	#==========================================================================================#
 	# >>>>> ПУБЛИЧНЫЕ МЕТОДЫ <<<<< #

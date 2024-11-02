@@ -13,7 +13,8 @@ def ParsersTable(columns: dict[str, list], sort_by: str = "NAME"):
 	Implementations = ["collect", "image"]
 	ImplementationStatuses = {
 		True: TextStyler("true", text_color = Styles.Colors.Green),
-		False: TextStyler("false", text_color = Styles.Colors.Red)
+		False: TextStyler("false", text_color = Styles.Colors.Yellow),
+		None: TextStyler("error", text_color = Styles.Colors.Red),
 	}
 
 	for SiteIndex in range(len(columns["SITE"])):
