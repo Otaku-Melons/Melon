@@ -1,5 +1,6 @@
+from Source.Core.Exceptions import ParsingError, TitleNotFound
 from Source.Core.Formats import BaseChapter, BaseTitle
-from Source.Core.Exceptions import ParsingError
+from Source.CLI import Templates
 
 from dublib.WebRequestor import WebResponse
 from dublib.Methods.JSON import ReadJSON
@@ -189,8 +190,130 @@ class LoggerSettings:
 # >>>>> ОСНОВНОЙ КЛАСС <<<<< #
 #==========================================================================================#
 
+class Portals:
+	"""Коллекция порталов CLI/логов для парсеров."""
+
+	def __init__(self, logger: "Logger"):
+		"""
+		Коллекция порталов CLI/логов для парсеров.
+			logger – менеджер портов CLI и логов.
+		"""
+
+		#---> Генерация динамических свойств.
+		#==========================================================================================#
+		self.__Logger = logger
+
+	#==========================================================================================#
+	# >>>>> БАЗОВЫЕ ТИПЫ ПОРТАЛОВ <<<<< #
+	#==========================================================================================#
+
+	def critical(self, text: str):
+		"""
+		Портал критической ошибки.
+			text – данные.
+		"""
+
+		self.__Logger.critical(text)
+
+	def error(self, text: str):
+		"""
+		Портал ошибки.
+			text – данные.
+		"""
+
+		self.__Logger.error(text)
+
+	def info(self, text: str):
+		"""
+		Портал информациию
+			text – данные.
+		"""
+
+		self.__Logger.info(text)
+
+	def warning(self, text: str):
+		"""
+		Портал предупреждения.
+			text – данные.
+		"""
+
+		self.__Logger.warning(text)
+
+	#==========================================================================================#
+	# >>>>> ШАБЛОНЫ ПОРТАЛОВ ОШИБОК <<<<< #
+	#==========================================================================================#
+
+	def request_error(self, response: WebResponse, text: str | None = None, exception: bool = True):
+		"""
+		Портал ошибки запроса.
+			response – WEB-ответ;\n
+			text – описание ошибки;\n
+			exception – указывает, выбрасывать ли исключение.
+		"""
+
+		self.__Logger.request_error(response, text, exception)
+
+	def title_not_found(self, title: BaseTitle, exception: bool = True):
+		"""
+		Портал ошибки: глава не найдена.
+			title – данные тайтла;\n
+			exception – указывает, выбрасывать ли исключение.
+		"""
+
+		self.__Logger.title_not_found(title, exception)
+
+	#==========================================================================================#
+	# >>>>> ШАБЛОНЫ ПОРТАЛОВ <<<<< #
+	#==========================================================================================#
+
+	def chapter_skipped(self, title: BaseTitle, chapter: BaseChapter):
+		"""
+		Портал уведомления о пропуске главы.
+			title – данные тайтла;\n
+			chapter – данные главы.
+		"""
+
+		ChapterNote = "Paid chapter" if chapter.is_paid else "Chapter"
+		self.info(f"Title: \"{title.slug}\" (ID: {title.id}). {ChapterNote} {chapter.id} skipped.")
+		print(f"{ChapterNote} {chapter.id} skipped.")
+
+	def collect_progress_by_page(self, page: int):
+		"""
+		Портал индикации прогресса сбора коллекции.
+			page – номер обработанной страницы каталога.
+		"""
+
+		Text = f"Titles on page {page} collected."
+		self.info(Text)
+		print(Text)
+
+	def covers_unstubbed(self, title: BaseTitle):
+		"""
+		Портал уведомления о фильтрации заглушек обложек.
+			title – данные тайтла.
+		"""
+
+		self.info(f"Title: \"{title.slug}\" (ID: {title.id}). Stubs detected. Covers downloading will be skipped.")
+		print("Stubs detected. Covers downloading will be skipped.")
+
 class Logger:
-	"""Менеджер логов."""
+	"""Коллекция порталов CLI/логов для парсеров."""
+
+	#==========================================================================================#
+	# >>>>> СВОЙСТВА <<<<< #
+	#==========================================================================================#
+
+	@property
+	def portals(self) -> Portals:
+		"""Набор шаблонов ввода-вывода."""
+
+		return self.__Portals
+
+	@property
+	def templates(self) -> Templates:
+		"""Набор шаблонов ввода-вывода."""
+
+		return Templates
 
 	#==========================================================================================#
 	# >>>>> ПРИВАТНЫЕ МЕТОДЫ <<<<< #
@@ -247,11 +370,17 @@ class Logger:
 	# >>>>> ПУБЛИЧНЫЕ МЕТОДЫ <<<<< #
 	#==========================================================================================#
 
-	def __init__(self):
-		"""Менеджер логов."""
+	def __init__(self, system_objects: "SystemObjects"):
+		"""
+		Менеджер портов CLI и логов
+			system_objects – коллекция системных объектов.
+		"""
 		
 		#---> Генерация динамических свойств.
 		#==========================================================================================#
+		self.__SystemObjects = system_objects
+
+		self.__Portals = Portals(self)
 		self.__LoggerSettings = LoggerSettings()
 
 		self.__LogFilename = None
@@ -311,17 +440,15 @@ class Logger:
 		logging.critical(text)
 		if not self.__SilentMode: self.__SendReport(text)
 
-	def error(self, text: str, exception: bool = False):
+	def error(self, text: str):
 		"""
 		Записывает в лог ошибку.
-			text – данные;\n
-			exception – указывает, нужно ли выбрасывать исключение.
+			text – данные.
 		"""
 
 		self.__IsLogHasError = True
 		logging.error(text)
 		if not self.__SilentMode: self.__SendReport(text)
-		if exception: raise ParsingError()
 
 	def info(self, text: str):
 		"""
@@ -346,49 +473,34 @@ class Logger:
 		except KeyError: pass
 
 	#==========================================================================================#
-	# >>>>> ШАБЛОНЫ ПРЕДУПРЕЖДЕНИЙ <<<<< #
-	#==========================================================================================#
-
-	def collect_filters_ignored(self):
-		"""Записывает в лог предупреждение: игнорирование фильтров."""
-
-		self.warning(f"Filters will be ignored.")
-
-	def collect_pages_ignored(self):
-		"""Записывает в лог предупреждение: игнорирование страниц."""
-
-		self.warning(f"Pages will be ignored.")
-
-	def collect_period_ignored(self):
-		"""Записывает в лог предупреждение: игнорирование периода."""
-
-		self.warning(f"Period will be ignored.")
-
-	#==========================================================================================#
 	# >>>>> ШАБЛОНЫ ОШИБОК <<<<< #
 	#==========================================================================================#
 
 	def request_error(self, response: WebResponse, text: str | None = None, exception: bool = True):
 		"""
-		Обрабатывает ошибку сети.
-			response – объект WEB-ответа;\n
+		Шаблон ошибки запроса.
+			response – WEB-ответ;\n
 			text – описание ошибки;\n
 			exception – указывает, выбрасывать ли исключение.
 		"""
 
 		if not text: text = "Request error."
 		if response.status_code in self.__LoggerSettings.commands[self.__PointName].ignored_requests_errors: self.__SilentMode = True
-		self.error(f"{text} Response code: {response.status_code}.", exception = exception)
+		self.error(f"{text} Response code: {response.status_code}.")
+		if exception: raise ParsingError()
 
-	def title_not_found(self, title: BaseTitle):
+	def title_not_found(self, title: BaseTitle, exception: bool = True):
 		"""
-		Записывает в лог предупреждение о том, что тайтл не найден в источнике.
-			title – данные тайтла.
+		Шаблон ошибки: глава не найдена.
+			title – данные тайтла;\n
+			exception – указывает, выбрасывать ли исключение.
 		"""
 
 		NoteID = f" (ID: {title.id})" if title.id else ""
 		if not self.__LoggerSettings.commands[self.__PointName].title_not_found: self.__SilentMode = True
 		self.error(f"Title: \"{title.slug}\"{NoteID}. Not found.")
+		print("Not found.")
+		if exception: raise TitleNotFound(title)
 
 	#==========================================================================================#
 	# >>>>> ШАБЛОНЫ ЗАПИСЕЙ <<<<< #
@@ -396,90 +508,69 @@ class Logger:
 
 	def amending_end(self, title: BaseTitle, amended_chapter_count: int):
 		"""
-		Записывает в лог информацию о количестве дополненных глав.
+		Шаблон: дополнение глав завершено.
 			title – данные тайтла;\n
 			amended_chapter_count – количество дополненных глав.
 		"""
 
 		self.info(f"Title: \"{title.slug}\" (ID: {title.id}). Amended chapters count: {amended_chapter_count}.")
+		print(f"Amended chapters count: {amended_chapter_count}.")
 
 	def chapter_amended(self, title: BaseTitle, chapter: BaseChapter):
 		"""
-		Записывает в лог отчёт о дополнении главы.
+		Шаблон: глава дополнена.
 			title – данные тайтла;\n
 			chapter – данные главы.
 		"""
 
 		ChapterNote = "Paid chapter" if chapter.is_paid else "Chapter"
 		self.info(f"Title: \"{title.slug}\" (ID: {title.id}). {ChapterNote} {chapter.id} amended.")
+		print(f"{ChapterNote} {chapter.id} amended.")
 
 	def chapter_repaired(self, title: BaseTitle, chapter: BaseChapter):
 		"""
-		Записывает в лог отчёт о восстановлении главы.
+		Шаблон: глава восстановлена.
 			title – данные тайтла;\n
 			chapter – данные главы.
 		"""
 
 		ChapterNote = "Paid chapter" if chapter.is_paid else "Chapter"
 		self.info(f"Title: \"{title.slug}\" (ID: {title.id}). {ChapterNote} {chapter.id} repaired.")
-
-	def chapter_skipped(self, title: BaseTitle, chapter: BaseChapter):
+		print(f"{ChapterNote} {chapter.id} repaired.")
+		
+	def merging_end(self, title: BaseTitle, merged_chapter_count: int):
 		"""
-		Записывает в лог отчёт о пропуске главы.
+		Шаблон: слияние глав завершено.
 			title – данные тайтла;\n
-			chapter – данные главы.
+			merged_chapter_count – количество дополненных глав.
 		"""
 
-		ChapterNote = "Paid chapter" if chapter.is_paid else "Chapter"
-		self.info(f"Title: \"{title.slug}\" (ID: {title.id}). {ChapterNote} {chapter.id} skipped.")
+		if self.__SystemObjects.FORCE_MODE:
+			self.info(f"Title: \"{title.slug}\" (ID: {title.id}). Local data will be removed.")
+			print("Local data will be removed.")
 
-	def collect_filters(self, filters: str):
-		"""
-		Записывает в лог сообщение: используемые фильтры коллекции.
-			filters – фильтры.
-		"""
-
-		self.info(f"Filters: \"{filters}\".")
-
-	def collect_pages(self, pages: int):
-		"""
-		Записывает в лог сообщение: используемые страницы коллекции.
-			pages – страницы.
-		"""
-
-		self.info(f"Pages: {pages}.")
-
-	def collect_period(self, period: int):
-		"""
-		Записывает в лог сообщение: используемый период коллекции.
-			period – период.
-		"""
-
-		self.info(f"Period: {period} hours.")
-
-	def covers_unstubbed(self, title: BaseTitle):
-		"""
-		Записывает в лог информацию об удалении обложек по причине того, что те являются заглушками.
-			title – данные тайтла.
-		"""
-
-		self.info(f"Title: \"{title.slug}\" (ID: {title.id}). Stubs detected. Covers downloading will be skipped.")
+		else:
+			self.info(f"Title: \"{title.slug}\" (ID: {title.id}). Merged chapters count: {merged_chapter_count}.")
+			print(f"Merged chapters count: {merged_chapter_count}.")
 
 	def parsing_start(self, title: BaseTitle):
 		"""
-		Записывает в лог сообщение об успешном парсинге данных тайтла.
+		Шаблон: начат парсинг.
 			title – данные тайтла.
 		"""
 
-		self.info(f"Title: \"{title.slug}\" (ID: {title.id}). Parsing...")
+		self.info(f"Title: \"{title.slug}\". Parsing...")
+		BoldSlug = Templates.bold(title.slug)
+		print(f"Parsing {BoldSlug}... ", end = "")
 
-	def titles_collected(self, collected_titles_count: int):
+	def titles_collected(self, count: int):
 		"""
-		Записывает в лог количество собранных из каталога тайтлов.
-			titles_count – количество тайтлов.
+		Шаблон: коллекция собрана.
+			count – количество собранных алиасов.
 		"""
 
-		self.info(f"Titles collected: {collected_titles_count}.")
+		self.info(f"Collected titles count: {count}.")
+		print(f"Titles collected: {count}.")
 
 	#==========================================================================================#
 	# >>>>> МЕТОДЫ УПРАВЛЕНИЯ ЛОГАМИ <<<<< #

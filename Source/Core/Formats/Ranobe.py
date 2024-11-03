@@ -1,4 +1,4 @@
-from . import ChaptersTypes, BaseChapter, BaseBranch, BaseTitle, By, Statuses
+from . import BaseChapter, BaseBranch, BaseTitle, By, Statuses
 from Source.Core.SystemObjects import SystemObjects
 from Source.Core.Exceptions import ChapterNotFound
 
@@ -7,7 +7,24 @@ from dublib.Methods.JSON import ReadJSON
 from dublib.Polyglot import HTML
 from bs4 import BeautifulSoup
 
+import enum
 import os
+
+#==========================================================================================#
+# >>>>> ПЕРЕЧИСЛЕНИЯ ТИПОВ <<<<< #
+#==========================================================================================#
+
+class ChaptersTypes(enum.Enum):
+	"""Определения типов глав."""
+
+	afterword = "afterword"
+	art = "art"
+	chapter = "chapter"
+	epilogue = "epilogue"
+	extra = "extra"
+	glossary = "glossary"
+	prologue = "prologue"
+	trash = "trash"
 
 #==========================================================================================#
 # >>>>> ДОПОЛНИТЕЛЬНЫЕ СТРУКТУРЫ ДАННЫХ <<<<< #
@@ -26,6 +43,12 @@ class Chapter(BaseChapter):
 
 		return self._Chapter["paragraphs"]
 	
+	@property
+	def type(self) -> ChaptersTypes | None:
+		"""Тип главы."""
+
+		return ChaptersTypes[self._Chapter["type"]]
+
 	#==========================================================================================#
 	# >>>>> ПРИВАТНЫЕ МЕТОДЫ <<<<< #
 	#==========================================================================================#
@@ -178,6 +201,15 @@ class Chapter(BaseChapter):
 
 		for Paragraph in paragraphs: self.add_paragraph(Paragraph)
 
+	def set_type(self, type: ChaptersTypes | None):
+		"""
+		Задаёт тип главы.
+			type – тип.
+		"""
+
+		if type: self._Chapter["type"] = type.value
+		else: self._Chapter["type"] = None
+
 class Branch(BaseBranch):
 	"""Ветвь."""
 
@@ -261,7 +293,7 @@ class Ranobe(BaseTitle):
 		"""Оригинальный язык контента по стандарту ISO 639-3."""
 
 		return self._Title["original_language"]
-	
+
 	#==========================================================================================#
 	# >>>>> ПЕРЕОПРЕДЕЛЯЕМЫЕ МЕТОДЫ <<<<< #
 	#==========================================================================================#
@@ -305,6 +337,7 @@ class Ranobe(BaseTitle):
 	def merge(self):
 		"""Объединяет данные описательного файла и текущей структуры данных."""
 
+		print("")
 		Path = f"{self._ParserSettings.common.titles_directory}/{self._UsedFilename}.json"
 		
 		if os.path.exists(Path) and not self._SystemObjects.FORCE_MODE:
@@ -326,10 +359,7 @@ class Ranobe(BaseTitle):
 							self._Title["content"][BranchID][ChapterIndex]["paragraphs"] = LocalContent[ChapterID]
 							MergedChaptersCount += 1
 
-			self._SystemObjects.logger.info("Title: \"" + self._Title["slug"] + f"\" (ID: " + str(self._Title["id"]) + f"). Merged chapters count: {MergedChaptersCount}.")
-
-		elif self._SystemObjects.FORCE_MODE:
-			self._SystemObjects.logger.info("Title: \"" + self._Title["slug"] + "\" (ID: " + str(self._Title["id"]) + "). Local data removed.")
+			self._SystemObjects.logger.merging_end(self, MergedChaptersCount)
 
 		self._Branches = list()
 
@@ -344,68 +374,16 @@ class Ranobe(BaseTitle):
 
 			self.add_branch(NewBranch)
 
-	def open(self, identificator: int | str, selector_type: By = By.Filename):
-		"""
-		Считывает локальный файл.
-			identificator – идентификатор тайтла;\n
-			selector_type – тип указателя на тайтл.
-		"""
-
-		Data = None
-		Directory = self._ParserSettings.common.titles_directory
-
-		if selector_type == By.Filename:
-			Path = f"{Directory}/{identificator}.json"
-
-			if os.path.exists(Path):
-				Data = ReadJSON(f"{Directory}/{identificator}.json")
-				
-			else:
-				self._SystemObjects.logger.critical("Couldn't open file.")
-				raise FileNotFoundError(Path)
-
-		if selector_type == By.Slug:
-			LocalTitles = os.listdir(Directory)
-			LocalTitles = list(filter(lambda File: File.endswith(".json"), LocalTitles))
-
-			for File in LocalTitles:
-				Path = f"{Directory}/{File}"
-
-				if os.path.exists(Path):
-					Buffer = ReadJSON(Path)
-
-					if Buffer["slug"] == identificator:
-						Data = Buffer
-						break
-
-		if selector_type == By.ID:
-			LocalTitles = os.listdir(Directory)
-			LocalTitles = list(filter(lambda File: File.endswith(".json"), LocalTitles))
-
-			for File in LocalTitles:
-				Path = f"{Directory}/{File}"
-
-				if os.path.exists(Path):
-					Buffer = ReadJSON(Path)
-
-					if Buffer["id"] == identificator:
-						Data = Buffer
-						break
-
-		if Data: self._Title = Data
-		else: raise FileNotFoundError(identificator + ".json")
-
 	def repair(self, chapter_id: int):
 		"""
 		Восстанавливает содержимое главы, заново получая его из источника.
 			chapter_id – уникальный идентификатор целевой главы.
 		"""
 
+		print()
 		SearchResult = self._FindChapterByID(chapter_id)
 
-		if not SearchResult:
-			self._SystemObjects.logger.title_not_found(self)
-			raise ChapterNotFound(chapter_id)
+		if not SearchResult: raise ChapterNotFound(chapter_id)
 
 		BranchData: Branch = SearchResult[0]
 		ChapterData: Chapter = SearchResult[1]

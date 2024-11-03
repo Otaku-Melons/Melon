@@ -16,6 +16,7 @@ Settings = {
 	"common": {
 		"archives_directory": "",
 		"covers_directory": "",
+		"images_directory": "",
 		"titles_directory": "",
 		"bad_image_stub": "",
 		"pretty": True,
@@ -195,6 +196,12 @@ class Common:
 		return self.__Settings["covers_directory"]
 	
 	@property
+	def images_directory(self) -> str:
+		"""Директория изображений."""
+
+		return self.__Settings["images_directory"]
+	
+	@property
 	def titles_directory(self) -> str:
 		"""Директория описательных файлов."""
 
@@ -211,12 +218,6 @@ class Common:
 		"""Указывает, нужно ли пытаться определить размер изображений."""
 
 		return self.__Settings["sizing_images"]
-	
-	@property
-	def legacy(self) -> bool:
-		"""Указывает, нужно ли использовать устаревший формат для описания тайтла."""
-
-		return self.__Settings["legacy"]
 	
 	@property
 	def pretty(self) -> bool:
@@ -246,14 +247,12 @@ class Common:
 			parser_name – название парсера.
 		"""
 
-		if not self.__Settings["archives_directory"]: self.__Settings["archives_directory"] = f"Output/{parser_name}/archives"
-		else: self.__Settings["archives_directory"] = NormalizePath(self.__Settings["archives_directory"])
+		Directories = ["archives", "covers", "images", "titles"]
 
-		if not self.__Settings["covers_directory"]: self.__Settings["covers_directory"] = f"Output/{parser_name}/covers"
-		else: self.__Settings["covers_directory"] = NormalizePath(self.__Settings["covers_directory"])
-
-		if not self.__Settings["titles_directory"]: self.__Settings["titles_directory"] = f"Output/{parser_name}/titles"
-		else: self.__Settings["titles_directory"] = NormalizePath(self.__Settings["titles_directory"])
+		for Directory in Directories:
+			Key = f"{Directory}_directory"
+			if not self.__Settings[Key]: self.__Settings[Key] = f"Output/{parser_name}/{Directory}"
+			else: self.__Settings[Key] = NormalizePath(self.__Settings[Key])
 
 	def __init__(self, parser_name: str, settings: dict, logger: Logger):
 		"""
@@ -268,12 +267,12 @@ class Common:
 		self.__Settings = {
 			"archives_directory": "",
 			"covers_directory": "",
+			"images_directory": "",
 			"titles_directory": "",
 			"bad_image_stub": None,
 			"pretty": False,
 			"use_id_as_filename": False,
 			"sizing_images": False,
-			"legacy": False,
 			"retries": 0,
 			"delay": 1.0
 		}

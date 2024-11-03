@@ -1,9 +1,8 @@
 from Source.Core.ImagesDownloader import ImagesDownloader
 
-from dublib.WebRequestor import Protocols, WebConfig, WebLibs, WebRequestor
 from dublib.Methods.JSON import WriteJSON
+from dublib.Methods.JSON import ReadJSON
 from dublib.Methods.Data import Zerotify
-from dublib.Methods.System import Clear
 from time import sleep
 
 import enum
@@ -19,18 +18,6 @@ class By(enum.Enum):
 	Filename = 0
 	Slug = 1
 	ID = 2
-
-class ChaptersTypes(enum.Enum):
-	"""Определения типов глав."""
-
-	afterword = "afterword"
-	art = "art"
-	chapter = "chapter"
-	epilogue = "epilogue"
-	extra = "extra"
-	glossary = "glossary"
-	prologue = "prologue"
-	trash = "trash"
 
 class Statuses(enum.Enum):
 	"""Определения статусов."""
@@ -90,12 +77,6 @@ class BaseChapter:
 		"""Название главы."""
 
 		return self._Chapter["name"]
-	
-	@property
-	def type(self) -> ChaptersTypes | None:
-		"""Тип главы."""
-
-		return ChaptersTypes[self._Chapter["type"]]
 
 	@property
 	def is_paid(self) -> bool | None:
@@ -117,6 +98,7 @@ class BaseChapter:
 		"""Преобразует номер главы или тома в корректное значение."""
 
 		if number == None: number = ""
+		elif type(number) != str: number = str(number)
 		if "-" in number: number = number.split("-")[0]
 		number = number.strip("\t .\n")
 		number = Zerotify(number)
@@ -147,7 +129,6 @@ class BaseChapter:
 			"volume": None,
 			"number": None,
 			"name": None,
-			"type": None,
 			"is_paid": None,
 			"translators": []
 		}
@@ -238,9 +219,9 @@ class BaseChapter:
 			name – название главы.
 		"""
 
-		self._Chapter["name"] = name
+		self._Chapter["name"] = Zerotify(name)
 
-	def set_number(self, number: str | None):
+	def set_number(self, number: float | int | str | None):
 		"""
 		Задаёт номер главы.
 			number – номер главы.
@@ -264,16 +245,7 @@ class BaseChapter:
 
 		self._Chapter["slug"] = slug
 
-	def set_type(self, type: ChaptersTypes | None):
-		"""
-		Задаёт тип главы.
-			type – тип.
-		"""
-
-		if type: self._Chapter["type"] = type.value
-		else: self._Chapter["type"] = None
-
-	def set_volume(self, volume: str | None):
+	def set_volume(self, volume: float | int | str | None):
 		"""
 		Задаёт номер тома.
 			volume – номер тома.
@@ -574,17 +546,6 @@ class BaseTitle:
 
 		return Result
 
-	def _PrintAmendingProgress(self, message: str, current_state: int, max_state: int):
-		"""
-		Выводит в консоль прогресс дополнение глав информацией о содержимом.
-			message – сообщение из внешнего обработчика;\n
-			current_state – индекс текущей дополняемой главы;\n
-			max_state – количество глав, которые необходимо дополнить.
-		"""
-
-		Clear()
-		print(f"{message}\nAmending: {current_state} / {max_state}")
-
 	def _UpdateBranchesInfo(self):
 		"""Обновляет информацию о ветвях."""
 
@@ -618,7 +579,6 @@ class BaseTitle:
 		self._ParserSettings = self._SystemObjects.manager.parser_settings
 		self._Branches: list[BaseBranch] = list()
 		self._UsedFilename = None
-		self._IsLegacy = True if self._ParserSettings.common.legacy else False
 		self._Parser = None
 		
 		self._Title = {
@@ -651,11 +611,8 @@ class BaseTitle:
 
 		self._PostInitMethod()
 
-	def amend(self, message: str):
-		"""
-		Дополняет контент содержимым.
-			message – сообщение для внутреннего обработчика.
-		"""
+	def amend(self):
+		"""Дополняет контент содержимым."""
 
 		ChaptersToAmendCount = self._CalculateEmptyChapters()
 		AmendedChaptersCount = 0
@@ -676,24 +633,18 @@ class BaseTitle:
 						AmendedChaptersCount += 1
 						self._SystemObjects.logger.chapter_amended(self, CurrentChapter)
 
-					self._PrintAmendingProgress(message, ProgressIndex, ChaptersToAmendCount)
 					sleep(self._ParserSettings.common.delay)
 
 		self._SystemObjects.logger.amending_end(self, AmendedChaptersCount)
 
-	def download_covers(self, message: str):
-		"""
-		Скачивает обложки.
-			message – сообщение для внутреннего обработчика.
-		"""
+	def download_covers(self):
+		"""Скачивает обложки."""
 
 		self._CheckStandartPath(self._ParserSettings.common.covers_directory)
 
 		CoversDirectory = f"{self._ParserSettings.common.covers_directory}/{self._UsedFilename}/"
 		if not os.path.exists(CoversDirectory): os.makedirs(CoversDirectory)
 		
-		Clear()
-		print(message)
 		DownloadedCoversCount = 0
 		
 		for CoverIndex in range(len(self._Title["covers"])):
@@ -712,15 +663,61 @@ class BaseTitle:
 
 		self._SystemObjects.logger.info(f"Title: \"{self.slug}\" (ID: {self.id}). Covers downloaded: {DownloadedCoversCount}.")
 
-	def parse(self, message: str | None = None):
+	def open(self, identificator: int | str, selector_type: By = By.Filename):
 		"""
-		Получает основные данные тайтла.
-			message – сообщение для внутреннего обработчика.
+		Считывает локальный файл.
+			identificator – идентификатор тайтла;\n
+			selector_type – тип указателя на тайтл.
 		"""
-		
-		Clear()
-		message = message or ""
-		if message: print(f"{message}\nParsing data...")
+
+		Data = None
+		Directory = self._ParserSettings.common.titles_directory
+
+		if selector_type == By.Filename:
+			Path = f"{Directory}/{identificator}.json"
+
+			if os.path.exists(Path):
+				Data = ReadJSON(f"{Directory}/{identificator}.json")
+				
+			else:
+				self._SystemObjects.logger.critical("Couldn't open file.")
+				raise FileNotFoundError(Path)
+
+		if selector_type == By.Slug:
+			LocalTitles = os.listdir(Directory)
+			LocalTitles = list(filter(lambda File: File.endswith(".json"), LocalTitles))
+
+			for File in LocalTitles:
+				Path = f"{Directory}/{File}"
+
+				if os.path.exists(Path):
+					Buffer = ReadJSON(Path)
+
+					if Buffer["slug"] == identificator:
+						Data = Buffer
+						break
+
+		if selector_type == By.ID:
+			LocalTitles = os.listdir(Directory)
+			LocalTitles = list(filter(lambda File: File.endswith(".json"), LocalTitles))
+
+			for File in LocalTitles:
+				Path = f"{Directory}/{File}"
+
+				if os.path.exists(Path):
+					Buffer = ReadJSON(Path)
+
+					if Buffer["id"] == identificator:
+						Data = Buffer
+						break
+
+		if Data: self._Title = Data
+		else: raise FileNotFoundError(identificator + ".json")
+
+	def parse(self):
+		"""Получает основные данные тайтла."""
+
+		self._SystemObjects.logger.parsing_start(self)
 		self._Parser.parse()
 		self._UsedFilename = str(self.id) if self._ParserSettings.common.use_id_as_filename else self.slug
 
@@ -736,7 +733,8 @@ class BaseTitle:
 		self._CheckStandartPath(self._ParserSettings.common.titles_directory)
 		WriteJSON(f"{self._ParserSettings.common.titles_directory}/{self._UsedFilename}.json", self._Title)
 		self._SystemObjects.logger.info(f"Title: \"{self.slug}\" (ID: {self.id}). Saved.")
-
+		print("Done.")
+		
 	def set_parser(self, parser: any):
 		"""Задаёт парсер для вызова методов."""
 

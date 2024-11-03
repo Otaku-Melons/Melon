@@ -1,4 +1,5 @@
 from Source.Core.Formats import BaseChapter, BaseBranch, BaseTitle
+from Source.Core.ImagesDownloader import ImagesDownloader
 from Source.Core.SystemObjects import SystemObjects
 
 from dublib.WebRequestor import Protocols, WebConfig, WebLibs, WebRequestor
@@ -30,20 +31,6 @@ class BaseParser:
 		return self._Title
 
 	#==========================================================================================#
-	# >>>>> НАСЛЕДУЕМЫЕ МЕТОДЫ <<<<< #
-	#==========================================================================================#
-
-	def _PrintCollectingStatus(self, page: int | None):
-		"""
-		Выводит в консоль прогресс сбора коллекции из каталога.
-			page – номер текущей страницы.
-		"""
-
-		Clear()
-		page = f" titles on page {page}" if page else ""
-		print(f"Collecting{page}...")
-
-	#==========================================================================================#
 	# >>>>> ПЕРЕОПРЕДЕЛЯЕМЫЕ МЕТОДЫ <<<<< #
 	#==========================================================================================#
 
@@ -52,6 +39,10 @@ class BaseParser:
 
 		Config = WebConfig()
 		Config.select_lib(WebLibs.requests)
+		Config.set_retries_count(2)
+		Config.generate_user_agent()
+		Config.add_header("Referer", f"https://{ParserSite}/")
+		Config.requests.enable_proxy_protocol_switching(True)
 		WebRequestorObject = WebRequestor(Config)
 		
 		if self._Settings.proxy.enable: WebRequestorObject.add_proxy(
@@ -84,8 +75,9 @@ class BaseParser:
 		#==========================================================================================#
 		self._SystemObjects = system_objects
 		self._Title = title
-		
-		self._Logger = self._SystemObjects.logger
+
+		self._Temper = self._SystemObjects.temper
+		self._Portals = self._SystemObjects.logger.portals
 		self._Settings = self._SystemObjects.manager.parser_settings
 		self._Requestor = self._InitializeRequestor()
 
@@ -99,6 +91,16 @@ class BaseParser:
 		"""
 
 		pass
+
+	def image(self, url: str) -> str | None:
+		"""
+		Скачивает изображение с сайта во временный каталог парсера и возвращает имя файла.
+			url – ссылка на изображение.
+		"""
+
+		Filename = ImagesDownloader(self._SystemObjects, self._Requestor).temp_image(url)
+		
+		return Filename
 
 	def parse(self):
 		"""Получает основные данные тайтла."""

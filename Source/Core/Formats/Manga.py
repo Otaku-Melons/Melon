@@ -1,4 +1,4 @@
-from . import ChaptersTypes, BaseChapter, BaseBranch, BaseTitle, By, Statuses
+from . import BaseChapter, BaseBranch, BaseTitle, By, Statuses
 from Source.Core.SystemObjects import SystemObjects
 from Source.Core.Exceptions import ChapterNotFound
 
@@ -6,6 +6,21 @@ from dublib.Methods.JSON import ReadJSON
 
 import enum
 import os
+
+#==========================================================================================#
+# >>>>> ПЕРЕЧИСЛЕНИЯ ТИПОВ <<<<< #
+#==========================================================================================#
+
+class Types(enum.Enum):
+	"""Определения типов манги."""
+
+	manga = "manga"
+	manhwa = "manhwa"
+	manhua = "manhua"
+	oel = "oel"
+	western_comic = "western_comic"
+	russian_comic = "russian_comic"
+	indonesian_comic = "indonesian_comic"
 
 #==========================================================================================#
 # >>>>> ДОПОЛНИТЕЛЬНЫЕ СТРУКТУРЫ ДАННЫХ <<<<< #
@@ -44,7 +59,6 @@ class Chapter(BaseChapter):
 			"volume": None,
 			"number": None,
 			"name": None,
-			"type": None,
 			"is_paid": None,
 			"translators": [],
 			"slides": []	
@@ -163,17 +177,6 @@ class Branch(BaseBranch):
 
 		if not IsSuccess: raise KeyError(id)
 
-class Types(enum.Enum):
-	"""Определения типов манги."""
-
-	manga = "manga"
-	manhwa = "manhwa"
-	manhua = "manhua"
-	oel = "oel"
-	western_comic = "western_comic"
-	russian_comic = "russian_comic"
-	indonesian_comic = "indonesian_comic"
-
 #==========================================================================================#
 # >>>>> ОСНОВНОЙ КЛАСС <<<<< #
 #==========================================================================================#
@@ -233,7 +236,8 @@ class Manga(BaseTitle):
 
 	def merge(self):
 		"""Объединяет данные описательного файла и текущей структуры данных."""
-
+		
+		print("")
 		Path = f"{self._ParserSettings.common.titles_directory}/{self._UsedFilename}.json"
 		
 		if os.path.exists(Path) and not self._SystemObjects.FORCE_MODE:
@@ -255,10 +259,7 @@ class Manga(BaseTitle):
 							self._Title["content"][BranchID][ChapterIndex]["slides"] = LocalContent[ChapterID]
 							MergedChaptersCount += 1
 
-			self._SystemObjects.logger.info("Title: \"" + self._Title["slug"] + f"\" (ID: " + str(self._Title["id"]) + f"). Merged chapters count: {MergedChaptersCount}.")
-
-		elif self._SystemObjects.FORCE_MODE:
-			self._SystemObjects.logger.info("Title: \"" + self._Title["slug"] + "\" (ID: " + str(self._Title["id"]) + "). Local data removed.")
+			self._SystemObjects.logger.merging_end(self, MergedChaptersCount)
 
 		self._Branches = list()
 
@@ -279,11 +280,9 @@ class Manga(BaseTitle):
 			chapter_id – уникальный идентификатор целевой главы.
 		"""
 
+		print("")
 		SearchResult = self._FindChapterByID(chapter_id)
-
-		if not SearchResult:
-			self._SystemObjects.logger.title_not_found(self)
-			raise ChapterNotFound(chapter_id)
+		if not SearchResult: raise ChapterNotFound(chapter_id)
 
 		BranchData: Branch = SearchResult[0]
 		ChapterData: Chapter = SearchResult[1]

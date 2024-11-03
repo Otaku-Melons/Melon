@@ -1,6 +1,7 @@
 from Source.Core.SystemObjects.Logger import Logger, LoggerRules
 from Source.Core.SystemObjects.Manager import Manager
 from Source.Core.SystemObjects.Temper import Temper
+from Source.CLI import Templates
 
 class SystemObjects:
 	"""Коллекция системных объектов."""
@@ -10,12 +11,11 @@ class SystemObjects:
 	#==========================================================================================#
 
 	FORCE_MODE = False
+	LIVE_MODE = False
 	SHUTDOWN = False
 
 	EXIT_CODE = 0
-
-	MSG_FORCE_MODE = ""
-	MSG_SHUTDOWN = ""
+	VERSION = "0.1.0-alpha"
 
 	#==========================================================================================#
 	# >>>>> СВОЙСТВА ТОЛЬКО ДЛЯ ЧТЕНИЯ <<<<< #
@@ -23,7 +23,7 @@ class SystemObjects:
 
 	@property
 	def logger(self) -> Logger:
-		"""Менеджер логов."""
+		"""Менеджер портов CLI и логов."""
 
 		return self.__Logger
 
@@ -55,7 +55,7 @@ class SystemObjects:
 		#---> Генерация динамических свойств.
 		#==========================================================================================#
 		self.__Manager = Manager(self)
-		self.__Logger = Logger()
+		self.__Logger = Logger(self)
 		self.__Temper = Temper()
 		self.__ParserName = None
 

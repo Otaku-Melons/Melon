@@ -138,7 +138,7 @@ class ImagesDownloader:
 					Status.message = "Error! Image doesn't contain enough bytes."
 
 			else:
-				if self.__Logging: self.__SystemObjects.logger.request_error(Response, f"Unable to download image: \"{url}\".")
+				if self.__Logging: self.__SystemObjects.logger.request_error(Response, f"Unable to download image: \"{url}\".", exception = False)
 				Status = ExecutionError(Response.status_code)
 				Status.message = f"Error! Response code: {Response.status_code}."
 

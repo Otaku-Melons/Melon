@@ -23,6 +23,10 @@ class Collector:
 					Line = Line.strip()
 					if Line: Collection.append(Line)
 
+		elif self.__SystemObjects.FORCE_MODE:
+			self.__SystemObjects.logger.info("Collection will be overwritten.")
+			print("Collection will be overwritten.")
+
 		return Collection
 
 	#==========================================================================================#
@@ -41,13 +45,13 @@ class Collector:
 		self.__Path = system_objects.temper.parser_temp + "/Collection.txt"
 		self.__Collection = self.__ReadCollection()
 
-	def append(self, slugs: list[str]):
+	def append(self, slugs: str | list[str]):
 		"""
 		Добавляет в коллекцию список алиасов.
-			slugs – список алиасов.
+			slugs – алиас или список алиасов.
 		"""
 
-		self.__SystemObjects.logger.titles_collected(len(slugs))
+		if type(slugs) != list: slugs = [slugs]
 		self.__Collection += slugs
 
 	def save(self, sort: bool = False):

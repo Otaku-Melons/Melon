@@ -23,7 +23,19 @@ class Manager:
 	def parser_settings(self) -> ParserSettings:
 		"""Настройки используемого парсера."""
 
+		return self.get()
+
+	@property
+	def parser_settings(self) -> ParserSettings:
+		"""Настройки используемого парсера."""
+
 		return self.get_parser_settings()
+
+	@property
+	def parser_version(self) -> str:
+		"""Версия используемого парсера."""
+
+		return self.get_parser_version()
 
 	#==========================================================================================#
 	# >>>>> ПРИВАТНЫЕ МЕТОДЫ <<<<< #
@@ -69,7 +81,10 @@ class Manager:
 		parser_name = self.__CheckParser(parser_name)
 		Module = importlib.import_module(f"Parsers.{parser_name}.main")
 		Parser = Module.Parser(self.__SystemObjects)
-		self.__SystemObjects.logger.info(f"Parser: \"{Module.NAME}\" (version {Module.VERSION}).")
+
+		Text = f"Parser: \"{Module.NAME}\" (version {Module.VERSION})."
+		self.__SystemObjects.logger.info(Text)
+		# print(Text)
 
 		return Parser
 

@@ -30,7 +30,8 @@ class RanobeParser(BaseParser):
 		self._SystemObjects = system_objects
 		self._Title = title
 
-		self._Logger = self._SystemObjects.logger
+		self._Temper = self._SystemObjects.temper
+		self._Portals = self._SystemObjects.logger.portals
 		self._Settings = self._SystemObjects.manager.get_parser_settings()
 		self._Requestor = self._InitializeRequestor()
 

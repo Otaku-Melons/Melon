@@ -14,6 +14,8 @@ import sys
 CheckPythonMinimalVersion(3, 10)
 MakeRootDirectories(["Parsers"])
 
+VERSION = "0.1.0-alpha"
+
 #==========================================================================================#
 # >>>>> НАСТРОЙКА ОБРАБОТЧИКА КОМАНД <<<<< #
 #==========================================================================================#
@@ -49,7 +51,6 @@ ComPos.add_key("fullname", description = "Full name of file.")
 ComPos.add_key("name", "Name of file without type.")
 Com.add_flag("f", "Enable force mode.")
 Com.add_flag("s", "Shutdown PC after script finish.")
-Com.add_flag("sid", "Disable custom imege downloader.")
 Com.add_key("dir", ParametersTypes.ValidPath, "Output directory.")
 CommandsList.append(Com)
 
@@ -97,10 +98,10 @@ Com.add_flag("f", "Also remove configs.")
 CommandsList.append(Com)
 
 Analyzer = Terminalyzer()
+Objects = SystemObjects()
 Analyzer.enable_help(True)
 CommandDataStruct = Analyzer.check_commands(CommandsList)
 
-Objects = SystemObjects()
 Objects.logger.info("====== Preparing to starting ======")
 Objects.logger.info(f"Starting with Python {sys.version_info.major}.{sys.version_info.minor}.{sys.version_info.micro} on {sys.platform}.")
 Objects.logger.info("Command: \"" + " ".join(sys.argv[1:len(sys.argv)]) + "\".")
@@ -108,24 +109,25 @@ Objects.logger.info("Command: \"" + " ".join(sys.argv[1:len(sys.argv)]) + "\".")
 if CommandDataStruct == None:
 	Objects.logger.set_rule(3)
 	Objects.logger.close()
-	print("Unknown command.")
+	print("Unknown command!")
 	exit(0)
 
-else: Objects.select_parser(CommandDataStruct.get_key_value("use"))
+elif CommandDataStruct.name in ["help", "list"]: Objects.LIVE_MODE = True
 
-#==========================================================================================#
-# >>>>> ОБРАБОТКА НЕСПЕЦИФИЧЕСКИХ ФЛАГОВ <<<<< #
-#==========================================================================================#
+if not Objects.LIVE_MODE:
+	Objects.logger.templates.title(VERSION)
 
-if "f" in CommandDataStruct.flags:
-	Objects.FORCE_MODE = True
-	Objects.logger.info("Force mode: ON.")
-	Objects.MSG_FORCE_MODE = "Force mode: ON\n"
+	if "f" in CommandDataStruct.flags: 
+		Objects.FORCE_MODE = True
+		Objects.logger.info("Force mode: ON.")
 
-if "s" in CommandDataStruct.flags:
-	Objects.SHUTDOWN = True
-	Objects.logger.info("Computer will be turned off after script is finished!")
-	Objects.MSG_SHUTDOWN = "Computer will be turned off after script is finished!\n"
+	if "s" in CommandDataStruct.flags:
+		Objects.SHUTDOWN = True
+		Objects.logger.info("Computer will be turned off after script is finished!")
+
+	Objects.logger.templates.option_status("Force mode", Objects.FORCE_MODE)
+	Objects.logger.templates.option_status("Shutdown after work", Objects.SHUTDOWN)
+	Objects.logger.templates.header("PROCESSING")
 
 #==========================================================================================#
 # >>>>> ОБРАБОТКА КОММАНД <<<<< #
@@ -139,5 +141,9 @@ except KeyboardInterrupt: exit(0)
 #==========================================================================================#
 
 Objects.logger.close()
-if Objects.SHUTDOWN: Shutdown()
+
+if Objects.SHUTDOWN:
+	print("Shutdowning...")
+	Shutdown()
+
 exit(Objects.EXIT_CODE)
