@@ -85,7 +85,6 @@
 				"volume": "1",
 				"number": "1",
 				"name": "Название главы",
-				"type": "chapter",
 				"is_paid": false,
 				"translators": [
 					"Имя переводчика"
