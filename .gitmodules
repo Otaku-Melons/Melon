@@ -13,6 +13,6 @@
 [submodule "Parsers/renovels"]
 	path = Parsers/renovels
 	url = git@github.com:Otaku-Melons/renovels.git
-[submodule "ifreedom"]
+[submodule "Parsers/ifreedom"]
 	path = Parsers/ifreedom
 	url = git@github.com:Otaku-Melons/ifreedom.git

@@ -1,9 +1,9 @@
 from Source.Core.Formats import BaseChapter, BaseBranch, BaseTitle
 from Source.Core.ImagesDownloader import ImagesDownloader
+from Source.Core.ParserSettings import ParserSettings
 from Source.Core.SystemObjects import SystemObjects
 
 from dublib.WebRequestor import Protocols, WebConfig, WebLibs, WebRequestor
-from dublib.Methods.System import Clear
 
 #==========================================================================================#
 # >>>>> ОПРЕДЕЛЕНИЯ <<<<< #
@@ -23,6 +23,12 @@ class BaseParser:
 	#==========================================================================================#
 	# >>>>> СВОЙСТВА <<<<< #
 	#==========================================================================================#
+
+	@property
+	def settings(self) -> ParserSettings:
+		"""Настройки парсера."""
+
+		return self._Settings
 
 	@property
 	def title(self) -> BaseTitle:

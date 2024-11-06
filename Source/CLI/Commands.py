@@ -259,7 +259,7 @@ def com_parse(system_objects: SystemObjects, command: ParsedCommandData):
 		Slugs = Parser.collect(period = Period)
 		
 	elif command.check_flag("local"):
-		print("Scanning titles...")
+		print("Scanning titles... ", end = "")
 		LocalTitles = os.listdir(system_objects.manager.parser_settings.common.titles_directory)
 		LocalTitles = list(filter(lambda File: File.endswith(".json"), LocalTitles))
 		
@@ -267,7 +267,10 @@ def com_parse(system_objects: SystemObjects, command: ParsedCommandData):
 			Title = ReadJSON(f"{ParserSettings.common.titles_directory}/{Slug}") 
 			Slugs.append(Title["slug"])
 
-		system_objects.logger.info("Local titles to parsing: " + str(len(Slugs)) + ".")
+		print("Done.")
+		Text = "Local titles to parsing: " + str(len(Slugs)) + "."
+		print(Text)
+		system_objects.logger.info(Text)
 
 	else: Slugs.append(command.arguments[0])
 		
@@ -287,7 +290,7 @@ def com_parse(system_objects: SystemObjects, command: ParsedCommandData):
 		Title = ContentType(system_objects)
 		Title.set_slug(Slugs[Index])
 		Title.set_parser(Parser)
-		
+
 		try:
 			Title.parse()
 			Title.merge()

@@ -1,4 +1,6 @@
 from Source.Core.ImagesDownloader import ImagesDownloader
+from Source.Core.Base.BaseParser import BaseParser
+from Source.Core.Timer import Timer
 
 from dublib.Methods.JSON import WriteJSON
 from dublib.Methods.JSON import ReadJSON
@@ -369,6 +371,16 @@ class BaseTitle:
 	#==========================================================================================#
 
 	@property
+	def parser(self) -> BaseParser | None:
+		"""Установленный парсер контента."""
+
+		return self._Parser
+
+	#==========================================================================================#
+	# >>>>> СВОЙСТВА ТАЙТЛА <<<<< #
+	#==========================================================================================#
+
+	@property
 	def format(self) -> str | None:
 		"""Формат структуры данных."""
 
@@ -580,6 +592,7 @@ class BaseTitle:
 		self._Branches: list[BaseBranch] = list()
 		self._UsedFilename = None
 		self._Parser = None
+		self._Timer = None
 		
 		self._Title = {
 			"format": None,
@@ -717,6 +730,9 @@ class BaseTitle:
 	def parse(self):
 		"""Получает основные данные тайтла."""
 
+		self._Timer = Timer()
+		self._Timer.start()
+
 		self._SystemObjects.logger.parsing_start(self)
 		self._Parser.parse()
 		self._UsedFilename = str(self.id) if self._ParserSettings.common.use_id_as_filename else self.slug
@@ -733,7 +749,10 @@ class BaseTitle:
 		self._CheckStandartPath(self._ParserSettings.common.titles_directory)
 		WriteJSON(f"{self._ParserSettings.common.titles_directory}/{self._UsedFilename}.json", self._Title)
 		self._SystemObjects.logger.info(f"Title: \"{self.slug}\" (ID: {self.id}). Saved.")
-		print("Done.")
+
+		ElapsedTime = self._Timer.ends()
+		self._Timer = None
+		print(f"Done in {ElapsedTime}.")
 		
 	def set_parser(self, parser: any):
 		"""Задаёт парсер для вызова методов."""
