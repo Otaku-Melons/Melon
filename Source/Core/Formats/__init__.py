@@ -1,5 +1,4 @@
 from Source.Core.ImagesDownloader import ImagesDownloader
-from Source.Core.Base.BaseParser import BaseParser
 from Source.Core.Timer import Timer
 
 from dublib.Methods.JSON import WriteJSON
@@ -371,10 +370,16 @@ class BaseTitle:
 	#==========================================================================================#
 
 	@property
-	def parser(self) -> BaseParser | None:
+	def parser(self) -> any:
 		"""Установленный парсер контента."""
 
 		return self._Parser
+	
+	@property
+	def used_filename(self) -> str | None:
+		"""Используемое имя файла."""
+
+		return self._UsedFilename
 
 	#==========================================================================================#
 	# >>>>> СВОЙСТВА ТАЙТЛА <<<<< #
@@ -634,7 +639,7 @@ class BaseTitle:
 		for CurrentBranch in self._Branches:
 
 			for CurrentChapter in CurrentBranch.chapters:
-				ChapterContent: list = list()
+				ChapterContent = list()
 				if self.format == "melon-manga": ChapterContent = CurrentChapter.slides
 				elif self.format == "melon-ranobe": ChapterContent = CurrentChapter.paragraphs
 

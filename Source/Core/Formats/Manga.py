@@ -195,6 +195,62 @@ class Manga(BaseTitle):
 		return self._Title["type"]
 
 	#==========================================================================================#
+	# >>>>> ПРИВАТНЫЕ МЕТОДЫ <<<<< #
+	#==========================================================================================#
+
+	def __FromLegacy(self, manga: dict) -> dict:
+		"""
+		Форматирует мангу из устаревшего формата.
+			manga – словарное описание манги.
+		"""
+
+		from dublib.Methods.Data import ReplaceDictionaryKey
+
+		Types = {
+			"UNKNOWN": None,
+			"MANGA": "manga",
+			"MANHWA": "manhwa",
+			"MANHUA": "manhua",
+			"WESTERN_COMIC": "western_comic",
+			"RUS_COMIC": "russian_comic",
+			"INDONESIAN_COMIC": "indonesian_comic",
+			"MANGA": "manga",
+			"OEL": "oel"
+		}
+		Statuses = {
+			"UNKNOWN": None,
+			"ANNOUNCED": "announced",
+			"ONGOING": "ongoing",
+			"ABANDONED": "dropped",
+			"COMPLETED": "completed"
+		}
+		manga["content_language"] = None
+		manga = ReplaceDictionaryKey(manga, "ru-name", "localized_name")
+		manga = ReplaceDictionaryKey(manga, "en-name", "eng_name")
+		manga = ReplaceDictionaryKey(manga, "another-names", "another_names")
+		manga = ReplaceDictionaryKey(manga, "author", "authors")
+		manga = ReplaceDictionaryKey(manga, "publication-year", "publication_year")
+		manga = ReplaceDictionaryKey(manga, "age-rating", "age_limit")
+		manga = ReplaceDictionaryKey(manga, "is-licensed", "is_licensed")
+		manga = ReplaceDictionaryKey(manga, "series", "franchises")
+		manga = ReplaceDictionaryKey(manga, "chapters", "content")
+		manga["format"] = "melon-manga"
+		manga["authors"] = manga["authors"].split(", ") if manga["authors"] else list()
+		manga["type"] = Types[manga["type"]]
+		manga["status"] = Statuses[manga["status"]]
+
+		for BranchID in manga["content"]:
+
+			for ChapterIndex in range(len(manga["content"][BranchID])):
+				Buffer = manga["content"][BranchID][ChapterIndex]
+				Buffer = ReplaceDictionaryKey(Buffer, "is-paid", "is_paid")
+				Buffer = ReplaceDictionaryKey(Buffer, "translator", "translators")
+				Buffer["translators"] = Buffer["translators"].split(", ") if Buffer["translators"] else list()
+				manga["content"][BranchID][ChapterIndex] = Buffer
+
+		return manga
+
+	#==========================================================================================#
 	# >>>>> ПЕРЕОПРЕДЕЛЯЕМЫЕ МЕТОДЫ <<<<< #
 	#==========================================================================================#
 
@@ -242,6 +298,7 @@ class Manga(BaseTitle):
 		
 		if os.path.exists(Path) and not self._SystemObjects.FORCE_MODE:
 			LocalManga = ReadJSON(Path)
+			if LocalManga["format"] == "dmp-v1": LocalManga = self.__FromLegacy(LocalManga)
 			LocalContent = dict()
 			MergedChaptersCount = 0
 			

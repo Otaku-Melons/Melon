@@ -48,7 +48,7 @@ class Command:
 	def warnings(self) -> LoggerRules:
 		"""Указывает, стоит ли обращать внимание на предупреждения при обработке ошибок."""
 
-		return self.__Data["rule"]
+		return self.__Data["warnings"]
 	
 	@property
 	def title_not_found(self) -> LoggerRules:
@@ -243,6 +243,15 @@ class Portals:
 	# >>>>> ШАБЛОНЫ ПОРТАЛОВ ОШИБОК <<<<< #
 	#==========================================================================================#
 
+	def chapter_not_found(self, title: BaseTitle, chapter: BaseChapter):
+		"""
+		Шаблон ошибки: глава не найдена.
+			title – данные тайтла;\n
+			chapter – данные главы.
+		"""
+
+		self.__Logger.chapter_not_found(title, chapter)
+
 	def request_error(self, response: WebResponse, text: str | None = None, exception: bool = True):
 		"""
 		Портал ошибки запроса.
@@ -255,7 +264,7 @@ class Portals:
 
 	def title_not_found(self, title: BaseTitle, exception: bool = True):
 		"""
-		Портал ошибки: глава не найдена.
+		Портал ошибки: тайтл не найден.
 			title – данные тайтла;\n
 			exception – указывает, выбрасывать ли исключение.
 		"""
@@ -476,6 +485,16 @@ class Logger:
 	# >>>>> ШАБЛОНЫ ОШИБОК <<<<< #
 	#==========================================================================================#
 
+	def chapter_not_found(self, title: BaseTitle, chapter: BaseChapter):
+		"""
+		Шаблон ошибки: глава не найдена.
+			title – данные тайтла;\n
+			chapter – данные главы.
+		"""
+
+		self.info(f"Title: \"{title.slug}\" (ID: {title.id}). Chapter {chapter.id} not found.")
+		print(f"Chapter {chapter.id} not found.")
+
 	def request_error(self, response: WebResponse, text: str | None = None, exception: bool = True):
 		"""
 		Шаблон ошибки запроса.
@@ -491,7 +510,7 @@ class Logger:
 
 	def title_not_found(self, title: BaseTitle, exception: bool = True):
 		"""
-		Шаблон ошибки: глава не найдена.
+		Шаблон ошибки: тайтл не найден.
 			title – данные тайтла;\n
 			exception – указывает, выбрасывать ли исключение.
 		"""

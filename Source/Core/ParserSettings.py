@@ -5,6 +5,7 @@ from dublib.Methods.Filesystem import NormalizePath
 from dublib.Methods.JSON import ReadJSON
 from dublib.Methods.Data import Zerotify
 
+import hashlib
 import os
 import re
 
@@ -142,13 +143,27 @@ class ImageFilters:
 
 		#---> Генерация динамических свойств.
 		#==========================================================================================#
-		self.__Data = dict()
+		self.__Data = data
 
 		if "image_md5" not in self.__Data.keys() or type(self.__Data["image_md5"]) != list: self.__Data["image_md5"] = list()
 		Keys = ["image_min_height", "image_min_width", "image_max_height", "image_max_width"]
 
 		for Key in Keys:
 			if Key not in self.__Data.keys() or type(self.__Data[Key]) != int: self.__Data[Key] = None
+
+	def check_hash(self, path: str) -> bool:
+		"""
+		Проверяет, следует ли отфильтровать изображение по MD5-хэшу.
+			path – путь к изображению.
+		"""
+
+		Hash = None
+		
+		with open(path, "rb") as FileReader: 
+			BinaryContent = FileReader.read()
+			Hash = hashlib.md5(BinaryContent).hexdigest()
+
+		return Hash in self.md5
 
 	def check_sizes(self, width: int, height: int) -> bool:
 		"""
@@ -196,12 +211,6 @@ class Common:
 		return self.__Settings["covers_directory"]
 	
 	@property
-	def images_directory(self) -> str:
-		"""Директория изображений."""
-
-		return self.__Settings["images_directory"]
-	
-	@property
 	def titles_directory(self) -> str:
 		"""Директория описательных файлов."""
 
@@ -247,7 +256,7 @@ class Common:
 			parser_name – название парсера.
 		"""
 
-		Directories = ["archives", "covers", "images", "titles"]
+		Directories = ["archives", "covers", "titles"]
 
 		for Directory in Directories:
 			Key = f"{Directory}_directory"
@@ -267,7 +276,6 @@ class Common:
 		self.__Settings = {
 			"archives_directory": "",
 			"covers_directory": "",
-			"images_directory": "",
 			"titles_directory": "",
 			"bad_image_stub": None,
 			"pretty": False,
@@ -314,6 +322,10 @@ class Filters:
 
 		return self.__ImageFilters
 	
+	#==========================================================================================#
+	# >>>>> ПУБЛИЧНЫЕ МЕТОДЫ <<<<< #
+	#==========================================================================================#
+
 	def __init__(self, settings: dict):
 
 		#---> Генерация динамических свойств.
@@ -387,6 +399,60 @@ class Proxy:
 				if Key in settings["proxy"].keys() and type(self.__Settings[Key]) == type(settings["proxy"][Key]): self.__Settings[Key] = settings["proxy"][Key]
 				else: logger.warning(f"Proxy setting \"{Key}\" has been reset to default.")
 
+class Ranobe:
+	"""Дополнительные настройки парсеров ранобэ."""
+
+	#==========================================================================================#
+	# >>>>> СВОЙСТВА <<<<< #
+	#==========================================================================================#
+
+	@property
+	def images_directory(self) -> str:
+		"""Директория иллюстраций."""
+
+		return self.__Settings["images_directory"]
+
+	#==========================================================================================#
+	# >>>>> МЕТОДЫ <<<<< #
+	#==========================================================================================#
+
+	def __PutDefaultDirectories(self, parser_name: str):
+		"""
+		Подстанавливает стандартные директории на пустые места.
+			parser_name – название парсера.
+		"""
+
+		Directories = ["images"]
+
+		for Directory in Directories:
+			Key = f"{Directory}_directory"
+			if not self.__Settings[Key]: self.__Settings[Key] = f"Output/{parser_name}/{Directory}"
+			else: self.__Settings[Key] = NormalizePath(self.__Settings[Key])
+
+	def __init__(self, parser_name: str, settings: dict, logger: Logger):
+		"""
+		Дополнительные настройки парсеров ранобэ.
+			parser_name – название парсера;\n
+			settings – словарь настроек;\n
+			logger – менеджер логов.
+		"""
+
+		#---> Генерация динамических свойств.
+		#==========================================================================================#
+		self.__Settings = {
+			"images_directory": ""
+		}
+
+		if "ranobe" in settings.keys():
+			
+			for Key in self.__Settings.keys():
+				if Key in settings["common"].keys(): self.__Settings[Key] = settings["common"][Key]
+				else: logger.warning(f"Ranobe setting \"{Key}\" has been reset to default.")
+
+			self.__PutDefaultDirectories(parser_name)
+
+		else: raise BadSettings(parser_name)
+
 class Custom:
 	"""Собственные настройки парсера."""
 
@@ -447,6 +513,12 @@ class ParserSettings:
 
 		return self.__Proxy
 
+	@property
+	def ranobe(self) -> Ranobe | None:
+		"""Дополнительные настройки парсеров ранобэ.."""
+
+		return self.__Ranobe
+
 	#==========================================================================================#
 	# >>>>> ПРИВАТНЫЕ МЕТОДЫ <<<<< #
 	#==========================================================================================#
@@ -493,6 +565,7 @@ class ParserSettings:
 		self.__Filters = Filters(self.__Settings)
 		self.__Proxy = Proxy(self.__Settings, logger)
 		self.__Custom = Custom(self.__Settings, logger)
+		self.__Ranobe = Ranobe(parser_name, self.__Settings, logger)
 
 	def __getitem__(self, category: str) -> dict:
 		"""

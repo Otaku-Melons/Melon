@@ -1,4 +1,5 @@
 from . import BaseChapter, BaseBranch, BaseTitle, By, Statuses
+from Source.Core.ImagesDownloader import ImagesDownloader
 from Source.Core.SystemObjects import SystemObjects
 from Source.Core.Exceptions import ChapterNotFound
 
@@ -52,6 +53,54 @@ class Chapter(BaseChapter):
 	#==========================================================================================#
 	# >>>>> ПРИВАТНЫЕ МЕТОДЫ <<<<< #
 	#==========================================================================================#
+
+	def __DownloadImages(self, paragraph: BeautifulSoup):
+		"""
+		Скачивает иллюстрации из абзаца.
+			paragraph – абзац.
+		"""
+
+		Parser = self.__Title.parser
+		Images = paragraph.find_all("img")
+
+		for Image in Images:
+			Image: BeautifulSoup
+			Message = "Done."
+			
+			if Image.has_attr("src"):
+				Link = Image["src"]
+				Filename = Link.split("/")[-1]
+				Result = None
+
+				print(f"Downloading image: \"{Filename}\"... ", end = "")
+				
+				Filename = Parser.image(Link)
+				Directory = f"{Parser.settings.ranobe.images_directory}/{self.__Title.used_filename}/{self.id}"
+
+				if Filename: 
+					Path = f"{self._SystemObjects.temper.parser_temp}/{Filename}"
+
+					if Parser.settings.filters.image.check_hash(Path):
+						Message = "Filtered by MD5 hash."
+						Image.decompose()
+						os.remove(Path)
+
+					else:
+						if not os.path.exists(Directory): os.makedirs(Directory)
+						Result = ImagesDownloader(self._SystemObjects).move_from_temp(Directory, Filename)
+
+						if Result: Image.attrs = {"src": f"{Directory}/{Filename}"}
+						else: Message = "Error."
+
+				else: Message = "Error."
+
+				if Message != "Done." and Parser.settings.common.bad_image_stub:
+					Image.attrs = {"src": Parser.settings.common.bad_image_stub}
+					Message += " Replaced by stub."
+
+				print(Message)
+
+			else: Image.decompose()
 
 	def __GetLocalizedChapterWord(self) -> str | None:
 		"""Возвращает слово в нижнем регистре, обозначающее главу."""
@@ -119,14 +168,14 @@ class Chapter(BaseChapter):
 		"""
 
 		IsCorrect = True
+
 		paragraph = self._ParserSettings.filters.text.clear(paragraph)
-		
+		Tag = BeautifulSoup(paragraph, "html.parser").find("p")
+		self.__DownloadImages(Tag)
 		if self._ParserSettings.common.pretty:
 
 			#---> Редактирование абзаца.
 			#==========================================================================================#
-			paragraph = paragraph.strip()
-			Tag = BeautifulSoup(paragraph, "html.parser").find("p")
 			
 			if Tag.text:
 				Align = ""
@@ -149,7 +198,7 @@ class Chapter(BaseChapter):
 			#---> Определение валидности абзаца.
 			#==========================================================================================#
 			
-			if not Tag.text.strip():
+			if not Tag.text.strip(" \t\n.") and not Tag.find("img"):
 				IsCorrect = False
 
 			elif len(self._Chapter["paragraphs"]) < 4:
