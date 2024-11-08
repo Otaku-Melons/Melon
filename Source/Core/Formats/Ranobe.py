@@ -7,6 +7,7 @@ from dublib.Methods.Data import RemoveRecurringSubstrings
 from dublib.Methods.JSON import ReadJSON
 from dublib.Polyglot import HTML
 from bs4 import BeautifulSoup
+from time import sleep
 
 import enum
 import os
@@ -62,12 +63,13 @@ class Chapter(BaseChapter):
 
 		Parser = self.__Title.parser
 		Images = paragraph.find_all("img")
-
+		
 		for Image in Images:
 			Image: BeautifulSoup
 			Message = "Done."
 			
 			if Image.has_attr("src"):
+				Image.attrs = {"src": Image["src"]}
 				Link = Image["src"]
 				Filename = Link.split("/")[-1]
 				Result = None
@@ -75,6 +77,8 @@ class Chapter(BaseChapter):
 				print(f"Downloading image: \"{Filename}\"... ", end = "")
 				
 				Filename = Parser.image(Link)
+				sleep(Parser.settings.common.delay)
+
 				Directory = f"{Parser.settings.ranobe.images_directory}/{self.__Title.used_filename}/{self.id}"
 
 				if Filename: 
@@ -89,13 +93,15 @@ class Chapter(BaseChapter):
 						if not os.path.exists(Directory): os.makedirs(Directory)
 						Result = ImagesDownloader(self._SystemObjects).move_from_temp(Directory, Filename)
 
-						if Result: Image.attrs = {"src": f"{Directory}/{Filename}"}
+						if Result: Image["src"] = f"{Directory}/{Filename}"
 						else: Message = "Error."
 
-				else: Message = "Error."
+				else:
+					Message = "Error."
+					
 
 				if Message != "Done." and Parser.settings.common.bad_image_stub:
-					Image.attrs = {"src": Parser.settings.common.bad_image_stub}
+					Image["src"] = Parser.settings.common.bad_image_stub
 					Message += " Replaced by stub."
 
 				print(Message)
@@ -235,7 +241,7 @@ class Chapter(BaseChapter):
 			name += "…"
 
 		else: 
-			name = name.rstrip(".")
+			name = name.rstrip(".–")
 
 		name = name.replace("\u00A0", " ")
 		name = name.lstrip(":")

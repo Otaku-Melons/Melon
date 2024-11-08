@@ -282,9 +282,13 @@ class Portals:
 			chapter – данные главы.
 		"""
 
-		ChapterNote = "Paid chapter" if chapter.is_paid else "Chapter"
-		self.info(f"Title: \"{title.slug}\" (ID: {title.id}). {ChapterNote} {chapter.id} skipped.")
-		print(f"{ChapterNote} {chapter.id} skipped.")
+		ChapterType = "Paid chapter" if chapter.is_paid else "Chapter"
+		ChapterID = chapter.id if chapter.id else chapter.slug
+		if ChapterID: ChapterID = " " + ChapterID
+		else: ChapterID = ""
+
+		self.info(f"Title: \"{title.slug}\" (ID: {title.id}). {ChapterType}{ChapterID} skipped.")
+		print(f"{ChapterType}{ChapterID} skipped.")
 
 	def collect_progress_by_page(self, page: int):
 		"""

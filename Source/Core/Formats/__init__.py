@@ -650,8 +650,7 @@ class BaseTitle:
 					if ChapterContent:
 						AmendedChaptersCount += 1
 						self._SystemObjects.logger.chapter_amended(self, CurrentChapter)
-
-					sleep(self._ParserSettings.common.delay)
+						sleep(self._ParserSettings.common.delay)
 
 		self._SystemObjects.logger.amending_end(self, AmendedChaptersCount)
 
