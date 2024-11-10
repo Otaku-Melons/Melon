@@ -90,6 +90,20 @@ ComPos.add_key("use", ParametersTypes.Text, "Parser name.")
 Com.add_flag("s", "Shutdown PC after script finish.")
 CommandsList.append(Com)
 
+Com = Command("tagger", "Process titles classificators.")
+ComPos = Com.create_position("INPUT", "Input data.", important = True)
+ComPos.add_key("classificator", ParametersTypes.All, "Unknown type of classificator.")
+ComPos.add_key("genre", ParametersTypes.All, "Genre.")
+ComPos.add_key("franchise", ParametersTypes.All, "Franchise.")
+ComPos.add_key("tag", ParametersTypes.All, "Tag.")
+ComPos = Com.create_position("PARSER", "Parser name to determine source rules.")
+ComPos.add_key("use", ParametersTypes.Text, "Parser name.")
+ComPos = Com.create_position("OUTPUT", "Output mode.")
+ComPos.add_flag("print", "Styled print in console (default).")
+ComPos.add_flag("json", "Prints JSON-string in console.")
+ComPos.add_key("file", description = "Path to dump JSON file.")
+CommandsList.append(Com)
+
 Com = Command("uninstall", "Uninstall parsers.")
 ComPos = Com.create_position("PARSER", "Name of parser.", important = True)
 ComPos.add_argument(ParametersTypes.Text, "Name of parser.")
@@ -112,7 +126,7 @@ if CommandDataStruct == None:
 	print("Unknown command!")
 	exit(0)
 
-elif CommandDataStruct.name in ["help", "list"]: Objects.LIVE_MODE = True
+elif CommandDataStruct.name in ["help", "list", "tagger"]: Objects.LIVE_MODE = True
 
 if not Objects.LIVE_MODE:
 	Objects.logger.templates.title(VERSION)

@@ -3,6 +3,7 @@ from Source.Core.SystemObjects import SystemObjects
 from Source.Core.Builders import MangaBuilder
 from Source.Core.Collector import Collector
 from Source.Core.Installer import Installer
+from Source.Core.Tagger import Tagger
 from Source.Core.Exceptions import *
 from Source.Core.Formats import By
 from Source.CLI import Templates
@@ -364,6 +365,33 @@ def com_repair(system_objects: SystemObjects, command: ParsedCommandData):
 	#---> Вывод отчёта.
 	#==========================================================================================#
 	# print(ResultMessage)
+
+def com_tagger(system_objects: SystemObjects, command: ParsedCommandData):
+	"""
+	Запускает обработчик классификаторов тайтлов.
+		system_objects – коллекция системных объектов;\n
+		command – объект представления консольной команды.
+	"""
+
+	#---> Подготовка к выполнению.
+	#==========================================================================================#
+	ParserName = command.get_key_value("use")
+	system_objects.logger.select_cli_point(command.name)
+	if ParserName: system_objects.select_parser(ParserName)
+
+	#---> Парсинг данных команды.
+	#==========================================================================================#
+	TaggerObject = Tagger()
+	Type, Name = TaggerObject.get_data(command)
+
+	#---> Выполнение команды.
+	#==========================================================================================#
+	Operation = TaggerObject.process(Name, Type, ParserName)
+
+	#---> Вывод отчёта.
+	#==========================================================================================#
+	if command.check_flag("json"): print(Operation.to_json())
+	else: Operation.print()
 
 # Экспериментальный метод.
 def com_uninstall(system_objects: SystemObjects, command: ParsedCommandData):
