@@ -451,8 +451,6 @@ class Ranobe:
 
 			self.__PutDefaultDirectories(parser_name)
 
-		else: raise BadSettings(parser_name)
-
 class Custom:
 	"""Собственные настройки парсера."""
 

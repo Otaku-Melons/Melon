@@ -361,21 +361,24 @@ class Logger:
 
 			if Message != self.__ErrorCache:
 				self.__ErrorCache = Message
+				
+				try:
+					if self.__LoggerSettings.telebot.attach_log:
+						Bot.send_document(
+							self.__LoggerSettings.telebot.chat_id,
+							document = open(self.__LogFilename, "rb"), 
+							caption = Message,
+							parse_mode = "MarkdownV2"
+						)
 
-				if self.__LoggerSettings.telebot.attach_log:
-					Bot.send_document(
-						self.__LoggerSettings.telebot.chat_id,
-						document = open(self.__LogFilename, "rb"), 
-						caption = Message,
-						parse_mode = "MarkdownV2"
-					)
+					else:
+						Bot.send_message(
+							self.__LoggerSettings.telebot.chat_id,
+							Message,
+							parse_mode = "MarkdownV2"
+						)
 
-				else:
-					Bot.send_message(
-						self.__LoggerSettings.telebot.chat_id,
-						Message,
-						parse_mode = "MarkdownV2"
-					)
+				except telebot.apihelper.ApiTelegramException: logging.error("TeleBot error occurs during sending report.")
 
 		self.__SilentMode = False
 

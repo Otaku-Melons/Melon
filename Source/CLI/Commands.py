@@ -10,7 +10,7 @@ from Source.CLI import Templates
 
 from dublib.CLI.StyledPrinter import Styles, TextStyler
 from dublib.CLI.Terminalyzer import ParsedCommandData
-from dublib.Methods.JSON import ReadJSON
+from dublib.Methods.JSON import ReadJSON, WriteJSON
 from dublib.Methods.System import Clear
 from time import sleep
 
@@ -382,8 +382,8 @@ def com_tagger(system_objects: SystemObjects, command: ParsedCommandData):
 	#---> Парсинг данных команды.
 	#==========================================================================================#
 	TaggerObject = Tagger()
-	Type, Name = TaggerObject.get_data(command)
-
+	Type, Name = TaggerObject.get_classificator_data(command)
+	
 	#---> Выполнение команды.
 	#==========================================================================================#
 	Operation = TaggerObject.process(Name, Type, ParserName)
@@ -391,6 +391,7 @@ def com_tagger(system_objects: SystemObjects, command: ParsedCommandData):
 	#---> Вывод отчёта.
 	#==========================================================================================#
 	if command.check_flag("json"): print(Operation.to_json())
+	elif command.check_key("file"): WriteJSON(command.get_key_value("file"), Operation.to_dict())
 	else: Operation.print()
 
 # Экспериментальный метод.

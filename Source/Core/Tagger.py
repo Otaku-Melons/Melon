@@ -1,4 +1,4 @@
-from dublib.CLI.Terminalyzer import Command, ParametersTypes, ParsedCommandData, Terminalyzer
+from dublib.CLI.Terminalyzer import Command, ParsedCommandData, Terminalyzer
 from dublib.Methods.Filesystem import ReadTextFile, WriteTextFile
 from dublib.CLI.StyledPrinter import Styles, StyledPrinter
 
@@ -14,33 +14,11 @@ import os
 class ClassificatorsTypes(enum.Enum):
 	"""Перечисление типов классификаторов."""
 
+	Classificator = "classificator"
 	Franchise = "franchise"
 	Genre = "genre"
+	Person = "person"
 	Tag = "tag"
-	
-#==========================================================================================#
-# >>>>> ОПИСАНИЕ КОМАНДЫ <<<<< #
-#==========================================================================================#
-
-TaggerCommand = Command("tagger", "Process genres and tags.")
-
-TaggerInputPosition = TaggerCommand.create_position("INPUT", "Input data.", important = True)
-TaggerInputPosition.add_key("classificator", ParametersTypes.All, "Unknown type of classificator.")
-TaggerInputPosition.add_key("genre", ParametersTypes.All, "Genre.")
-TaggerInputPosition.add_key("franchise", ParametersTypes.All, "Franchise.")
-TaggerInputPosition.add_key("tag", ParametersTypes.All, "Tag.")
-
-TaggerParserPosition = TaggerCommand.create_position("PARSER", "Parser name to determine source rules.")
-TaggerParserPosition.add_key("use", ParametersTypes.Text, "Parser name.")
-
-TaggerParserPosition = TaggerCommand.create_position("TYPE", "New type of classificator.")
-
-TaggerCommand.add_flag("del", "Delete classificator.")
-TaggerCommand.add_flag("p", "Make classificator a person.")
-TaggerCommand.add_flag("t", "Make classificator a tag.")
-TaggerCommand.add_flag("g", "Make classificator a genre.")
-TaggerCommand.add_flag("f", "Make classificator a franchise.")
-TaggerCommand.add_key("rename", ParametersTypes.All, "Rename classificator.")
 
 #==========================================================================================#
 # >>>>> ДОПОЛНИТЕЛЬНЫЕ ТИПЫ ДАННЫХ <<<<< #
@@ -78,6 +56,12 @@ class Operation:
 		return self.__Name
 	
 	@property
+	def rule(self) -> bool:
+		"""Состояние: найдено ли правило."""
+
+		return self.__IsRuleActive
+
+	@property
 	def type(self) -> ClassificatorsTypes | None:
 		"""Тип классификатора."""
 
@@ -99,6 +83,7 @@ class Operation:
 		self.__OriginalName = classificator
 		self.__Name = classificator
 		self.__IsDeleted = False
+		self.__IsRuleActive = False
 		self.__OriginalType = type
 		self.__Type = type
 	
@@ -106,6 +91,11 @@ class Operation:
 		"""Преобразует операцию в строковое представление словаря."""
 
 		return str(self.to_dict())
+
+	def activate(self):
+		"""Указывает, что правило для этой операции было найдено."""
+
+		self.__IsRuleActive = True
 
 	def change_type(self, type: ClassificatorsTypes):
 		"""
@@ -120,6 +110,11 @@ class Operation:
 
 		self.__IsDeleted = True
 	
+	def lower(self):
+		"""Переводит в нижний регистр."""
+
+		self.__Name = self.__Name.lower()
+
 	def print(self):
 		"""Выводит операцию в консоль."""
 
@@ -130,6 +125,9 @@ class Operation:
 		StyledPrinter("delete: ", decorations = [Styles.Decorations.Bold], end = False)
 		if self.is_deleted: StyledPrinter("true", text_color = Styles.Colors.Red)
 		else: StyledPrinter("false", text_color = Styles.Colors.Green)
+		StyledPrinter("rule: ", decorations = [Styles.Decorations.Bold], end = False)
+		if self.rule: StyledPrinter("true", text_color = Styles.Colors.Green)
+		else: StyledPrinter("false", text_color = Styles.Colors.Red)
 
 	def rename(self, text: str):
 		"""Переименовывает классификатор."""
@@ -139,12 +137,17 @@ class Operation:
 	def to_dict(self) -> dict:
 		"""Преобразует операцию в словарь."""
 
-		return {"name": self.name, "type": self.type.value, "delete": self.is_deleted}
+		return {"name": self.name, "type": self.type.value, "delete": self.is_deleted, "rule": self.rule}
 
 	def to_json(self) -> str:
 		"""Преобразует операцию в JSON-строку."""
 
 		return json.dumps(self.to_dict(), ensure_ascii = False).encode("utf8").decode()
+
+	def upper(self):
+		"""Переводит в верхний регистр."""
+
+		self.__Name = self.__Name.upper()
 
 #==========================================================================================#
 # >>>>> ОСНОВНОЙ КЛАСС <<<<< #
@@ -154,29 +157,56 @@ class Tagger:
 	"""Обработчик жанров и тегов."""
 
 	#==========================================================================================#
+	# >>>>> СВОЙСТВА <<<<< #
+	#==========================================================================================#
+
+	@property
+	def command(self) -> Command:
+		"""Описание команды интерпретации операции."""
+
+		TaggerCommand = Command("tagger", "Determine classificator operation.")
+
+		TaggerInputPosition = TaggerCommand.create_position("CLASSIFICATOR", "Input data.", important = True)
+		TaggerInputPosition.add_key("classificator", description = "Unknown type of classificator.")
+		TaggerInputPosition.add_key("genre", description = "Genre.")
+		TaggerInputPosition.add_key("franchise", description = "Franchise.")
+		TaggerInputPosition.add_key("tag", description = "Tag.")
+
+		TaggerTypePosition = TaggerCommand.create_position("TYPE", "New type of classificator.")
+		TaggerTypePosition.add_flag("p", "Make classificator a person.")
+		TaggerTypePosition.add_flag("t", "Make classificator a tag.")
+		TaggerTypePosition.add_flag("g", "Make classificator a genre.")
+		TaggerTypePosition.add_flag("f", "Make classificator a franchise.")
+
+		TaggerCasePosition = TaggerCommand.create_position("CASE", "Case directive.")
+		TaggerCasePosition.add_flag("low", "Convert to lower case.")
+		TaggerCasePosition.add_flag("up", "Convert to upper case.")
+
+		TaggerCommand.add_flag("del", "Delete classificator.")
+		TaggerCommand.add_key("rename", description = "Rename classificator.")
+
+		return TaggerCommand
+
+	#==========================================================================================#
 	# >>>>> ПРИВАТНЫЕ МЕТОДЫ <<<<< #
 	#==========================================================================================#
 
-	def __DirectiveToOperation(self, directive: ParsedCommandData) -> Operation:
+	def __CheckParameters(self, rule: list[str], indicator: str, parameters: list[str]) -> bool:
 		"""
-		Преобразует директиву в операцию.
-			directive – спаршенная директива.
+		Проверяет, находится ли хотя бы один из параметров в правиле.
+			rule – правило обработки;\n
+			indicator – индикатор флага или ключа;\n
+			parameters – список параметров.
 		"""
 
-		Type, Name = self.get_data(directive)
-		NewOperation = Operation(Name, Type)
+		for Parameter in parameters:
+			if f"{indicator}{Parameter}" in rule: return True
 
-		if directive.check_flag("del"): NewOperation.delete()
-		if directive.check_key("rename"): NewOperation.rename(directive.get_key_value("rename"))
-		if directive.check_flag("g"): NewOperation.change_type(ClassificatorsTypes.Genre)
-		if directive.check_flag("f"): NewOperation.change_type(ClassificatorsTypes.Franchise)
-		if directive.check_flag("t"): NewOperation.change_type(ClassificatorsTypes.Tag)
-
-		return NewOperation
+		return False
 
 	def __FindOperation(self, operations: list[Operation], classificator: str, type: ClassificatorsTypes | None) -> Operation | None:
 		"""
-		Ищет операцию по имени классификатора.
+		Ищет операцию в списке по имени и типу классификатора.
 			operations – список операций;\n
 			classificator – классификатор;\n
 			type – тип классификатора.
@@ -186,38 +216,78 @@ class Tagger:
 
 		for CurrentOperation in operations:
 			
-			if CurrentOperation.original_type == type and CurrentOperation.original_name == classificator: 
-				SearchResult = CurrentOperation
+			if type:
+				if CurrentOperation.original_type == type and CurrentOperation.original_name == classificator: SearchResult = CurrentOperation
+
+			else:
+				if CurrentOperation.original_name == classificator: SearchResult = CurrentOperation
 
 		return SearchResult
 
 	def __ReadScript(self):
-		"""Считывает скрипт обработки жанров и тегов."""
+		"""Считывает скрипт обработки жанров и тегов и преобразует его в набор команд."""
 
 		Path = "Configs/tagger.ini"
 		Script = list()
-		Source = None
 
 		if not os.path.exists(Path): WriteTextFile(Path, "# Melon tagger ruleset.\n")
 		else: Script = ReadTextFile(Path, split = "\n")
 
+		Source = None
+		Directives = list()
+
 		for Line in Script:
 			Line = Line.strip()
 
-			if not Line or Line.startswith("#"): pass
+			if not Line or Line[0] in "#;\\/": pass
 
 			elif Line.startswith("[") and Line.endswith("]"):
 				Source = Line[1:-1].strip()
 				if Source not in self.__Script.keys(): self.__Script[Source] = list()
+				Directives = list()
+
+			elif Line.startswith("@"):
+				Directive = Line[1:].strip().upper()
+				Directives = self.__RemoveTypesDirectives(Directives, Directive)
+				Directives.append(Directive)
+				if Directive == "DROP": Directives = list()
 
 			else:
+				if "IGNORE" in Directives: continue
+
 				Parts = shlex.split(Line)
 
 				for Index in range(len(Parts)):
 					if Parts[Index] in ["franchise", "genre", "tag", "rename"]: Parts[Index] = "--" + Parts[Index]
+					elif Parts[Index] == "*": Parts[Index] = "--classificator"
 					elif Parts[Index] in ["del"]: Parts[Index] = "-" + Parts[Index]
 
-				self.__Script[Source].append(["tagger"] + Parts)
+				if "LOW" in Directives and not self.__CheckParameters(Parts, "-", ["low", "up"]): Parts.append("-low")
+				elif "UP" in Directives and not self.__CheckParameters(Parts, "-", ["low", "up"]): Parts.append("-up")
+				
+				if "GENRE" in Directives and not self.__CheckParameters(Parts, "-", ["g", "f", "p", "t"]): Parts.append("-g")
+				elif "FRANCHISE" in Directives and not self.__CheckParameters(Parts, "-", ["g", "f", "p", "t"]): Parts.append("-f")
+				elif "PERSON" in Directives and not self.__CheckParameters(Parts, "-", ["g", "f", "p", "t"]): Parts.append("-p")
+				elif "TAG" in Directives and not self.__CheckParameters(Parts, "-", ["g", "f", "p", "t"]): Parts.append("-t")
+
+				self.__Script[Source].append(Parts)
+
+	def __RemoveTypesDirectives(self, directives: list[str], type: str) -> list[str]:
+		"""
+		Удаляет директивы типов при обновлении.
+			directives – список активных директив;\n
+			type – тип из директивы.
+		"""
+
+		TypesDirectives = ["GENRES", "FRANCHISES", "PERSONS", "TAGS"]
+
+		if type in TypesDirectives:
+			Buffer = directives.copy()
+
+			for Element in Buffer:
+				if Element in TypesDirectives: directives.remove(Element)
+
+		return directives
 
 	#==========================================================================================#
 	# >>>>> ПУБЛИЧНЫЕ МЕТОДЫ <<<<< #
@@ -234,31 +304,45 @@ class Tagger:
 
 		self.__ReadScript()
 
-	def get_data(self, parsed_command: ParsedCommandData) -> tuple[ClassificatorsTypes | None, str]:
+	def get_classificator_data(self, command: ParsedCommandData) -> tuple[ClassificatorsTypes | None, str]:
 		"""
-		Определяет тип классификатора исходя из данных команды.
-			parsed_command – данные команды.
+		Определяет заданные тип и имя классификатора исходя из команды.
+			command – данные команды.
 		"""
 
 		Type = None
 		Name = None
 
-		if parsed_command.check_key("genre"):
-			Type = ClassificatorsTypes.Genre
-			Name = parsed_command.get_key_value("genre")
+		for CurrentType in [Element for Element in ClassificatorsTypes]:
+			CurrentType: ClassificatorsTypes
 
-		elif parsed_command.check_key("franchise"):
-			Type = ClassificatorsTypes.Franchise
-			Name = parsed_command.get_key_value("franchise")
-
-		elif parsed_command.check_key("tag"):
-			Type = ClassificatorsTypes.Tag
-			Name = parsed_command.get_key_value("tag")
-
-		elif parsed_command.check_key("classificator"):
-			Name = parsed_command.get_key_value("classificator")
+			if command.check_key(CurrentType.value):
+				Type = CurrentType
+				Name = command.get_key_value(CurrentType.value)
 
 		return Type, Name
+
+	def interprete(self, command: ParsedCommandData) -> Operation:
+		"""
+		Интерпретирует команду в операцию.
+			command – данные команды.
+		"""
+
+		Type, Name = self.get_classificator_data(command)
+		NewOperation = Operation(Name, Type)
+
+		if command.check_flag("del"): NewOperation.delete()
+		if command.check_key("rename"): NewOperation.rename(command.get_key_value("rename"))
+
+		if command.check_flag("g"): NewOperation.change_type(ClassificatorsTypes.Genre)
+		elif command.check_flag("f"): NewOperation.change_type(ClassificatorsTypes.Franchise)
+		elif command.check_flag("p"): NewOperation.change_type(ClassificatorsTypes.Person)
+		elif command.check_flag("t"): NewOperation.change_type(ClassificatorsTypes.Tag)
+		
+		if command.check_flag("up"): NewOperation.upper()
+		if command.check_flag("low"): NewOperation.lower()
+
+		return NewOperation
 
 	def process(self, classificator: str, type: ClassificatorsTypes | None, parser: str | None = None) -> Operation:
 		"""
@@ -268,27 +352,23 @@ class Tagger:
 			parser – название парсера для определение списка директив.
 		"""
 
-		parser = [parser, None] if parser else [None]
+		Levels = [parser, None] if parser else [None]
 		Script = self.__Script.copy()
-		Directives: list[str] = list()
-		
-		for Key in Script.keys(): 
-			if Key in parser: Directives += Script[Key]
-
+		Directives: list[list] = list()
 		ParsedDirectives: list[ParsedCommandData] = list()
+		Operations: list[Operation] = list()
+
+		for Key in Script.keys(): 
+			if Key in Levels: Directives += Script[Key]
 
 		for Line in Directives:
-			Analyzer = Terminalyzer(Line)
-			ParsedDirectives.append(Analyzer.check_commands([TaggerCommand]))
+			Analyzer = Terminalyzer(["tagger"] + Line)
+			ParsedDirectives.append(Analyzer.check_commands([self.command]))
 
 		ParsedDirectives = [Value for Value in ParsedDirectives if Value is not None]
-
-		Operations: list[Operation] = list()
-		
-		for Directive in ParsedDirectives: Operations.append(self.__DirectiveToOperation(Directive))
-		
+		for Directive in ParsedDirectives: Operations.append(self.interprete(Directive))
 		TargetOperation = self.__FindOperation(Operations, classificator, type)
 		if not TargetOperation: TargetOperation = Operation(classificator, type)
+		else: TargetOperation.activate()
 
 		return TargetOperation
-
