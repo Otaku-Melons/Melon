@@ -2,6 +2,7 @@ from Source.Core.Exceptions import ParsingError, TitleNotFound
 from Source.Core.Formats import BaseChapter, BaseTitle
 from Source.CLI import Templates
 
+from dublib.CLI.TextStyler import TextStyler
 from dublib.WebRequestor import WebResponse
 from dublib.Methods.JSON import ReadJSON
 from dublib.Polyglot import Markdown
@@ -29,75 +30,111 @@ class LoggerRules(enum.Enum):
 # >>>>> КОНТЕЙНЕРЫ НАСТРОЕК <<<<< #
 #==========================================================================================#
 
-class Command:
-	"""Фильтры вывода команды."""
+class CleanerSettings:
+	"""Правила очистки логов."""
 
-	@property
-	def rule(self) -> LoggerRules:
-		"""Правило обработки логов."""
+	def __init__(self, data: dict):
+		"""
+		Правила очистки логов.
+			data – словарь прафил очистки.
+		"""
 
-		return self.__Data["rule"]
+		#---> Генерация динамических свойств.
+		#==========================================================================================#
+		self.__Rules = data.copy()
+
+	def __getitem__(self, command: str) -> LoggerRules:
+		"""Возвращает правило очистки логов."""
+
+		Rule = LoggerRules(0)
+		if command in self.__Rules.keys(): Rule = LoggerRules(self.__Rules[command])
+
+		return Rule
+
+class ReportsRules:
+	"""Набор правил отправки отчётов."""
+
+	@property 
+	def attach_log(self) -> bool:
+		"""Состояние: требуется ли прикреплять файл лога к отчёту."""
+
+		return self.__Data["attach_log"]
 	
-	@property
-	def ignored_requests_errors(self) -> list[any]:
-		"""Список игнорируемых кодов ошибок запросов."""
+	@property 
+	def forbidden_commands(self) -> list[str]:
+		"""Список команд, для которых запрещена отправка отчётов."""
+
+		return self.__Data["forbidden_commands"]
+	
+	@property 
+	def ignored_requests_errors(self) -> list[int, None]:
+		"""Список кодов HTTP, не вызывающих отправку отчётов."""
 
 		return self.__Data["ignored_requests_errors"]
 	
-	@property
-	def warnings(self) -> LoggerRules:
-		"""Указывает, стоит ли обращать внимание на предупреждения при обработке ошибок."""
+	@property 
+	def title_not_found(self) -> bool:
+		"""Указывает, нужно ли отправлять отчёт для данного типа записи."""
+
+		return self.__Data["title_not_found"]
+	
+	@property 
+	def chapter_not_found(self) -> bool:
+		"""Указывает, нужно ли отправлять отчёт для данного типа записи."""
+
+		return self.__Data["chapter_not_found"]
+	
+	@property 
+	def downloading_error(self) -> bool:
+		"""Указывает, нужно ли отправлять отчёт для данного типа записи."""
+
+		return self.__Data["downloading_error"]
+	
+	@property 
+	def critical(self) -> bool:
+		"""Указывает, нужно ли отправлять отчёт для данного типа записи."""
+
+		return self.__Data["critical"]
+	
+	@property 
+	def errors(self) -> bool:
+		"""Указывает, нужно ли отправлять отчёт для данного типа записи."""
+
+		return self.__Data["errors"]
+	
+	@property 
+	def warnings(self) -> bool:
+		"""Указывает, нужно ли отправлять отчёт для данного типа записи."""
 
 		return self.__Data["warnings"]
 	
-	@property
-	def title_not_found(self) -> LoggerRules:
-		"""Указывает, стоит ли обращать внимание на ошибки типа: TitleNotFound."""
-
-		return self.__Data["title_not_found"]
-
-	def __init__(self, data: dict | None = None):
+	def __init__(self, data: dict):
 		"""
-		Фильтры вывода команды.
-			data – словарь фильтров для парсинга.
+		Набор правил отправки отчётов.
+			data – словарь правил.
 		"""
 
+		#---> Генерация динамических свойств.
+		#==========================================================================================#
+		self.__Data = data.copy()
+		
 		Default = {
-			"rule": LoggerRules.Remove,
-			"warnings": True,
+			"attach_log": True,
 
+			"forbidden_commands": [],
 			"ignored_requests_errors": [],
-			"title_not_found": True
+
+			"title_not_found": True,
+			"chapter_not_found": True,
+			"downloading_error": True,
+
+			"critical": True,
+			"errors": True,
+			"warnings": True
 		}
 
-		#---> Генерация динамических свойств.
-		#==========================================================================================#
-		self.__Data = data or dict()
-
-		for Key in Default.keys():
-			if Key not in self.__Data.keys(): self.__Data[Key] = Default[Key]
-
-class CommandsSettings:
-	"""Фильтры вывода команд."""
-
-	def __init__(self, data: dict | None = None):
-		"""
-		Настройки бота Telegram
-			data – словарь настроек для парсинга.
-		"""
-
-		#---> Генерация динамических свойств.
-		#==========================================================================================#
-		self.__Filters = dict()
-
-		for Key in data.keys(): self.__Filters[Key] = Command(data[Key])
-
-	def __getitem__(self, command: str) -> Command:
-		"""Возвращает контейнер фильтров вывода."""
-
-		if command in self.__Filters.keys(): return self.__Filters[command]
-
-		return Command()
+		for Rule in Default.keys():
+			if Rule not in self.__Data.keys(): self.__Data[Rule] = Default[Rule]
 
 class TelebotSettings:
 	"""Настройки бота Telegram."""
@@ -127,10 +164,10 @@ class TelebotSettings:
 		return self.__Data["comment"]
 	
 	@property 
-	def attach_log(self) -> bool:
-		"""Указывает, нужно ли прикреплять лог к отчёту."""
+	def rules(self) -> ReportsRules:
+		"""Набор правил отправки отчётов."""
 
-		return self.__Data["attach_log"]
+		return self.__Rules
 	
 	def __init__(self, data: dict | None = None):
 		"""
@@ -145,17 +182,20 @@ class TelebotSettings:
 			"bot_token": None,
 			"chat_id": None,
 			"comment": None,
-			"attach_log": True
+			"rules": {}
 		}
+
+		self.__Rules = ReportsRules(self.__Data["rules"])
 
 class LoggerSettings:
 	"""Настройки логов."""
 
 	@property 
-	def commands(self) -> CommandsSettings:
-		"""Фильтры вывода команд."""
+	def cleaner(self) -> CleanerSettings:
+		"""Правила очистки логов."""
 
-		return self.__Commands
+		return self.__Cleaner
+	
 	@property 
 	def telebot(self) -> TelebotSettings:
 		"""Настройки бота Telegram."""
@@ -172,19 +212,19 @@ class LoggerSettings:
 		#==========================================================================================#
 		self.__Data = data or {
 			"telebot": {},
-			"commands": {}
+			"cleaner": {}
 		}
 
 		self.__Telebot = None
-		self.__Commands = None
+		self.__Cleaner = None
 
 		#---> Парсинг настроек.
 		#==========================================================================================#
-		for Key in ["telebot", "commands"]:
+		for Key in ["telebot", "cleaner"]:
 			if Key not in self.__Data.keys(): self.__Data[Key] = dict()
 
 		self.__Telebot = TelebotSettings(self.__Data["telebot"])
-		self.__Commands = CommandsSettings(self.__Data["commands"])
+		self.__Cleaner = CleanerSettings(self.__Data["cleaner"])
 
 #==========================================================================================#
 # >>>>> ОСНОВНОЙ КЛАСС <<<<< #
@@ -213,7 +253,7 @@ class Portals:
 			text – данные.
 		"""
 
-		self.__Logger.critical(text)
+		self.__Logger.critical(text, stdout = True)
 
 	def error(self, text: str):
 		"""
@@ -221,7 +261,7 @@ class Portals:
 			text – данные.
 		"""
 
-		self.__Logger.error(text)
+		self.__Logger.error(text, stdout = True)
 
 	def info(self, text: str):
 		"""
@@ -229,7 +269,7 @@ class Portals:
 			text – данные.
 		"""
 
-		self.__Logger.info(text)
+		self.__Logger.info(text, stdout = True)
 
 	def warning(self, text: str):
 		"""
@@ -237,7 +277,7 @@ class Portals:
 			text – данные.
 		"""
 
-		self.__Logger.warning(text)
+		self.__Logger.warning(text, stdout = True)
 
 	#==========================================================================================#
 	# >>>>> ШАБЛОНЫ ПОРТАЛОВ ОШИБОК <<<<< #
@@ -284,7 +324,7 @@ class Portals:
 
 		ChapterType = "Paid chapter" if chapter.is_paid else "Chapter"
 		ChapterID = chapter.id if chapter.id else chapter.slug
-		if ChapterID: ChapterID = " " + ChapterID
+		if ChapterID: ChapterID = " " + str(ChapterID)
 		else: ChapterID = ""
 
 		self.info(f"Title: \"{title.slug}\" (ID: {title.id}). {ChapterType}{ChapterID} skipped.")
@@ -349,7 +389,7 @@ class Logger:
 			description – описание ошибки.
 		"""
 
-		if self.__LoggerSettings.telebot.enable:
+		if self.__LoggerSettings.telebot.enable and self.__PointName not in self.__LoggerSettings.telebot.rules.forbidden_commands:
 			Token = self.__LoggerSettings.telebot.bot_token
 			description = Markdown(description).escaped_text
 			Bot = telebot.TeleBot(Token)
@@ -363,7 +403,7 @@ class Logger:
 				self.__ErrorCache = Message
 				
 				try:
-					if self.__LoggerSettings.telebot.attach_log:
+					if self.__LoggerSettings.telebot.rules.attach_log:
 						Bot.send_document(
 							self.__LoggerSettings.telebot.chat_id,
 							document = open(self.__LogFilename, "rb"), 
@@ -378,7 +418,7 @@ class Logger:
 							parse_mode = "MarkdownV2"
 						)
 
-				except telebot.apihelper.ApiTelegramException: logging.error("TeleBot error occurs during sending report.")
+				except: logging.error("TeleBot error occurs during sending report.")
 
 		self.__SilentMode = False
 
@@ -446,47 +486,51 @@ class Logger:
 	# >>>>> БАЗОВЫЕ ТИПЫ ЗАПИСЕЙ <<<<< #
 	#==========================================================================================#
 
-	def critical(self, text: str):
+	def critical(self, text: str, stdout: bool = False):
 		"""
 		Записывает в лог критическую ошибку.
-			text – данные.
+			text – текст критической ошибки;\n
+			stdout – указывает, помещать ли данные в поток стандартного вывода.
 		"""
 
 		self.__IsLogHasError = True
 		logging.critical(text)
-		if not self.__SilentMode: self.__SendReport(text)
+		if stdout: print(TextStyler("[CRITICAL]").colorize.red, TextStyler(text).colorize.red)
+		if not self.__SilentMode and self.__LoggerSettings.telebot.rules.critical: self.__SendReport(text)
 
-	def error(self, text: str):
+	def error(self, text: str, stdout: bool = False):
 		"""
 		Записывает в лог ошибку.
-			text – данные.
+			text – текст ошибки;\n
+			stdout – указывает, помещать ли данные в поток стандартного вывода.
 		"""
 
 		self.__IsLogHasError = True
 		logging.error(text)
-		if not self.__SilentMode: self.__SendReport(text)
+		if stdout: print(TextStyler("[ERROR]").colorize.red, TextStyler(text).colorize.red)
+		if not self.__SilentMode and self.__LoggerSettings.telebot.rules.errors: self.__SendReport(text)
 
-	def info(self, text: str):
+	def info(self, text: str, stdout: bool = False):
 		"""
 		Записывает в лог информацию.
-			text – данные.
+			text – информация;\n
+			stdout – указывает, помещать ли данные в поток стандартного вывода.
 		"""
 
 		logging.info(text)
+		if stdout: print(text)
 
-	def warning(self, text: str):
+	def warning(self, text: str, stdout: bool = False):
 		"""
 		Записывает в лог предупреждение.
-			text – данные.
+			text – описание предупреждения;\n
+			stdout – указывает, помещать ли данные в поток стандартного вывода.
 		"""
 
 		self.__IsLogHasWarning = True
 		logging.warning(text)
-
-		try: 
-			if self.__LoggerSettings.commands[self.__PointName].warnings: self.__SendReport(text)
-			
-		except KeyError: pass
+		if stdout: print(TextStyler("[WARNING]").colorize.yellow, TextStyler(text).colorize.yellow)
+		if not self.__SilentMode and self.__LoggerSettings.telebot.rules.warnings: self.__SendReport(text)
 
 	#==========================================================================================#
 	# >>>>> ШАБЛОНЫ ОШИБОК <<<<< #
@@ -511,8 +555,14 @@ class Logger:
 		"""
 
 		if not text: text = "Request error."
-		if response.status_code in self.__LoggerSettings.commands[self.__PointName].ignored_requests_errors: self.__SilentMode = True
-		self.error(f"{text} Response code: {response.status_code}.")
+		Text = f"{text} Response code: {response.status_code}."
+
+		if response.status_code not in self.__LoggerSettings.telebot.rules.ignored_requests_errors:
+			self.__SendReport(Text)
+			self.__SilentMode = True
+
+		self.error(Text)
+		self.__SilentMode = False
 		if exception: raise ParsingError()
 
 	def title_not_found(self, title: BaseTitle, exception: bool = True):
@@ -523,10 +573,28 @@ class Logger:
 		"""
 
 		NoteID = f" (ID: {title.id})" if title.id else ""
-		if not self.__LoggerSettings.commands[self.__PointName].title_not_found: self.__SilentMode = True
-		self.error(f"Title: \"{title.slug}\"{NoteID}. Not found.")
+		Text = f"Title: \"{title.slug}\"{NoteID}. Not found."
+
+		if self.__LoggerSettings.telebot.rules.title_not_found:
+			self.__SendReport(Text)
+			self.__SilentMode = True
+
+		self.error(Text)
 		print("Not found.")
+		self.__SilentMode = False
 		if exception: raise TitleNotFound(title)
+
+	def unsupported_format(self, title: BaseTitle, exception: bool = False):
+		"""
+		Шаблон ошибки: неподдерживаемый формат JSON.
+			title – данные тайтла;\n
+			exception – указывает, выбрасывать ли исключение.
+		"""
+
+		Text = "Unsupported JSON format. Will be overwritten."
+		self.warning(f"Title: \"{title.slug}\" (ID: {title.id}). {Text}")
+		print(TextStyler("[WARNING] " + Text).colorize.yellow)
+		if exception: raise ParsingError()
 
 	#==========================================================================================#
 	# >>>>> ШАБЛОНЫ ЗАПИСЕЙ <<<<< #
@@ -579,15 +647,28 @@ class Logger:
 			self.info(f"Title: \"{title.slug}\" (ID: {title.id}). Merged chapters count: {merged_chapter_count}.")
 			print(f"Merged chapters count: {merged_chapter_count}.")
 
-	def parsing_start(self, title: BaseTitle):
+	def parsing_start(self, title: BaseTitle, index: int, titles_count: int):
 		"""
 		Шаблон: начат парсинг.
-			title – данные тайтла.
+			title – данные тайтла;\n
+			index – индекс текущего тайтла;\n
+			titles_count – количество тайтлов в задаче.
 		"""
+
+		if titles_count > 1:
+			Number = index + 1
+			Progress = round(Number / titles_count * 100, 2)
+			Number = str(index + 1).rjust(len(str(titles_count)), " ")
+			Number = TextStyler(Number).colorize.purple
+			if str(Progress).endswith(".0"): Progress = str(int(Progress))
+			elif len(str(Progress).split(".")[-1]) == 1: Progress = str(Progress) + "0"
+			else: Progress = str(Progress)
+			Progress = TextStyler(Progress + "%").colorize.cyan
+			print(f"[{Number} / {titles_count} | {Progress}] ", end = "")
 
 		self.info(f"Title: \"{title.slug}\". Parsing...")
 		BoldSlug = Templates.bold(title.slug)
-		print(f"Parsing {BoldSlug}... ", end = "")
+		print(f"Parsing {BoldSlug}...", end = "")
 
 	def titles_collected(self, count: int):
 		"""
@@ -605,7 +686,7 @@ class Logger:
 	def close(self):
 		"""Закрывает логи."""
 
-		if not self.__LoggerRule: self.set_rule(self.__LoggerSettings.commands[self.__PointName].rule)
+		if not self.__LoggerRule: self.set_rule(self.__LoggerSettings.cleaner[self.__PointName])
 
 		self.info("====== End ======")
 		logging.shutdown()

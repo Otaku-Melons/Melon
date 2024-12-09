@@ -2,4 +2,4 @@ pyTelegramBotAPI
 BeautifulSoup4
 prettytable
 packaging
-dublib==0.13.0
+dublib==0.15.0

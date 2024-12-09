@@ -731,13 +731,17 @@ class BaseTitle:
 		if Data: self._Title = Data
 		else: raise FileNotFoundError(identificator + ".json")
 
-	def parse(self):
-		"""Получает основные данные тайтла."""
+	def parse(self, index: int, titles_count: int):
+		"""
+		Получает основные данные тайтла.
+			index – индекс текущего тайтла;\n
+			titles_count – количество тайтлов в задаче.
+		"""
 
 		self._Timer = Timer()
 		self._Timer.start()
 
-		self._SystemObjects.logger.parsing_start(self)
+		self._SystemObjects.logger.parsing_start(self, index, titles_count)
 		self._Parser.parse()
 		self._UsedFilename = str(self.id) if self._ParserSettings.common.use_id_as_filename else self.slug
 

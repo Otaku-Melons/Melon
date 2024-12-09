@@ -396,12 +396,16 @@ class Ranobe(BaseTitle):
 		Path = f"{self._ParserSettings.common.titles_directory}/{self._UsedFilename}.json"
 		
 		if os.path.exists(Path) and not self._SystemObjects.FORCE_MODE:
-			LocalManga = ReadJSON(Path)
+			LocalRanobe = ReadJSON(Path)
 			LocalContent = dict()
 			MergedChaptersCount = 0
+
+			if LocalRanobe["format"] != "melon-ranobe":
+				self._SystemObjects.logger.unsupported_format(self)
+				return
 			
-			for BranchID in LocalManga["content"]:
-				for CurrentChapter in LocalManga["content"][BranchID]: LocalContent[CurrentChapter["id"]] = CurrentChapter["paragraphs"]
+			for BranchID in LocalRanobe["content"]:
+				for CurrentChapter in LocalRanobe["content"][BranchID]: LocalContent[CurrentChapter["id"]] = CurrentChapter["paragraphs"]
 			
 			for BranchID in self._Title["content"]:
 		

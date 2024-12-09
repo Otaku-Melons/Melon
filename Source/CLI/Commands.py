@@ -6,15 +6,14 @@ from Source.Core.Installer import Installer
 from Source.Core.Tagger import Tagger
 from Source.Core.Exceptions import *
 from Source.Core.Formats import By
+from Source.Core.Timer import Timer
 from Source.CLI import Templates
 
-from dublib.CLI.StyledPrinter import Styles, TextStyler
+from dublib.CLI.TextStyler import Styles, TextStyler
 from dublib.CLI.Terminalyzer import ParsedCommandData
-from dublib.Methods.JSON import ReadJSON, WriteJSON
+from dublib.Methods.JSON import WriteJSON
 from dublib.Methods.System import Clear
 from time import sleep
-
-import os
 
 # В разработке!
 def com_build(system_objects: SystemObjects, command: ParsedCommandData):
@@ -79,20 +78,30 @@ def com_collect(system_objects: SystemObjects, command: ParsedCommandData):
 	Title = system_objects.manager.get_parser_type()
 	Title = Title(system_objects)
 	Parser = system_objects.manager.launch()
+	CollectorObject = Collector(system_objects)
+	CollectedTitlesCount = 0
+	Collection = list()
 
-	if not system_objects.manager.check_method_collect():
+	if command.check_flag("local"):
+		system_objects.logger.info("====== Collecting ======")
+		TimerObject = Timer()
+		TimerObject.start()
+		print("Scanning titles... ", end = "", flush = True)
+		CollectorObject = Collector(system_objects)
+		CollectedTitlesCount = CollectorObject.scan_local()
+		ElapsedTime = TimerObject.ends()
+		print(f"Done in {ElapsedTime}.")
+
+	elif not system_objects.manager.check_method_collect():
 		print("Parser doesn't support " + TextStyler("collect", decorations = [Styles.Decorations.Bold]) + " method.")
 		return
 
-	CollectorObject = Collector(system_objects)
-	CollectedTitlesCount = 0
-	system_objects.logger.info("====== Collecting ======")
+	else:
+		system_objects.logger.info("====== Collecting ======")
+		Collection = Parser.collect(filters = Filters, period = Period, pages = PagesCount)
+		CollectedTitlesCount = len(Collection)
+		CollectorObject.append(Collection)
 
-	#---> Обработка команды.
-	#==========================================================================================#
-	Collection = Parser.collect(filters = Filters, period = Period, pages = PagesCount)
-	CollectedTitlesCount = len(Collection)
-	CollectorObject.append(Collection)
 	CollectorObject.save(sort = Sort)
 	
 	#---> Вывод отчёта.
@@ -260,18 +269,16 @@ def com_parse(system_objects: SystemObjects, command: ParsedCommandData):
 		Slugs = Parser.collect(period = Period)
 		
 	elif command.check_flag("local"):
-		print("Scanning titles... ", end = "")
-		LocalTitles = os.listdir(system_objects.manager.parser_settings.common.titles_directory)
-		LocalTitles = list(filter(lambda File: File.endswith(".json"), LocalTitles))
-		
-		for Slug in LocalTitles:
-			Title = ReadJSON(f"{ParserSettings.common.titles_directory}/{Slug}") 
-			Slugs.append(Title["slug"])
-
-		print("Done.")
+		TimerObject = Timer()
+		TimerObject.start()
+		print("Scanning titles... ", end = "", flush = True)
+		CollectorObject = Collector(system_objects)
+		CollectorObject.scan_local()
+		Slugs += CollectorObject.slugs
+		ElapsedTime = TimerObject.ends()
+		print(f"Done in {ElapsedTime}.")
 		Text = "Local titles to parsing: " + str(len(Slugs)) + "."
-		print(Text)
-		system_objects.logger.info(Text)
+		system_objects.logger.info(Text, stdout = True)
 
 	else: Slugs.append(command.arguments[0])
 		
@@ -286,14 +293,15 @@ def com_parse(system_objects: SystemObjects, command: ParsedCommandData):
 	ParsedCount = 0
 	NotFoundCount = 0
 	ErrorsCount = 0
+	TotalCount = len(Slugs)
 
-	for Index in range(StartIndex, len(Slugs)):
+	for Index in range(StartIndex, TotalCount):
 		Title = ContentType(system_objects)
 		Title.set_slug(Slugs[Index])
 		Title.set_parser(Parser)
 
 		try:
-			Title.parse()
+			Title.parse(Index, TotalCount)
 			Title.merge()
 			Title.amend()
 			Title.download_covers()

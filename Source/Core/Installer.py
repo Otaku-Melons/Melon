@@ -1,6 +1,6 @@
 from Source.Core.Exceptions import GitNotInstalled
 
-from dublib.CLI.StyledPrinter import StyledPrinter, Styles, TextStyler
+from dublib.CLI.TextStyler import Styles, TextStyler
 from dublib.Methods.Filesystem import ReadTextFile
 
 import platform
@@ -145,7 +145,7 @@ class Installer:
 
 		StyledParserName = self.__StyleParserName(parser_name)
 		print(f"Installing {StyledParserName}..." if is_progenitor else f"=== Installing {StyledParserName} ===")
-		StyledPrinter("WARNING: Last commit will be installed instead stable version!", text_color = Styles.Colors.Yellow)
+		# StyledPrinter("WARNING: Last commit will be installed instead stable version!", text_color = Styles.Colors.Yellow)
 		if force: print("Force mode: " + TextStyler("enabled", text_color = Styles.Colors.Red))
 
 		Path = f"Parsers/{parser_name}"
@@ -162,7 +162,7 @@ class Installer:
 			self.__CheckDirectories(parser_name)
 
 			if os.system("cd Parsers && git clone " + self.__GetReposLink(parser_name) + self.__DevNull) != 0:
-				StyledPrinter("ERROR!", text_color = Styles.Colors.Red)
+				# StyledPrinter("ERROR!", text_color = Styles.Colors.Red)
 				return
 			
 			else:

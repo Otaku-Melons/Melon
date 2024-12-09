@@ -244,6 +244,10 @@ class Manga(BaseTitle):
 			LocalManga = ReadJSON(Path)
 			LocalContent = dict()
 			MergedChaptersCount = 0
+
+			if LocalManga["format"] != "melon-manga":
+				self._SystemObjects.logger.unsupported_format(self)
+				return
 			
 			for BranchID in LocalManga["content"]:
 				for CurrentChapter in LocalManga["content"][BranchID]: LocalContent[CurrentChapter["id"]] = CurrentChapter["slides"]

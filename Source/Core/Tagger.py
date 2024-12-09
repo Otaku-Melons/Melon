@@ -1,6 +1,6 @@
 from dublib.CLI.Terminalyzer import Command, ParsedCommandData, Terminalyzer
 from dublib.Methods.Filesystem import ReadTextFile, WriteTextFile
-from dublib.CLI.StyledPrinter import Styles, StyledPrinter
+from dublib.CLI.TextStyler import Styles, TextStyler
 
 import shlex
 import enum
@@ -118,16 +118,16 @@ class Operation:
 	def print(self):
 		"""Выводит операцию в консоль."""
 
-		StyledPrinter("name: ", decorations = [Styles.Decorations.Bold], end = False)
-		StyledPrinter(self.name, decorations = [Styles.Decorations.Italic])
-		StyledPrinter("type: ", decorations = [Styles.Decorations.Bold], end = False)
+		print(TextStyler("name: ", decorations = [Styles.Decorations.Bold]).text, end = "")
+		TextStyler(self.name, decorations = [Styles.Decorations.Italic]).print()
+		print(TextStyler("type: ", decorations = [Styles.Decorations.Bold]).text, end = "")
 		print(self.type.value)
-		StyledPrinter("delete: ", decorations = [Styles.Decorations.Bold], end = False)
-		if self.is_deleted: StyledPrinter("true", text_color = Styles.Colors.Red)
-		else: StyledPrinter("false", text_color = Styles.Colors.Green)
-		StyledPrinter("rule: ", decorations = [Styles.Decorations.Bold], end = False)
-		if self.rule: StyledPrinter("true", text_color = Styles.Colors.Green)
-		else: StyledPrinter("false", text_color = Styles.Colors.Red)
+		print(TextStyler("delete: ", decorations = [Styles.Decorations.Bold]).text, end = "")
+		if self.is_deleted: TextStyler("true", text_color = Styles.Colors.Red).print()
+		else: TextStyler("false", text_color = Styles.Colors.Green).print()
+		print(TextStyler("rule: ", decorations = [Styles.Decorations.Bold]).text, end = "")
+		if self.rule: TextStyler("true", text_color = Styles.Colors.Green).print()
+		else: TextStyler("false", text_color = Styles.Colors.Red).print()
 
 	def rename(self, text: str):
 		"""Переименовывает классификатор."""
@@ -265,10 +265,10 @@ class Tagger:
 				if "LOW" in Directives and not self.__CheckParameters(Parts, "-", ["low", "up"]): Parts.append("-low")
 				elif "UP" in Directives and not self.__CheckParameters(Parts, "-", ["low", "up"]): Parts.append("-up")
 				
-				if "GENRE" in Directives and not self.__CheckParameters(Parts, "-", ["g", "f", "p", "t"]): Parts.append("-g")
-				elif "FRANCHISE" in Directives and not self.__CheckParameters(Parts, "-", ["g", "f", "p", "t"]): Parts.append("-f")
-				elif "PERSON" in Directives and not self.__CheckParameters(Parts, "-", ["g", "f", "p", "t"]): Parts.append("-p")
-				elif "TAG" in Directives and not self.__CheckParameters(Parts, "-", ["g", "f", "p", "t"]): Parts.append("-t")
+				if "GENRES" in Directives and not self.__CheckParameters(Parts, "-", ["g", "f", "p", "t"]): Parts.append("-g")
+				elif "FRANCHISES" in Directives and not self.__CheckParameters(Parts, "-", ["g", "f", "p", "t"]): Parts.append("-f")
+				elif "PERSONS" in Directives and not self.__CheckParameters(Parts, "-", ["g", "f", "p", "t"]): Parts.append("-p")
+				elif "TAGS" in Directives and not self.__CheckParameters(Parts, "-", ["g", "f", "p", "t"]): Parts.append("-t")
 
 				self.__Script[Source].append(Parts)
 

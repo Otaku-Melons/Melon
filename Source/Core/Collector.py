@@ -1,9 +1,21 @@
 from Source.Core.SystemObjects import SystemObjects
 
+from dublib.Methods.Filesystem import ReadJSON
+
 import os
 
 class Collector:
 	"""Менеджер коллекций."""
+
+	#==========================================================================================#
+	# >>>>> СВОЙСТВА <<<<< #
+	#==========================================================================================#
+
+	@property
+	def slugs(self) -> list[str]:
+		"""Список алиасов в коллекции."""
+
+		return self.__Collection
 
 	#==========================================================================================#
 	# >>>>> ПРИВАТНЫЕ МЕТОДЫ <<<<< #
@@ -42,6 +54,7 @@ class Collector:
 		#---> Генерация динамических свойств.
 		#==========================================================================================#
 		self.__SystemObjects = system_objects
+
 		self.__Path = system_objects.temper.parser_temp + "/Collection.txt"
 		self.__Collection = self.__ReadCollection()
 
@@ -65,3 +78,22 @@ class Collector:
 
 		with open(self.__Path, "w") as FileWriter:
 			for Slug in self.__Collection: FileWriter.write(Slug + "\n")
+
+	def scan_local(self) -> int:
+		"""Сканирует локальную директорию и сторит коллекцию из её тайтлов."""
+		
+		ParserSettings = self.__SystemObjects.manager.parser_settings
+
+		LocalTitles = [Entry.name for Entry in os.scandir(ParserSettings.common.titles_directory) if Entry.is_file() and Entry.name.endswith(".json")]
+		TitlesCount = 0
+
+		for Slug in LocalTitles:
+
+			try:
+				Title = ReadJSON(f"{ParserSettings.common.titles_directory}/{Slug}") 
+				self.__Collection.append(Title["slug"])
+
+			except KeyError: pass
+			else: TitlesCount += 1
+
+		return TitlesCount

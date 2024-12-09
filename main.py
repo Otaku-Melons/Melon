@@ -14,7 +14,7 @@ import sys
 CheckPythonMinimalVersion(3, 10)
 MakeRootDirectories(["Parsers"])
 
-VERSION = "0.1.0-alpha"
+VERSION = "0.2.0-alpha"
 
 #==========================================================================================#
 # >>>>> НАСТРОЙКА ОБРАБОТЧИКА КОМАНД <<<<< #
@@ -35,10 +35,12 @@ ComPos = Com.create_position("PARSER", "Name of parser.", important = True)
 ComPos.add_key("use", ParametersTypes.Text, "Parser name.")
 Com.add_flag("f", "Enable force mode.")
 Com.add_flag("s", "Shutdown PC after script finish.")
+Com.add_flag("local", "Scan local titles and put into collection.")
 Com.add_flag("sort", "Enable slugs sorting.")
 Com.add_key("filters", description = "Query string for filtering titles (supporting optional).")
 Com.add_key("pages", ParametersTypes.Number, "Count of pages to collecting.")
 Com.add_key("period", ParametersTypes.Number, "Period in hours for parsing updates.")
+
 CommandsList.append(Com)
 
 Com = Command("get", "Download image.")

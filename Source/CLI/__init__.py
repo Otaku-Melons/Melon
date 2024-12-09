@@ -1,4 +1,4 @@
-from dublib.CLI.StyledPrinter import Styles, TextStyler
+from dublib.CLI.TextStyler import Styles, TextStyler
 from prettytable import PLAIN_COLUMNS, PrettyTable
 
 class Templates:
@@ -14,7 +14,7 @@ class Templates:
 			text – текст.
 		"""
 
-		return TextStyler(text, decorations = [Styles.Decorations.Bold])
+		return TextStyler(text).decorate.bold
 
 	#==========================================================================================#
 	# >>>>> БАЗОВЫЕ ШАБЛОНЫ <<<<< #
@@ -39,7 +39,7 @@ class Templates:
 			status – статус.
 		"""
 
-		status = TextStyler("enabled", text_color = Styles.Colors.Green) if status else TextStyler("disabled", text_color = Styles.Colors.Red)
+		status = TextStyler("enabled").colorize.green if status else TextStyler("disabled").colorize.red
 		print(f"{text}: {status}")
 
 	def parsers_table(columns: dict[str, list], sort_by: str = "NAME"):
@@ -53,13 +53,13 @@ class Templates:
 		TableObject.set_style(PLAIN_COLUMNS)
 		Implementations = ["collect", "image"]
 		ImplementationStatuses = {
-			True: TextStyler("true", text_color = Styles.Colors.Green),
-			False: TextStyler("false", text_color = Styles.Colors.Yellow),
-			None: TextStyler("error", text_color = Styles.Colors.Red),
+			True: TextStyler("true").colorize.green,
+			False: TextStyler("false").colorize.yellow,
+			None: TextStyler("error").colorize.red,
 		}
 
 		for SiteIndex in range(len(columns["SITE"])):
-			columns["SITE"][SiteIndex] = TextStyler(columns["SITE"][SiteIndex], decorations = [Styles.Decorations.Italic])
+			columns["SITE"][SiteIndex] = TextStyler(columns["SITE"][SiteIndex]).decorate.italic
 
 		for ColumnName in Implementations:
 
@@ -67,13 +67,13 @@ class Templates:
 				columns[ColumnName][StatusIndex] = ImplementationStatuses[columns[ColumnName][StatusIndex]]
 
 		for ColumnName in columns.keys():
-			Buffer = TextStyler(ColumnName, decorations = [Styles.Decorations.Bold])
+			Buffer = TextStyler(ColumnName).decorate.bold
 			TableObject.add_column(Buffer, columns[ColumnName])
 
 		TableObject.align = "l"
-		TableObject.sortby = TextStyler(sort_by, decorations = [Styles.Decorations.Bold])
+		TableObject.sortby = TextStyler(sort_by).decorate.bold
 		TableObject = str(TableObject).strip()
-		Link = TextStyler("https://github.com/Otaku-Melons", decorations = [Styles.Decorations.Underlined])
+		Link = TextStyler("https://github.com/Otaku-Melons").decorate.underlined
 		print(TableObject if TableObject else f"Parsers not installed. See {Link} for more info.")
 
 	def parsing_summary(parsed: int, not_found: int, errors: int):
@@ -85,9 +85,9 @@ class Templates:
 		"""
 
 		Templates.header("SUMMARY")
-		parsed = TextStyler(str(parsed), text_color = Styles.Colors.Green) if parsed else TextStyler(str(parsed), text_color = Styles.Colors.Red)
-		not_found = TextStyler(str(not_found), text_color = Styles.Colors.Yellow) if not_found else TextStyler(str(not_found), text_color = Styles.Colors.Green)
-		errors = TextStyler(str(errors), text_color = Styles.Colors.Red) if errors else TextStyler(str(errors), text_color = Styles.Colors.Green)
+		parsed = TextStyler(str(parsed)).colorize.green if parsed else TextStyler(str(parsed)).colorize.red
+		not_found = TextStyler(str(not_found)).colorize.yellow if not_found else TextStyler(str(not_found)).colorize.green
+		errors = TextStyler(str(errors)).colorize.red if errors else TextStyler(str(errors)).colorize.green
 		print(f"Parsed: {parsed}. Not found: {not_found}. Errors: {errors}.")
 
 	def title(version: str):
