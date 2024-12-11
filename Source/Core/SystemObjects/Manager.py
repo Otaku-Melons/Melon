@@ -1,5 +1,8 @@
 from Source.Core.ParserSettings import ParserSettings
 
+from dublib.Methods.Filesystem import ReadJSON
+from dublib.CLI.TextStyler import TextStyler
+
 import importlib
 import os
 
@@ -18,18 +21,18 @@ class Manager:
 		if "Templates" in Parsers: Parsers.remove("Templates")
 
 		return Parsers
-	
-	@property
-	def parser_settings(self) -> ParserSettings:
-		"""Настройки используемого парсера."""
-
-		return self.get()
 
 	@property
 	def parser_settings(self) -> ParserSettings:
 		"""Настройки используемого парсера."""
 
 		return self.get_parser_settings()
+
+	@property
+	def parser_site(self) -> str:
+		"""Название источника."""
+
+		return self.get_parser_site()
 
 	@property
 	def parser_version(self) -> str:
@@ -41,20 +44,20 @@ class Manager:
 	# >>>>> ПРИВАТНЫЕ МЕТОДЫ <<<<< #
 	#==========================================================================================#
 
-	def __CheckParser(self, parser_name: str | None) -> str:
+	def __CheckParser(self, parser: str | None) -> str:
 		"""
 		Проверяет наличие парсера.
-			parser_name – название парсера.
+			parser – название парсера.
 		"""
 
-		if not parser_name: parser_name = self.__ParserName
+		if not parser: parser = self.__Parser
 
-		if parser_name != None and parser_name not in self.all_parsers_names:
-			self.__SystemObjects.logger.critical(f"No parser \"{parser_name}\".")
-			print(f"No parser: \"{parser_name}\".")
+		if parser != None and parser not in self.all_parsers_names:
+			self.__SystemObjects.logger.critical(f"No parser \"{parser}\".")
+			print(f"No parser: \"{parser}\".")
 			exit(-1)
 
-		return parser_name
+		return parser
 
 	#==========================================================================================#
 	# >>>>> ПУБЛИЧНЫЕ МЕТОДЫ <<<<< #
@@ -66,46 +69,73 @@ class Manager:
 			system_objects – коллекция системных объектов.
 		"""
 
-		#---> Генерация динамических свойств.
+		#---> Генерация динамических атрибутов.
 		#==========================================================================================#
 		self.__SystemObjects = system_objects
-		self.__ParserSettings = None
-		self.__ParserName = None
 
-	def launch(self, parser_name: str | None = None) -> any:
+		self.__ExtensionSettings = None
+		self.__ParserSettings = None
+		self.__Extension = None
+		self.__Parser = None
+
+	def launch(self, parser: str | None = None) -> any:
 		"""
 		Запускает парсер и возвращает его объект.
-			parser_name – название парсера.
+			parser – название парсера.
 		"""
 
-		parser_name = self.__CheckParser(parser_name)
-		Module = importlib.import_module(f"Parsers.{parser_name}.main")
+		parser = self.__CheckParser(parser)
+		Module = importlib.import_module(f"Parsers.{parser}.main")
 		Parser = Module.Parser(self.__SystemObjects)
 
-		Text = f"Parser: \"{Module.NAME}\" (version {Module.VERSION})."
-		self.__SystemObjects.logger.info(Text)
-		# print(Text)
+		ParserName = TextStyler(parser).decorate.bold
+		Text = f"Parser: {ParserName} (version {Module.VERSION})."
+		self.__SystemObjects.logger.info(Text, stdout = True)
 
 		return Parser
 
-	def select_parser(self, parser_name: str):
+	def launch_extension(self, parser: str, extension: str) -> any:
+		"""
+		Запускает парсер и возвращает его объект.
+			parser – название парсера.
+		"""
+
+		parser = self.__CheckParser(parser)
+		Module = importlib.import_module(f"Parsers.{parser}.extensions.{extension}.main")
+		Extension = Module.Extension(self.__SystemObjects)
+
+		ParserName = TextStyler(parser).decorate.bold
+		ExtensionName = TextStyler(extension).decorate.bold
+		Text = f"Parser: {ParserName} (version {self.parser_version}).\n"
+		Text += f"Running extension: {ExtensionName}...\n"
+		Text += f"=== {extension} ==="
+		self.__SystemObjects.logger.info(Text, stdout = True)
+
+		return Extension
+
+	def select_extension(self, extension: str):
+		"""Задаёт имя используемого расширения."""
+
+		self.__Extension = extension
+
+	def select_parser(self, parser: str):
 		"""Задаёт имя используемого парсера."""
 
-		self.__ParserName = parser_name
+		self.__Parser = parser
 
 	#==========================================================================================#
 	# >>>>> ПУБЛИЧНЫЕ МЕТОДЫ ПРОВЕРКИ ИМПЛЕМЕНТАЦИЙ ПАРСЕРОВ <<<<< #
 	#==========================================================================================#
 
-	def check_method_collect(self, parser_name: str | None = None) -> bool | None:
+	def check_method_collect(self, parser: str | None = None) -> bool | None:
 		"""
 		Проверяет, доступна ли в парсере имплементация метода collect.
-			parser_name – название парсера.
+			parser – название парсера.
 		"""
 		
-		parser_name = self.__CheckParser(parser_name)
-		Module = importlib.import_module(f"Parsers.{parser_name}.main")
-		Parser = Module.Parser(self.__SystemObjects, self.get_parser_settings(parser_name))
+		parser = self.__CheckParser(parser)
+		Module = importlib.import_module(f"Parsers.{parser}.main")
+		Parser = Module.Parser(self.__SystemObjects, self.get_parser_settings(parser))
 		IsImplemented = True
 
 		try: Parser.collect
@@ -114,15 +144,15 @@ class Manager:
 
 		return IsImplemented
 
-	def check_method_image(self, parser_name: str | None = None) -> bool:
+	def check_method_image(self, parser: str | None = None) -> bool:
 		"""
 		Проверяет, доступна ли в парсере имплементация метода image.
-			parser_name – название парсера.
+			parser – название парсера.
 		"""
 
-		parser_name = self.__CheckParser(parser_name)
-		Module = importlib.import_module(f"Parsers.{parser_name}.main")
-		Parser = Module.Parser(self.__SystemObjects, self.get_parser_settings(parser_name))
+		parser = self.__CheckParser(parser)
+		Module = importlib.import_module(f"Parsers.{parser}.main")
+		Parser = Module.Parser(self.__SystemObjects, self.get_parser_settings(parser))
 		IsImplemented = True
 
 		try: Parser.image
@@ -132,61 +162,81 @@ class Manager:
 		return IsImplemented
 	
 	#==========================================================================================#
+	# >>>>> ПУБЛИЧНЫЕ МЕТОДЫ ПОЛУЧЕНИЯ ПАРАМЕТРОВ РАСШИРЕНИЙ <<<<< #
+	#==========================================================================================#
+
+	def get_extension_settings(self, parser: str | None = None, extension: str | None = None) -> dict | None:
+		"""
+		Возвращает словарь настроек расширения.
+			parser – имя парсера;\n
+			extension – имя расширения.
+		"""
+
+		if not parser: parser = self.__Parser
+		if not extension: extension = self.__Extension
+		parser = self.__CheckParser(parser)
+
+		try: self.__ExtensionSettings = ReadJSON(f"Parsers/{parser}/extensions/{extension}/settings.json")
+		except FileNotFoundError: pass
+
+		return self.__ExtensionSettings
+
+	#==========================================================================================#
 	# >>>>> ПУБЛИЧНЫЕ МЕТОДЫ ПОЛУЧЕНИЯ ПАРАМЕТРОВ ПАРСЕРОВ <<<<< #
 	#==========================================================================================#
 
-	def get_parser_settings(self, parser_name: str | None = None) -> ParserSettings:
+	def get_parser_settings(self, parser: str | None = None) -> ParserSettings:
 		"""
 		Возвращает контейнер настроек парсера.
-			parser_name – название парсера.
+			parser – название парсера.
 		"""
 
-		parser_name = self.__CheckParser(parser_name)
-		if not self.__ParserSettings: self.__ParserSettings = ParserSettings(parser_name, self.__SystemObjects.logger)
+		parser = self.__CheckParser(parser)
+		if not self.__ParserSettings: self.__ParserSettings = ParserSettings(parser, self.__SystemObjects.logger)
 
 		return self.__ParserSettings
 
-	def get_parser_site(self, parser_name: str | None = None) -> str:
+	def get_parser_site(self, parser: str | None = None) -> str:
 		"""
 		Возвращает поддерживаемый парсером сайт.
-			parser_name – название парсера.
+			parser – название парсера.
 		"""
 
-		parser_name = self.__CheckParser(parser_name)
-		Module = importlib.import_module(f"Parsers.{parser_name}.main")
+		parser = self.__CheckParser(parser)
+		Module = importlib.import_module(f"Parsers.{parser}.main")
 		importlib.reload(Module)
 
 		return Module.SITE
 
-	def get_parser_type(self, parser_name: str | None = None) -> str:
+	def get_parser_type(self, parser: str | None = None) -> str:
 		"""
 		Возвращает тип контента парсера.
-			parser_name – название парсера.
+			parser – название парсера.
 		"""
 
-		parser_name = self.__CheckParser(parser_name)
-		Module = importlib.import_module(f"Parsers.{parser_name}.main")
+		parser = self.__CheckParser(parser)
+		Module = importlib.import_module(f"Parsers.{parser}.main")
 
 		return Module.TYPE
 	
-	def get_parser_type_name(self, parser_name: str | None = None) -> str:
+	def get_parser_type_name(self, parser: str | None = None) -> str:
 		"""
 		Возвращает название типа контента парсера.
-			parser_name – название парсера.
+			parser – название парсера.
 		"""
 
-		parser_name = self.__CheckParser(parser_name)
-		Module = importlib.import_module(f"Parsers.{parser_name}.main")
+		parser = self.__CheckParser(parser)
+		Module = importlib.import_module(f"Parsers.{parser}.main")
 
 		return Module.TYPE.__name__.lower()
 
-	def get_parser_version(self, parser_name: str | None = None) -> str:
+	def get_parser_version(self, parser: str | None = None) -> str:
 		"""
 		Возвращает версию парсера.
-			parser_name – название парсера.
+			parser – название парсера.
 		"""
 
-		parser_name = self.__CheckParser(parser_name)
-		Module = importlib.import_module(f"Parsers.{parser_name}.main")
+		parser = self.__CheckParser(parser)
+		Module = importlib.import_module(f"Parsers.{parser}.main")
 
 		return Module.VERSION

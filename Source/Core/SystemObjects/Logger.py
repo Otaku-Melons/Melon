@@ -39,7 +39,7 @@ class CleanerSettings:
 			data – словарь прафил очистки.
 		"""
 
-		#---> Генерация динамических свойств.
+		#---> Генерация динамических атрибутов.
 		#==========================================================================================#
 		self.__Rules = data.copy()
 
@@ -114,7 +114,7 @@ class ReportsRules:
 			data – словарь правил.
 		"""
 
-		#---> Генерация динамических свойств.
+		#---> Генерация динамических атрибутов.
 		#==========================================================================================#
 		self.__Data = data.copy()
 		
@@ -175,7 +175,7 @@ class TelebotSettings:
 			data – словарь настроек для парсинга.
 		"""
 
-		#---> Генерация динамических свойств.
+		#---> Генерация динамических атрибутов.
 		#==========================================================================================#
 		self.__Data = data or {
 			"enable": False,
@@ -208,7 +208,7 @@ class LoggerSettings:
 			data – словарь настроек для парсинга.
 		"""
 
-		#---> Генерация динамических свойств.
+		#---> Генерация динамических атрибутов.
 		#==========================================================================================#
 		self.__Data = data or {
 			"telebot": {},
@@ -230,6 +230,125 @@ class LoggerSettings:
 # >>>>> ОСНОВНОЙ КЛАСС <<<<< #
 #==========================================================================================#
 
+class ExtensionsPortals:
+	"""Коллекция порталов CLI/логов для расширений."""
+
+	def __init__(self, logger: "Logger"):
+		"""
+		Коллекция порталов CLI/логов для расширений.
+			logger – менеджер портов CLI и логов.
+		"""
+
+		#---> Генерация динамических атрибутов.
+		#==========================================================================================#
+		self.__Logger = logger
+
+	#==========================================================================================#
+	# >>>>> БАЗОВЫЕ ТИПЫ ПОРТАЛОВ <<<<< #
+	#==========================================================================================#
+
+	def critical(self, text: str):
+		"""
+		Портал критической ошибки.
+			text – данные.
+		"""
+
+		self.__Logger.critical(text, stdout = True, log = False)
+
+	def error(self, text: str):
+		"""
+		Портал ошибки.
+			text – данные.
+		"""
+
+		self.__Logger.error(text, stdout = True, log = False)
+
+	def info(self, text: str):
+		"""
+		Портал информациию
+			text – данные.
+		"""
+
+		self.__Logger.info(text, stdout = True, log = False)
+
+	def warning(self, text: str):
+		"""
+		Портал предупреждения.
+			text – данные.
+		"""
+
+		self.__Logger.warning(text, stdout = True, log = False)
+
+	#==========================================================================================#
+	# >>>>> ШАБЛОНЫ ПОРТАЛОВ ОШИБОК <<<<< #
+	#==========================================================================================#
+
+	def chapter_not_found(self, title: BaseTitle, chapter: BaseChapter):
+		"""
+		Шаблон ошибки: глава не найдена.
+			title – данные тайтла;\n
+			chapter – данные главы.
+		"""
+
+		self.__Logger.chapter_not_found(title, chapter)
+
+	def request_error(self, response: WebResponse, text: str | None = None, exception: bool = True):
+		"""
+		Портал ошибки запроса.
+			response – WEB-ответ;\n
+			text – описание ошибки;\n
+			exception – указывает, выбрасывать ли исключение.
+		"""
+
+		self.__Logger.request_error(response, text, exception)
+
+	def title_not_found(self, title: BaseTitle, exception: bool = True):
+		"""
+		Портал ошибки: тайтл не найден.
+			title – данные тайтла;\n
+			exception – указывает, выбрасывать ли исключение.
+		"""
+
+		self.__Logger.title_not_found(title, exception)
+
+	#==========================================================================================#
+	# >>>>> ШАБЛОНЫ ПОРТАЛОВ <<<<< #
+	#==========================================================================================#
+
+	def chapter_skipped(self, title: BaseTitle, chapter: BaseChapter):
+		"""
+		Портал уведомления о пропуске главы.
+			title – данные тайтла;\n
+			chapter – данные главы.
+		"""
+
+		ChapterType = "Paid chapter" if chapter.is_paid else "Chapter"
+		ChapterID = chapter.id if chapter.id else chapter.slug
+		if ChapterID: ChapterID = " " + str(ChapterID)
+		else: ChapterID = ""
+
+		self.info(f"Title: \"{title.slug}\" (ID: {title.id}). {ChapterType}{ChapterID} skipped.")
+		print(f"{ChapterType}{ChapterID} skipped.")
+
+	def collect_progress_by_page(self, page: int):
+		"""
+		Портал индикации прогресса сбора коллекции.
+			page – номер обработанной страницы каталога.
+		"""
+
+		Text = f"Titles on page {page} collected."
+		self.info(Text)
+		print(Text)
+
+	def covers_unstubbed(self, title: BaseTitle):
+		"""
+		Портал уведомления о фильтрации заглушек обложек.
+			title – данные тайтла.
+		"""
+
+		self.info(f"Title: \"{title.slug}\" (ID: {title.id}). Stubs detected. Covers downloading will be skipped.")
+		print("Stubs detected. Covers downloading will be skipped.")
+
 class Portals:
 	"""Коллекция порталов CLI/логов для парсеров."""
 
@@ -239,7 +358,7 @@ class Portals:
 			logger – менеджер портов CLI и логов.
 		"""
 
-		#---> Генерация динамических свойств.
+		#---> Генерация динамических атрибутов.
 		#==========================================================================================#
 		self.__Logger = logger
 
@@ -432,7 +551,7 @@ class Logger:
 			system_objects – коллекция системных объектов.
 		"""
 		
-		#---> Генерация динамических свойств.
+		#---> Генерация динамических атрибутов.
 		#==========================================================================================#
 		self.__SystemObjects = system_objects
 
@@ -486,49 +605,53 @@ class Logger:
 	# >>>>> БАЗОВЫЕ ТИПЫ ЗАПИСЕЙ <<<<< #
 	#==========================================================================================#
 
-	def critical(self, text: str, stdout: bool = False):
+	def critical(self, text: str, stdout: bool = False, log: bool = True):
 		"""
 		Записывает в лог критическую ошибку.
 			text – текст критической ошибки;\n
-			stdout – указывает, помещать ли данные в поток стандартного вывода.
+			stdout – указывает, помещать ли данные в поток стандартного вывода;\n
+			log – указывает, делать ли запись в лог.
 		"""
 
 		self.__IsLogHasError = True
-		logging.critical(text)
+		if log: logging.critical(text)
 		if stdout: print(TextStyler("[CRITICAL]").colorize.red, TextStyler(text).colorize.red)
 		if not self.__SilentMode and self.__LoggerSettings.telebot.rules.critical: self.__SendReport(text)
 
-	def error(self, text: str, stdout: bool = False):
+	def error(self, text: str, stdout: bool = False, log: bool = True):
 		"""
 		Записывает в лог ошибку.
 			text – текст ошибки;\n
-			stdout – указывает, помещать ли данные в поток стандартного вывода.
+			stdout – указывает, помещать ли данные в поток стандартного вывода;\n
+			logs – указывает, делать ли запись в лог.
 		"""
 
 		self.__IsLogHasError = True
-		logging.error(text)
+		if log: logging.error(text)
 		if stdout: print(TextStyler("[ERROR]").colorize.red, TextStyler(text).colorize.red)
 		if not self.__SilentMode and self.__LoggerSettings.telebot.rules.errors: self.__SendReport(text)
 
-	def info(self, text: str, stdout: bool = False):
+	def info(self, text: str, stdout: bool = False, log: bool = True):
 		"""
 		Записывает в лог информацию.
 			text – информация;\n
-			stdout – указывает, помещать ли данные в поток стандартного вывода.
+			stdout – указывает, помещать ли данные в поток стандартного вывода;\n
+			log – указывает, делать ли запись в лог.
 		"""
 
-		logging.info(text)
+		if log: logging.info(text)
 		if stdout: print(text)
 
-	def warning(self, text: str, stdout: bool = False):
+	def warning(self, text: str, stdout: bool = False, log: bool = True):
 		"""
 		Записывает в лог предупреждение.
 			text – описание предупреждения;\n
-			stdout – указывает, помещать ли данные в поток стандартного вывода.
+			stdout – указывает, помещать ли данные в поток стандартного вывода;\n
+			log – указывает, делать ли запись в лог.
 		"""
 
 		self.__IsLogHasWarning = True
-		logging.warning(text)
+		if log: logging.warning(text)
 		if stdout: print(TextStyler("[WARNING]").colorize.yellow, TextStyler(text).colorize.yellow)
 		if not self.__SilentMode and self.__LoggerSettings.telebot.rules.warnings: self.__SendReport(text)
 
@@ -658,7 +781,8 @@ class Logger:
 		if titles_count > 1:
 			Number = index + 1
 			Progress = round(Number / titles_count * 100, 2)
-			Number = str(index + 1).rjust(len(str(titles_count)), " ")
+			# Решение о выравнивании принять после тестирования.
+			Number = str(Number).rjust(len(str(titles_count)), " ")
 			Number = TextStyler(Number).colorize.purple
 			if str(Progress).endswith(".0"): Progress = str(int(Progress))
 			elif len(str(Progress).split(".")[-1]) == 1: Progress = str(Progress) + "0"
@@ -668,7 +792,7 @@ class Logger:
 
 		self.info(f"Title: \"{title.slug}\". Parsing...")
 		BoldSlug = Templates.bold(title.slug)
-		print(f"Parsing {BoldSlug}...", end = "")
+		print(f"Parsing {BoldSlug}... ", end = "")
 
 	def titles_collected(self, count: int):
 		"""

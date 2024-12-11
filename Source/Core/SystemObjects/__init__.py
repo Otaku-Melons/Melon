@@ -22,6 +22,12 @@ class SystemObjects:
 	#==========================================================================================#
 
 	@property
+	def extension_name(self) -> str | None:
+		"""Название используемого расширения."""
+
+		return self.__ExtensionName
+
+	@property
 	def logger(self) -> Logger:
 		"""Менеджер портов CLI и логов."""
 
@@ -52,15 +58,30 @@ class SystemObjects:
 	def __init__(self):
 		"""Коллекция системных объектов."""
 
-		#---> Генерация динамических свойств.
+		#---> Генерация динамических атрибутов.
 		#==========================================================================================#
 		self.__Manager = Manager(self)
 		self.__Logger = Logger(self)
 		self.__Temper = Temper()
+
+		self.__ExtensionName = None
 		self.__ParserName = None
 
+	def select_extension(self, extension_name: str):
+		"""
+		Задаёт используемое расширение и настраивает согласно ему системные объекты.
+			extension_name – имя расширения.
+		"""
+
+		self.__ExtensionName = extension_name
+		self.__Manager.select_extension(extension_name)
+		self.__Temper.select_extension(extension_name)
+
 	def select_parser(self, parser_name: str):
-		"""Выбирает используемый парсер и настраивает согласно ему системные объекты."""
+		"""
+		Задаёт используемое расширение и настраивает согласно ему системные объекты.
+			parser_name – имя парсера.
+		"""
 
 		self.__ParserName = parser_name
 		self.__Logger.select_parser(parser_name)

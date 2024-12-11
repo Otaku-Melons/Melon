@@ -1,5 +1,7 @@
-from dublib.CLI.TextStyler import Styles, TextStyler
+from Source.CLI.Descriptions import CommandsList
+
 from prettytable import PLAIN_COLUMNS, PrettyTable
+from dublib.CLI.TextStyler import TextStyler
 
 class Templates:
 	"""Набор шаблонов ввода-вывода."""

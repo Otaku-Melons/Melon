@@ -7,8 +7,14 @@ class Temper:
 	"""Дескриптор каталога временных файлов."""
 
 	#==========================================================================================#
-	# >>>>> СВОЙСТВА ТОЛЬКО ДЛЯ ЧТЕНИЯ <<<<< #
+	# >>>>> СВОЙСТВА <<<<< #
 	#==========================================================================================#
+
+	@property
+	def extension_temp(self) -> str:
+		"""Путь к выделенному для конкретного расширения каталогу временных файлов."""
+
+		return self.get_extension_temp()
 
 	@property
 	def parser_temp(self) -> str:
@@ -25,15 +31,16 @@ class Temper:
 		return self.__Temp
 
 	#==========================================================================================#
-	# >>>>> МЕТОДЫ <<<<< #
+	# >>>>> ПУБЛИЧНЫЕ МЕТОДЫ <<<<< #
 	#==========================================================================================#
 
 	def __init__(self):
 		"""Дескриптор каталога временных файлов."""
 
-		#---> Генерация динамических свойств.
+		#---> Генерация динамических атрибутов.
 		#==========================================================================================#
 		self.__Temp = "Temp"
+		self.__Extension = None
 		self.__ParserName = None
 
 	def clear_parser_temp(self, parser_name: str | None = None):
@@ -49,16 +56,37 @@ class Temper:
 	def get_parser_temp(self, parser_name: str | None = None) -> str:
 		"""
 		Возвращает путь к выделенному для конкретного парсера каталогу временных файлов.
-			parser_name – название парсера.
+			parser_name – имя парсера.
 		"""
 
 		if not parser_name: parser_name = self.__ParserName
 		Path = f"{self.__Temp}/{parser_name}"
 		if not os.path.exists(Path): os.makedirs(Path)
 		Path = NormalizePath(Path)
+
+		return Path
+	
+	def get_extension_temp(self, parser_name: str | None = None, extension: str | None = None) -> str:
+		"""
+		Возвращает путь к выделенному для конкретного расшриения каталогу временных файлов.
+			parser_name – имя парсера;\n
+			extension – расширение.
+		"""
+
+		if not parser_name: parser_name = self.__ParserName
+		if not extension: extension = self.__Extension
+		ParserTemp = self.get_parser_temp(parser_name)
+		Path = f"{ParserTemp}/extensions/{extension}"
+		if not os.path.exists(Path): os.makedirs(Path)
+		Path = NormalizePath(Path)
 		
 		return Path
 	
+	def select_extension(self, extension: str):
+		"""Задаёт имя используемого расширения."""
+
+		self.__Extension = extension
+
 	def select_parser(self, parser_name: str):
 		"""Задаёт имя используемого парсера."""
 

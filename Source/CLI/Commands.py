@@ -374,6 +374,39 @@ def com_repair(system_objects: SystemObjects, command: ParsedCommandData):
 	#==========================================================================================#
 	# print(ResultMessage)
 
+def com_run(system_objects: SystemObjects, command: ParsedCommandData):
+	"""
+	Восстанавливает содержимое главы, заново получая его из источника.
+		system_objects – коллекция системных объектов;\n
+		command – объект представления консольной команды.
+	"""
+
+	#---> Подготовка к выполнению.
+	#==========================================================================================#
+	ParserName = command.get_key_value("use", exception = True)
+	ExtensionName = command.get_key_value("extension", exception = True)
+	system_objects.logger.select_cli_point(command.name)
+	system_objects.select_extension(ExtensionName)
+	system_objects.select_parser(ParserName)
+
+	#---> Парсинг данных команды.
+	#==========================================================================================#
+	ExtensionCommand = command.get_key_value("command")
+
+	#---> Выполнение команды.
+	#==========================================================================================#
+	Extension = system_objects.manager.launch_extension(ParserName, ExtensionName)
+	system_objects.logger.info(f"====== {ParserName}:{ExtensionName} ======")
+
+	try:
+		Extension.run(ExtensionCommand)
+
+	except ZeroDivisionError: pass
+
+	#---> Вывод отчёта.
+	#==========================================================================================#
+	# print(ResultMessage)
+
 def com_tagger(system_objects: SystemObjects, command: ParsedCommandData):
 	"""
 	Запускает обработчик классификаторов тайтлов.
