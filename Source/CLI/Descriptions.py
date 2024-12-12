@@ -76,6 +76,7 @@ ComPos = Com.create_position("TARGET", "Target to run.", important = True)
 ComPos.add_key("extension", ParametersTypes.Text, "Extension name.")
 ComPos = Com.create_position("PARSER", "Parser for using context.", important = True)
 ComPos.add_key("use", ParametersTypes.Text, "Parser name.")
+Com.add_flag("f", "Enable force mode.")
 Com.add_key("command", description = "Extension command.")
 CommandsList.append(Com)
 

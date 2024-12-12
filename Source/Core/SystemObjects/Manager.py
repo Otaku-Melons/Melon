@@ -106,10 +106,8 @@ class Manager:
 
 		ParserName = TextStyler(parser).decorate.bold
 		ExtensionName = TextStyler(extension).decorate.bold
-		Text = f"Parser: {ParserName} (version {self.parser_version}).\n"
-		Text += f"Running extension: {ExtensionName}...\n"
-		Text += f"=== {extension} ==="
-		self.__SystemObjects.logger.info(Text, stdout = True)
+		self.__SystemObjects.logger.info(f"Parser: {ParserName} (version {self.parser_version}).", stdout = True)
+		self.__SystemObjects.logger.info(f"Running extension: {ExtensionName}...", stdout = True)
 
 		return Extension
 

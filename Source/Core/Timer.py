@@ -34,7 +34,7 @@ class Timer:
 		
 		StrMinutes = ""
 		if Minutes: StrMinutes = f"{Minutes} minutes " 
-		else: Seconds = Delay
+		else: Seconds = Delay if Delay else 0
 		StrTime = f"{StrMinutes}{Seconds} seconds"
 
 		return StrTime

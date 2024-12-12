@@ -9,8 +9,10 @@ from Source.Core.Formats import By
 from Source.Core.Timer import Timer
 from Source.CLI import Templates
 
-from dublib.CLI.TextStyler import Styles, TextStyler
 from dublib.CLI.Terminalyzer import ParsedCommandData
+from dublib.CLI.Templates import PrintExecutionStatus
+from dublib.CLI.TextStyler import Styles, TextStyler
+from dublib.Engine.Bus import ExecutionError
 from dublib.Methods.JSON import WriteJSON
 from dublib.Methods.System import Clear
 from time import sleep
@@ -78,7 +80,6 @@ def com_collect(system_objects: SystemObjects, command: ParsedCommandData):
 	Title = system_objects.manager.get_parser_type()
 	Title = Title(system_objects)
 	Parser = system_objects.manager.launch()
-	CollectorObject = Collector(system_objects)
 	CollectedTitlesCount = 0
 	Collection = list()
 
@@ -87,8 +88,8 @@ def com_collect(system_objects: SystemObjects, command: ParsedCommandData):
 		TimerObject = Timer()
 		TimerObject.start()
 		print("Scanning titles... ", end = "", flush = True)
-		CollectorObject = Collector(system_objects)
-		CollectedTitlesCount = CollectorObject.scan_local()
+		CollectorObject = Collector(system_objects, merge = True)
+		CollectedTitlesCount = CollectorObject.from_local()
 		ElapsedTime = TimerObject.ends()
 		print(f"Done in {ElapsedTime}.")
 
@@ -269,11 +270,10 @@ def com_parse(system_objects: SystemObjects, command: ParsedCommandData):
 		Slugs = Parser.collect(period = Period)
 		
 	elif command.check_flag("local"):
-		TimerObject = Timer()
-		TimerObject.start()
+		TimerObject = Timer(start = True)
 		print("Scanning titles... ", end = "", flush = True)
-		CollectorObject = Collector(system_objects)
-		CollectorObject.scan_local()
+		CollectorObject = Collector(system_objects, merge = True)
+		CollectorObject.from_local()
 		Slugs += CollectorObject.slugs
 		ElapsedTime = TimerObject.ends()
 		print(f"Done in {ElapsedTime}.")
@@ -396,16 +396,13 @@ def com_run(system_objects: SystemObjects, command: ParsedCommandData):
 	#---> Выполнение команды.
 	#==========================================================================================#
 	Extension = system_objects.manager.launch_extension(ParserName, ExtensionName)
-	system_objects.logger.info(f"====== {ParserName}:{ExtensionName} ======")
-
-	try:
-		Extension.run(ExtensionCommand)
-
-	except ZeroDivisionError: pass
+	system_objects.logger.info(f"====== {ParserName}:{ExtensionName} ======", stdout = True)
+	Status = ExecutionError(-1, "Unkown error while running extension.")
+	Status = Extension.run(ExtensionCommand)
 
 	#---> Вывод отчёта.
 	#==========================================================================================#
-	# print(ResultMessage)
+	PrintExecutionStatus(Status)
 
 def com_tagger(system_objects: SystemObjects, command: ParsedCommandData):
 	"""

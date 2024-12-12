@@ -1,8 +1,7 @@
 from Source.Core.ImagesDownloader import ImagesDownloader
 from Source.Core.Timer import Timer
 
-from dublib.Methods.JSON import WriteJSON
-from dublib.Methods.JSON import ReadJSON
+from dublib.Methods.Filesystem import ReadJSON, WriteJSON
 from dublib.Methods.Data import Zerotify
 from time import sleep
 
@@ -16,9 +15,9 @@ import os
 class By(enum.Enum):
 	"""Типы идентификаторов описательных файлов."""
 	
-	Filename = 0
-	Slug = 1
-	ID = 2
+	Filename = None
+	Slug = "slug"
+	ID = "id"
 
 class Statuses(enum.Enum):
 	"""Определения статусов."""

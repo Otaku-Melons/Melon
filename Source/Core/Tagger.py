@@ -217,7 +217,7 @@ class Tagger:
 		for CurrentOperation in operations:
 			
 			if type:
-				if CurrentOperation.original_type == type and CurrentOperation.original_name == classificator: SearchResult = CurrentOperation
+				if CurrentOperation.original_type == type and CurrentOperation.original_name.lower() == classificator.lower(): SearchResult = CurrentOperation
 
 			else:
 				if CurrentOperation.original_name == classificator: SearchResult = CurrentOperation

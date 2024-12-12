@@ -4,6 +4,7 @@ from Source.Core.SystemObjects import SystemObjects
 
 from dublib.CLI.Terminalyzer import Command, ParsedCommandData, Terminalyzer
 from dublib.WebRequestor import Protocols, WebConfig, WebLibs, WebRequestor
+from dublib.Engine.Bus import ExecutionStatus, ExecutionError
 
 import shlex
 
@@ -25,17 +26,11 @@ class BaseExtension:
 	#==========================================================================================#
 
 	@property
-	def settings(self) -> dict | None:
-		"""Настройки расширения."""
+	def force_mode(self) -> bool:
+		"""Состояние: включён ли глобальный режим перезаписи."""
 
-		return self._Settings
-	
-	@property
-	def system_objects(self) -> SystemObjects:
-		"""Коллекция системных объектов."""
+		return self._SystemObjects.FORCE_MODE
 
-		return self._SystemObjects
-	
 	@property
 	def parser_settings(self) -> ParserSettings:
 		"""Настройки парсера."""
@@ -54,6 +49,18 @@ class BaseExtension:
 
 		return self._Requestor
 	
+	@property
+	def settings(self) -> dict | None:
+		"""Настройки расширения."""
+
+		return self._Settings
+	
+	@property
+	def system_objects(self) -> SystemObjects:
+		"""Коллекция системных объектов."""
+
+		return self._SystemObjects
+
 	@property
 	def temp(self) -> str:
 		"""Путь к каталогу."""
@@ -127,15 +134,26 @@ class BaseExtension:
 
 		self._PostInitMethod()
 
-	def run(self, command: str | None):
+	def run(self, command: str | None) -> ExecutionStatus:
 		"""
 		Запускает расширение.Там картинки. 
 			command – передаваемая для обработки команда.
 		"""
+
+		Status = ExecutionStatus(0)
 
 		if command: 
 			command = shlex.split(command)
 			Analyzer = Terminalyzer(command)
 			Analyzer.enable_help(True)
 			ParsedCommand = Analyzer.check_commands(self._GenerateCommandsList())
+
+			if not ParsedCommand:
+				Status = ExecutionError(-1, "Unknown command.")
+				return Status
+
 			self._ProcessCommand(ParsedCommand)
+
+		else: Status.message = "No command. Use \"--command\" key."
+
+		return Status

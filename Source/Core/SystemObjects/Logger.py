@@ -13,6 +13,7 @@ import telebot
 import enum
 import sys
 import os
+import re
 
 #==========================================================================================#
 # >>>>> ВСПОМОГАТЕЛЬНЫЕ СТРУКТУРЫ ДАННЫХ <<<<< #
@@ -230,125 +231,6 @@ class LoggerSettings:
 # >>>>> ОСНОВНОЙ КЛАСС <<<<< #
 #==========================================================================================#
 
-class ExtensionsPortals:
-	"""Коллекция порталов CLI/логов для расширений."""
-
-	def __init__(self, logger: "Logger"):
-		"""
-		Коллекция порталов CLI/логов для расширений.
-			logger – менеджер портов CLI и логов.
-		"""
-
-		#---> Генерация динамических атрибутов.
-		#==========================================================================================#
-		self.__Logger = logger
-
-	#==========================================================================================#
-	# >>>>> БАЗОВЫЕ ТИПЫ ПОРТАЛОВ <<<<< #
-	#==========================================================================================#
-
-	def critical(self, text: str):
-		"""
-		Портал критической ошибки.
-			text – данные.
-		"""
-
-		self.__Logger.critical(text, stdout = True, log = False)
-
-	def error(self, text: str):
-		"""
-		Портал ошибки.
-			text – данные.
-		"""
-
-		self.__Logger.error(text, stdout = True, log = False)
-
-	def info(self, text: str):
-		"""
-		Портал информациию
-			text – данные.
-		"""
-
-		self.__Logger.info(text, stdout = True, log = False)
-
-	def warning(self, text: str):
-		"""
-		Портал предупреждения.
-			text – данные.
-		"""
-
-		self.__Logger.warning(text, stdout = True, log = False)
-
-	#==========================================================================================#
-	# >>>>> ШАБЛОНЫ ПОРТАЛОВ ОШИБОК <<<<< #
-	#==========================================================================================#
-
-	def chapter_not_found(self, title: BaseTitle, chapter: BaseChapter):
-		"""
-		Шаблон ошибки: глава не найдена.
-			title – данные тайтла;\n
-			chapter – данные главы.
-		"""
-
-		self.__Logger.chapter_not_found(title, chapter)
-
-	def request_error(self, response: WebResponse, text: str | None = None, exception: bool = True):
-		"""
-		Портал ошибки запроса.
-			response – WEB-ответ;\n
-			text – описание ошибки;\n
-			exception – указывает, выбрасывать ли исключение.
-		"""
-
-		self.__Logger.request_error(response, text, exception)
-
-	def title_not_found(self, title: BaseTitle, exception: bool = True):
-		"""
-		Портал ошибки: тайтл не найден.
-			title – данные тайтла;\n
-			exception – указывает, выбрасывать ли исключение.
-		"""
-
-		self.__Logger.title_not_found(title, exception)
-
-	#==========================================================================================#
-	# >>>>> ШАБЛОНЫ ПОРТАЛОВ <<<<< #
-	#==========================================================================================#
-
-	def chapter_skipped(self, title: BaseTitle, chapter: BaseChapter):
-		"""
-		Портал уведомления о пропуске главы.
-			title – данные тайтла;\n
-			chapter – данные главы.
-		"""
-
-		ChapterType = "Paid chapter" if chapter.is_paid else "Chapter"
-		ChapterID = chapter.id if chapter.id else chapter.slug
-		if ChapterID: ChapterID = " " + str(ChapterID)
-		else: ChapterID = ""
-
-		self.info(f"Title: \"{title.slug}\" (ID: {title.id}). {ChapterType}{ChapterID} skipped.")
-		print(f"{ChapterType}{ChapterID} skipped.")
-
-	def collect_progress_by_page(self, page: int):
-		"""
-		Портал индикации прогресса сбора коллекции.
-			page – номер обработанной страницы каталога.
-		"""
-
-		Text = f"Titles on page {page} collected."
-		self.info(Text)
-		print(Text)
-
-	def covers_unstubbed(self, title: BaseTitle):
-		"""
-		Портал уведомления о фильтрации заглушек обложек.
-			title – данные тайтла.
-		"""
-
-		self.info(f"Title: \"{title.slug}\" (ID: {title.id}). Stubs detected. Covers downloading will be skipped.")
-		print("Stubs detected. Covers downloading will be skipped.")
-
 class Portals:
 	"""Коллекция порталов CLI/логов для парсеров."""
 
@@ -446,7 +328,7 @@ class Portals:
 		if ChapterID: ChapterID = " " + str(ChapterID)
 		else: ChapterID = ""
 
-		self.info(f"Title: \"{title.slug}\" (ID: {title.id}). {ChapterType}{ChapterID} skipped.")
+		self.__Logger.info(f"Title: \"{title.slug}\" (ID: {title.id}). {ChapterType}{ChapterID} skipped.")
 		print(f"{ChapterType}{ChapterID} skipped.")
 
 	def collect_progress_by_page(self, page: int):
@@ -456,7 +338,7 @@ class Portals:
 		"""
 
 		Text = f"Titles on page {page} collected."
-		self.info(Text)
+		self.__Logger.info(Text)
 		print(Text)
 
 	def covers_unstubbed(self, title: BaseTitle):
@@ -465,7 +347,7 @@ class Portals:
 			title – данные тайтла.
 		"""
 
-		self.info(f"Title: \"{title.slug}\" (ID: {title.id}). Stubs detected. Covers downloading will be skipped.")
+		self.__Logger.info(f"Title: \"{title.slug}\" (ID: {title.id}). Stubs detected. Covers downloading will be skipped.")
 		print("Stubs detected. Covers downloading will be skipped.")
 
 class Logger:
@@ -501,6 +383,30 @@ class Logger:
 			if os.path.exists(Path): LoggerSettingsObject = LoggerSettings(ReadJSON(Path))
 
 		return LoggerSettingsObject
+
+	def __RemoveControlCodes(self, text: str) -> str:
+		"""
+		Удаляет управляющие последовательности ANSI.
+			text – обрабатываемый текст.
+		"""
+
+		Regex = r'\x1b(' \
+             r'(\[\??\d+[hl])|' \
+             r'([=<>a-kzNM78])|' \
+             r'([\(\)][a-b0-2])|' \
+             r'(\[\d{0,2}[ma-dgkjqi])|' \
+             r'(\[\d+;\d+[hfy]?)|' \
+             r'(\[;?[hf])|' \
+             r'(#[3-68])|' \
+             r'([01356]n)|' \
+             r'(O[mlnp-z]?)|' \
+             r'(/Z)|' \
+             r'(\d+)|' \
+             r'(\[\?\d;\d0c)|' \
+             r'(\d;\dR))'
+		CompiledRegex = re.compile(Regex, flags = re.IGNORECASE)
+
+		return CompiledRegex.sub("", text)
 
 	def __SendReport(self, description: str):
 		"""
@@ -613,9 +519,13 @@ class Logger:
 			log – указывает, делать ли запись в лог.
 		"""
 
-		self.__IsLogHasError = True
-		if log: logging.critical(text)
 		if stdout: print(TextStyler("[CRITICAL]").colorize.red, TextStyler(text).colorize.red)
+		text = self.__RemoveControlCodes(text)
+
+		if log:
+			logging.critical(text)
+			self.__IsLogHasError = True
+
 		if not self.__SilentMode and self.__LoggerSettings.telebot.rules.critical: self.__SendReport(text)
 
 	def error(self, text: str, stdout: bool = False, log: bool = True):
@@ -626,9 +536,13 @@ class Logger:
 			logs – указывает, делать ли запись в лог.
 		"""
 
-		self.__IsLogHasError = True
-		if log: logging.error(text)
 		if stdout: print(TextStyler("[ERROR]").colorize.red, TextStyler(text).colorize.red)
+		text = self.__RemoveControlCodes(text)
+
+		if log:
+			logging.error(text)
+			self.__IsLogHasError = True
+
 		if not self.__SilentMode and self.__LoggerSettings.telebot.rules.errors: self.__SendReport(text)
 
 	def info(self, text: str, stdout: bool = False, log: bool = True):
@@ -639,8 +553,9 @@ class Logger:
 			log – указывает, делать ли запись в лог.
 		"""
 
-		if log: logging.info(text)
 		if stdout: print(text)
+		text = self.__RemoveControlCodes(text)
+		if log: logging.info(text)
 
 	def warning(self, text: str, stdout: bool = False, log: bool = True):
 		"""
@@ -650,9 +565,13 @@ class Logger:
 			log – указывает, делать ли запись в лог.
 		"""
 
-		self.__IsLogHasWarning = True
-		if log: logging.warning(text)
 		if stdout: print(TextStyler("[WARNING]").colorize.yellow, TextStyler(text).colorize.yellow)
+		text = self.__RemoveControlCodes(text)
+
+		if log:
+			logging.warning(text)
+			self.__IsLogHasWarning = True
+		
 		if not self.__SilentMode and self.__LoggerSettings.telebot.rules.warnings: self.__SendReport(text)
 
 	#==========================================================================================#
