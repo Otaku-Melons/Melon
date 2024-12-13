@@ -82,13 +82,14 @@ def com_collect(system_objects: SystemObjects, command: ParsedCommandData):
 	Parser = system_objects.manager.launch()
 	CollectedTitlesCount = 0
 	Collection = list()
+	system_objects.logger.warning("Collection will be overwritten.", stdout = True)
 
 	if command.check_flag("local"):
 		system_objects.logger.info("====== Collecting ======")
 		TimerObject = Timer()
 		TimerObject.start()
 		print("Scanning titles... ", end = "", flush = True)
-		CollectorObject = Collector(system_objects, merge = True)
+		CollectorObject = Collector(system_objects)
 		CollectedTitlesCount = CollectorObject.from_local()
 		ElapsedTime = TimerObject.ends()
 		print(f"Done in {ElapsedTime}.")
@@ -255,13 +256,7 @@ def com_parse(system_objects: SystemObjects, command: ParsedCommandData):
 	ParserSettings = system_objects.manager.parser_settings
 
 	if command.check_flag("collection"):
-		
-		with open(system_objects.temper.parser_temp + "/Collection.txt", "r") as FileReader:
-			Buffer = FileReader.read().split("\n")
-			
-			for Line in Buffer:
-				if Line.strip(): Slugs.append(Line)
-
+		Slugs = Collector(system_objects, merge = True).slugs
 		system_objects.logger.info(f"Titles in collection: {len(Slugs)}.")
 
 	elif command.check_flag("updates"):
@@ -272,7 +267,7 @@ def com_parse(system_objects: SystemObjects, command: ParsedCommandData):
 	elif command.check_flag("local"):
 		TimerObject = Timer(start = True)
 		print("Scanning titles... ", end = "", flush = True)
-		CollectorObject = Collector(system_objects, merge = True)
+		CollectorObject = Collector(system_objects)
 		CollectorObject.from_local()
 		Slugs += CollectorObject.slugs
 		ElapsedTime = TimerObject.ends()
@@ -301,6 +296,7 @@ def com_parse(system_objects: SystemObjects, command: ParsedCommandData):
 		Title.set_parser(Parser)
 
 		try:
+			Title.open(Slugs[Index], By.Slug, exception = False)
 			Title.parse(Index, TotalCount)
 			Title.merge()
 			Title.amend()

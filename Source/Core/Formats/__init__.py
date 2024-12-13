@@ -679,7 +679,7 @@ class BaseTitle:
 
 		self._SystemObjects.logger.info(f"Title: \"{self.slug}\" (ID: {self.id}). Covers downloaded: {DownloadedCoversCount}.")
 
-	def open(self, identificator: int | str, selector_type: By = By.Filename):
+	def open(self, identificator: int | str, selector_type: By = By.Filename, exception: bool = True):
 		"""
 		Считывает локальный файл.
 			identificator – идентификатор тайтла;\n
@@ -728,7 +728,7 @@ class BaseTitle:
 						break
 
 		if Data: self._Title = Data
-		else: raise FileNotFoundError(identificator + ".json")
+		elif exception: raise FileNotFoundError(identificator + ".json")
 
 	def parse(self, index: int = 0, titles_count: int = 1):
 		"""

@@ -7,18 +7,6 @@ class Templates:
 	"""Набор шаблонов ввода-вывода."""
 
 	#==========================================================================================#
-	# >>>>> СТИЛИЗАТОРЫ <<<<< #
-	#==========================================================================================#
-
-	def bold(text: str) -> str:
-		"""
-		Возвращает стилизованный текст: полужирный.
-			text – текст.
-		"""
-
-		return TextStyler(text).decorate.bold
-
-	#==========================================================================================#
 	# >>>>> БАЗОВЫЕ ШАБЛОНЫ <<<<< #
 	#==========================================================================================#
 
@@ -78,6 +66,22 @@ class Templates:
 		Link = TextStyler("https://github.com/Otaku-Melons").decorate.underlined
 		print(TableObject if TableObject else f"Parsers not installed. See {Link} for more info.")
 
+	def parsing_progress(index: int, count: int):
+		"""
+		Выводит прогресс обработки множества элементов.
+			index – индекс обрабатываемого элемента;\n
+			count – количество жлементов.
+		"""
+
+		Number = index + 1
+		Progress = round(Number / count * 100, 2)
+		Number = TextStyler(str(Number)).colorize.purple
+		if str(Progress).endswith(".0"): Progress = str(int(Progress))
+		elif len(str(Progress).split(".")[-1]) == 1: Progress = str(Progress) + "0"
+		else: Progress = str(Progress)
+		Progress = TextStyler(Progress + "%").colorize.cyan
+		print(f"[{Number} / {count} | {Progress}] ", end = "")
+
 	def parsing_summary(parsed: int, not_found: int, errors: int):
 		"""
 		Выводит в консоль результат парсинга.
@@ -99,4 +103,3 @@ class Templates:
 		"""
 
 		Templates.header(f"Melon v{version}")
-		

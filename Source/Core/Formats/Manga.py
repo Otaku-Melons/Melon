@@ -237,7 +237,6 @@ class Manga(BaseTitle):
 	def merge(self):
 		"""Объединяет данные описательного файла и текущей структуры данных."""
 		
-		print("")
 		Path = f"{self._ParserSettings.common.titles_directory}/{self._UsedFilename}.json"
 		
 		if os.path.exists(Path) and not self._SystemObjects.FORCE_MODE:

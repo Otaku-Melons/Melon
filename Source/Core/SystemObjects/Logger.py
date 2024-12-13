@@ -303,9 +303,13 @@ class Portals:
 
 		self.__Logger.request_error(response, text, exception)
 
+	#==========================================================================================#
+	# >>>>> ШАБЛОНЫ ПОРТАЛОВ ПРЕДУПРЕЖДЕНИЙ <<<<< #
+	#==========================================================================================#
+
 	def title_not_found(self, title: BaseTitle, exception: bool = True):
 		"""
-		Портал ошибки: тайтл не найден.
+		Портал предупреждения: тайтл не найден.
 			title – данные тайтла;\n
 			exception – указывает, выбрасывать ли исключение.
 		"""
@@ -603,28 +607,9 @@ class Logger:
 			self.__SendReport(Text)
 			self.__SilentMode = True
 
-		self.error(Text)
+		self.error(Text, stdout = True)
 		self.__SilentMode = False
 		if exception: raise ParsingError()
-
-	def title_not_found(self, title: BaseTitle, exception: bool = True):
-		"""
-		Шаблон ошибки: тайтл не найден.
-			title – данные тайтла;\n
-			exception – указывает, выбрасывать ли исключение.
-		"""
-
-		NoteID = f" (ID: {title.id})" if title.id else ""
-		Text = f"Title: \"{title.slug}\"{NoteID}. Not found."
-
-		if self.__LoggerSettings.telebot.rules.title_not_found:
-			self.__SendReport(Text)
-			self.__SilentMode = True
-
-		self.error(Text)
-		print("Not found.")
-		self.__SilentMode = False
-		if exception: raise TitleNotFound(title)
 
 	def unsupported_format(self, title: BaseTitle, exception: bool = False):
 		"""
@@ -637,6 +622,29 @@ class Logger:
 		self.warning(f"Title: \"{title.slug}\" (ID: {title.id}). {Text}")
 		print(TextStyler("[WARNING] " + Text).colorize.yellow)
 		if exception: raise ParsingError()
+
+	#==========================================================================================#
+	# >>>>> ШАБЛОНЫ ПРЕДУПРЕЖДЕНИЙ <<<<< #
+	#==========================================================================================#
+
+	def title_not_found(self, title: BaseTitle, exception: bool = True):
+		"""
+		Шаблон предупреждения: тайтл не найден.
+			title – данные тайтла;\n
+			exception – указывает, выбрасывать ли исключение.
+		"""
+
+		NoteID = f" (ID: {title.id})" if title.id else ""
+		Text = f"Title: \"{title.slug}\"{NoteID}. Not found."
+
+		if self.__LoggerSettings.telebot.rules.title_not_found:
+			self.__SendReport(Text)
+			self.__SilentMode = True
+
+		self.warning(Text)
+		print(TextStyler("[WARNING] Title not found.").colorize.yellow)
+		self.__SilentMode = False
+		if exception: raise TitleNotFound(title)
 
 	#==========================================================================================#
 	# >>>>> ШАБЛОНЫ ЗАПИСЕЙ <<<<< #
@@ -697,21 +705,11 @@ class Logger:
 			titles_count – количество тайтлов в задаче.
 		"""
 
-		if titles_count > 1:
-			Number = index + 1
-			Progress = round(Number / titles_count * 100, 2)
-			# Решение о выравнивании принять после тестирования.
-			Number = str(Number).rjust(len(str(titles_count)), " ")
-			Number = TextStyler(Number).colorize.purple
-			if str(Progress).endswith(".0"): Progress = str(int(Progress))
-			elif len(str(Progress).split(".")[-1]) == 1: Progress = str(Progress) + "0"
-			else: Progress = str(Progress)
-			Progress = TextStyler(Progress + "%").colorize.cyan
-			print(f"[{Number} / {titles_count} | {Progress}] ", end = "")
-
-		self.info(f"Title: \"{title.slug}\". Parsing...")
-		BoldSlug = Templates.bold(title.slug)
-		print(f"Parsing {BoldSlug}... ", end = "")
+		NoteID = f" (ID: {title.id})" if title.id else ""
+		self.info(f"Title: \"{title.slug}\"{NoteID}. Parsing...")
+		BoldSlug = TextStyler(title.slug).decorate.bold
+		if titles_count > 1: Templates.parsing_progress(index, titles_count)
+		print(f"Parsing {BoldSlug}{NoteID}...")
 
 	def titles_collected(self, count: int):
 		"""

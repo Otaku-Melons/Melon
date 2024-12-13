@@ -36,10 +36,6 @@ class Collector:
 					Line = Line.strip()
 					if Line: Collection.append(Line)
 
-		elif self.__SystemObjects.FORCE_MODE:
-			self.__SystemObjects.logger.info("Collection will be overwritten.")
-			print("Collection will be overwritten.")
-
 		return Collection
 
 	#==========================================================================================#
@@ -67,7 +63,7 @@ class Collector:
 		"""
 
 		if type(slugs) != list: slugs = [slugs]
-		self.__Collection += slugs
+		self.__Collection += [Slug for Slug in slugs if Slug not in self.__Collection]
 
 	def get_local_identificators(self, identificator_type: By) -> list[int] | list[str]:
 		"""
@@ -111,6 +107,6 @@ class Collector:
 		
 		LocalTitles = self.get_local_identificators(By.Slug)
 		TitlesCount = len(LocalTitles)
-		self.__Collection += LocalTitles
+		self.append(LocalTitles)
 
 		return TitlesCount

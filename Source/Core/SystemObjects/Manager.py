@@ -23,10 +23,16 @@ class Manager:
 		return Parsers
 
 	@property
+	def extension_settings(self) -> ParserSettings:
+		"""Настройки используемого расширения."""
+
+		return self.get_extension_settings(cache = True)
+
+	@property
 	def parser_settings(self) -> ParserSettings:
 		"""Настройки используемого парсера."""
 
-		return self.get_parser_settings()
+		return self.get_parser_settings(cache = True)
 
 	@property
 	def parser_site(self) -> str:
@@ -163,19 +169,31 @@ class Manager:
 	# >>>>> ПУБЛИЧНЫЕ МЕТОДЫ ПОЛУЧЕНИЯ ПАРАМЕТРОВ РАСШИРЕНИЙ <<<<< #
 	#==========================================================================================#
 
-	def get_extension_settings(self, parser: str | None = None, extension: str | None = None) -> dict | None:
+	def get_extension_settings(self, parser: str | None = None, extension: str | None = None, cache: bool = False) -> dict | None:
 		"""
 		Возвращает словарь настроек расширения.
 			parser – имя парсера;\n
-			extension – имя расширения.
+			extension – имя расширения;\n
+			cache – указывает, использовать ли кэшированные настройки.
 		"""
 
 		if not parser: parser = self.__Parser
 		if not extension: extension = self.__Extension
 		parser = self.__CheckParser(parser)
 
-		try: self.__ExtensionSettings = ReadJSON(f"Parsers/{parser}/extensions/{extension}/settings.json")
-		except FileNotFoundError: pass
+		if cache and self.__ExtensionSettings and parser == self.__SystemObjects.parser_name and extension == self.__SystemObjects.extension_name: return self.__ExtensionSettings
+
+		if not self.__ExtensionSettings:
+			try: self.__ExtensionSettings = ReadJSON(f"Configs/{parser}/extensions/{extension}.json")
+			except FileNotFoundError: pass
+
+			if not self.__ExtensionSettings:
+
+				try: 
+					self.__ExtensionSettings = ReadJSON(f"Parsers/{parser}/extensions/{extension}/settings.json")
+					self.__SystemObjects.logger.warning("Using extension settings from repository.", stdout = True)
+
+				except FileNotFoundError: pass
 
 		return self.__ExtensionSettings
 
@@ -183,14 +201,16 @@ class Manager:
 	# >>>>> ПУБЛИЧНЫЕ МЕТОДЫ ПОЛУЧЕНИЯ ПАРАМЕТРОВ ПАРСЕРОВ <<<<< #
 	#==========================================================================================#
 
-	def get_parser_settings(self, parser: str | None = None) -> ParserSettings:
+	def get_parser_settings(self, parser: str | None = None, cache: bool = False) -> ParserSettings:
 		"""
 		Возвращает контейнер настроек парсера.
-			parser – название парсера.
+			parser – название парсера;\n
+			cache – указывает, использовать ли кэшированные настройки.
 		"""
 
 		parser = self.__CheckParser(parser)
-		if not self.__ParserSettings: self.__ParserSettings = ParserSettings(parser, self.__SystemObjects.logger)
+		if cache and self.__ParserSettings and parser == self.__SystemObjects.parser_name: return self.__ParserSettings
+		self.__ParserSettings = ParserSettings(parser, self.__SystemObjects.logger)
 
 		return self.__ParserSettings
 

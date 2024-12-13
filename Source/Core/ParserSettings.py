@@ -537,6 +537,7 @@ class ParserSettings:
 
 			if os.path.exists(Path):
 				ParserSettingsDict = ReadJSON(Path)
+				if Path.startswith("Parsers"): self.__Logger.warning("Using parser settings from repository.", stdout = True)
 				break
 
 		if not ParserSettingsDict:
