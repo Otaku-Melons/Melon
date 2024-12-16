@@ -1,8 +1,7 @@
 from Source.Core.SystemObjects.Logger import Logger
 from Source.Core.Exceptions import BadSettings
 
-from dublib.Methods.Filesystem import NormalizePath
-from dublib.Methods.JSON import ReadJSON
+from dublib.Methods.Filesystem import NormalizePath, ReadJSON
 from dublib.Methods.Data import Zerotify
 
 import hashlib
@@ -260,8 +259,13 @@ class Common:
 
 		for Directory in Directories:
 			Key = f"{Directory}_directory"
-			if not self.__Settings[Key]: self.__Settings[Key] = f"Output/{parser_name}/{Directory}"
-			else: self.__Settings[Key] = NormalizePath(self.__Settings[Key])
+
+			if not self.__Settings[Key]:
+				self.__Settings[Key] = f"Output/{parser_name}/{Directory}"
+				if not os.path.exists(self.__Settings[Key]): os.makedirs(self.__Settings[Key])
+
+			else:
+				self.__Settings[Key] = NormalizePath(self.__Settings[Key])
 
 	def __init__(self, parser_name: str, settings: dict, logger: Logger):
 		"""

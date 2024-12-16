@@ -4,7 +4,7 @@ from Source.Core.SystemObjects import SystemObjects
 from Source.Core.Exceptions import ChapterNotFound
 
 from dublib.Methods.Data import RemoveRecurringSubstrings
-from dublib.Methods.JSON import ReadJSON
+from dublib.Methods.Filesystem import ReadJSON
 from dublib.Polyglot import HTML
 from bs4 import BeautifulSoup
 from time import sleep

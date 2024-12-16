@@ -2,7 +2,7 @@ from . import BaseChapter, BaseBranch, BaseTitle, By, Statuses
 from Source.Core.SystemObjects import SystemObjects
 from Source.Core.Exceptions import ChapterNotFound
 
-from dublib.Methods.JSON import ReadJSON
+from dublib.Methods.Filesystem import ReadJSON
 
 import enum
 import os

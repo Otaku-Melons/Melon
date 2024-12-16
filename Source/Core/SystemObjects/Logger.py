@@ -2,9 +2,9 @@ from Source.Core.Exceptions import ParsingError, TitleNotFound
 from Source.Core.Formats import BaseChapter, BaseTitle
 from Source.CLI import Templates
 
+from dublib.Methods.Filesystem import ReadJSON
 from dublib.CLI.TextStyler import TextStyler
 from dublib.WebRequestor import WebResponse
-from dublib.Methods.JSON import ReadJSON
 from dublib.Polyglot import Markdown
 from datetime import datetime
 
@@ -320,20 +320,22 @@ class Portals:
 	# >>>>> ШАБЛОНЫ ПОРТАЛОВ <<<<< #
 	#==========================================================================================#
 
-	def chapter_skipped(self, title: BaseTitle, chapter: BaseChapter):
+	def chapter_skipped(self, title: BaseTitle, chapter: BaseChapter, comment: str | None = None):
 		"""
 		Портал уведомления о пропуске главы.
 			title – данные тайтла;\n
-			chapter – данные главы.
+			chapter – данные главы;\n
+			comment – комментарий о причине пропуска главы.
 		"""
 
 		ChapterType = "Paid chapter" if chapter.is_paid else "Chapter"
 		ChapterID = chapter.id if chapter.id else chapter.slug
 		if ChapterID: ChapterID = " " + str(ChapterID)
 		else: ChapterID = ""
+		comment = f" {comment}" if comment else ""
 
-		self.__Logger.info(f"Title: \"{title.slug}\" (ID: {title.id}). {ChapterType}{ChapterID} skipped.")
-		print(f"{ChapterType}{ChapterID} skipped.")
+		self.__Logger.info(f"Title: \"{title.slug}\" (ID: {title.id}). {ChapterType}{ChapterID} skipped.{comment}")
+		print(f"{ChapterType}{ChapterID} skipped.{comment}")
 
 	def collect_progress_by_page(self, page: int):
 		"""

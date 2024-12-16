@@ -12,8 +12,8 @@ from Source.CLI import Templates
 from dublib.CLI.Terminalyzer import ParsedCommandData
 from dublib.CLI.Templates import PrintExecutionStatus
 from dublib.CLI.TextStyler import Styles, TextStyler
+from dublib.Methods.Filesystem import WriteJSON
 from dublib.Engine.Bus import ExecutionError
-from dublib.Methods.JSON import WriteJSON
 from dublib.Methods.System import Clear
 from time import sleep
 
@@ -82,14 +82,15 @@ def com_collect(system_objects: SystemObjects, command: ParsedCommandData):
 	Parser = system_objects.manager.launch()
 	CollectedTitlesCount = 0
 	Collection = list()
-	system_objects.logger.warning("Collection will be overwritten.", stdout = True)
+	CollectorObject = Collector(system_objects)
+
+	if system_objects.FORCE_MODE: system_objects.logger.warning("Collection will be overwritten.", stdout = True)
 
 	if command.check_flag("local"):
 		system_objects.logger.info("====== Collecting ======")
 		TimerObject = Timer()
 		TimerObject.start()
 		print("Scanning titles... ", end = "", flush = True)
-		CollectorObject = Collector(system_objects)
 		CollectedTitlesCount = CollectorObject.from_local()
 		ElapsedTime = TimerObject.ends()
 		print(f"Done in {ElapsedTime}.")
@@ -135,9 +136,9 @@ def com_get(system_objects: SystemObjects, command: ParsedCommandData):
 	#==========================================================================================#
 	ResultMessage = "Download failed."
 	system_objects.logger.info("====== Downloading ======")
-	print(f"URL: {command.arguments[0]}\nDownloading... ", end = "")
-
 	Parser = system_objects.manager.launch()
+	print(f"URL: {command.arguments[0]}\nDownloading... ", end = "")
+	
 	TempFilename = Parser.image(Link)
 	if TempFilename and ImagesDownloader(system_objects).move_from_temp(Directory, TempFilename, Filename, True): ResultMessage = "Done."	
 

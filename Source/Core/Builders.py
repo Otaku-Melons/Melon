@@ -1,7 +1,6 @@
 from Source.Core.SystemObjects import SystemObjects
 
-from dublib.Methods.Filesystem import MakeRootDirectories, RemoveDirectoryContent
-from dublib.Methods.JSON import ReadJSON
+from dublib.Methods.Filesystem import MakeRootDirectories, ReadJSON, RemoveDirectoryContent
 from dublib.Methods.System import Clear
 from time import sleep
 

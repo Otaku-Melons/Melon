@@ -168,7 +168,7 @@ class ImagesDownloader:
 				
 			elif not filename: filename = original_filename
 
-			os.replace(OriginalPath, f"{directory}/{filename}{Filetype}")
+			shutil.move(OriginalPath, f"{directory}/{filename}{Filetype}")
 
 		except: return False
 

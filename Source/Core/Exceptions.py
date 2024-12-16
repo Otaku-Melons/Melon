@@ -52,7 +52,7 @@ class ParsingError(Exception):
 	def __init__(self):
 		"""Исключение: ошибка парсинга."""
 
-		self.__Message = "Unable to get title data."
+		self.__Message = "Unable to get data."
 		super().__init__(self.__Message) 
 			
 	def __str__(self):
