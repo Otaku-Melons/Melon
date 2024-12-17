@@ -5,8 +5,8 @@ from Source.Core.Collector import Collector
 from Source.Core.Installer import Installer
 from Source.Core.Tagger import Tagger
 from Source.Core.Exceptions import *
-from Source.Core.Formats import By
 from Source.Core.Timer import Timer
+from Source.Core.Formats import By
 from Source.CLI import Templates
 
 from dublib.CLI.Terminalyzer import ParsedCommandData
@@ -148,14 +148,13 @@ def com_get(system_objects: SystemObjects, command: ParsedCommandData):
 
 def com_help(system_objects: SystemObjects, command: ParsedCommandData):
 	"""
-	Собирает алиасы тайтлов из каталога и помещает их в список.
+	Заглушка для обработки помощи.
 		system_objects – коллекция системных объектов;\n
 		command – объект представления консольной команды.
 	"""
 
 	pass
 
-# Экспериментальный метод.
 def com_install(system_objects: SystemObjects, command: ParsedCommandData):
 	"""
 	Производит установку парсеров.
@@ -163,25 +162,29 @@ def com_install(system_objects: SystemObjects, command: ParsedCommandData):
 		command – объект представления консольной команды.
 	"""
 
-	#---> Подготовительный этап.
+	#---> Подготовка к выполнению.
 	#==========================================================================================#
 	system_objects.logger.select_cli_point(command.name)
 
-	#---> Получение и обработка предварительных данных.
+	#---> Парсинг данных команды.
 	#==========================================================================================#
-	ParsersInstaller = Installer()
-	ParsersInstaller.enable_ssh(command.check_flag("ssh"))
-	Force = command.check_flag("f")
-	Repositories = list()
+	FullInstallation = command.check_flag("all")
 	
-	if command.check_flag("all"):
-		Repositories = ParsersInstaller.get_owner_repositories()
-		if "Melon" in Repositories: Repositories.remove("Melon")
+	#---> Выполнение команды.
+	#==========================================================================================#
+	system_objects.logger.info("====== Insrallation ======")
+	print("Running installation...")
+	InstallerObject = Installer(system_objects)
+	TimerObject = Timer(start = True)
 
-	else:
-		Repositories = [command.arguments[0]]
+	if command.check_flag("a") or FullInstallation: InstallerObject.alias()
+	if command.check_flag("r") or FullInstallation: InstallerObject.requirements()
+	if command.check_flag("s") or FullInstallation: InstallerObject.scripts()
+	if command.check_flag("c") or FullInstallation: InstallerObject.configs()
 
-	for Repos in Repositories: ParsersInstaller.install(Repos, Force)
+	#---> Вывод отчёта.
+	#==========================================================================================#
+	print("Done in " + TimerObject.ends() + ".")
 
 def com_list(system_objects: SystemObjects, command: ParsedCommandData):
 	"""
@@ -428,26 +431,3 @@ def com_tagger(system_objects: SystemObjects, command: ParsedCommandData):
 	if command.check_flag("json"): print(Operation.to_json())
 	elif command.check_key("file"): WriteJSON(command.get_key_value("file"), Operation.to_dict())
 	else: Operation.print()
-
-# Экспериментальный метод.
-def com_uninstall(system_objects: SystemObjects, command: ParsedCommandData):
-	"""
-	Производит удаление парсеров.
-		system_objects – коллекция системных объектов;\n
-		command – объект представления консольной команды.
-	"""
-
-	#---> Подготовительный этап.
-	#==========================================================================================#
-	system_objects.logger.select_cli_point(command.name)
-
-	#---> Получение и обработка предварительных данных.
-	#==========================================================================================#
-	ParsersInstaller = Installer()
-	Force = command.check_flag("f")
-	Parsers = list()
-	
-	if command.check_flag("all"): Parsers = system_objects.manager.all_parsers_names
-	else: Parsers = [command.arguments[0]]
-
-	for Parser in Parsers: ParsersInstaller.uninstall(Parser, Force)

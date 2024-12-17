@@ -2,7 +2,7 @@ from Source.Core.SystemObjects import SystemObjects
 from Source.CLI.Descriptions import CommandsList
 from Source.CLI.Commands import *
 
-from dublib.Methods.System import CheckPythonMinimalVersion, Shutdown
+from dublib.Methods.System import CheckPythonMinimalVersion
 from dublib.Methods.Filesystem import MakeRootDirectories
 from dublib.CLI.Terminalyzer import Terminalyzer
 
@@ -14,8 +14,6 @@ import sys
 
 CheckPythonMinimalVersion(3, 10)
 MakeRootDirectories(["Parsers"])
-
-VERSION = "0.2.0-alpha"
 
 #==========================================================================================#
 # >>>>> НАСТРОЙКА ОБРАБОТЧИКА КОМАНД <<<<< #
@@ -39,18 +37,13 @@ if CommandDataStruct == None:
 elif CommandDataStruct.name in ("help", "list", "tagger"): Objects.LIVE_MODE = True
 
 if not Objects.LIVE_MODE:
-	Objects.logger.templates.title(VERSION)
+	Objects.logger.templates.title(SystemObjects.VERSION)
 
 	if "f" in CommandDataStruct.flags: 
 		Objects.FORCE_MODE = True
 		Objects.logger.info("Force mode: ON.")
 
-	if "s" in CommandDataStruct.flags:
-		Objects.SHUTDOWN = True
-		Objects.logger.info("Computer will be turned off after script is finished!")
-
 	Objects.logger.templates.option_status("Force mode", Objects.FORCE_MODE)
-	Objects.logger.templates.option_status("Shutdown after work", Objects.SHUTDOWN)
 	Objects.logger.templates.header("PROCESSING")
 
 #==========================================================================================#
@@ -65,9 +58,4 @@ except KeyboardInterrupt: exit(0)
 #==========================================================================================#
 
 Objects.logger.close()
-
-if Objects.SHUTDOWN:
-	print("Shutdowning...")
-	Shutdown()
-
 exit(Objects.EXIT_CODE)

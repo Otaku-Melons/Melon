@@ -3,7 +3,7 @@ __pycache__
 .venv
 # Visual Studio Code project files.
 .vscode
-# Parcers and titles data.
+# Parsers and titles data.
 Configs
 Output
 Logs

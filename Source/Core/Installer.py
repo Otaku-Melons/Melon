@@ -1,209 +1,134 @@
-from Source.Core.Exceptions import GitNotInstalled
+from Source.Core.SystemObjects import SystemObjects
 
-from dublib.CLI.TextStyler import Styles, TextStyler
-from dublib.Methods.Filesystem import ReadTextFile
+from dublib.Methods.Filesystem import ReadTextFile, WriteTextFile
+from dublib.CLI.TextStyler import TextStyler
 
-import platform
-import requests
 import shutil
+import sys
 import os
-import re
 
 class Installer:
-	"""Установщик парсеров."""
-
-	#==========================================================================================#
-	# >>>>> ПРИВАТНЫЕ МЕТОДЫ CLI <<<<< #
-	#==========================================================================================#
-
-	def __StyleParserName(self, parser_name: str) -> str:
-		"""
-		Возвращает стилизованное название парсера.
-			parser_name – значение.
-		"""
-
-		return TextStyler(parser_name, decorations = [Styles.Decorations.Bold])
+	"""Менеджер установки."""
 
 	#==========================================================================================#
 	# >>>>> ПРИВАТНЫЕ МЕТОДЫ <<<<< #
 	#==========================================================================================#
 
-	def __CheckDirectories(self, parser_name: str):
+	def __CheckVenv(self, feature: str) -> bool:
 		"""
-		Проверяет наличие каталогов парсера и создаёт их при необходимости.
-			parser_name – название парсера.
-		"""
-
-		Paths = [
-			f"Configs/{parser_name}",
-			"Parsers"
-		]
-
-		for Path in Paths:
-			if not os.path.exists(Path): os.makedirs(Path)
-
-	def __CheckGit(self):
-		"""Проверяет наличие Git на устройстве."""
-
-		if os.system(f"git --version {self.__DevNull}") != 0: raise GitNotInstalled()
-
-	def __GetReposLink(self, parser_name: str) -> str:
-		"""
-		Генерирует ссылку на репозиторий.
-			parser_name – название парсера.
+		Проверяет, создано ли вирутальное окружение Python в стандартном каталоге.
+			feature – описание функционала, для которого проводится проверка.
 		"""
 
-		Link = None
-		if self.__SSH: Link = f"git@{self.__Domain}:{self.__Owner}/{parser_name}.git"
-		else: Link = f"https://{self.__Domain}/{self.__Owner}/{parser_name}"
-
-		return Link
-
-	def __InstallConfigs(self, parser_name: str):
+		if not os.path.exists(".venv"):
+			self.__Logger.warning(f"{feature} isn't supported without Python Virtual Enviroment.", stdout = True)
+			return False
+		
+		return True
+	
+	def __InstallConfig(self, parser: str, extension: str | None = None):
 		"""
-		Устанавливает конфигурации парсера.
-			parser_name – название парсера.
+		Устанавливает настройки парсера или расширения в каталог конфигураций.
+			parser – название парсера;\n
+			extension – название расширения.
 		"""
 
-		Configs = [
-			"logger",
-			"settings"
-		]
+		Title = f"Parser: " + TextStyler(parser).decorate.bold + "."
+		if extension: Title += f" Extension: " + TextStyler(extension).decorate.bold + "."
 
-		for Config in Configs:
-			TagetPath = f"Configs/{parser_name}/{Config}.json"
-			FromPath = f"Parsers/{parser_name}/{Config}.json"
+		OriginalPath = f"Parsers/{parser}/settings.json" if not extension else f"Parsers/{parser}/extensions/{extension}/settings.json"
+		ConfigsPath = f"Configs/{parser}/settings.json" if not extension else f"Configs/{parser}/extensions/{extension}.json"
 
-			if not os.path.exists(TagetPath) and os.path.exists(FromPath):
-				shutil.copy2(FromPath, TagetPath)
-				print(f"Config \"{Config}.json\" installed.")
+		ParserConfigPath = f"Configs/{parser}"
+		if not os.path.exists(ParserConfigPath): os.makedirs(ParserConfigPath)
+		ExtensionsConfigsPath = f"Configs/{parser}/extensions"
+		if extension and not os.path.exists(ExtensionsConfigsPath): os.makedirs(ExtensionsConfigsPath)
+
+		if os.path.exists(OriginalPath):
+
+			if not os.path.exists(ConfigsPath):
+				shutil.copy2(OriginalPath, ConfigsPath)
+				self.__Logger.info(f"{Title} Config installed.", stdout = True)
+
+			else: self.__Logger.info(f"{Title} Already have configuration. Skipped.", stdout = True)
+
+		else: self.__Logger.info(f"{Title} No default settings.", stdout = True)
 
 	#==========================================================================================#
 	# >>>>> ПУБЛИЧНЫЕ МЕТОДЫ <<<<< #
 	#==========================================================================================#
 
-	def __init__(self):
+	def __init__(self, system_objects: SystemObjects):
+		"""
+		Менеджер установки.
+			system_objects – коллекция системных объектов.
+		"""
 
 		#---> Генерация динамических атрибутов.
 		#==========================================================================================#
-		self.__SSH = False
-		self.__Domain = "github.com"
-		self.__Owner = "Otaku-Melons"
-		self.__DevNull = " >/dev/null 2>&1" if platform.system() == "Linux" else ""
+		self.__SystemObjects = system_objects
 
-		self.__CheckGit()
+		self.__Logger = self.__SystemObjects.logger
 
-	def enable_ssh(self, status: bool):
-		"""
-		Переключает использование SSH вместо HTTP.
-			status – статус.
-		"""
+	def alias(self):
+		"""Добавляет алиас быстрого запуска в вирутальную среду."""
 
-		self.__SSH = status
-
-	def get_owner_repositories(self, owner: str | None = None) -> list[str]:
-		"""
-		Возвращает список репозиториев пользователя или организации.
-			owner – пользователь или организация.
-		"""
-
-		Repositories = list()
-		Owner = owner or self.__Owner
-		Response = requests.get(f"https://api.github.com/users/{Owner}")
-		if "next" in Response.links: Repositories += self.get_owner_repositories(Response.links["next"]["url"])
-		for Repos in Response.json(): Repositories.append(Repos.get("name"))
-
-		return Repositories
-
-	def get_progenitors(self, parser_name: str) -> list[str]:
-		"""
-		Возвращает список прародителей парсера.
-			parser_name – название парсера.
-		"""
-
-		Progenitors = list()
-
-		try:
-			Path = f"Parsers/{parser_name}/main.py"
-			if not os.path.exists(Path): raise FileExistsError(Path)
-			Main = ReadTextFile(Path)
-			SearchResults = re.findall(r"Parsers\.\w+\.main", Main)
-			for String in SearchResults: Progenitors.append(String[8:-5])
-			Progenitors = list(set(Progenitors))
+		if not self.__CheckVenv("Alias"): return
+		if not sys.platform.startswith("linux"): self.__Logger.warning("Alias will be installed only for Bash script.", stdout = True)
 		
-		except: pass
+		Alias = "alias melon=\"python main.py\""
+		ActivateScript = ReadTextFile(".venv/bin/activate", split = "\n")
 
-		return Progenitors
+		if Alias not in ActivateScript:
+			ActivateScript.insert(0, Alias)
+			WriteTextFile(".venv/bin/activate", ActivateScript, join = "\n")
+			self.__Logger.info("Alias installed.", stdout = True)
 
-	def install(self, parser_name: str, force: bool = False, is_progenitor: bool = False):
-		"""
-		Устанавливает парсер.
-			parser_name – название парсера;\n
-			force – указывает, нужно ли удалить существующие файлы;\n
-			is_progenitor – считается ли парсер предком другого парсера.
-		"""
+		else: self.__Logger.warning("Alias already installed.", stdout = True)
 
-		StyledParserName = self.__StyleParserName(parser_name)
-		print(f"Installing {StyledParserName}..." if is_progenitor else f"=== Installing {StyledParserName} ===")
-		# StyledPrinter("WARNING: Last commit will be installed instead stable version!", text_color = Styles.Colors.Yellow)
-		if force: print("Force mode: " + TextStyler("enabled", text_color = Styles.Colors.Red))
+	def configs(self):
+		"""Копирует настройки парсеров и расширений в каталог конфигураций, если таковые ещё не существуют."""
 
-		Path = f"Parsers/{parser_name}"
-		IsExists = os.path.exists(Path)
-		
-		if IsExists and force:
-			shutil.rmtree(Path)
-			print("Existing files deleted.")
+		for Parser in self.__SystemObjects.manager.all_parsers_names:
+			self.__InstallConfig(Parser)
 
-		elif IsExists and not force:
-			print("Already installed.")
+			try:
+				for Extension in os.listdir(f"Parsers/{Parser}/extensions"): self.__InstallConfig(Parser, Extension)
+			except FileNotFoundError: pass
 
-		else:
-			self.__CheckDirectories(parser_name)
+	def requirements(self):
+		"""Устанавливает зависимости парсеров."""
 
-			if os.system("cd Parsers && git clone " + self.__GetReposLink(parser_name) + self.__DevNull) != 0:
-				# StyledPrinter("ERROR!", text_color = Styles.Colors.Red)
-				return
-			
-			else:
-				self.__InstallConfigs(parser_name)
-				print("Done.")
+		if not self.__CheckVenv("Automatic requirements installation"): return
 
-				Progenitors = self.get_progenitors(parser_name)
-				if Progenitors: print("=== Installing progenitors ===")
-				for Repos in self.get_progenitors(parser_name): self.install(Repos, is_progenitor = True)
+		for Parser in self.__SystemObjects.manager.all_parsers_names:
+			Path = f"Parsers/{Parser}/requirements.txt"
+			ParserBold = TextStyler(Parser).decorate.bold
 
-	def set_owner(self, owner: str):
-		"""
-		Задаёт владельца репозитория для генерации ссылок.
-			owner – владелец.
-		"""
+			if os.path.exists(Path):
+				self.__Logger.info(f"Installing requirements for {ParserBold}...", stdout = True)
+				ExitCode = os.system(f". .venv/bin/activate && pip install -r {Path}")
 
-		self.__Owner = owner
+				if ExitCode == 0: self.__Logger.info(f"Requirements for {ParserBold} installed.", stdout = True)
+				else: self.__Logger.info(f"Error occurs during requirements installation for {ParserBold}.", stdout = True)
 
-	def uninstall(self, parser_name: str, force: bool = False):
-		"""
-		Уадялет парсер.
-			parser_name – название парсера;\n
-			force – указывает, нужно ли удалить существующие файлы.
-		"""
+	def scripts(self):
+		"""Выполняет установочные скрипты парсеров."""
 
-		StyledParserName = self.__StyleParserName(parser_name)
-		print(f"Uninstalling {StyledParserName}...")
-		if force: print("Force mode: " + TextStyler("enabled", text_color = Styles.Colors.Red))
+		ScriptTypes = {
+			"linux": "sh",
+			"win32": "bat"
+		}
 
-		Path = f"Configs/{parser_name}"
+		for Parser in self.__SystemObjects.manager.all_parsers_names:
+			Path = f"Parsers/{Parser}/install." + ScriptTypes[sys.platform]
+			ParserBold = TextStyler(Parser).decorate.bold
 
-		if force and os.path.exists(Path):
-			shutil.rmtree(Path)
-			print("Configs removed.")
+			if os.path.exists(Path):
+				print(f"Running script for {ParserBold}...")
+				ExitCode = os.system(f"bash {Path}")
 
-		if os.path.exists("Configs") and not os.listdir("Configs"): os.rmdir("Configs")
+				if ExitCode == 0: self.__Logger.info(f"Script for {ParserBold} done.", stdout = True)
+				else: self.__Logger.error(f"Script for {ParserBold} failure.", stdout = True)
 
-		Path = f"Parsers/{parser_name}"
-
-		if os.path.exists(Path):
-			shutil.rmtree(Path)
-			print("Done.")
-
-		else: print(f"Parser {StyledParserName} not found.")
+			else: self.__Logger.info(f"No {ParserBold} script for this system.", stdout = True)

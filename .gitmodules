@@ -1,12 +1,6 @@
 [submodule "Parsers/mangalib"]
 	path = Parsers/mangalib
 	url = git@github.com:Otaku-Melons/mangalib.git
-[submodule "Parsers/hentailib"]
-	path = Parsers/hentailib
-	url = git@github.com:Otaku-Melons/hentailib.git
-[submodule "Parsers/slashlib"]
-	path = Parsers/slashlib
-	url = git@github.com:Otaku-Melons/slashlib.git
 [submodule "Parsers/remanga"]
 	path = Parsers/remanga
 	url = git@github.com:Otaku-Melons/remanga.git
