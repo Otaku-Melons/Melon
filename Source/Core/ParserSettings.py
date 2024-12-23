@@ -19,7 +19,7 @@ Settings = {
 		"images_directory": "",
 		"titles_directory": "",
 		"bad_image_stub": "",
-		"pretty": True,
+		"pretty": False,
 		"use_id_as_filename": False,
 		"sizing_images": False,
 		"legacy": False,
@@ -42,11 +42,7 @@ Settings = {
 		"login": "",
 		"password": ""
 	},
-	"custom": {
-		"token": "",
-		"unstub": False,
-		"add_free_publication_date": False
-	}
+	"custom": {}
 }
 
 #==========================================================================================#

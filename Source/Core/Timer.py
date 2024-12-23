@@ -26,18 +26,23 @@ class Timer:
 	def ends(self) -> str:
 		"""Завершает отсчёт интервала и возвращает форматированную строку времени."""
 
-		Delay = self.end()
-		Delay = round(Delay, 2)
+		OriginalDelay = self.end()
+		Delay = round(OriginalDelay, 2)
 		Minutes, Seconds = divmod(Delay, 60)
 		Minutes = int(Minutes)
 		Seconds = int(Seconds)
 		
 		StrMinutes = ""
 		if Minutes: StrMinutes = f"{Minutes} minutes " 
-		else: Seconds = Delay if Delay else 0
+		else: Seconds = Delay if Delay else round(OriginalDelay, 4)
 		StrTime = f"{StrMinutes}{Seconds} seconds"
 
 		return StrTime
+	
+	def done(self):
+		"""Останавливает таймер и выводит в консоль время исполнения."""
+
+		print("Done in " + self.ends() + ".")
 
 	def start(self):
 		"""Начинает отсчёт интервала времени."""

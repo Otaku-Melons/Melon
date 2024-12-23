@@ -13,6 +13,7 @@ import shlex
 #==========================================================================================#
 
 VERSION = None
+NAME = None
 
 #==========================================================================================#
 # >>>>> ОСНОВНОЙ КЛАСС <<<<< #
@@ -134,9 +135,9 @@ class BaseExtension:
 
 		self._PostInitMethod()
 
-	def run(self, command: str | None) -> ExecutionStatus:
+	def run(self, command: str | None) -> ExecutionStatus | ExecutionError:
 		"""
-		Запускает расширение.Там картинки. 
+		Запускает расширение.
 			command – передаваемая для обработки команда.
 		"""
 

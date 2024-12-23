@@ -1,12 +1,13 @@
 from Source.Core.ImagesDownloader import ImagesDownloader
+from Source.Core.Development import DevelopmeptAssistant
 from Source.Core.SystemObjects import SystemObjects
+from Source.Core.Formats import By, ContentTypes
 from Source.Core.Builders import MangaBuilder
 from Source.Core.Collector import Collector
 from Source.Core.Installer import Installer
 from Source.Core.Tagger import Tagger
 from Source.Core.Exceptions import *
 from Source.Core.Timer import Timer
-from Source.Core.Formats import By
 from Source.CLI import Templates
 
 from dublib.CLI.Terminalyzer import ParsedCommandData
@@ -155,6 +156,30 @@ def com_help(system_objects: SystemObjects, command: ParsedCommandData):
 
 	pass
 
+def com_init(system_objects: SystemObjects, command: ParsedCommandData):
+	"""
+	Производит установку парсеров.
+		system_objects – коллекция системных объектов;\n
+		command – объект представления консольной команды.
+	"""
+
+	#---> Подготовка к выполнению.
+	#==========================================================================================#
+	system_objects.logger.select_cli_point(command.name)
+	
+	#---> Парсинг данных команды.
+	#==========================================================================================#
+	Name = command.arguments[0]
+	Type = ContentTypes(command.get_key_value("content"))
+	
+	#---> Выполнение команды.
+	#==========================================================================================#
+	system_objects.logger.info("====== Initializing ======")
+	Assistang = DevelopmeptAssistant(system_objects)
+
+	if command.check_flag("p"): Assistang.init_parser(Name, Type)
+	elif command.check_flag("e"): Assistang.init_extension(Name)
+
 def com_install(system_objects: SystemObjects, command: ParsedCommandData):
 	"""
 	Производит установку парсеров.
@@ -172,7 +197,7 @@ def com_install(system_objects: SystemObjects, command: ParsedCommandData):
 	
 	#---> Выполнение команды.
 	#==========================================================================================#
-	system_objects.logger.info("====== Insrallation ======")
+	system_objects.logger.info("====== Installation ======")
 	print("Running installation...")
 	InstallerObject = Installer(system_objects)
 	TimerObject = Timer(start = True)

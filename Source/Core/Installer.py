@@ -2,6 +2,7 @@ from Source.Core.SystemObjects import SystemObjects
 
 from dublib.Methods.Filesystem import ReadTextFile, WriteTextFile
 from dublib.CLI.TextStyler import TextStyler
+from dublib.Engine.Patcher import Patch
 
 import shutil
 import sys
@@ -75,13 +76,13 @@ class Installer:
 
 		if not self.__CheckVenv("Alias"): return
 		if not sys.platform.startswith("linux"): self.__Logger.warning("Alias will be installed only for Bash script.", stdout = True)
-		
-		Alias = "alias melon=\"python main.py\""
-		ActivateScript = ReadTextFile(".venv/bin/activate", split = "\n")
 
-		if Alias not in ActivateScript:
-			ActivateScript.insert(0, Alias)
-			WriteTextFile(".venv/bin/activate", ActivateScript, join = "\n")
+		Alias = "alias melon=\"python main.py\""
+		File = Patch(".venv/bin/activate")
+
+		if Alias not in File.lines:
+			File.append_line(0, Alias)
+			File.save()
 			self.__Logger.info("Alias installed.", stdout = True)
 
 		else: self.__Logger.warning("Alias already installed.", stdout = True)

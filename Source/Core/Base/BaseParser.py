@@ -45,9 +45,9 @@ class BaseParser:
 
 		Config = WebConfig()
 		Config.select_lib(WebLibs.requests)
-		Config.set_retries_count(2)
+		Config.set_retries_count(self._Settings.common.retries)
 		Config.generate_user_agent()
-		Config.add_header("Referer", f"https://{ParserSite}/")
+		Config.add_header("Referer", f"https://{SITE}/")
 		Config.requests.enable_proxy_protocol_switching(True)
 		WebRequestorObject = WebRequestor(Config)
 		

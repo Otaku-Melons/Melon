@@ -19,6 +19,14 @@ class By(enum.Enum):
 	Slug = "slug"
 	ID = "id"
 
+class ContentTypes(enum.Enum):
+	"""Перечисление типов контента."""
+
+	Anime = "anime"
+	Manga = "manga"
+	Ranobe = "ranobe"
+	Unknown = None
+	
 class Statuses(enum.Enum):
 	"""Определения статусов."""
 
