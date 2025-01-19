@@ -24,9 +24,9 @@ Objects = SystemObjects()
 Analyzer.enable_help(True)
 CommandDataStruct = Analyzer.check_commands(CommandsList)
 
-Objects.logger.info("====== Preparing to starting ======")
-Objects.logger.info(f"Starting with Python {sys.version_info.major}.{sys.version_info.minor}.{sys.version_info.micro} on {sys.platform}.")
-Objects.logger.info("Command: \"" + " ".join(sys.argv[1:len(sys.argv)]) + "\".")
+Objects.logger.info("====== Preparing to starting ======", stdout = False)
+Objects.logger.info(f"Starting with Python {sys.version_info.major}.{sys.version_info.minor}.{sys.version_info.micro} on {sys.platform}.", stdout = False)
+Objects.logger.info("Command: \"" + " ".join(sys.argv[1:len(sys.argv)]) + "\".", stdout = False)
 
 if CommandDataStruct == None:
 	Objects.logger.set_rule(3)
@@ -44,7 +44,6 @@ if not Objects.LIVE_MODE:
 		Objects.logger.info("Force mode: ON.")
 
 	Objects.logger.templates.option_status("Force mode", Objects.FORCE_MODE)
-	Objects.logger.templates.header("PROCESSING")
 
 #==========================================================================================#
 # >>>>> ОБРАБОТКА КОММАНД <<<<< #

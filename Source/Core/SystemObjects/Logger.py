@@ -3,6 +3,7 @@ from Source.Core.Formats import BaseChapter, BaseTitle
 from Source.CLI import Templates
 
 from dublib.Methods.Filesystem import ReadJSON
+from dublib.Engine.Bus import ExecutionStatus
 from dublib.CLI.TextStyler import TextStyler
 from dublib.WebRequestor import WebResponse
 from dublib.Polyglot import Markdown
@@ -390,7 +391,7 @@ class Logger:
 
 		return LoggerSettingsObject
 
-	def __RemoveControlCodes(self, text: str) -> str:
+	def __RemoveEscapesANSI(self, text: str) -> str:
 		"""
 		Удаляет управляющие последовательности ANSI.
 			text – обрабатываемый текст.
@@ -413,6 +414,17 @@ class Logger:
 		CompiledRegex = re.compile(Regex, flags = re.IGNORECASE)
 
 		return CompiledRegex.sub("", text)
+	
+	def __BoldANSItoQuotes(self, text: str) -> str:
+		"""
+		Заменяет полужирные последовательности ANSI на кавычки.
+			text – обрабатываемый текст.
+		"""
+
+		text = text.replace("\033[1m", "\"")
+		text = text.replace("\033[0m", "\"")
+
+		return text
 
 	def __SendReport(self, description: str):
 		"""
@@ -452,6 +464,96 @@ class Logger:
 				except: logging.error("TeleBot error occurs during sending report.")
 
 		self.__SilentMode = False
+
+	#==========================================================================================#
+	# >>>>> ПРИВАТНЫЕ МЕТОДЫ ЛОГГИРОВАНИЯ <<<<< #
+	#==========================================================================================#
+
+	def __LogCritical(self, text: str):
+		"""
+		Записывает в лог критическую ошибку.
+			text – текст критической ошибки.
+		"""
+
+		text = self.__RemoveEscapesANSI(text)
+		logging.critical(text)
+		self.__IsLogHasError = True
+		if not self.__SilentMode and self.__LoggerSettings.telebot.rules.critical: self.__SendReport(text)
+
+	def __LogError(self, text: str):
+		"""
+		Записывает в лог ошибку.
+			text – текст ошибки.
+		"""
+
+		text = self.__RemoveEscapesANSI(text)
+		logging.error(text)
+		self.__IsLogHasError = True
+		if not self.__SilentMode and self.__LoggerSettings.telebot.rules.errors: self.__SendReport(text)
+
+	def __LogWarning(self, text: str):
+		"""
+		Записывает в лог предупреждение.
+			text – описание предупреждения.
+		"""
+
+		text = self.__RemoveEscapesANSI(text)
+		logging.warning(text)
+		self.__IsLogHasWarning = True
+		if not self.__SilentMode and self.__LoggerSettings.telebot.rules.warnings: self.__SendReport(text)
+
+	def __LogInfo(self, text: str):
+		"""
+		Записывает в лог информацию.
+			text – информация.
+		"""
+
+		text = self.__RemoveEscapesANSI(text)
+		logging.info(text)
+
+	#==========================================================================================#
+	# >>>>> ПРИВАТНЫЕ МЕТОДЫ ВЫВОДА В КОНСОЛЬ <<<<< #
+	#==========================================================================================#
+
+	def __PrintCritical(self, text: str):
+		"""
+		Записывает в лог критическую ошибку.
+			text – текст критической ошибки.
+		"""
+
+		Status = ExecutionStatus()
+		Status.push_critical(text)
+		Status.print_messages()
+
+	def __PrintError(self, text: str):
+		"""
+		Записывает в лог ошибку.
+			text – текст ошибки.
+		"""
+
+		Status = ExecutionStatus()
+		Status.push_error(text)
+		Status.print_messages()
+
+	def __PrintWarning(self, text: str):
+		"""
+		Записывает в лог предупреждение.
+			text – описание предупреждения.
+		"""
+
+		Status = ExecutionStatus()
+		Status.push_warning(text)
+		Status.print_messages()
+
+	def __PrintInfo(self, text: str):
+		"""
+		Записывает в лог информацию.
+			text – информация.
+		"""
+
+		Status = ExecutionStatus()
+		Status.push_message(text)
+		Status.print_messages()
 
 	#==========================================================================================#
 	# >>>>> ПУБЛИЧНЫЕ МЕТОДЫ <<<<< #
@@ -514,10 +616,10 @@ class Logger:
 		else: self.__LoggerRule = rule
 
 	#==========================================================================================#
-	# >>>>> БАЗОВЫЕ ТИПЫ ЗАПИСЕЙ <<<<< #
+	# >>>>> БАЗОВЫЕ ТИПЫ ЗАПИСЕЙ<<<<< #
 	#==========================================================================================#
 
-	def critical(self, text: str, stdout: bool = False, log: bool = True):
+	def critical(self, text: str, stdout: bool = True, log: bool = True):
 		"""
 		Записывает в лог критическую ошибку.
 			text – текст критической ошибки;\n
@@ -525,16 +627,10 @@ class Logger:
 			log – указывает, делать ли запись в лог.
 		"""
 
-		if stdout: print(TextStyler("[CRITICAL]").colorize.red, TextStyler(text).colorize.red)
-		text = self.__RemoveControlCodes(text)
+		if stdout: self.__PrintCritical(text)
+		if log: self.__LogCritical(text)
 
-		if log:
-			logging.critical(text)
-			self.__IsLogHasError = True
-
-		if not self.__SilentMode and self.__LoggerSettings.telebot.rules.critical: self.__SendReport(text)
-
-	def error(self, text: str, stdout: bool = False, log: bool = True):
+	def error(self, text: str, stdout: bool = True, log: bool = True):
 		"""
 		Записывает в лог ошибку.
 			text – текст ошибки;\n
@@ -542,28 +638,10 @@ class Logger:
 			logs – указывает, делать ли запись в лог.
 		"""
 
-		if stdout: print(TextStyler("[ERROR]").colorize.red, TextStyler(text).colorize.red)
-		text = self.__RemoveControlCodes(text)
+		if stdout: self.__PrintError(text)
+		if log: self.__LogError(text)
 
-		if log:
-			logging.error(text)
-			self.__IsLogHasError = True
-
-		if not self.__SilentMode and self.__LoggerSettings.telebot.rules.errors: self.__SendReport(text)
-
-	def info(self, text: str, stdout: bool = False, log: bool = True):
-		"""
-		Записывает в лог информацию.
-			text – информация;\n
-			stdout – указывает, помещать ли данные в поток стандартного вывода;\n
-			log – указывает, делать ли запись в лог.
-		"""
-
-		if stdout: print(text)
-		text = self.__RemoveControlCodes(text)
-		if log: logging.info(text)
-
-	def warning(self, text: str, stdout: bool = False, log: bool = True):
+	def warning(self, text: str, stdout: bool = True, log: bool = True):
 		"""
 		Записывает в лог предупреждение.
 			text – описание предупреждения;\n
@@ -571,14 +649,19 @@ class Logger:
 			log – указывает, делать ли запись в лог.
 		"""
 
-		if stdout: print(TextStyler("[WARNING]").colorize.yellow, TextStyler(text).colorize.yellow)
-		text = self.__RemoveControlCodes(text)
+		if stdout: self.__PrintWarning(text)
+		if log: self.__LogWarning(text)
 
-		if log:
-			logging.warning(text)
-			self.__IsLogHasWarning = True
-		
-		if not self.__SilentMode and self.__LoggerSettings.telebot.rules.warnings: self.__SendReport(text)
+	def info(self, text: str, stdout: bool = True, log: bool = True):
+		"""
+		Записывает в лог информацию.
+			text – информация;\n
+			stdout – указывает, помещать ли данные в поток стандартного вывода;\n
+			log – указывает, делать ли запись в лог.
+		"""
+
+		if stdout: self.__PrintInfo(text)
+		if log: self.__LogInfo(text)
 
 	#==========================================================================================#
 	# >>>>> ШАБЛОНЫ ОШИБОК <<<<< #
@@ -591,8 +674,8 @@ class Logger:
 			chapter – данные главы.
 		"""
 
-		self.info(f"Title: \"{title.slug}\" (ID: {title.id}). Chapter {chapter.id} not found.")
-		print(f"Chapter {chapter.id} not found.")
+		self.__LogInfo(f"Title: \"{title.slug}\" (ID: {title.id}). Chapter {chapter.id} not found.")
+		self.__PrintInfo(f"Chapter {chapter.id} not found.")
 
 	def request_error(self, response: WebResponse, text: str | None = None, exception: bool = True):
 		"""
@@ -611,18 +694,6 @@ class Logger:
 
 		self.error(Text, stdout = True)
 		self.__SilentMode = False
-		if exception: raise ParsingError()
-
-	def unsupported_format(self, title: BaseTitle, exception: bool = False):
-		"""
-		Шаблон ошибки: неподдерживаемый формат JSON.
-			title – данные тайтла;\n
-			exception – указывает, выбрасывать ли исключение.
-		"""
-
-		Text = "Unsupported JSON format. Will be overwritten."
-		self.warning(f"Title: \"{title.slug}\" (ID: {title.id}). {Text}")
-		print(TextStyler("[WARNING] " + Text).colorize.yellow)
 		if exception: raise ParsingError()
 
 	#==========================================================================================#
@@ -647,6 +718,18 @@ class Logger:
 		print(TextStyler("[WARNING] Title not found.").colorize.yellow)
 		self.__SilentMode = False
 		if exception: raise TitleNotFound(title)
+
+	def unsupported_format(self, title: BaseTitle, exception: bool = False):
+		"""
+		Шаблон ошибки: неподдерживаемый формат JSON.
+			title – данные тайтла;\n
+			exception – указывает, выбрасывать ли исключение.
+		"""
+
+		Text = "Unsupported JSON format."
+		self.__LogWarning(f"Title: \"{title.slug}\" (ID: {title.id}). {Text}")
+		self.__PrintWarning(Text)
+		if exception: raise ParsingError()
 
 	#==========================================================================================#
 	# >>>>> ШАБЛОНЫ ЗАПИСЕЙ <<<<< #
@@ -731,7 +814,7 @@ class Logger:
 
 		if not self.__LoggerRule: self.set_rule(self.__LoggerSettings.cleaner[self.__PointName])
 
-		self.info("====== End ======")
+		self.__LogInfo("====== End ======")
 		logging.shutdown()
 
 		IsClean = False

@@ -4,12 +4,12 @@ from Source.Core.ParserSettings import ParserSettings
 from Source.Core.SystemObjects import SystemObjects
 
 from dublib.WebRequestor import Protocols, WebConfig, WebLibs, WebRequestor
-
+from dublib.Engine.Bus import ExecutionStatus
+	
 #==========================================================================================#
 # >>>>> ОПРЕДЕЛЕНИЯ <<<<< #
 #==========================================================================================#
 
-VERSION = None
 NAME = None
 SITE = None
 
@@ -98,15 +98,15 @@ class BaseParser:
 
 		pass
 
-	def image(self, url: str) -> str | None:
+	def image(self, url: str) -> ExecutionStatus:
 		"""
 		Скачивает изображение с сайта во временный каталог парсера и возвращает имя файла.
 			url – ссылка на изображение.
 		"""
 
-		Filename = ImagesDownloader(self._SystemObjects, self._Requestor).temp_image(url)
+		Status = ImagesDownloader(self._SystemObjects, self._Requestor).temp_image(url)
 		
-		return Filename
+		return Status
 
 	def parse(self):
 		"""Получает основные данные тайтла."""

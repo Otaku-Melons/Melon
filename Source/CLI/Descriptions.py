@@ -1,4 +1,5 @@
 from dublib.CLI.Terminalyzer import Command, ParametersTypes
+from dublib.CLI.TextStyler import TextStyler
 
 CommandsList: list[Command] = list()
 
@@ -10,7 +11,8 @@ ComPos.add_key("use", ParametersTypes.Text, "Parser name.")
 Com.add_flag("cbz", "Make *.CBZ archives.")
 CommandsList.append(Com)
 
-Com = Command("collect", "Collect titles slugs into Collection.txt file.")
+CollectionFileBold = TextStyler("Collection.txt").decorate.italic
+Com = Command("collect", f"Collect titles slugs into {CollectionFileBold} file.")
 ComPos = Com.create_position("PARSER", "Name of parser.", important = True)
 ComPos.add_key("use", ParametersTypes.Text, "Parser name.")
 Com.add_flag("f", "Enable force mode.")

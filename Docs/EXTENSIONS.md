@@ -38,13 +38,13 @@ NAME = "parser.extension"
 По умолчанию метод содержит в себе обработку строки через [Terminalyzer](https://github.com/DUB1401/dublib/blob/main/docs/CLI/Terminalyzer.md) и передаёт результат в **_ProcessCommand()**. При необходимости собственной обработки параметров вы можете переопределять его по шаблону ниже.
 
 ```Python
-def run(self, command: str | None) -> ExecutionStatus | ExecutionError:
+def run(self, command: str | None) -> ExecutionStatus:
 		"""
 		Запускает расширение.
 			command – передаваемая для обработки команда.
 		"""
 
-		Status = ExecutionStatus(0)
+		Status = ExecutionStatus()
 
 		pass
 

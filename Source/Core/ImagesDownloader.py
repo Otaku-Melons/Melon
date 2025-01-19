@@ -1,8 +1,7 @@
 from dublib.WebRequestor import Protocols, WebConfig, WebLibs, WebRequestor
-from dublib.Engine.Bus import ExecutionError, ExecutionStatus
 from dublib.Methods.Filesystem import NormalizePath
+from dublib.Engine.Bus import ExecutionStatus
 from dublib.WebRequestor import WebRequestor
-from dublib.Methods.Data import Zerotify
 
 import shutil
 import os
@@ -87,6 +86,22 @@ class ImagesDownloader:
 		self.__Requestor = requestor or self.__InitializeRequestor()
 		self.__Logging = logging
 
+	def check_image_exists(self, url: str, directory: str | None = "", filename: str | None = None, is_full_filename: bool = False) -> bool:
+		"""
+		Проверяет, существует ли изображение с таким именем в целевой директории.
+			url – ссылка на изображение;\n
+			directory – путь к каталогу загрузки;\n
+			filename – имя файла;\n
+			is_full_filename – указывает, является ли имя файла полным.
+		"""
+
+		Filetype = ""
+		if not is_full_filename: Filetype = self.__GetFiletype(url)
+		if not filename: filename = self.__GetFilename(url)
+		Path = f"{directory}/{filename}{Filetype}"
+		
+		return os.path.exists(Path)
+
 	def image(self, url: str, directory: str | None = "", filename: str | None = None, is_full_filename: bool = False) -> ExecutionStatus:
 		"""
 		Скачивает изображение.
@@ -96,7 +111,8 @@ class ImagesDownloader:
 			is_full_filename – указывает, является ли имя файла полным.
 		"""
 
-		Status = ExecutionStatus(0)
+		Status = ExecutionStatus()
+		Status["exists"] = False
 		if directory == None: directory = ""
 		directory = NormalizePath(directory)
 		IsStubUsed = bool(self.__ParserSettings.common.bad_image_stub) if self.__ParserSettings.common.bad_image_stub else False
@@ -121,34 +137,35 @@ class ImagesDownloader:
 				
 					with open(Path, "wb") as FileWriter:
 						FileWriter.write(Response.content)
-						Status = ExecutionStatus(200)
+						Status.code = 200
 						Status.value = filename + Filetype
-						Status.message = "Done."
+						Status.push_message("Done.")
 
 				elif IsStubUsed:
 					shutil.copy2(self.__ParserSettings.common.bad_image_stub, Path)
 					if self.__Logging: self.__SystemObjects.logger.warning(f"Image doesn't contain enough bytes: \"{url}\". Replaced by stub.")
-					Status = ExecutionError(200)
+					Status.code = 200
 					Status.value = filename + Filetype
-					Status.message = "Bad image. Replaced by stub."
+					Status.push_warning("Bad image. Replaced by stub.")
 
 				else:
 					if self.__Logging: self.__SystemObjects.logger.error(f"Image doesn't contain enough bytes: \"{url}\".")
-					Status = ExecutionError(204)
-					Status.message = "Error! Image doesn't contain enough bytes."
+					Status.code = 204
+					Status.push_error("Error! Image doesn't contain enough bytes.")
 
 			else:
 				if self.__Logging: self.__SystemObjects.logger.request_error(Response, f"Unable to download image: \"{url}\".", exception = False)
-				Status = ExecutionError(Response.status_code)
-				Status.message = f"Error! Response code: {Response.status_code}."
+				Status.code = Response.status_code
+				Status.push_error(f"Error! Response code: {Response.status_code}.")
 
 		elif IsFileExists:
 			Status.value = filename + Filetype
-			Status.message = "Already exists."
-		
+			Status.push_message("Already exists.")
+			Status["exists"] = True
+			
 		return Status
 	
-	def move_from_temp(self, directory: str, original_filename: str, filename: str | None = None, is_full_filename: bool = True) -> bool:
+	def move_from_temp(self, directory: str, original_filename: str, filename: str | None = None, is_full_filename: bool = True) -> ExecutionStatus:
 		"""
 		Перемещает изображение из временного каталога парсера в другое расположение.
 			directory – путь к каталогу загрузки;\n
@@ -157,6 +174,9 @@ class ImagesDownloader:
 			is_full_filename – указывает, является ли имя файла полным.
 		"""
 		
+		Status = ExecutionStatus()
+		Status["exists"] = False
+
 		try:
 			OriginalPath = f"Temp/{self.__SystemObjects.parser_name}/" + original_filename
 			directory = NormalizePath(directory)
@@ -168,13 +188,21 @@ class ImagesDownloader:
 				
 			elif not filename: filename = original_filename
 
-			shutil.move(OriginalPath, f"{directory}/{filename}{Filetype}")
+			TargetPath = f"{directory}/{filename}{Filetype}"
 
-		except: return False
+			if os.path.exists(TargetPath): 
+				Status.value = True
+				Status["exists"] = True
 
-		return True
+			else:
+				shutil.move(OriginalPath, TargetPath)
+				Status.value = True
+
+		except: pass
+
+		return Status
 	
-	def temp_image(self, url: str, filename: str | None = None, is_full_filename: bool = False) -> str | None:
+	def temp_image(self, url: str, filename: str | None = None, is_full_filename: bool = False) -> ExecutionStatus:
 		"""
 		Скачивает изображение во временный каталог парсера.
 			url – ссылка на изображение;\n
@@ -182,11 +210,11 @@ class ImagesDownloader:
 			is_full_filename – указывает, является ли имя файла полным.
 		"""
 
-		Result = self.image(
+		Status = self.image(
 			url = url,
 			directory = self.__SystemObjects.temper.parser_temp,
 			filename = filename,
 			is_full_filename = is_full_filename
 		)
 
-		return Zerotify(Result.value)
+		return Status

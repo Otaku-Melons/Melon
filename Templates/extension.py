@@ -1,13 +1,12 @@
 from Source.Core.Exceptions import ParsingError, TitleNotFound
 from Source.Core.Base.BaseExtension import BaseExtension
 
-from ...main import VERSION as PARSER_VERSION
 from ...main import NAME as PARSER_NAME
 from ...main import TYPE as PARSER_TYPE
 from ...main import SITE
 
 from dublib.CLI.Terminalyzer import Command, ParsedCommandData
-from dublib.Engine.Bus import ExecutionStatus, ExecutionError
+from dublib.Engine.Bus import ExecutionStatus
 
 #==========================================================================================#
 # >>>>> ОПРЕДЕЛЕНИЯ <<<<< #

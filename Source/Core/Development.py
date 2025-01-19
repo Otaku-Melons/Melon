@@ -73,7 +73,7 @@ class DevelopmeptAssistant:
 		"""
 
 		for File in files.keys():
-			OriginalPath = f"Source/Templates/{File}" 
+			OriginalPath = f"Templates/{File}" 
 			Filename = files[File] if files[File] else File
 			Path = f"{path}/{Filename}"
 			shutil.copy(OriginalPath, Path)

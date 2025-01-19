@@ -4,7 +4,7 @@ from Source.Core.SystemObjects import SystemObjects
 
 from dublib.CLI.Terminalyzer import Command, ParsedCommandData, Terminalyzer
 from dublib.WebRequestor import Protocols, WebConfig, WebLibs, WebRequestor
-from dublib.Engine.Bus import ExecutionStatus, ExecutionError
+from dublib.Engine.Bus import ExecutionStatus
 
 import shlex
 
@@ -135,13 +135,13 @@ class BaseExtension:
 
 		self._PostInitMethod()
 
-	def run(self, command: str | None) -> ExecutionStatus | ExecutionError:
+	def run(self, command: str | None) -> ExecutionStatus:
 		"""
 		Запускает расширение.
 			command – передаваемая для обработки команда.
 		"""
 
-		Status = ExecutionStatus(0)
+		Status = ExecutionStatus()
 
 		if command: 
 			command = shlex.split(command)
@@ -150,11 +150,11 @@ class BaseExtension:
 			ParsedCommand = Analyzer.check_commands(self._GenerateCommandsList())
 
 			if not ParsedCommand:
-				Status = ExecutionError(-1, "Unknown command.")
+				Status.push_error("Unknown command.")
 				return Status
 
 			self._ProcessCommand(ParsedCommand)
 
-		else: Status.message = "No command. Use \"--command\" key."
+		else: Status.push_error("No command. Use \"--command\" key.")
 
 		return Status

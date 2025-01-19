@@ -5,7 +5,6 @@ from Source.Core.Base.MangaParser import MangaParser
 # >>>>> ОПРЕДЕЛЕНИЯ <<<<< #
 #==========================================================================================#
 
-VERSION = None
 NAME = None
 SITE = None
 TYPE = Manga

@@ -3,6 +3,9 @@ from Source.Core.ParserSettings import ParserSettings
 from dublib.Methods.Filesystem import ReadJSON
 from dublib.CLI.TextStyler import TextStyler
 
+from typing import Any
+
+import subprocess
 import importlib
 import os
 
@@ -65,6 +68,18 @@ class Manager:
 
 		return parser
 
+	def __GetLegacyParserVersion(self, parser: str | None = None) -> str | None:
+		"""
+		Возвращает версию парсера из констант главного файла.
+			parser – название парсера.
+		"""
+
+		Version = None
+		try: Version = importlib.import_module(f"Parsers.{parser}.main").VERSION
+		except AttributeError: pass
+
+		return Version
+
 	#==========================================================================================#
 	# >>>>> ПУБЛИЧНЫЕ МЕТОДЫ <<<<< #
 	#==========================================================================================#
@@ -84,7 +99,7 @@ class Manager:
 		self.__Extension = None
 		self.__Parser = None
 
-	def launch(self, parser: str | None = None) -> any:
+	def launch(self, parser: str | None = None) -> Any:
 		"""
 		Запускает парсер и возвращает его объект.
 			parser – название парсера.
@@ -139,7 +154,7 @@ class Manager:
 		
 		parser = self.__CheckParser(parser)
 		Module = importlib.import_module(f"Parsers.{parser}.main")
-		Parser = Module.Parser(self.__SystemObjects, self.get_parser_settings(parser))
+		Parser = Module.Parser
 		IsImplemented = True
 
 		try: Parser.collect
@@ -148,23 +163,6 @@ class Manager:
 
 		return IsImplemented
 
-	def check_method_image(self, parser: str | None = None) -> bool:
-		"""
-		Проверяет, доступна ли в парсере имплементация метода image.
-			parser – название парсера.
-		"""
-
-		parser = self.__CheckParser(parser)
-		Module = importlib.import_module(f"Parsers.{parser}.main")
-		Parser = Module.Parser(self.__SystemObjects, self.get_parser_settings(parser))
-		IsImplemented = True
-
-		try: Parser.image
-		except AttributeError: IsImplemented = False
-		except: IsImplemented = None
-
-		return IsImplemented
-	
 	#==========================================================================================#
 	# >>>>> ПУБЛИЧНЫЕ МЕТОДЫ ПОЛУЧЕНИЯ ПАРАМЕТРОВ РАСШИРЕНИЙ <<<<< #
 	#==========================================================================================#
@@ -255,6 +253,9 @@ class Manager:
 		"""
 
 		parser = self.__CheckParser(parser)
-		Module = importlib.import_module(f"Parsers.{parser}.main")
+		Version = subprocess.getoutput(f"cd Parsers/{parser} && git describe --tags $(git rev-list --tags --max-count=1)")
+		
+		if Version.startswith("fatal"): Version = self.__GetLegacyParserVersion(parser)
+		if Version.startswith("v"): Version = Version.lstrip("v")
 
-		return Module.VERSION
+		return Version

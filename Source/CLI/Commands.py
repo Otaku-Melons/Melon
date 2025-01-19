@@ -1,6 +1,7 @@
 from Source.Core.ImagesDownloader import ImagesDownloader
 from Source.Core.Development import DevelopmeptAssistant
 from Source.Core.SystemObjects import SystemObjects
+from Source.Core.Base.BaseParser import BaseParser
 from Source.Core.Formats import By, ContentTypes
 from Source.Core.Builders import MangaBuilder
 from Source.Core.Collector import Collector
@@ -11,11 +12,11 @@ from Source.Core.Timer import Timer
 from Source.CLI import Templates
 
 from dublib.CLI.Terminalyzer import ParsedCommandData
-from dublib.CLI.Templates import PrintExecutionStatus
 from dublib.CLI.TextStyler import Styles, TextStyler
 from dublib.Methods.Filesystem import WriteJSON
-from dublib.Engine.Bus import ExecutionError
+from dublib.Engine.Bus import ExecutionStatus
 from dublib.Methods.System import Clear
+
 from time import sleep
 
 # В разработке!
@@ -80,7 +81,7 @@ def com_collect(system_objects: SystemObjects, command: ParsedCommandData):
 	#==========================================================================================#
 	Title = system_objects.manager.get_parser_type()
 	Title = Title(system_objects)
-	Parser = system_objects.manager.launch()
+	Parser: BaseParser = system_objects.manager.launch()
 	CollectedTitlesCount = 0
 	Collection = list()
 	CollectorObject = Collector(system_objects)
@@ -137,11 +138,15 @@ def com_get(system_objects: SystemObjects, command: ParsedCommandData):
 	#==========================================================================================#
 	ResultMessage = "Download failed."
 	system_objects.logger.info("====== Downloading ======")
-	Parser = system_objects.manager.launch()
+	Parser: BaseParser = system_objects.manager.launch()
+	Downloader = ImagesDownloader(system_objects)
 	print(f"URL: {command.arguments[0]}\nDownloading... ", end = "")
-	
-	TempFilename = Parser.image(Link)
-	if TempFilename and ImagesDownloader(system_objects).move_from_temp(Directory, TempFilename, Filename, True): ResultMessage = "Done."	
+
+	if not Downloader.check_image_exists(command.arguments[0], Directory, Filename, FullName):
+		Status: ExecutionStatus = Parser.image(Link)
+		if Status.value and ImagesDownloader(system_objects).move_from_temp(Directory, Status.value, Filename, True): ResultMessage = "Done."
+
+	else: ResultMessage = "Already exists."
 
 	#---> Вывод отчёта.
 	#==========================================================================================#
@@ -229,8 +234,7 @@ def com_list(system_objects: SystemObjects, command: ParsedCommandData):
 		"VERSION": [],
 		"TYPE": [],
 		"SITE": [],
-		"collect": [],
-		"image": []
+		"collect": []
 	}
 
 	for Parser in system_objects.manager.all_parsers_names:
@@ -239,6 +243,11 @@ def com_list(system_objects: SystemObjects, command: ParsedCommandData):
 			Version = system_objects.manager.get_parser_version(Parser)
 			Site = system_objects.manager.get_parser_site(Parser)
 			Type = system_objects.manager.get_parser_type_name(Parser)
+			TypesEmoji = {
+				"anime": "🎬",
+				"manga": "🌄",
+				"ranobe": "📘"
+			}
 
 		except:
 			TableData["NAME"].append(Parser)
@@ -246,15 +255,13 @@ def com_list(system_objects: SystemObjects, command: ParsedCommandData):
 			TableData["TYPE"].append("")
 			TableData["SITE"].append("")
 			TableData["collect"].append(None)
-			TableData["image"].append(None)
 
 		else:
 			TableData["NAME"].append(Parser)
 			TableData["VERSION"].append(Version)
-			TableData["TYPE"].append(Type)
-			TableData["SITE"].append(Site)
+			TableData["TYPE"].append(TypesEmoji[Type] + " " + Type)
+			TableData["SITE"].append("https://" + Site)
 			TableData["collect"].append(system_objects.manager.check_method_collect(Parser))
-			TableData["image"].append(system_objects.manager.check_method_image(Parser))
 
 	#---> Вывод отчёта.
 	#==========================================================================================#
@@ -281,7 +288,7 @@ def com_parse(system_objects: SystemObjects, command: ParsedCommandData):
 	
 	ContentType = system_objects.manager.get_parser_type()
 	Title = ContentType(system_objects)
-	Parser = system_objects.manager.launch()
+	Parser: BaseParser = system_objects.manager.launch()
 	ParserSettings = system_objects.manager.parser_settings
 
 	if command.check_flag("collection"):
@@ -368,7 +375,7 @@ def com_repair(system_objects: SystemObjects, command: ParsedCommandData):
 	#==========================================================================================#
 	Title = system_objects.manager.get_parser_type()
 	Title = Title(system_objects)
-	Parser = system_objects.manager.launch()
+	Parser: BaseParser = system_objects.manager.launch()
 
 	system_objects.logger.info("====== Repairing ======")
 
@@ -422,12 +429,11 @@ def com_run(system_objects: SystemObjects, command: ParsedCommandData):
 	#==========================================================================================#
 	Extension = system_objects.manager.launch_extension(ParserName, ExtensionName)
 	system_objects.logger.info(f"====== {ParserName}:{ExtensionName} ======", stdout = True)
-	Status = ExecutionError(-1, "Unkown error while running extension.")
 	Status = Extension.run(ExtensionCommand)
 
 	#---> Вывод отчёта.
 	#==========================================================================================#
-	PrintExecutionStatus(Status)
+	Status.print_messages()
 
 def com_tagger(system_objects: SystemObjects, command: ParsedCommandData):
 	"""

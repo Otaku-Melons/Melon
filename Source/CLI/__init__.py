@@ -41,7 +41,7 @@ class Templates:
 
 		TableObject = PrettyTable()
 		TableObject.set_style(PLAIN_COLUMNS)
-		Implementations = ["collect", "image"]
+		Implementations = ["collect"]
 		ImplementationStatuses = {
 			True: TextStyler("true").colorize.green,
 			False: TextStyler("false").colorize.yellow,
