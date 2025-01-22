@@ -199,6 +199,7 @@ def com_install(system_objects: SystemObjects, command: ParsedCommandData):
 	#---> Парсинг данных команды.
 	#==========================================================================================#
 	FullInstallation = command.check_flag("all")
+	HaveFalgs = bool(command.flags)
 	
 	#---> Выполнение команды.
 	#==========================================================================================#
@@ -206,6 +207,10 @@ def com_install(system_objects: SystemObjects, command: ParsedCommandData):
 	print("Running installation...")
 	InstallerObject = Installer(system_objects)
 	TimerObject = Timer(start = True)
+
+	if not HaveFalgs: 
+		print("No installation options.")
+		return
 
 	if command.check_flag("a") or FullInstallation: InstallerObject.alias()
 	if command.check_flag("r") or FullInstallation: InstallerObject.requirements()
