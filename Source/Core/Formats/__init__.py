@@ -681,7 +681,7 @@ class BaseTitle:
 			)
 			
 			if Result.code == 200: DownloadedCoversCount += 1
-			print(Result.message)
+			Result.print_messages()
 			sleep(0.25)
 
 		self._SystemObjects.logger.info(f"Title: \"{self.slug}\" (ID: {self.id}). Covers downloaded: {DownloadedCoversCount}.")
