@@ -110,7 +110,8 @@ class Manager:
 		Parser = Module.Parser(self.__SystemObjects)
 
 		ParserName = TextStyler(parser).decorate.bold
-		Text = f"Parser: {ParserName} (version {Module.VERSION})."
+		Version = self.get_parser_version(parser)
+		Text = f"Parser: {ParserName} (version {Version})."
 		self.__SystemObjects.logger.info(Text, stdout = True)
 
 		return Parser

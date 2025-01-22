@@ -75,7 +75,7 @@ class Templates:
 
 		Number = index + 1
 		Progress = round(Number / count * 100, 2)
-		Number = TextStyler(str(Number)).colorize.purple
+		Number = TextStyler(str(Number)).colorize.magenta
 		if str(Progress).endswith(".0"): Progress = str(int(Progress))
 		elif len(str(Progress).split(".")[-1]) == 1: Progress = str(Progress) + "0"
 		else: Progress = str(Progress)

@@ -249,9 +249,9 @@ def com_list(system_objects: SystemObjects, command: ParsedCommandData):
 				"ranobe": "📘"
 			}
 
-		except:
+		except Exception as ExceptionData:
 			TableData["NAME"].append(Parser)
-			TableData["VERSION"].append("")
+			TableData["VERSION"].append(str(ExceptionData))
 			TableData["TYPE"].append("")
 			TableData["SITE"].append("")
 			TableData["collect"].append(None)
@@ -337,7 +337,7 @@ def com_parse(system_objects: SystemObjects, command: ParsedCommandData):
 			Title.merge()
 			Title.amend()
 			Title.download_covers()
-			Title.save()
+			Title.save(end_timer = True)
 			ParsedCount += 1
 
 		except TitleNotFound:
@@ -387,7 +387,7 @@ def com_repair(system_objects: SystemObjects, command: ParsedCommandData):
 		Title.open(Filename)
 		Title.parse()
 		Title.repair(ChapterID)
-		Title.save()
+		Title.save(end_timer = True)
 
 	except TitleNotFound:
 		ResultMessage = "Error! Title not found."

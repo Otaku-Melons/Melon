@@ -639,7 +639,6 @@ class BaseTitle:
 	def amend(self):
 		"""Дополняет контент содержимым."""
 
-		ChaptersToAmendCount = self._CalculateEmptyChapters()
 		AmendedChaptersCount = 0
 		ProgressIndex = 0
 
@@ -752,8 +751,11 @@ class BaseTitle:
 		self._Parser.parse()
 		self._UsedFilename = str(self.id) if self._ParserSettings.common.use_id_as_filename else self.slug
 
-	def save(self):
-		"""Сохраняет данные тайтла."""
+	def save(self, end_timer: bool = False):
+		"""
+		Сохраняет данные тайтла.
+			end_timer – указывает, нужно ли остановить таймер и вывести затраченное время.
+		"""
 
 		try:
 			for BranchID in self._Title["content"].keys(): self._Title["content"][BranchID] = sorted(self._Title["content"][BranchID], key = lambda Value: (list(map(int, Value["volume"].split("."))), list(map(int, Value["number"].split(".")))))
@@ -765,9 +767,10 @@ class BaseTitle:
 		WriteJSON(f"{self._ParserSettings.common.titles_directory}/{self._UsedFilename}.json", self._Title)
 		self._SystemObjects.logger.info(f"Title: \"{self.slug}\" (ID: {self.id}). Saved.")
 
-		ElapsedTime = self._Timer.ends()
-		self._Timer = None
-		print(f"Done in {ElapsedTime}.")
+		if end_timer: 
+			ElapsedTime = self._Timer.ends()
+			self._Timer = None
+			print(f"Done in {ElapsedTime}.")
 		
 	def set_parser(self, parser: any):
 		"""Задаёт парсер для вызова методов."""

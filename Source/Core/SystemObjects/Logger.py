@@ -335,7 +335,7 @@ class Portals:
 		else: ChapterID = ""
 		comment = f" {comment}" if comment else ""
 
-		self.__Logger.info(f"Title: \"{title.slug}\" (ID: {title.id}). {ChapterType}{ChapterID} skipped.{comment}")
+		self.__Logger.info(f"Title: \"{title.slug}\" (ID: {title.id}). {ChapterType}{ChapterID} skipped.{comment}", stdout = False)
 		print(f"{ChapterType}{ChapterID} skipped.{comment}")
 
 	def collect_progress_by_page(self, page: int):
@@ -346,7 +346,6 @@ class Portals:
 
 		Text = f"Titles on page {page} collected."
 		self.__Logger.info(Text)
-		print(Text)
 
 	def covers_unstubbed(self, title: BaseTitle):
 		"""
@@ -354,7 +353,7 @@ class Portals:
 			title – данные тайтла.
 		"""
 
-		self.__Logger.info(f"Title: \"{title.slug}\" (ID: {title.id}). Stubs detected. Covers downloading will be skipped.")
+		self.__Logger.info(f"Title: \"{title.slug}\" (ID: {title.id}). Stubs detected. Covers downloading will be skipped.", stdout = False)
 		print("Stubs detected. Covers downloading will be skipped.")
 
 class Logger:
@@ -692,7 +691,8 @@ class Logger:
 			self.__SendReport(Text)
 			self.__SilentMode = True
 
-		self.error(Text, stdout = True)
+		self.__LogError(Text)
+		self.__PrintError(Text)
 		self.__SilentMode = False
 		if exception: raise ParsingError()
 
@@ -714,8 +714,8 @@ class Logger:
 			self.__SendReport(Text)
 			self.__SilentMode = True
 
-		self.warning(Text)
-		print(TextStyler("[WARNING] Title not found.").colorize.yellow)
+		self.__LogWarning(Text)
+		self.__PrintWarning(TextStyler("[WARNING] Title not found.").colorize.yellow)
 		self.__SilentMode = False
 		if exception: raise TitleNotFound(title)
 
@@ -742,8 +742,8 @@ class Logger:
 			amended_chapter_count – количество дополненных глав.
 		"""
 
-		self.info(f"Title: \"{title.slug}\" (ID: {title.id}). Amended chapters count: {amended_chapter_count}.")
-		print(f"Amended chapters count: {amended_chapter_count}.")
+		self.__LogInfo(f"Title: \"{title.slug}\" (ID: {title.id}). Amended chapters count: {amended_chapter_count}.")
+		self.__PrintInfo(f"Amended chapters count: {amended_chapter_count}.")
 
 	def chapter_amended(self, title: BaseTitle, chapter: BaseChapter):
 		"""
@@ -753,8 +753,8 @@ class Logger:
 		"""
 
 		ChapterNote = "Paid chapter" if chapter.is_paid else "Chapter"
-		self.info(f"Title: \"{title.slug}\" (ID: {title.id}). {ChapterNote} {chapter.id} amended.")
-		print(f"{ChapterNote} {chapter.id} amended.")
+		self.__LogInfo(f"Title: \"{title.slug}\" (ID: {title.id}). {ChapterNote} {chapter.id} amended.")
+		self.__PrintInfo(f"{ChapterNote} {chapter.id} amended.")
 
 	def chapter_repaired(self, title: BaseTitle, chapter: BaseChapter):
 		"""
@@ -764,8 +764,8 @@ class Logger:
 		"""
 
 		ChapterNote = "Paid chapter" if chapter.is_paid else "Chapter"
-		self.info(f"Title: \"{title.slug}\" (ID: {title.id}). {ChapterNote} {chapter.id} repaired.")
-		print(f"{ChapterNote} {chapter.id} repaired.")
+		self.__LogInfo(f"Title: \"{title.slug}\" (ID: {title.id}). {ChapterNote} {chapter.id} repaired.")
+		self.__PrintInfo(f"{ChapterNote} {chapter.id} repaired.")
 		
 	def merging_end(self, title: BaseTitle, merged_chapter_count: int):
 		"""
@@ -775,12 +775,12 @@ class Logger:
 		"""
 
 		if self.__SystemObjects.FORCE_MODE:
-			self.info(f"Title: \"{title.slug}\" (ID: {title.id}). Local data will be removed.")
-			print("Local data will be removed.")
+			self.__LogInfo(f"Title: \"{title.slug}\" (ID: {title.id}). Local data will be removed.")
+			self.__PrintInfo("Local data will be removed.")
 
 		else:
-			self.info(f"Title: \"{title.slug}\" (ID: {title.id}). Merged chapters count: {merged_chapter_count}.")
-			print(f"Merged chapters count: {merged_chapter_count}.")
+			self.__LogInfo(f"Title: \"{title.slug}\" (ID: {title.id}). Merged chapters count: {merged_chapter_count}.")
+			self.__PrintInfo(f"Merged chapters count: {merged_chapter_count}.")
 
 	def parsing_start(self, title: BaseTitle, index: int, titles_count: int):
 		"""
@@ -791,10 +791,10 @@ class Logger:
 		"""
 
 		NoteID = f" (ID: {title.id})" if title.id else ""
-		self.info(f"Title: \"{title.slug}\"{NoteID}. Parsing...")
+		self.__LogInfo(f"Title: \"{title.slug}\"{NoteID}. Parsing...")
 		BoldSlug = TextStyler(title.slug).decorate.bold
 		if titles_count > 1: Templates.parsing_progress(index, titles_count)
-		print(f"Parsing {BoldSlug}{NoteID}...")
+		self.__PrintInfo(f"Parsing {BoldSlug}{NoteID}...")
 
 	def titles_collected(self, count: int):
 		"""
@@ -802,8 +802,8 @@ class Logger:
 			count – количество собранных алиасов.
 		"""
 
-		self.info(f"Collected titles count: {count}.")
-		print(f"Titles collected: {count}.")
+		self.__LogInfo(f"Collected titles count: {count}.")
+		self.__PrintInfo(f"Titles collected: {count}.")
 
 	#==========================================================================================#
 	# >>>>> МЕТОДЫ УПРАВЛЕНИЯ ЛОГАМИ <<<<< #
