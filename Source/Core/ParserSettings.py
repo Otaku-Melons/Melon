@@ -15,7 +15,6 @@ import re
 Settings = {
 	"common": {
 		"archives_directory": "",
-		"covers_directory": "",
 		"images_directory": "",
 		"titles_directory": "",
 		"bad_image_stub": "",
@@ -200,10 +199,10 @@ class Common:
 		return self.__Settings["bad_image_stub"]
 	
 	@property
-	def covers_directory(self) -> str:
-		"""Директория обложек."""
+	def images_directory(self) -> str:
+		"""Директория изображений."""
 
-		return self.__Settings["covers_directory"]
+		return self.__Settings["images_directory"]
 	
 	@property
 	def titles_directory(self) -> str:
@@ -251,7 +250,7 @@ class Common:
 			parser_name – название парсера.
 		"""
 
-		Directories = ["archives", "covers", "titles"]
+		Directories = ["archives", "images", "titles"]
 
 		for Directory in Directories:
 			Key = f"{Directory}_directory"
@@ -262,6 +261,7 @@ class Common:
 
 			else:
 				self.__Settings[Key] = NormalizePath(self.__Settings[Key])
+				if not os.path.exists(self.__Settings[Key]): raise FileNotFoundError(self.__Settings[Key])
 
 	def __init__(self, parser_name: str, settings: dict, logger: Logger):
 		"""
@@ -275,7 +275,7 @@ class Common:
 		#==========================================================================================#
 		self.__Settings = {
 			"archives_directory": "",
-			"covers_directory": "",
+			"images_directory": "",
 			"titles_directory": "",
 			"bad_image_stub": None,
 			"pretty": False,
@@ -302,6 +302,67 @@ class Common:
 			self.__PutDefaultDirectories(parser_name)
 
 		else: raise BadSettings(parser_name)
+
+class Directories:
+	"""Директории."""
+
+	#==========================================================================================#
+	# >>>>> СВОЙСТВА <<<<< #
+	#==========================================================================================#
+
+	@property
+	def archives(self) -> str:
+		"""Директория читаемого контента."""
+
+		return self.__Common.archives_directory
+	
+	@property
+	def images(self) -> str | None:
+		"""Директория изображений."""
+
+		return self.__Common.images_directory
+	
+	@property
+	def titles(self) -> str:
+		"""Директория описательных файлов."""
+
+		return self.__Common.titles_directory
+
+	#==========================================================================================#
+	# >>>>> ПУБЛИЧНЫЕ МЕТОДЫ <<<<< #
+	#==========================================================================================#
+
+	def __init__(self, common_settings: Common):
+		"""
+		Директории.
+			common_settings – общие настройки.
+		"""
+
+		#---> Генерация динамических атрибутов.
+		#==========================================================================================#
+		self.__Common = common_settings
+
+	def get_covers(self, used_name: str) -> str:
+		"""
+		Директория обложек.
+			used_name – используемое имя тайтла.
+		"""
+
+		Directory = self.__Common.images_directory + f"/{used_name}/covers"
+		if not os.path.exists(Directory): os.makedirs(Directory)
+
+		return Directory
+	
+	def get_persons(self, used_name: str) -> bool:
+		"""
+		Директория изображений персонажей.
+			used_name – используемое имя тайтла.
+		"""
+
+		Directory = self.__Common.images_directory + f"/{used_name}/persons"
+		if not os.path.exists(Directory): os.makedirs(Directory)
+
+		return Directory
 
 class Filters:
 	"""Фильтры контента."""
@@ -494,6 +555,12 @@ class ParserSettings:
 		return self.__Common
 	
 	@property
+	def directories(self) -> Directories:
+		"""Директории."""
+
+		return self.__Directories
+	
+	@property
 	def filters(self) -> Filters:
 		"""Фильтры контента."""
 
@@ -565,6 +632,7 @@ class ParserSettings:
 		self.__Proxy = Proxy(self.__Settings, logger)
 		self.__Custom = Custom(self.__Settings, logger)
 		self.__Ranobe = Ranobe(parser_name, self.__Settings, logger)
+		self.__Directories = Directories(self.__Common)
 
 	def __getitem__(self, category: str) -> dict:
 		"""

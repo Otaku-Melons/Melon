@@ -71,6 +71,19 @@
 	"franchises": [
 		"название франшизы"
 	],
+	"persons": [
+		{
+			"name": "Имя персонажа",
+			"another_names": ["Альтернативные имена персонажа"],
+			"images": [
+				{
+					"link": "https://example.com/person_slug/image.jpg",
+					"filename": "image.jpg"
+				}
+			],
+			"description": "Описание персонажа"
+		}
+	],
 	"branches": [
 		{
 			"id": 123456,

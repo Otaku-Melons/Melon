@@ -380,6 +380,7 @@ class Ranobe(BaseTitle):
 			"genres": [],
 			"tags": [],
 			"franchises": [],
+			"persons": [],
 			
 			"branches": [],
 			"content": {} 

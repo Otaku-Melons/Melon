@@ -39,6 +39,108 @@ class Statuses(enum.Enum):
 # >>>>> БАЗОВЫЕ СТРУКТУРЫ ТАЙТЛОВ <<<<< #
 #==========================================================================================#
 
+class Person:
+	"""Данные персонажа."""
+
+	#==========================================================================================#
+	# >>>>> СВОЙСТВА <<<<< #
+	#==========================================================================================#
+
+	@property
+	def name(self) -> str:
+		"""Имя."""
+
+		return self.__Data["name"]
+
+	@property
+	def another_names(self) -> list[str]:
+		"""Альтернативные имена."""
+
+		return self.__Data["another_names"]
+
+	@property
+	def images(self) -> list[dict]:
+		"""Список данных портретов."""
+
+		return self.__Data["images"]
+
+	@property
+	def description(self) -> str | None:
+		"""Описание."""
+
+		return self.__Data["description"]
+	
+	#==========================================================================================#
+	# >>>>> МЕТОДЫ <<<<< #
+	#==========================================================================================#
+
+	def __init__(self, name: str):
+		"""
+		Данные персонажа.
+			name – имя персонажа.
+		"""
+
+		#---> Генерация динамических атрибутов.
+		#==========================================================================================#
+		self.__Data = {
+			"name": name,
+			"another_names": [],
+			"images": [],
+			"description": None
+		}
+
+	def add_another_name(self, another_name: str):
+		"""
+		Добавляет альтернативное имя.
+			another_name – имя.
+		"""
+		
+		another_name = another_name.strip()
+		if another_name and another_name != self.name and another_name not in self.another_names: self.__Data["another_names"].append(another_name)
+
+	def add_image(self, link: str, filename: str | None = None, width: int | None = None, height: int | None = None):
+		"""
+		Добавляет портрет.
+			link – ссылка на изображение;\n
+			filename – имя локального файла;\n
+			width – ширина обложки;\n
+			height – высота обложки.
+		"""
+
+		if not filename: filename = link.split("/")[-1]
+		CoverInfo = {
+			"link": link,
+			"filename": filename,
+			"width": width,
+			"height": height
+		}
+
+		self.__Data["images"].append(CoverInfo)
+
+	def set_description(self, description: str | None):
+		"""
+		Задаёт описание.
+			description – описание.
+		"""
+
+		self.__Data["description"] = Zerotify(description)
+
+	def to_dict(self, remove_sizes: bool = False) -> dict:
+		"""
+		Возвращает словарное представление данных персонажа.
+			remove_sizes – указывает, нужно ли удалить ключи размеров изображений.
+		"""
+
+		Data = self.__Data.copy()
+
+		if remove_sizes:
+
+			for Index in range(len(Data["images"])):
+				del Data["images"][Index]["width"]
+				del Data["images"][Index]["height"]
+
+		return Data
+
 class BaseChapter:
 	"""Базовая глава."""
 
@@ -495,6 +597,12 @@ class BaseTitle:
 		return self._Title["franchises"]
 	
 	@property
+	def perons(self) -> list[Person]:
+		"""Список персонажей."""
+
+		return self._Persons
+	
+	@property
 	def status(self) -> Statuses | None:
 		"""Статус тайтла."""
 
@@ -523,16 +631,6 @@ class BaseTitle:
 		for Branch in self._Branches: EmptyChaptersCount += Branch.empty_chapters_count
 
 		return EmptyChaptersCount
-
-	def _CheckStandartPath(self, path: str):
-		"""
-		Проверяет, является ли переданный путь стандартным и отсутствует ли. В случае успеха создаёт его.
-			path – путь.
-		"""
-
-		IsStandart = path.startswith("Output")
-		if IsStandart and not os.path.exists(path): os.makedirs(path)
-		if not IsStandart and not os.path.exists(path): raise FileNotFoundError(path)
 
 	def _CheckStringsList(self, data: list[str]) -> list:
 		"""
@@ -602,6 +700,7 @@ class BaseTitle:
 
 		self._ParserSettings = self._SystemObjects.manager.parser_settings
 		self._Branches: list[BaseBranch] = list()
+		self._Persons: list[Person] = list()
 		self._UsedFilename = None
 		self._Parser = None
 		self._Timer = None
@@ -629,6 +728,7 @@ class BaseTitle:
 			"genres": [],
 			"tags": [],
 			"franchises": [],
+			"persons": [],
 			
 			"branches": [],
 			"content": {} 
@@ -660,31 +760,50 @@ class BaseTitle:
 
 		self._SystemObjects.logger.amending_end(self, AmendedChaptersCount)
 
-	def download_covers(self):
-		"""Скачивает обложки."""
+	def download_images(self):
+		"""Скачивает изображения из данных тайтла."""
 
-		self._CheckStandartPath(self._ParserSettings.common.covers_directory)
-
-		CoversDirectory = f"{self._ParserSettings.common.covers_directory}/{self._UsedFilename}/"
-		if not os.path.exists(CoversDirectory): os.makedirs(CoversDirectory)
-		
+		CoversDirectory = self._ParserSettings.directories.get_covers(self._UsedFilename)
 		DownloadedCoversCount = 0
 		
 		for CoverIndex in range(len(self._Title["covers"])):
 			Filename = self._Title["covers"][CoverIndex]["link"].split("/")[-1]
 			print(f"Downloading cover: \"{Filename}\"... ", end = "")
-			Result = ImagesDownloader(self._SystemObjects).image(
-				url = self._Title["covers"][CoverIndex]["link"],
-				directory = CoversDirectory,
-				filename = self._Title["covers"][CoverIndex]["filename"],
-				is_full_filename = True
-			)
+			Result = self._Parser.image(self._Title["covers"][CoverIndex]["link"])
 			
-			if Result.code == 200: DownloadedCoversCount += 1
+			if Result.code == 200:
+				ImagesDownloader(self._SystemObjects).move_from_temp(
+					directory = CoversDirectory,
+					original_filename = Result.value,
+					filename = self._Title["covers"][CoverIndex]["filename"],
+					is_full_filename = True
+				)
+				DownloadedCoversCount += 1
+
 			Result.print_messages()
 			sleep(0.25)
 
 		self._SystemObjects.logger.info(f"Title: \"{self.slug}\" (ID: {self.id}). Covers downloaded: {DownloadedCoversCount}.")
+		PersonsDirectory = self._ParserSettings.directories.get_persons(self._UsedFilename)
+
+		for CurrentPerson in self._Persons:
+
+			for ImageData in CurrentPerson.images:
+				Filename = ImageData["filename"]
+				print(f"Downloading image: \"{Filename}\"... ", end = "")
+				Result = self._Parser.image(ImageData["link"])
+			
+				if Result.code == 200:
+					ImagesDownloader(self._SystemObjects).move_from_temp(
+						directory = PersonsDirectory,
+						original_filename = Result.value,
+						filename = Filename,
+						is_full_filename = True
+					)
+					DownloadedCoversCount += 1
+
+				Result.print_messages()
+				sleep(0.25)
 
 	def open(self, identificator: int | str, selector_type: By = By.Filename, exception: bool = True):
 		"""
@@ -763,7 +882,9 @@ class BaseTitle:
 		except:
 			self._SystemObjects.logger.warning(f"Title: \"{self.slug}\" (ID: {self.id}). Error occurs during sorting chapters.")
 
-		self._CheckStandartPath(self._ParserSettings.common.titles_directory)
+		self._Title["persons"] = list()
+		for CurrentPerson in self._Persons: self._Title["persons"].append(CurrentPerson.to_dict(not self._ParserSettings.common.sizing_images))
+
 		WriteJSON(f"{self._ParserSettings.common.titles_directory}/{self._UsedFilename}.json", self._Title)
 		self._SystemObjects.logger.info(f"Title: \"{self.slug}\" (ID: {self.id}). Saved.")
 
@@ -844,6 +965,14 @@ class BaseTitle:
 		"""
 
 		if franshise not in self._Title["franshises"]: self._Title["franshises"].append(franshise)
+
+	def add_person(self, person: Person):
+		"""
+		Добавляет персонажа.
+			person – данные персонажа.
+		"""
+		
+		if person not in self._Persons: self._Persons.append(person)
 
 	def add_branch(self, branch: BaseBranch):
 		"""
@@ -975,6 +1104,14 @@ class BaseTitle:
 		"""
 
 		self._Title["franchises"] = self._CheckStringsList(franchises)
+
+	def set_persons(self, persons: list[Person]):
+		"""
+		Задаёт персонажей.
+			person – список персонажей.
+		"""
+		
+		for CurrentPerson in persons: self.add_person(CurrentPerson)
 
 	def set_status(self, status: Statuses | None):
 		"""

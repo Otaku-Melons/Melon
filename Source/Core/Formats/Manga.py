@@ -1,4 +1,4 @@
-from . import BaseChapter, BaseBranch, BaseTitle, By, Statuses
+from . import BaseChapter, BaseBranch, BaseTitle, By, Statuses, Person
 from Source.Core.SystemObjects import SystemObjects
 from Source.Core.Exceptions import ChapterNotFound
 
@@ -225,6 +225,7 @@ class Manga(BaseTitle):
 			"genres": [],
 			"tags": [],
 			"franchises": [],
+			"persons": [],
 			
 			"branches": [],
 			"content": {} 
@@ -283,7 +284,6 @@ class Manga(BaseTitle):
 			chapter_id – уникальный идентификатор целевой главы.
 		"""
 
-		print("")
 		SearchResult = self._FindChapterByID(chapter_id)
 		if not SearchResult: raise ChapterNotFound(chapter_id)
 

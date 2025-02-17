@@ -341,7 +341,7 @@ def com_parse(system_objects: SystemObjects, command: ParsedCommandData):
 			Title.parse(Index, TotalCount)
 			Title.merge()
 			Title.amend()
-			Title.download_covers()
+			Title.download_images()
 			Title.save(end_timer = True)
 			ParsedCount += 1
 
