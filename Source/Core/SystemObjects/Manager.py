@@ -123,7 +123,7 @@ class Manager:
 		"""
 
 		parser = self.__CheckParser(parser)
-		Module = importlib.import_module(f"Parsers.{parser}.extensions.{extension}.main")
+		Module = importlib.import_module(f"Parsers.{parser}.extensions.{parser}-{extension}.main")
 		Extension = Module.Extension(self.__SystemObjects)
 
 		ParserName = TextStyler(parser).decorate.bold

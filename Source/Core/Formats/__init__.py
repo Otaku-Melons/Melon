@@ -3,6 +3,8 @@ from Source.Core.Timer import Timer
 
 from dublib.Methods.Filesystem import ReadJSON, WriteJSON
 from dublib.Methods.Data import Zerotify
+
+from typing import Any
 from time import sleep
 
 import enum
@@ -736,6 +738,16 @@ class BaseTitle:
 
 		self._PostInitMethod()
 
+	def __getitem__(self, key: str) -> Any:
+		"""Метод прямого получения данных тайтла."""
+		
+		return self._Title[key]
+
+	def __setitem__(self, key: str, value: Any):
+		"""Метод прямого добавления данных в тайтл."""
+
+		self._Title[key] = value
+
 	def amend(self):
 		"""Дополняет контент содержимым."""
 
@@ -769,6 +781,11 @@ class BaseTitle:
 		for CoverIndex in range(len(self._Title["covers"])):
 			Filename = self._Title["covers"][CoverIndex]["link"].split("/")[-1]
 			print(f"Downloading cover: \"{Filename}\"... ", end = "")
+
+			if os.path.exists(f"{CoversDirectory}/{Filename}"):
+					print("Already exists.")
+					continue
+
 			Result = self._Parser.image(self._Title["covers"][CoverIndex]["link"])
 			
 			if Result.code == 200:
@@ -791,6 +808,11 @@ class BaseTitle:
 			for ImageData in CurrentPerson.images:
 				Filename = ImageData["filename"]
 				print(f"Downloading image: \"{Filename}\"... ", end = "")
+
+				if os.path.exists(f"{PersonsDirectory}/{Filename}"):
+					print("Already exists.")
+					continue
+
 				Result = self._Parser.image(ImageData["link"])
 			
 				if Result.code == 200:
@@ -853,8 +875,11 @@ class BaseTitle:
 						Data = Buffer
 						break
 
-		if Data: self._Title = Data
-		elif exception: raise FileNotFoundError(identificator + ".json")
+		if Data:
+			self._Title = Data
+			self._UsedFilename = str(self.id) if self._ParserSettings.common.use_id_as_filename else self.slug
+
+		elif exception: raise FileNotFoundError(f"{identificator}.json")
 
 	def parse(self, index: int = 0, titles_count: int = 1):
 		"""

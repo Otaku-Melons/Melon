@@ -420,8 +420,9 @@ def com_run(system_objects: SystemObjects, command: ParsedCommandData):
 
 	#---> Подготовка к выполнению.
 	#==========================================================================================#
-	ParserName = command.get_key_value("use", exception = True)
-	ExtensionName = command.get_key_value("extension", exception = True)
+	
+	ExtensionFullName: str = command.get_key_value("extension", exception = True)
+	ParserName, ExtensionName = ExtensionFullName.split("-")
 	system_objects.logger.select_cli_point(command.name)
 	system_objects.select_extension(ExtensionName)
 	system_objects.select_parser(ParserName)
