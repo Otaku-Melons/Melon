@@ -715,7 +715,7 @@ class Logger:
 			self.__SilentMode = True
 
 		self.__LogWarning(Text)
-		self.__PrintWarning(TextStyler("[WARNING] Title not found.").colorize.yellow)
+		self.__PrintWarning(TextStyler("Title not found.").colorize.yellow)
 		self.__SilentMode = False
 		if exception: raise TitleNotFound(title)
 
