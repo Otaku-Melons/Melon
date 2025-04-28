@@ -11,6 +11,12 @@ class Temper:
 	#==========================================================================================#
 
 	@property
+	def builder_temp(self) -> str:
+		"""Путь к выделенному для сборки контента каталогу временных файлов."""
+
+		return self.get_builder_temp()
+
+	@property
 	def extension_temp(self) -> str:
 		"""Путь к выделенному для конкретного расширения каталогу временных файлов."""
 
@@ -52,6 +58,20 @@ class Temper:
 		if not parser_name: parser_name = self.__ParserName
 		Path = f"{self.__Temp}/{parser_name}"
 		if os.path.exists(Path): RemoveDirectoryContent(Path)
+
+	def get_builder_temp(self, parser_name: str | None = None) -> str:
+		"""
+		Возвращает путь к выделенному для сборки контента каталогу временных файлов.
+			parser_name – имя парсера.
+		"""
+
+		if not parser_name: parser_name = self.__ParserName
+		ParserTemp = self.get_parser_temp(parser_name)
+		Path = f"{ParserTemp}/build"
+		if not os.path.exists(Path): os.makedirs(Path)
+		Path = NormalizePath(Path)
+		
+		return Path
 
 	def get_parser_temp(self, parser_name: str | None = None) -> str:
 		"""

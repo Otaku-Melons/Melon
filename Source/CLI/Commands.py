@@ -3,9 +3,9 @@ from Source.Core.Development import DevelopmeptAssistant
 from Source.Core.SystemObjects import SystemObjects
 from Source.Core.Base.BaseParser import BaseParser
 from Source.Core.Formats import By, ContentTypes
-from Source.Core.Builders import MangaBuilder
 from Source.Core.Collector import Collector
 from Source.Core.Installer import Installer
+from Source.Core.Builders.MangaBuilder import MangaBuilder
 from Source.Core.Tagger import Tagger
 from Source.Core.Exceptions import *
 from Source.Core.Timer import Timer
@@ -15,47 +15,59 @@ from dublib.CLI.Terminalyzer import ParsedCommandData
 from dublib.CLI.TextStyler import Styles, TextStyler
 from dublib.Methods.Filesystem import WriteJSON
 from dublib.Engine.Bus import ExecutionStatus
-from dublib.Methods.System import Clear
 
+from typing import TYPE_CHECKING
 from time import sleep
 
-# В разработке!
-def com_build(system_objects: SystemObjects, command: ParsedCommandData):
+if TYPE_CHECKING:
+	from Source.Core.Formats.Ranobe import Ranobe
+	from Source.Core.Formats.Manga import Manga
+
+def com_build_manga(system_objects: SystemObjects, command: ParsedCommandData):
 	"""
 	Строит читаемый контент из описательного файла.
 		system_objects – коллекция системных объектов;\n
 		command – объект представления консольной команды.
 	"""
 
-	#---> Подготовительный этап.
+	#---> Подготовка к выполнению.
 	#==========================================================================================#
-	Clear()
 	system_objects.logger.select_cli_point(command.name)
-
-	input("Builder not fully implemented yet! Press ENTER to continue...")
-	
-	#---> Получение и обработка предварительных данных.
-	#==========================================================================================#
 	ParserName = command.get_key_value("use")
-	Format = "cbz" if command.check_flag("cbz") else None
-	Format = "zip" if command.check_flag("zip") else None
-	Message = system_objects.MSG_SHUTDOWN + system_objects.MSG_FORCE_MODE
+	system_objects.select_parser(ParserName)
+	system_objects.logger.info("====== Building ======")
+	BuildSystemName = None
 
-	#---> Обработка команды.
+	for MangaBuilderSystem in ("simple", "zip", "cbz"):
+		if command.check_flag(MangaBuilderSystem):
+			BuildSystemName = MangaBuilderSystem
+			break
+
+	#---> Выполнение команды.
 	#==========================================================================================#
+	TimerObject = Timer(start = True)
 
-	if ParserName != "remanga":
-		print("Only \"remanga\" parser supported.")
-		exit(-1)
-	
-	Builder = MangaBuilder(system_objects, com_get, command.arguments[0], Message)
-	Builder.set_parameters(Format)
-	Builder.build_branch()
+	Builder = MangaBuilder(system_objects)
+	Builder.select_build_system(BuildSystemName)
+	Builder.enable_sorting_by_volumes(command.check_flag("v"))
+	if command.check_key("ch-template"): Builder.set_chapter_name_template(command.get_key_value("ch-template"))
+	if command.check_key("vol-template"): Builder.set_volume_name_template(command.get_key_value("vol-template"))
+
+	Title = system_objects.manager.get_parser_content_struct()
+	Title: "Manga | Ranobe" = Title(system_objects)
+	Parser: BaseParser = system_objects.manager.launch()
+	Title.set_parser(Parser)
+
+	try: Title.open(command.arguments[0])
+	except FileNotFoundError: return
+
+	if command.check_key("chapter"): Builder.build_chapter(Title, command.get_key_value("chapter"))
+	elif command.check_key("branch"): Builder.build_branch(Title, command.get_key_value("branch"))
+	else: Builder.build_branch(Title)
 
 	#---> Вывод отчёта.
 	#==========================================================================================#
-	Clear()
-	print("Builded.")
+	TimerObject.done()
 
 def com_collect(system_objects: SystemObjects, command: ParsedCommandData):
 	"""
@@ -79,7 +91,7 @@ def com_collect(system_objects: SystemObjects, command: ParsedCommandData):
 
 	#---> Выполнение команды.
 	#==========================================================================================#
-	Title = system_objects.manager.get_parser_type()
+	Title = system_objects.manager.get_parser_content_struct()
 	Title = Title(system_objects)
 	Parser: BaseParser = system_objects.manager.launch()
 	CollectedTitlesCount = 0
@@ -247,7 +259,7 @@ def com_list(system_objects: SystemObjects, command: ParsedCommandData):
 		try:
 			Version = system_objects.manager.get_parser_version(Parser)
 			Site = system_objects.manager.get_parser_site(Parser)
-			Type = system_objects.manager.get_parser_type_name(Parser)
+			Type = system_objects.manager.get_parser_content_struct_name(Parser)
 			TypesEmoji = {
 				"anime": "🎬",
 				"manga": "🌄",
@@ -291,7 +303,7 @@ def com_parse(system_objects: SystemObjects, command: ParsedCommandData):
 	StartIndex = 0
 	system_objects.logger.info("====== Parsing ======")
 	
-	ContentType = system_objects.manager.get_parser_type()
+	ContentType = system_objects.manager.get_parser_content_struct()
 	Title = ContentType(system_objects)
 	Parser: BaseParser = system_objects.manager.launch()
 	ParserSettings = system_objects.manager.parser_settings
@@ -378,7 +390,7 @@ def com_repair(system_objects: SystemObjects, command: ParsedCommandData):
 
 	#---> Выполнение команды.
 	#==========================================================================================#
-	Title = system_objects.manager.get_parser_type()
+	Title = system_objects.manager.get_parser_content_struct()
 	Title = Title(system_objects)
 	Parser: BaseParser = system_objects.manager.launch()
 

@@ -168,7 +168,7 @@ class ImagesDownloader:
 	def move_from_temp(self, directory: str, original_filename: str, filename: str | None = None, is_full_filename: bool = True) -> ExecutionStatus:
 		"""
 		Перемещает изображение из временного каталога парсера в другое расположение.
-			directory – путь к каталогу загрузки;\n
+			directory – путь к целевому каталогу;\n
 			original_filename – имя файла во временном каталоге парсера;\n
 			filename – имя файла в целевом каталоге;\n
 			is_full_filename – указывает, является ли имя файла полным.
@@ -178,7 +178,7 @@ class ImagesDownloader:
 		Status["exists"] = False
 
 		try:
-			OriginalPath = f"Temp/{self.__SystemObjects.parser_name}/" + original_filename
+			OriginalPath = f"Temp/{self.__SystemObjects.parser_name}/{original_filename}"
 			directory = NormalizePath(directory)
 			Filetype = ""
 			

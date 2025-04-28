@@ -1,0 +1,137 @@
+from Source.Core.ImagesDownloader import ImagesDownloader
+
+from typing import TYPE_CHECKING
+
+if TYPE_CHECKING:
+	from Source.Core.SystemObjects import SystemObjects
+	from Source.Core.Formats import BaseBranch, BaseChapter
+
+#==========================================================================================#
+# >>>>> БАЗОВЫЙ СБОРЩИК <<<<< #
+#==========================================================================================#
+
+class BaseBuilder:
+	"""Базовый сборщик."""
+
+	#==========================================================================================#
+	# >>>>> НАСЛЕДУЕМЫЕ МЕТОДЫ <<<<< #
+	#==========================================================================================#
+
+	def _FindChapter(self, branches: list["BaseBranch"], chapter_id: int) -> "BaseChapter | None":
+		"""
+		Находит главу по её ID.
+			branches – список ветвей в тайтле;\n
+			chapter_id – ID искомой главы.
+		"""
+
+		if not branches: return None
+
+		for CurrentBranch in branches:
+			for CurrentChapter in CurrentBranch.chapters:
+				if CurrentChapter.id == chapter_id: return CurrentChapter
+
+	def _GenerateChapterNameByTemplate(self, chapter: "BaseChapter") -> str:
+		"""
+		Генерирует название главы по шаблону.
+			chapter – данные главы.
+		"""
+
+		Name = self._ChapterNameTemplate
+		Name = Name.replace("{number}", str(chapter.number))
+		if chapter.name: Name = Name.replace("{name}", chapter.name)
+		else: Name = Name.replace("{name}", "")
+		Name = Name.strip()
+		Name = Name.rstrip(".")
+
+		return Name
+	
+	def _GenerateVolumeNameByTemplate(self, chapter: "BaseChapter") -> str:
+		"""
+		Генерирует название тома, к которому принадлежит глава, по шаблону.
+			chapter – данные главы.
+		"""
+
+		Name = self._VolumeNameTemplate
+		Name = Name.replace("{number}", str(chapter.volume))
+		Name = Name.strip()
+		Name = Name.rstrip(".")
+
+		return Name
+
+	def _SelectBranch(self, branches: list["BaseBranch"], branch_id: int | None = None) -> "BaseBranch | None":
+		"""
+		Выбирает ветвь для построения.
+			branches – список ветвей в тайтле;\n
+			branch_id – ID искомой ветви.
+		"""
+
+		if not branches: return None
+		if not branch_id: return branches[0]
+
+		for CurrentBranch in branches:
+			if CurrentBranch.id == branch_id: return CurrentBranch
+
+	#==========================================================================================#
+	# >>>>> ПЕРЕОПРЕДЕЛЯЕМЫЕ МЕТОДЫ <<<<< #
+	#==========================================================================================#
+
+	def _PostInitMethod(self):
+		"""Метод, выполняющийся после инициализации объекта."""
+
+		pass
+
+	#==========================================================================================#
+	# >>>>> ПУБЛИЧНЫЕ МЕТОДЫ <<<<< #
+	#==========================================================================================#
+
+	def __init__(self, system_objects: "SystemObjects"):
+		"""Базовый сборщик."""
+
+		#---> Генерация динамических атрибутов.
+		#==========================================================================================#
+		self._SystemObjects = system_objects
+
+		self._Downloader = ImagesDownloader(self._SystemObjects)
+		self._ParserSettings = self._SystemObjects.manager.parser_settings
+		self._Temper = self._SystemObjects.temper
+		self._Logger = self._SystemObjects.logger
+
+		self._BuildSystem = None
+		self._SortingByVolumes = False
+
+		self._ChapterNameTemplate: str = "{number}. {name}"
+		self._VolumeNameTemplate: str = "{number}. {name}"
+
+		self._PostInitMethod()
+
+	def enable_sorting_by_volumes(self, status: bool):
+		"""
+		Переключает сортировку глав по директориям томов.
+			status – статус сортировки.
+		"""
+
+		self._SortingByVolumes = status
+
+	def select_build_system(self, build_system: str | None):
+		"""
+		Задаёт систему сборки контента.
+			build_system – название системы сборки.
+		"""
+
+		self._BuildSystem = build_system or None
+
+	def set_chapter_name_template(self, template: str):
+		"""
+		Задаёт шаблон именования глав.
+			template – шаблон.
+		"""
+
+		self._ChapterNameTemplate = template
+
+	def set_volume_name_template(self, template: str):
+		"""
+		Задаёт шаблон именования томов.
+			template – шаблон.
+		"""
+
+		self._VolumeNameTemplate = template

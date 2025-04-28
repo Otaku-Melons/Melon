@@ -6,7 +6,6 @@ from dublib.Methods.Data import Zerotify
 
 from typing import Any
 from time import sleep
-
 import enum
 import os
 
@@ -221,8 +220,8 @@ class BaseChapter:
 	# >>>>> НАСЛЕДУЕМЫЕ МЕТОДЫ <<<<< #
 	#==========================================================================================#
 
-	def _Pass(self, value: any):
-		"""Ничего не делает."""
+	def _Pass(self, value: Any):
+		"""Заглушка Callable-объекта для неактивных методов установки контента."""
 
 		pass
 
@@ -256,7 +255,7 @@ class BaseChapter:
 
 		return self._Chapter[key]
 
-	def add_extra_data(self, key: str, value: any):
+	def add_extra_data(self, key: str, value: Any):
 		"""
 		Добавляет дополнительные данные о главе.
 			key – ключ для доступа;\n
@@ -481,7 +480,7 @@ class BaseTitle:
 	#==========================================================================================#
 
 	@property
-	def parser(self) -> any:
+	def parser(self) -> Any:
 		"""Установленный парсер контента."""
 
 		return self._Parser
@@ -620,7 +619,7 @@ class BaseTitle:
 	def branches(self) -> list[BaseBranch]:
 		"""Список ветвей тайтла."""
 
-		return self.__Branches
+		return self._Branches
 	
 	#==========================================================================================#
 	# >>>>> НАСЛЕДУЕМЫЕ МЕТОДЫ <<<<< #
@@ -674,12 +673,17 @@ class BaseTitle:
 		"""Обновляет информацию о ветвях."""
 
 		Branches = list()
-		for CurrentBranch in self._Branches: Branches.append({"id": CurrentBranch.id, "chapters_count": CurrentBranch.chapters_count })
+		for CurrentBranch in self._Branches: Branches.append({"id": CurrentBranch.id, "chapters_count": CurrentBranch.chapters_count})
 		self._Title["branches"] = sorted(Branches, key = lambda Value: Value["chapters_count"], reverse = True) 
 
 	#==========================================================================================#
 	# >>>>> ПЕРЕОПРЕДЕЛЯЕМЫЕ МЕТОДЫ <<<<< #
 	#==========================================================================================#
+
+	def _ParseBranchesToObjects(self):
+		"""Преобразует данные ветвей в объекты."""
+
+		pass
 
 	def _PostInitMethod(self):
 		"""Метод, выполняющийся после инициализации объекта."""
@@ -844,7 +848,7 @@ class BaseTitle:
 				Data = ReadJSON(f"{Directory}/{identificator}.json")
 				
 			else:
-				self._SystemObjects.logger.critical("Couldn't open file.")
+				self._SystemObjects.logger.error(f"Couldn't open file \"{Path}\".")
 				raise FileNotFoundError(Path)
 
 		if selector_type == By.Slug:
@@ -880,6 +884,8 @@ class BaseTitle:
 			self._UsedFilename = str(self.id) if self._ParserSettings.common.use_id_as_filename else self.slug
 
 		elif exception: raise FileNotFoundError(f"{identificator}.json")
+
+		self._ParseBranchesToObjects()
 
 	def parse(self, index: int = 0, titles_count: int = 1):
 		"""
@@ -918,7 +924,7 @@ class BaseTitle:
 			self._Timer = None
 			print(f"Done in {ElapsedTime}.")
 		
-	def set_parser(self, parser: any):
+	def set_parser(self, parser: Any):
 		"""Задаёт парсер для вызова методов."""
 
 		parser.set_title(self)

@@ -3,12 +3,21 @@ from dublib.CLI.TextStyler import TextStyler
 
 CommandsList: list[Command] = list()
 
-Com = Command("build", "Build readable content.")
-ComPos = Com.create_position("FILENAME", "Source file.", important = True)
-ComPos.add_argument(description = "Filename of locally saved title.")
+Com = Command("build-manga", "Build readable manga.")
+ComPos = Com.create_position("SOURCE", "Title's data.", important = True)
+ComPos.add_argument(description = "Filename of local JSON.")
 ComPos = Com.create_position("PARSER", "Name of parser.", important = True)
 ComPos.add_key("use", ParametersTypes.Text, "Parser name.")
-Com.add_flag("cbz", "Make *.CBZ archives.")
+ComPos = Com.create_position("TARGET", "Target for building.")
+ComPos.add_key("branch", ParametersTypes.Number, "Branch ID.")
+ComPos.add_key("chapter", ParametersTypes.Number, "Chapter ID.")
+ComPos = Com.create_position("BUILDER", "Type of building system.")
+ComPos.add_flag("simple", "Download images in directories (default).")
+ComPos.add_flag("zip", "Make *.ZIP archives.")
+ComPos.add_flag("cbz", "Make *.CBZ files.")
+Com.add_key("ch-template", description = "Template for chapters naming. Available {number} and {name} replacements.")
+Com.add_key("vol-template", description = "Template for volumes naming. Available {number} replacement.")
+Com.add_flag("v", description = "Enable chapters sorting by volumes directories.")
 CommandsList.append(Com)
 
 CollectionFileBold = TextStyler("Collection.txt").decorate.italic

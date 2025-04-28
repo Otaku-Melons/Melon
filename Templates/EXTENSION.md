@@ -1,5 +1,5 @@
 # {NAME}
-**{NAME}** – это расширение для парсера [Melon](https://github.com/Otaku-Melons/Melon), предоставляющее следующий функционал: ...
+**{NAME}** – это расширение [Melon](https://github.com/Otaku-Melons/Melon) для источника [site](www.site.com), предоставляющее следующий функционал: ...
 
 # Настройки
 ```JSON

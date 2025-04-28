@@ -49,7 +49,10 @@ if not Objects.LIVE_MODE:
 # >>>>> ОБРАБОТКА КОММАНД <<<<< #
 #==========================================================================================#
 
-try: exec(f"com_{CommandDataStruct.name}(Objects, CommandDataStruct)")
+try:
+	CommandName = CommandDataStruct.name.replace("-", "_")
+	exec(f"com_{CommandName}(Objects, CommandDataStruct)")
+	
 except KeyboardInterrupt: exit(0)
 
 #==========================================================================================#

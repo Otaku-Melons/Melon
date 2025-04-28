@@ -1,14 +1,19 @@
 from Source.Core.ParserSettings import ParserSettings
+from Source.Core.Formats import ContentTypes
 
 from dublib.Methods.Filesystem import ReadJSON
 from dublib.CLI.TextStyler import TextStyler
 
-from typing import Any
-
+from typing import Any, TYPE_CHECKING
 import subprocess
 import importlib
 import os
 
+if TYPE_CHECKING:
+	from Source.Core.SystemObjects import SystemObjects
+	from Source.Core.Formats.Ranobe import Ranobe
+	from Source.Core.Formats.Manga import Manga
+	
 class Manager:
 	"""Менеджер парсеров."""
 
@@ -116,7 +121,7 @@ class Manager:
 
 		return Parser
 
-	def launch_extension(self, parser: str, extension: str) -> any:
+	def launch_extension(self, parser: str, extension: str) -> Any:
 		"""
 		Запускает парсер и возвращает его объект.
 			parser – название парсера.
@@ -225,7 +230,7 @@ class Manager:
 
 		return Module.SITE
 
-	def get_parser_type(self, parser: str | None = None) -> str:
+	def get_parser_content_struct(self, parser: str | None = None) -> "Manga | Ranobe":
 		"""
 		Возвращает тип контента парсера.
 			parser – название парсера.
@@ -236,7 +241,7 @@ class Manager:
 
 		return Module.TYPE
 	
-	def get_parser_type_name(self, parser: str | None = None) -> str:
+	def get_parser_type(self, parser: str | None = None) -> ContentTypes:
 		"""
 		Возвращает название типа контента парсера.
 			parser – название парсера.
@@ -245,7 +250,7 @@ class Manager:
 		parser = self.__CheckParser(parser)
 		Module = importlib.import_module(f"Parsers.{parser}.main")
 
-		return Module.TYPE.__name__.lower()
+		return ContentTypes(Module.TYPE.__name__.lower())
 
 	def get_parser_version(self, parser: str | None = None) -> str:
 		"""

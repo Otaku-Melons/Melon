@@ -4,6 +4,7 @@ from Source.Core.Exceptions import BadSettings
 from dublib.Methods.Filesystem import NormalizePath, ReadJSON
 from dublib.Methods.Data import Zerotify
 
+from typing import Any
 import hashlib
 import os
 import re
@@ -527,7 +528,7 @@ class Custom:
 		self.__Settings = settings["custom"] if "custom" in settings.keys() else dict()
 		self.__Logger = logger
 
-	def __getitem__(self, key: str) -> any:
+	def __getitem__(self, key: str) -> Any:
 		"""
 		Возвращает значение настройки.
 			key – ключ настройки.
