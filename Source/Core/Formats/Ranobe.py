@@ -1,7 +1,7 @@
+from Source.Core.Exceptions import ChapterNotFound, UnresolvedTag
 from . import BaseChapter, BaseBranch, BaseTitle, By, Statuses
 from Source.Core.ImagesDownloader import ImagesDownloader
 from Source.Core.SystemObjects import SystemObjects
-from Source.Core.Exceptions import ChapterNotFound
 
 from dublib.Methods.Data import RemoveRecurringSubstrings
 from dublib.Methods.Filesystem import ReadJSON
@@ -55,14 +55,16 @@ class Chapter(BaseChapter):
 	# >>>>> ПРИВАТНЫЕ МЕТОДЫ <<<<< #
 	#==========================================================================================#
 
-	def __DownloadImages(self, paragraph: BeautifulSoup):
+	def __DownloadImages(self, paragraph: str):
 		"""
 		Скачивает иллюстрации из абзаца.
-			paragraph – абзац.
+
+		:param paragraph: Абзац текста.
+		:type paragraph: str
 		"""
 
 		Parser = self.__Title.parser
-		Images = paragraph.find_all("img")
+		Images = BeautifulSoup(paragraph, "lxml").find_all("img")
 		
 		for Image in Images:
 			Image: BeautifulSoup
@@ -135,6 +137,52 @@ class Chapter(BaseChapter):
 			paragraph = paragraph.strip()
 			self.set_name(paragraph)
 
+	def __UnwrapTags(self, paragraph: BeautifulSoup) -> BeautifulSoup:
+		"""
+		Раскрывает вложенные одноимённые теги.
+
+		:param paragraph: Обрабатываемый абзац.
+		:type paragraph: BeautifulSoup
+		:return: Обработанный абзац.
+		:rtype: BeautifulSoup
+		"""
+
+		AllowedTags = list(self.__AllowedTags.keys())
+		AllowedTags.remove("blockquote")
+		AllowedTags = tuple(AllowedTags)
+
+		for Tag in self.__AllowedTags.keys():
+			for Parent in paragraph.find_all(Tag):
+				for Child in Parent.find_all(Tag): Child.unwrap()
+
+		return paragraph
+
+	def __ValidateHTML(self, paragraph: BeautifulSoup, exceptions: bool = True) -> BeautifulSoup:
+		"""
+		Проверяет соответствие абзаца допустимым спецификациям HTML.
+
+		:param paragraph: Проверяемый абзац.
+		:type paragraph: BeautifulSoup
+		:param exceptions: Указывает, нужно ли выбрасывать соответствующие исключения. По умочанию `True`.
+		:type exceptions: bool, optional
+		:return: Обработанный абзац.
+		:rtype: BeautifulSoup
+		"""
+		
+		for Tag in paragraph.find_all():
+
+			if Tag.name not in self.__AllowedTags.keys():
+				self._SystemObjects.logger.error(f"Unresolved tag \"{Tag.name}\".")
+				if exceptions: raise UnresolvedTag(Tag)
+
+			else:
+				for Attribute in Tag.attrs:
+					if Attribute not in self.__AllowedTags[Tag.name]:
+						del Tag[Attribute]
+						self._SystemObjects.logger.warning(f"Unresolved attribute \"{Attribute}\" in \"{Tag.name}\" tag. Removed.")
+
+		return paragraph
+
 	#==========================================================================================#
 	# >>>>> ПУБЛИЧНЫЕ МЕТОДЫ <<<<< #
 	#==========================================================================================#
@@ -164,37 +212,55 @@ class Chapter(BaseChapter):
 		}
 		self._ParserSettings = system_objects.manager.parser_settings
 
+		self.__AllowedTags = {
+			"p": ("align"),
+			"b": (),
+			"i": (),
+			"s": (),
+			"u": (),
+			"sup": (),
+			"sub": (),
+			"img": ("src"),
+			"blockquote": ("data-name")
+		}
+
 		self._SetParagraphsMethod = self.set_paragraphs
 		self._SetSlidesMethod = self._Pass
 
 	def add_paragraph(self, paragraph: str):
 		"""
-		Добавляет абзац.
-			paragraph – абзац в формате HTML.
+		Добавляет абзац в главу. Если текст не обёрнут в тег `<p>`, это будет выполнено автоматически.
+
+		:param paragraph: Текст абзаца с поддерживаемой HTML разметкой.
+		:type paragraph: str
 		"""
 
-		IsCorrect = True
-
-		paragraph = self._ParserSettings.filters.text.clear(paragraph)
-		Tag = BeautifulSoup(paragraph, "html.parser").find("p")
-		self.__DownloadImages(Tag)
+		paragraph = paragraph.strip()
+		if not paragraph.startswith("<p"): paragraph = f"<p>{paragraph}</p>"
+		
 		if self._ParserSettings.common.pretty:
 
-			#---> Редактирование абзаца.
-			#==========================================================================================#
-			
-			if Tag.text:
-				Align = ""
-				InnerHTML = Tag.decode_contents().strip()
-				if Tag.has_attr("align"): Align = " align=\"" + Tag["align"] + "\""
-				InnerHTML = HTML(InnerHTML)
-				InnerHTML.replace_tag("em", "i")
-				InnerHTML.replace_tag("strong", "b")
-				InnerHTML.replace_tag("strike", "s")
-				InnerHTML.replace_tag("del", "s")
-				InnerHTML.unescape()
-				Tag = BeautifulSoup(f"<p{Align}>{InnerHTML.text}</p>", "html.parser")
+			Tag = BeautifulSoup(paragraph, "html.parser").find("p")
+			if not Tag.text: return
 
+			#---> Форматирование тегов и атрибутов.
+			#==========================================================================================#
+			Align = ""
+			InnerHTML = Tag.decode_contents().strip()
+			if Tag.has_attr("align"): Align = " align=\"" + Tag["align"] + "\""
+			InnerHTML = HTML(InnerHTML)
+			InnerHTML.remove_tags(["br"])
+			InnerHTML.replace_tag("em", "i")
+			InnerHTML.replace_tag("strong", "b")
+			InnerHTML.replace_tag("strike", "s")
+			InnerHTML.replace_tag("del", "s")
+			InnerHTML.unescape()
+			Tag = BeautifulSoup(f"<p{Align}>{InnerHTML.text}</p>", "html.parser")
+			Tag = self.__UnwrapTags(Tag)
+			self.__ValidateHTML(Tag)
+
+			#---> Преобразование символьных последовательностей.
+			#==========================================================================================#
 			paragraph = str(Tag)
 			paragraph = paragraph.replace("\u00A0", " ")
 			paragraph = RemoveRecurringSubstrings(paragraph, " ")
@@ -203,23 +269,27 @@ class Chapter(BaseChapter):
 
 			#---> Определение валидности абзаца.
 			#==========================================================================================#
-			
-			if not Tag.text.strip(" \t\n.") and not Tag.find("img"):
-				IsCorrect = False
+			IsValid = True
 
-			elif len(self._Chapter["paragraphs"]) < 4:
+			if not Tag.text.strip(" \t\n.") and not Tag.find("img"):
+				IsValid = False
+
+			elif len(self._Chapter["paragraphs"]) <= 3:
 				Paragraph = Tag.text.rstrip(".!?…").lower()
 				ChapterName = self.name.rstrip(".!?…").lower() if self.name else None
 				LocalizedName = self.__Title.localized_name.rstrip(".!?…").lower() if self.__Title.localized_name else None
 				LocalizedChapterWord = self.__GetLocalizedChapterWord()
 
-				if ChapterName and Paragraph == ChapterName: IsCorrect = False
-				elif LocalizedName and Paragraph == LocalizedName: IsCorrect = False
+				if ChapterName and Paragraph == ChapterName: IsValid = False
+				elif LocalizedName and Paragraph == LocalizedName: IsValid = False
 				elif LocalizedChapterWord and f"{LocalizedChapterWord} {self.number}" in Paragraph:
-					IsCorrect = False
+					IsValid = False
 					self.__TryGetName(Tag.text)
 
-		if IsCorrect: self._Chapter["paragraphs"].append(paragraph)
+			if not IsValid: return
+
+		self._Chapter["paragraphs"].append(self._ParserSettings.filters.text.clear(paragraph))
+		self.__DownloadImages(paragraph)
 
 	def clear_paragraphs(self):
 		"""Удаляет содержимое главы."""

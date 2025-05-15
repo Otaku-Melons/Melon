@@ -60,3 +60,24 @@ class TitleNotFound(Exception):
 			
 	def __str__(self):
 		return self.__Message
+	
+#==========================================================================================#
+# >>>>> ИСКЛЮЧЕНИЯ ФОРМАТИРОВЩИКОВ КОНТЕНТА <<<<< #
+#==========================================================================================#
+	
+class UnresolvedTag(Exception):
+	"""Исключение: неразрешённый тег."""
+
+	def __init__(self, tag: str):
+		"""
+		Исключение: неразрешённый тег.
+
+		:param tag: Имя тега.
+		:type tag: str
+		"""
+
+		self.__Message = f"Unresolved tag \"{tag}\"."
+		super().__init__(self.__Message) 
+			
+	def __str__(self):
+		return self.__Message

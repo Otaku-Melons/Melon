@@ -146,7 +146,7 @@ class BaseExtension:
 		if command: 
 			command = shlex.split(command)
 			Analyzer = Terminalyzer(command)
-			Analyzer.enable_help(True)
+			Analyzer.helper.enable()
 			ParsedCommand = Analyzer.check_commands(self._GenerateCommandsList())
 
 			if not ParsedCommand:

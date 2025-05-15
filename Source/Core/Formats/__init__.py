@@ -1054,7 +1054,7 @@ class BaseTitle:
 			ru_name – название на русском.
 		"""
 
-		self._Title["localized_name"] = localized_name
+		self._Title["localized_name"] = localized_name.strip() if localized_name else None
 
 	def set_eng_name(self, eng_name: str | None):
 		"""
@@ -1062,7 +1062,7 @@ class BaseTitle:
 			en_name – название на английском.
 		"""
 
-		self._Title["eng_name"] = eng_name
+		self._Title["eng_name"] = eng_name.strip() if eng_name else None
 
 	def set_another_names(self, another_names: list[str]):
 		"""

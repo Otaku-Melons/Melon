@@ -21,7 +21,7 @@ MakeRootDirectories(["Parsers"])
 
 Analyzer = Terminalyzer()
 Objects = SystemObjects()
-Analyzer.enable_help(True)
+Analyzer.helper.enable()
 CommandDataStruct = Analyzer.check_commands(CommandsList)
 
 Objects.logger.info("====== Preparing to starting ======", stdout = False)
