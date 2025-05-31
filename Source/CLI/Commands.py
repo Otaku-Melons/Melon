@@ -1,3 +1,4 @@
+from Source.Core.Builders.MangaBuilder import MangaBuilder
 from Source.Core.ImagesDownloader import ImagesDownloader
 from Source.Core.Development import DevelopmeptAssistant
 from Source.Core.SystemObjects import SystemObjects
@@ -5,10 +6,9 @@ from Source.Core.Base.BaseParser import BaseParser
 from Source.Core.Formats import By, ContentTypes
 from Source.Core.Collector import Collector
 from Source.Core.Installer import Installer
-from Source.Core.Builders.MangaBuilder import MangaBuilder
 from Source.Core.Tagger import Tagger
-from Source.Core.Exceptions import *
 from Source.Core.Timer import Timer
+from Source.Core import Exceptions
 from Source.CLI import Templates
 
 from dublib.CLI.Terminalyzer import ParsedCommandData
@@ -16,12 +16,14 @@ from dublib.CLI.TextStyler import Styles, TextStyler
 from dublib.Methods.Filesystem import WriteJSON
 from dublib.Engine.Bus import ExecutionStatus
 
+from json.decoder import JSONDecodeError
 from typing import TYPE_CHECKING
 from time import sleep
 
 if TYPE_CHECKING:
 	from Source.Core.Formats.Ranobe import Ranobe
 	from Source.Core.Formats.Manga import Manga
+	from Source.Core.Formats import BaseTitle
 
 def com_build_manga(system_objects: SystemObjects, command: ParsedCommandData):
 	"""
@@ -96,7 +98,7 @@ def com_collect(system_objects: SystemObjects, command: ParsedCommandData):
 	Parser: BaseParser = system_objects.manager.launch()
 	CollectedTitlesCount = 0
 	Collection = list()
-	CollectorObject = Collector(system_objects)
+	CollectorObject = Collector(system_objects, merge = system_objects.FORCE_MODE)
 
 	if system_objects.FORCE_MODE: system_objects.logger.warning("Collection will be overwritten.", stdout = True)
 
@@ -304,12 +306,12 @@ def com_parse(system_objects: SystemObjects, command: ParsedCommandData):
 	system_objects.logger.info("====== Parsing ======")
 	
 	ContentType = system_objects.manager.get_parser_content_struct()
-	Title = ContentType(system_objects)
+	Title: BaseTitle = ContentType(system_objects)
 	Parser: BaseParser = system_objects.manager.launch()
 	ParserSettings = system_objects.manager.parser_settings
 
 	if command.check_flag("collection"):
-		Slugs = Collector(system_objects, merge = True).slugs
+		Slugs = Collector(system_objects).slugs
 		system_objects.logger.info(f"Titles in collection: {len(Slugs)}.")
 
 	elif command.check_flag("updates"):
@@ -349,7 +351,7 @@ def com_parse(system_objects: SystemObjects, command: ParsedCommandData):
 		Title.set_parser(Parser)
 
 		try:
-			Title.open(Slugs[Index], By.Slug, exception = False)
+			Title.open(Slugs[Index], By.Slug)
 			Title.parse(Index, TotalCount)
 			Title.merge()
 			Title.amend()
@@ -357,12 +359,20 @@ def com_parse(system_objects: SystemObjects, command: ParsedCommandData):
 			Title.save(end_timer = True)
 			ParsedCount += 1
 
-		except TitleNotFound:
+		except JSONDecodeError as ExceptionData:
+			system_objects.logger.error(str(ExceptionData))
+			ErrorsCount += 1
+
+		except Exceptions.UnsupportedFormat as ExceptionData:
+			system_objects.logger.error(str(ExceptionData))
+			ErrorsCount += 1
+
+		except Exceptions.TitleNotFound:
 			try: Title.open(Slugs[Index], By.Slug)
 			except: pass
 			NotFoundCount += 1
 
-		except ParsingError:
+		except Exceptions.ParsingError:
 			ErrorsCount += 1
 
 		if Index != len(Slugs) - 1: sleep(ParserSettings.common.delay)
@@ -390,14 +400,13 @@ def com_repair(system_objects: SystemObjects, command: ParsedCommandData):
 
 	#---> Выполнение команды.
 	#==========================================================================================#
-	Title = system_objects.manager.get_parser_content_struct()
+	Title: BaseTitle = system_objects.manager.get_parser_content_struct()
 	Title = Title(system_objects)
 	Parser: BaseParser = system_objects.manager.launch()
 
 	system_objects.logger.info("====== Repairing ======")
 
 	Filename = Filename[:-5] if command.arguments[0].endswith(".json") else command.arguments[0]
-	ResultMessage = "Done."
 
 	try:
 		Title.set_parser(Parser)
@@ -406,22 +415,7 @@ def com_repair(system_objects: SystemObjects, command: ParsedCommandData):
 		Title.repair(ChapterID)
 		Title.save(end_timer = True)
 
-	except TitleNotFound:
-		ResultMessage = "Error! Title not found."
-		system_objects.logger.title_not_found(Title, exception = False)
-		system_objects.EXIT_CODE = -1
-
-	except ChapterNotFound:
-		ResultMessage = "Error! Chapter not found."
-		system_objects.EXIT_CODE = -1
-
-	except ParsingError:
-		ResultMessage = "Error! Unable access title data."
-		system_objects.EXIT_CODE = -1
-
-	#---> Вывод отчёта.
-	#==========================================================================================#
-	# print(ResultMessage)
+	except (Exceptions.TitleNotFound, Exceptions.ChapterNotFound, Exceptions.ParsingError): system_objects.EXIT_CODE = -1
 
 def com_run(system_objects: SystemObjects, command: ParsedCommandData):
 	"""

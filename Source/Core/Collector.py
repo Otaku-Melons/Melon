@@ -27,7 +27,7 @@ class Collector:
 
 		Collection = list()
 		
-		if os.path.exists(self.__Path) and not self.__SystemObjects.FORCE_MODE:
+		if os.path.exists(self.__Path):
 			
 			with open(self.__Path, "r") as FileReader:
 				Buffer = FileReader.read().split("\n")
@@ -42,18 +42,21 @@ class Collector:
 	# >>>>> ПУБЛИЧНЫЕ МЕТОДЫ <<<<< #
 	#==========================================================================================#
 
-	def __init__(self, system_objects: SystemObjects, merge: bool = False):
+	def __init__(self, system_objects: SystemObjects, merge: bool = True):
 		"""
 		Менеджер коллекций.
-			system_objects – коллекция системных объектов;\n
-			merge – указывает, считывать ли коллекцию.
+
+		:param system_objects: Коллекция системных объектов.
+		:type system_objects: SystemObjects
+		:param merge: Указывает, нужно ли читать файл коллекции. По умолчанию `True`.
+		:type merge: boolt
 		"""
 
 		#---> Генерация динамических атрибутов.
 		#==========================================================================================#
 		self.__SystemObjects = system_objects
 
-		self.__Path = system_objects.temper.parser_temp + "/Collection.txt"
+		self.__Path = f"{system_objects.temper.parser_temp}/Collection.txt"
 		self.__Collection = self.__ReadCollection() if merge else list()
 
 	def append(self, slugs: str | list[str]):

@@ -1,13 +1,17 @@
 from Source.Core.ImagesDownloader import ImagesDownloader
+from Source.Core.Exceptions import UnsupportedFormat
 from Source.Core.Timer import Timer
 
-from dublib.Methods.Filesystem import ReadJSON, WriteJSON
+from dublib.Methods.Filesystem import ListDir, ReadJSON, WriteJSON
 from dublib.Methods.Data import Zerotify
 
-from typing import Any
+from typing import Any, TYPE_CHECKING
 from time import sleep
 import enum
 import os
+
+if TYPE_CHECKING:
+	from Source.Core.SystemObjects import SystemObjects
 
 #==========================================================================================#
 # >>>>> ДОПОЛНИТЕЛЬНЫЕ СТРУКТУРЫ ДАННЫХ <<<<< #
@@ -669,6 +673,25 @@ class BaseTitle:
 
 		return Result
 
+	def _SafeRead(self, path: str) -> dict:
+		"""
+		В случае ошибки декодирования JSON выбрасывает исключение.
+
+		:param path: Путь к JSON файлу.
+		:type path: str
+		:raises JSONDecodeError: Ошибка десериализации JSON.
+		:raises UnsupportedFormat: Неподдерживаемый формат JSON.
+		:return: Словарное представление JSON тайтла.
+		:rtype: dict
+		"""
+
+		Formats: tuple[str] = tuple(File[:-3] for File in ListDir("Docs/Examples"))
+		Data = ReadJSON(path)
+		if "format" not in Data.keys(): raise UnsupportedFormat()
+		elif Data["format"] not in Formats: raise UnsupportedFormat(Data["format"])
+
+		return Data
+	
 	def _UpdateBranchesInfo(self):
 		"""Обновляет информацию о ветвях."""
 
@@ -805,7 +828,7 @@ class BaseTitle:
 			sleep(0.25)
 
 		self._SystemObjects.logger.info(f"Title: \"{self.slug}\" (ID: {self.id}). Covers downloaded: {DownloadedCoversCount}.")
-		PersonsDirectory = self._ParserSettings.directories.get_persons(self._UsedFilename)
+		if self._Persons: PersonsDirectory = self._ParserSettings.directories.get_persons(self._UsedFilename)
 
 		for CurrentPerson in self._Persons:
 
@@ -831,11 +854,17 @@ class BaseTitle:
 				Result.print_messages()
 				sleep(0.25)
 
-	def open(self, identificator: int | str, selector_type: By = By.Filename, exception: bool = True):
+	def open(self, identificator: int | str, selector_type: By = By.Filename):
 		"""
-		Считывает локальный файл.
-			identificator – идентификатор тайтла;\n
-			selector_type – тип указателя на тайтл.
+		Открывает локальный JSON файл и интерпретирует его данные.
+
+		:param identificator: Идентификатор тайтла: ID или алиас.
+		:type identificator: int | str
+		:param selector_type: Режим поиска файла. По умолчанию `By.Filename` – идентификатор соответствует имени файла без расширения.
+		:type selector_type: By, optional
+		:raises FileNotFoundError: Не удалось найти файл с указанным именем. Выбрасывается только при идентификации через `By.Filename`.
+		:raises JSONDecodeError: Ошибка десериализации JSON.
+		:raises UnsupportedFormat: Неподдерживаемый формат JSON.
 		"""
 
 		Data = None
@@ -844,46 +873,56 @@ class BaseTitle:
 		if selector_type == By.Filename:
 			Path = f"{Directory}/{identificator}.json"
 
-			if os.path.exists(Path):
-				Data = ReadJSON(f"{Directory}/{identificator}.json")
-				
+			if os.path.exists(Path): 
+				Data = self._SafeRead(f"{Directory}/{identificator}.json")
+
 			else:
 				self._SystemObjects.logger.error(f"Couldn't open file \"{Path}\".")
-				raise FileNotFoundError(Path)
+				raise FileNotFoundError(f"{identificator}.json")
 
 		if selector_type == By.Slug:
-			LocalTitles = os.listdir(Directory)
-			LocalTitles = list(filter(lambda File: File.endswith(".json"), LocalTitles))
+		
+			if not self._ParserSettings.common.use_id_as_filename:
+				Path = f"{Directory}/{identificator}.json"
+				if os.path.exists(Path): Data = self._SafeRead(f"{Directory}/{identificator}.json")
+				
+			if not Data:
+				LocalTitles = ListDir(Directory)
+				LocalTitles = tuple(filter(lambda File: File.endswith(".json"), LocalTitles))
 
-			for File in LocalTitles:
-				Path = f"{Directory}/{File}"
+				for File in LocalTitles:
+					Path = f"{Directory}/{File}"
 
-				if os.path.exists(Path):
-					Buffer = ReadJSON(Path)
+					if os.path.exists(Path):
+						Buffer = self._SafeRead(Path)
 
-					if Buffer["slug"] == identificator:
-						Data = Buffer
-						break
+						if Buffer["slug"] == identificator:
+							Data = Buffer
+							break
 
 		if selector_type == By.ID:
-			LocalTitles = os.listdir(Directory)
-			LocalTitles = list(filter(lambda File: File.endswith(".json"), LocalTitles))
 
-			for File in LocalTitles:
-				Path = f"{Directory}/{File}"
+			if self._ParserSettings.common.use_id_as_filename:
+				Path = f"{Directory}/{identificator}.json"
+				if os.path.exists(Path): Data = self._SafeRead(f"{Directory}/{identificator}.json")
 
-				if os.path.exists(Path):
-					Buffer = ReadJSON(Path)
+			if not Data:
+				LocalTitles = ListDir(Directory)
+				LocalTitles = tuple(filter(lambda File: File.endswith(".json"), LocalTitles))
 
-					if Buffer["id"] == identificator:
-						Data = Buffer
-						break
+				for File in LocalTitles:
+					Path = f"{Directory}/{File}"
+
+					if os.path.exists(Path):
+						Buffer = self._SafeRead(Path)
+
+						if Buffer["id"] == identificator:
+							Data = Buffer
+							break
 
 		if Data:
 			self._Title = Data
 			self._UsedFilename = str(self.id) if self._ParserSettings.common.use_id_as_filename else self.slug
-
-		elif exception: raise FileNotFoundError(f"{identificator}.json")
 
 		self._ParseBranchesToObjects()
 

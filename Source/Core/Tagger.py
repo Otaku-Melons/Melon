@@ -182,8 +182,8 @@ class Tagger:
 		TaggerCasePosition.add_flag("low", "Convert to lower case.")
 		TaggerCasePosition.add_flag("up", "Convert to upper case.")
 
-		TaggerCommand.add_flag("del", "Delete classificator.")
-		TaggerCommand.add_key("rename", description = "Rename classificator.")
+		TaggerCommand.base.add_flag("del", "Delete classificator.")
+		TaggerCommand.base.add_key("rename", description = "Rename classificator.")
 
 		return TaggerCommand
 
