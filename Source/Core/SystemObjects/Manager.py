@@ -1,7 +1,7 @@
-from Source.Core.ParserSettings import ParserSettings
+from Source.Core.Base.Parser.Components.ParserSettings import ParserSettings
 from Source.Core.Formats import ContentTypes
 
-from dublib.Methods.Filesystem import ReadJSON
+from dublib.Methods.Filesystem import ReadJSON, ListDir
 from dublib.CLI.TextStyler import TextStyler
 
 from typing import Any, TYPE_CHECKING
@@ -25,7 +25,7 @@ class Manager:
 	def all_parsers_names(self) -> list[str]:
 		"""Список названий доступных парсеров."""
 
-		Parsers = os.listdir("Parsers")
+		Parsers = ListDir("Parsers")
 		if "Templates" in Parsers: Parsers.remove("Templates")
 
 		return Parsers
@@ -205,7 +205,7 @@ class Manager:
 	# >>>>> ПУБЛИЧНЫЕ МЕТОДЫ ПОЛУЧЕНИЯ ПАРАМЕТРОВ ПАРСЕРОВ <<<<< #
 	#==========================================================================================#
 
-	def get_parser_settings(self, parser: str | None = None, cache: bool = False) -> ParserSettings:
+	def get_parser_settings(self, parser: str | None = None, cache: bool = True) -> ParserSettings:
 		"""
 		Возвращает контейнер настроек парсера.
 			parser – название парсера;\n

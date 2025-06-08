@@ -1,6 +1,6 @@
 from Source.Core.Exceptions import ChapterNotFound, UnresolvedTag
 from . import BaseChapter, BaseBranch, BaseTitle, By, Statuses
-from Source.Core.ImagesDownloader import ImagesDownloader
+from Source.Core.Base.Parser.Components.ImagesDownloader import ImagesDownloader
 from Source.Core.SystemObjects import SystemObjects
 
 from dublib.Methods.Data import RemoveRecurringSubstrings
@@ -124,6 +124,38 @@ class Chapter(BaseChapter):
 
 		return Word
 
+	def __MergeSimilarTags(self, soup: BeautifulSoup, tag: str) -> BeautifulSoup:
+		"""
+		Объединяет рядом располагающиеся одинаковые теги, отдлённые пробельными символами.
+
+		:param soup: Обрабатываемый абзац текста.
+		:type soup: BeautifulSoup
+		:param tag: Имя тега.
+		:type tag: str
+		:return: Обработанный абзац текста.
+		:rtype: BeautifulSoup
+		"""
+
+
+		MergableTags = soup.find_all(tag)
+		if not MergableTags: return soup
+		NewText = ""
+
+		for Index, Tag in enumerate(MergableTags):
+			NewText += Tag.get_text()
+			
+			if Index + 1 < len(MergableTags):
+				BetweenText = Tag.next_sibling.string
+				# Сохранение пробельных символов между тегами.
+				if BetweenText: NewText += BetweenText
+
+		NewTag = soup.new_tag(tag)
+		NewTag.string = NewText
+		MergableTags[0].insert_before(NewTag)
+		for Tag in MergableTags: Tag.extract()
+
+		return soup
+
 	def __TryGetName(self, paragraph: str):
 		"""
 		Пытается получить название главы из абзаца.
@@ -207,7 +239,7 @@ class Chapter(BaseChapter):
 			"name": None,
 			"type": None,
 			"is_paid": None,
-			"translators": [],
+			"workers": [],
 			"paragraphs": []	
 		}
 		self._ParserSettings = system_objects.manager.parser_settings
@@ -256,6 +288,8 @@ class Chapter(BaseChapter):
 			InnerHTML.replace_tag("del", "s")
 			InnerHTML.unescape()
 			Tag = BeautifulSoup(f"<p{Align}>{InnerHTML.text}</p>", "html.parser")
+			# input(self.__MergeSimilarTags(BeautifulSoup("<p><i>начало</i>  	<i>конец</i><b>текста</b><i>123</i></p>", "html.parser"), "i"))
+			# for TagName in ("i", "b", "s"): Tag = self.__MergeSimilarTags(Tag, TagName)
 			Tag = self.__UnwrapTags(Tag)
 			self.__ValidateHTML(Tag)
 

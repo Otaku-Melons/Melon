@@ -61,6 +61,7 @@ Com.base.add_flag("c", "Copy parsers and extensions default settings in Configs 
 Com.base.add_flag("all", "Full installation.")
 Com.base.add_flag("r", "Install parsers requirements (only Python packages).")
 Com.base.add_flag("s", "Running parsers installation scripts.")
+Com.base.add_flag("t", "Switch parsers submodules to the latest stable tag.")
 CommandsList.append(Com)
 
 Com = Command("list", "Print list of installed parsers.")

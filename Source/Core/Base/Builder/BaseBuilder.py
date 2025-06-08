@@ -1,4 +1,4 @@
-from Source.Core.ImagesDownloader import ImagesDownloader
+from Source.Core.Base.Parser.Components.ImagesDownloader import ImagesDownloader
 
 from typing import TYPE_CHECKING
 

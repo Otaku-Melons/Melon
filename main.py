@@ -1,9 +1,8 @@
 from Source.Core.SystemObjects import SystemObjects
 from Source.CLI.Descriptions import CommandsList
-from Source.CLI.Commands import *
+from Source.CLI import Commands
 
 from dublib.Methods.System import CheckPythonMinimalVersion
-from dublib.Methods.Filesystem import MakeRootDirectories
 from dublib.CLI.Terminalyzer import Terminalyzer
 
 import sys
@@ -13,7 +12,6 @@ import sys
 #==========================================================================================#
 
 CheckPythonMinimalVersion(3, 10)
-MakeRootDirectories(["Parsers"])
 
 #==========================================================================================#
 # >>>>> НАСТРОЙКА ОБРАБОТЧИКА КОМАНД <<<<< #
@@ -32,17 +30,12 @@ if CommandDataStruct == None:
 	Objects.logger.set_rule(3)
 	Objects.logger.close()
 	print("Unknown command!")
-	exit(0)
 
 elif CommandDataStruct.name in ("help", "list", "tagger"): Objects.LIVE_MODE = True
 
 if not Objects.LIVE_MODE:
+	if "f" in CommandDataStruct.flags: Objects.FORCE_MODE = True
 	Objects.logger.templates.title(SystemObjects.VERSION)
-
-	if "f" in CommandDataStruct.flags: 
-		Objects.FORCE_MODE = True
-		Objects.logger.info("Force mode: ON.")
-
 	Objects.logger.templates.option_status("Force mode", Objects.FORCE_MODE)
 
 #==========================================================================================#
@@ -51,9 +44,9 @@ if not Objects.LIVE_MODE:
 
 try:
 	CommandName = CommandDataStruct.name.replace("-", "_")
-	exec(f"com_{CommandName}(Objects, CommandDataStruct)")
+	exec(f"Commands.com_{CommandName}(Objects, CommandDataStruct)")
 	
-except KeyboardInterrupt: exit(0)
+except KeyboardInterrupt: pass
 
 #==========================================================================================#
 # >>>>> ЗАВЕРШЕНИЕ РАБОТЫ <<<<< #

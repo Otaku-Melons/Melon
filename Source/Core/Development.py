@@ -1,5 +1,5 @@
 from Source.Core.SystemObjects import SystemObjects
-from Source.Core.ParserSettings import Settings
+from Source.Core.Base.Parser.Components.ParserSettings import Settings
 from Source.Core.Formats import ContentTypes
 from Source.Core.Timer import Timer
 

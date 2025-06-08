@@ -1,8 +1,7 @@
-from Source.Core.Builders.MangaBuilder import MangaBuilder
-from Source.Core.ImagesDownloader import ImagesDownloader
+from Source.Core.Base.Builder.MangaBuilder import MangaBuilder
 from Source.Core.Development import DevelopmeptAssistant
 from Source.Core.SystemObjects import SystemObjects
-from Source.Core.Base.BaseParser import BaseParser
+from Source.Core.Base.Parser.BaseParser import BaseParser
 from Source.Core.Formats import By, ContentTypes
 from Source.Core.Collector import Collector
 from Source.Core.Installer import Installer
@@ -12,7 +11,6 @@ from Source.Core import Exceptions
 from Source.CLI import Templates
 
 from dublib.CLI.Terminalyzer import ParsedCommandData
-from dublib.CLI.TextStyler import Styles, TextStyler
 from dublib.Methods.Filesystem import WriteJSON
 from dublib.Engine.Bus import ExecutionStatus
 
@@ -99,11 +97,10 @@ def com_collect(system_objects: SystemObjects, command: ParsedCommandData):
 	CollectedTitlesCount = 0
 	Collection = list()
 	CollectorObject = Collector(system_objects, merge = system_objects.FORCE_MODE)
-
+	system_objects.logger.info("====== Collecting ======")
 	if system_objects.FORCE_MODE: system_objects.logger.warning("Collection will be overwritten.", stdout = True)
 
 	if command.check_flag("local"):
-		system_objects.logger.info("====== Collecting ======")
 		TimerObject = Timer()
 		TimerObject.start()
 		print("Scanning titles... ", end = "", flush = True)
@@ -112,11 +109,10 @@ def com_collect(system_objects: SystemObjects, command: ParsedCommandData):
 		print(f"Done in {ElapsedTime}.")
 
 	elif not system_objects.manager.check_method_collect():
-		print("Parser doesn't support " + TextStyler("collect", decorations = [Styles.Decorations.Bold]) + " method.")
+		system_objects.logger.error("Parser doesn't support \"collect\" method.")
 		return
 
 	else:
-		system_objects.logger.info("====== Collecting ======")
 		Collection = Parser.collect(filters = Filters, period = Period, pages = PagesCount)
 		CollectedTitlesCount = len(Collection)
 		CollectorObject.append(Collection)
@@ -139,6 +135,7 @@ def com_get(system_objects: SystemObjects, command: ParsedCommandData):
 	ParserName = command.get_key_value("use")
 	system_objects.logger.select_cli_point(command.name)
 	system_objects.select_parser(ParserName)
+	TimerObject = Timer(start = True)
 
 	#---> Парсинг данных команды.
 	#==========================================================================================#
@@ -150,21 +147,20 @@ def com_get(system_objects: SystemObjects, command: ParsedCommandData):
 	
 	#---> Выполнение команды.
 	#==========================================================================================#
-	ResultMessage = "Download failed."
 	system_objects.logger.info("====== Downloading ======")
 	Parser: BaseParser = system_objects.manager.launch()
-	Downloader = ImagesDownloader(system_objects)
-	print(f"URL: {command.arguments[0]}\nDownloading... ", end = "")
+	IsImageExists = Parser.images_downloader.is_exists(Link, Directory, Filename, FullName)
+	print(f"URL: {command.arguments[0]}")
+	if IsImageExists: print("Already exists.")
 
-	if not Downloader.check_image_exists(command.arguments[0], Directory, Filename, FullName):
-		Status: ExecutionStatus = Parser.image(Link)
-		if Status.value and ImagesDownloader(system_objects).move_from_temp(Directory, Status.value, Filename, True): ResultMessage = "Done."
-
-	else: ResultMessage = "Already exists."
+	if not IsImageExists or system_objects.FORCE_MODE:
+		Status = Parser.image(Link)
+		if Status: Status += Parser.images_downloader.move_from_temp(Directory, Status.value, Filename, True)
+		if IsImageExists: print("Overwritten.")
 
 	#---> Вывод отчёта.
 	#==========================================================================================#
-	print(ResultMessage)
+	TimerObject.done()
 
 def com_help(system_objects: SystemObjects, command: ParsedCommandData):
 	"""
@@ -230,6 +226,7 @@ def com_install(system_objects: SystemObjects, command: ParsedCommandData):
 	if command.check_flag("r") or FullInstallation: InstallerObject.requirements()
 	if command.check_flag("s") or FullInstallation: InstallerObject.scripts()
 	if command.check_flag("c") or FullInstallation: InstallerObject.configs()
+	if command.check_flag("t") or FullInstallation: system_objects.logger.warning("Switching parsers submodules to the latest stable tag not available yet.")
 
 	#---> Вывод отчёта.
 	#==========================================================================================#
@@ -261,7 +258,7 @@ def com_list(system_objects: SystemObjects, command: ParsedCommandData):
 		try:
 			Version = system_objects.manager.get_parser_version(Parser)
 			Site = system_objects.manager.get_parser_site(Parser)
-			Type = system_objects.manager.get_parser_content_struct_name(Parser)
+			Type = system_objects.manager.get_parser_content_struct(Parser).__name__.lower()
 			TypesEmoji = {
 				"anime": "🎬",
 				"manga": "🌄",
@@ -351,7 +348,7 @@ def com_parse(system_objects: SystemObjects, command: ParsedCommandData):
 		Title.set_parser(Parser)
 
 		try:
-			Title.open(Slugs[Index], By.Slug)
+			if not system_objects.FORCE_MODE: Title.open(Slugs[Index], By.Slug)
 			Title.parse(Index, TotalCount)
 			Title.merge()
 			Title.amend()
@@ -367,13 +364,8 @@ def com_parse(system_objects: SystemObjects, command: ParsedCommandData):
 			system_objects.logger.error(str(ExceptionData))
 			ErrorsCount += 1
 
-		except Exceptions.TitleNotFound:
-			try: Title.open(Slugs[Index], By.Slug)
-			except: pass
-			NotFoundCount += 1
-
-		except Exceptions.ParsingError:
-			ErrorsCount += 1
+		except Exceptions.TitleNotFound: NotFoundCount += 1
+		except Exceptions.ParsingError: ErrorsCount += 1
 
 		if Index != len(Slugs) - 1: sleep(ParserSettings.common.delay)
 
@@ -441,7 +433,7 @@ def com_run(system_objects: SystemObjects, command: ParsedCommandData):
 	#==========================================================================================#
 	Extension = system_objects.manager.launch_extension(ParserName, ExtensionName)
 	system_objects.logger.info(f"====== {ParserName}:{ExtensionName} ======", stdout = True)
-	Status = Extension.run(ExtensionCommand)
+	Status: ExecutionStatus = Extension.run(ExtensionCommand)
 
 	#---> Вывод отчёта.
 	#==========================================================================================#

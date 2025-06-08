@@ -1,10 +1,44 @@
-from dublib.Methods.Filesystem import RemoveDirectoryContent
-from dublib.Methods.Filesystem import NormalizePath
+from dublib.Methods.Filesystem import NormalizePath, RemoveDirectoryContent
 
+from typing import Any
 import os
 
+class SharedMemory:
+	"""Разделяемая в контексте одного парсера память."""
+
+	def __init__(self, temper: "Temper", parser_name: str):
+		"""
+		_summary_
+
+		:param temper: _description_
+		:type temper: Temper
+		:param parser_name: _description_
+		:type parser_name: str
+		:return: _description_
+		:rtype: _type_
+		"""
+
+		self.__Temper = temper
+		self.__ParserName = parser_name
+
+		self.__Memory = dict()
+
+	def get_memory_point(self, point: str) -> dict[str, Any]:
+		"""
+		Осуществляет доступ к разделяемому словарю.
+
+		:param point: Идентификатор разделяемого словаря.
+		:type point: str
+		:return: Словарь разделяемой памяти.
+		:rtype: _type_
+		"""
+
+		pass
+
+
+
 class Temper:
-	"""Дескриптор каталога временных файлов."""
+	"""Дескриптор временных каталогов и объектов."""
 
 	#==========================================================================================#
 	# >>>>> СВОЙСТВА <<<<< #
@@ -41,13 +75,27 @@ class Temper:
 	#==========================================================================================#
 
 	def __init__(self):
-		"""Дескриптор каталога временных файлов."""
+		"""Дескриптор временных каталогов и объектов."""
 
 		#---> Генерация динамических атрибутов.
 		#==========================================================================================#
 		self.__Temp = "Temp"
 		self.__Extension = None
 		self.__ParserName = None
+
+	def select_extension(self, extension: str):
+		"""Задаёт имя используемого расширения."""
+
+		self.__Extension = extension
+
+	def select_parser(self, parser_name: str):
+		"""Задаёт имя используемого парсера."""
+
+		self.__ParserName = parser_name
+
+	#==========================================================================================#
+	# >>>>> ПУБЛИЧНЫЕ МЕТОДЫ РАБОТЫ С ВРЕМЕННЫМИ КАТАЛОГАМИ <<<<< #
+	#==========================================================================================#
 
 	def clear_parser_temp(self, parser_name: str | None = None):
 		"""
@@ -101,13 +149,3 @@ class Temper:
 		Path = NormalizePath(Path)
 		
 		return Path
-	
-	def select_extension(self, extension: str):
-		"""Задаёт имя используемого расширения."""
-
-		self.__Extension = extension
-
-	def select_parser(self, parser_name: str):
-		"""Задаёт имя используемого парсера."""
-
-		self.__ParserName = parser_name

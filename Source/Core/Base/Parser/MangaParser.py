@@ -1,41 +1,31 @@
-from Source.Core.Formats.Ranobe import Chapter, Branch, Ranobe
+from Source.Core.Formats.Manga import Chapter, Branch, Manga
 from .BaseParser import *
 
 #==========================================================================================#
 # >>>>> ОПРЕДЕЛЕНИЯ <<<<< #
 #==========================================================================================#
 
-TYPE = Ranobe
+TYPE = Manga
 
 #==========================================================================================#
 # >>>>> ОСНОВНОЙ КЛАСС <<<<< #
 #==========================================================================================#
 
-class RanobeParser(BaseParser):
-	"""Базовый парсер ранобэ."""
+class MangaParser(BaseParser):
+	"""Базовый парсер манги."""
 
 	#==========================================================================================#
 	# >>>>> ПУБЛИЧНЫЕ МЕТОДЫ <<<<< #
 	#==========================================================================================#
 
-	def __init__(self, system_objects: SystemObjects, title: Ranobe | None = None):
+	def __init__(self, system_objects: SystemObjects, title: Manga | None = None):
 		"""
 		Базовый парсер манги.
 			system_objects – коллекция системных объектов;\n
 			title – данные тайтла.
 		"""
 
-		#---> Генерация динамических атрибутов.
-		#==========================================================================================#
-		self._SystemObjects = system_objects
-		self._Title = title
-
-		self._Temper = self._SystemObjects.temper
-		self._Portals = self._SystemObjects.logger.portals
-		self._Settings = self._SystemObjects.manager.get_parser_settings()
-		self._Requestor = self._InitializeRequestor()
-
-		self._PostInitMethod()
+		super().__init__(system_objects, title)
 
 	def amend(self, branch: Branch, chapter: Chapter):
 		"""
@@ -46,7 +36,7 @@ class RanobeParser(BaseParser):
 
 		pass
 
-	def set_title(self, title: Ranobe):
+	def set_title(self, title: Manga):
 		"""
 		Задаёт данные тайтла.
 			title – данные тайтла.

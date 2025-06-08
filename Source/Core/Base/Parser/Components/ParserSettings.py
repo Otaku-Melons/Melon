@@ -2,8 +2,9 @@ from Source.Core.SystemObjects.Logger import Logger
 from Source.Core.Exceptions import BadSettings
 
 from dublib.Methods.Filesystem import NormalizePath, ReadJSON
-from dublib.Methods.Data import Zerotify
+from dublib.WebRequestor import Proxy
 
+from os import PathLike
 from typing import Any
 import hashlib
 import os
@@ -35,13 +36,7 @@ Settings = {
 		"image_max_height": None,
 		"image_max_width": None
 	},
-	"proxy": {
-		"enable": False,
-		"host": "",
-		"port": "",
-		"login": "",
-		"password": ""
-	},
+	"proxies": [],
 	"custom": {}
 }
 
@@ -73,9 +68,13 @@ class TextFilters:
 	#==========================================================================================#
 
 	def __init__(self, data: dict):
+		"""
+		Фильтры текста.
 
-		#---> Генерация динамических атрибутов.
-		#==========================================================================================#
+		:param data: Словарь фильтров текста.
+		:type data: dict
+		"""
+
 		self.__Regexs = list()
 		self.__Strings = list()
 
@@ -85,7 +84,11 @@ class TextFilters:
 	def clear(self, text: str) -> str:
 		"""
 		Очищает текст согласно фильтрам.
-			text – текст.
+
+		:param text: Обрабатываемый текст.
+		:type text: str
+		:return: Обработанный текст.
+		:rtype: str
 		"""
 
 		for Regex in self.__Regexs: text = re.sub(Regex, "", text)
@@ -135,9 +138,13 @@ class ImageFilters:
 	#==========================================================================================#
 
 	def __init__(self, data: dict):
+		"""
+		Фильтры изображений.
 
-		#---> Генерация динамических атрибутов.
-		#==========================================================================================#
+		:param data: Словарь фильтров изображений.
+		:type data: dict
+		"""
+
 		self.__Data = data
 
 		if "image_md5" not in self.__Data.keys() or type(self.__Data["image_md5"]) != list: self.__Data["image_md5"] = list()
@@ -146,10 +153,14 @@ class ImageFilters:
 		for Key in Keys:
 			if Key not in self.__Data.keys() or type(self.__Data[Key]) != int: self.__Data[Key] = None
 
-	def check_hash(self, path: str) -> bool:
+	def check_hash(self, path: PathLike) -> bool:
 		"""
-		Проверяет, следует ли отфильтровать изображение по MD5-хэшу.
-			path – путь к изображению.
+		Проверяет, соответствует ли изображение указанным в чёрном списке MD5 хешам.
+
+		:param path: Путь к изображению.
+		:type path: str
+		:return: Возвращает `True`, если хеш изображения найден в чёрном списке.
+		:rtype: bool
 		"""
 
 		Hash = None
@@ -163,8 +174,13 @@ class ImageFilters:
 	def check_sizes(self, width: int, height: int) -> bool:
 		"""
 		Проверяет, выходит ли размер изображения за пределы разрешённых значений.
-			width – ширина;\n
-			height – высота.
+
+		:param width: Ширина изображения.
+		:type width: int
+		:param height: Высота изображения.
+		:type height: int
+		:return: Возвращает `True` при превышении одного из размеров.
+		:rtype: bool
 		"""
 
 		IsFiltered = False
@@ -248,7 +264,9 @@ class Common:
 	def __PutDefaultDirectories(self, parser_name: str):
 		"""
 		Подстанавливает стандартные директории на пустые места.
-			parser_name – название парсера.
+		:param parser_name: Название парсера.
+		:type parser_name: str
+		:raises FileNotFoundError: Выбрасывается при указании несуществующей директории.
 		"""
 
 		Directories = ["archives", "images", "titles"]
@@ -267,13 +285,16 @@ class Common:
 	def __init__(self, parser_name: str, settings: dict, logger: Logger):
 		"""
 		Базовые настройки.
-			parser_name – название парсера;\n
-			settings – словарь настроек;\n
-			logger – менеджер логов.
+
+		:param parser_name: Имя парсера.
+		:type parser_name: str
+		:param settings: Словарь настроек.
+		:type settings: dict
+		:param logger: Оператор логгирования.
+		:type logger: Logger
+		:raises BadSettings: Выбрасывается при обнаружении несоответствия формата файла насроек.
 		"""
 
-		#---> Генерация динамических атрибутов.
-		#==========================================================================================#
 		self.__Settings = {
 			"archives_directory": "",
 			"images_directory": "",
@@ -330,47 +351,66 @@ class Directories:
 		return self.__Common.titles_directory
 
 	#==========================================================================================#
+	# >>>>> ПРИВАТНЫЕ МЕТОДЫ <<<<< #
+	#==========================================================================================#
+
+	def __GenerateDirectoryPath(self, used_name: str, subdir: str) -> PathLike:
+		"""
+		Возвращает путь к подкаталогу изображений. Если такового нет, то создаёт его.
+
+		:param used_name: Используемое имя тайтла.
+		:type used_name: str
+		:param subdir: Название подкаталога внутри директории изображений.
+		:type subdir: str
+		:return: Путь к подкаталогу изображений.
+		:rtype: PathLike
+		"""
+
+		Directory = self.__Common.images_directory + f"/{used_name}/{subdir}"
+		if not os.path.exists(Directory): os.makedirs(Directory)
+
+		return Directory
+
+	#==========================================================================================#
 	# >>>>> ПУБЛИЧНЫЕ МЕТОДЫ <<<<< #
 	#==========================================================================================#
 
 	def __init__(self, common_settings: Common):
 		"""
 		Директории.
-			common_settings – общие настройки.
+
+		:param common_settings: Базовые настройки.
+		:type common_settings: Common
 		"""
 
-		#---> Генерация динамических атрибутов.
-		#==========================================================================================#
 		self.__Common = common_settings
 
-	def get_covers(self, used_name: str) -> str:
+	def get_covers(self, used_name: str) -> PathLike:
 		"""
-		Директория обложек.
-			used_name – используемое имя тайтла.
+		Возвращает путь к директории обложек. Если таковой нет, то создаёт её.
+
+		:param used_name: Используемое имя тайтла.
+		:type used_name: str
+		:return: Путь к директории обложек.
+		:rtype: PathLike
 		"""
 
-		Directory = self.__Common.images_directory + f"/{used_name}/covers"
-		if not os.path.exists(Directory): os.makedirs(Directory)
-
-		return Directory
+		return self.__GenerateDirectoryPath(used_name, "covers")
 	
-	def get_persons(self, used_name: str) -> bool:
+	def get_persons(self, used_name: str) -> PathLike:
 		"""
-		Директория изображений персонажей.
-			used_name – используемое имя тайтла.
+		Возвращает путь к директории портретов персонажей. Если таковой нет, то создаёт её.
+
+		:param used_name: Используемое имя тайтла.
+		:type used_name: str
+		:return: Путь к директории обложек.
+		:rtype: PathLike
 		"""
 
-		Directory = self.__Common.images_directory + f"/{used_name}/persons"
-		if not os.path.exists(Directory): os.makedirs(Directory)
-
-		return Directory
+		return self.__GenerateDirectoryPath(used_name, "persons")
 
 class Filters:
 	"""Фильтры контента."""
-
-	#==========================================================================================#
-	# >>>>> СВОЙСТВА <<<<< #
-	#==========================================================================================#
 
 	@property
 	def text(self) -> TextFilters:
@@ -383,155 +423,43 @@ class Filters:
 		"""Фильтры изображений."""
 
 		return self.__ImageFilters
-	
-	#==========================================================================================#
-	# >>>>> ПУБЛИЧНЫЕ МЕТОДЫ <<<<< #
-	#==========================================================================================#
 
 	def __init__(self, settings: dict):
+		"""
+		Фильтры контента.
 
-		#---> Генерация динамических атрибутов.
-		#==========================================================================================#
+		:param settings: Словарь настроек.
+		:type settings: dict
+		"""
+
 		if "filters" not in settings.keys() or type(settings["filters"]) != dict: settings["filters"] = dict()
 		self.__TextFilters = TextFilters(settings["filters"])
 		self.__ImageFilters = ImageFilters(settings["filters"])
-
-class Proxy:
-	"""Настройки прокси."""
-
-	#==========================================================================================#
-	# >>>>> СВОЙСТВА <<<<< #
-	#==========================================================================================#
-
-	@property
-	def enable(self) -> bool:
-		"""Указывает, нужно ли использовать прокси."""
-
-		return self.__Settings["enable"]
-	
-	@property
-	def host(self) -> str:
-		"""Хост."""
-
-		return self.__Settings["host"]
-	
-	@property
-	def port(self) -> int:
-		"""Порт."""
-
-		return self.__Settings["port"]
-	
-	@property
-	def login(self) -> str | None:
-		"""Логин для авторизации прокси."""
-
-		return Zerotify(self.__Settings["login"])
-	
-	@property
-	def password(self) -> str | None:
-		"""Пароль для авторизации прокси."""
-
-		return Zerotify(self.__Settings["password"])
-
-	#==========================================================================================#
-	# >>>>> МЕТОДЫ <<<<< #
-	#==========================================================================================#
-
-	def __init__(self, settings: dict, logger: Logger):
-		"""
-		Настройки прокси.
-			settings – словарь настроек;\n
-			logger – менеджер логов.
-		"""
-
-		#---> Генерация динамических атрибутов.
-		#==========================================================================================#
-		self.__Settings = {
-			"enable": False,
-			"host": "",
-			"port": 0,
-			"login": "",
-			"password": ""
-		}
-
-		if "proxy" in settings.keys():
-			if "port" in settings["proxy"].keys(): settings["proxy"]["port"] = int(settings["proxy"]["port"]) if settings["proxy"]["port"] else 0
-
-			for Key in self.__Settings.keys():
-				if Key in settings["proxy"].keys() and type(self.__Settings[Key]) == type(settings["proxy"][Key]): self.__Settings[Key] = settings["proxy"][Key]
-				else: logger.warning(f"Proxy setting \"{Key}\" has been reset to default.")
-
-class Ranobe:
-	"""Дополнительные настройки парсеров ранобэ."""
-
-	#==========================================================================================#
-	# >>>>> СВОЙСТВА <<<<< #
-	#==========================================================================================#
-
-	@property
-	def images_directory(self) -> str:
-		"""Директория иллюстраций."""
-
-		return self.__Settings["images_directory"]
-
-	#==========================================================================================#
-	# >>>>> МЕТОДЫ <<<<< #
-	#==========================================================================================#
-
-	def __PutDefaultDirectories(self, parser_name: str):
-		"""
-		Подстанавливает стандартные директории на пустые места.
-			parser_name – название парсера.
-		"""
-
-		Directories = ["images"]
-
-		for Directory in Directories:
-			Key = f"{Directory}_directory"
-			if not self.__Settings[Key]: self.__Settings[Key] = f"Output/{parser_name}/{Directory}"
-			else: self.__Settings[Key] = NormalizePath(self.__Settings[Key])
-
-	def __init__(self, parser_name: str, settings: dict, logger: Logger):
-		"""
-		Дополнительные настройки парсеров ранобэ.
-			parser_name – название парсера;\n
-			settings – словарь настроек;\n
-			logger – менеджер логов.
-		"""
-
-		#---> Генерация динамических атрибутов.
-		#==========================================================================================#
-		self.__Settings = {
-			"images_directory": ""
-		}
-
-		if "ranobe" in settings.keys():
-			
-			for Key in self.__Settings.keys():
-				if Key in settings["common"].keys(): self.__Settings[Key] = settings["common"][Key]
-				else: logger.warning(f"Ranobe setting \"{Key}\" has been reset to default.")
-
-			self.__PutDefaultDirectories(parser_name)
 
 class Custom:
 	"""Собственные настройки парсера."""
 
 	def __init__(self, settings: dict, logger: Logger):
 		"""
-		Настройки прокси.
-			settings – словарь настроек;\n
-			logger – менеджер логов.
+		Собственные настройки парсера.
+
+		:param settings: Словарь настроек парсера.
+		:type settings: dict
+		:param logger: Оператор логгирования.
+		:type logger: Logger
 		"""
 
-		#---> Генерация динамических атрибутов.
-		#==========================================================================================#
 		self.__Settings = settings["custom"] if "custom" in settings.keys() else dict()
 		self.__Logger = logger
 
 	def __getitem__(self, key: str) -> Any:
 		"""
 		Возвращает значение настройки.
-			key – ключ настройки.
+
+		:param key: Ключ настройки.
+		:type key: str
+		:return: Значение настройки.
+		:rtype: Any
 		"""
 
 		if key not in self.__Settings.keys(): self.__Logger.warning(f"No custom setting: \"{key}\".")
@@ -574,31 +502,42 @@ class ParserSettings:
 		return self.__Custom
 	
 	@property
-	def proxy(self) -> Proxy:
-		"""Данные прокси."""
+	def proxies(self) -> tuple[Proxy]:
+		"""Набор прокси."""
 
-		return self.__Proxy
-
-	@property
-	def ranobe(self) -> Ranobe | None:
-		"""Дополнительные настройки парсеров ранобэ.."""
-
-		return self.__Ranobe
+		return self.__Proxies
 
 	#==========================================================================================#
 	# >>>>> ПРИВАТНЫЕ МЕТОДЫ <<<<< #
 	#==========================================================================================#
 
-	def __ReadSettings(self, parser_name: str) -> dict:
+	def __ParseProxies(self, settings: dict) -> tuple[Proxy]:
 		"""
-		Считывает настройки в порядке приоритета.
-			parser_name – название парсера.
+		Парсит строковые представления прокси.
+
+		:return: Набор объектов данных прокси.
+		:rtype: tuple[Proxy]
+		"""
+
+		Proxies = list()
+
+		if "proxies" in settings.keys():
+			for String in settings["proxies"]: Proxies.append(Proxy().parse(String))
+			
+		return tuple(Proxies)
+
+	def __ReadSettings(self) -> dict:
+		"""
+		Считывает настройки парсера из JSON в порядке приоритета: сначала из каталога конфигураций, затем из домашнего каталога парсера.
+
+		:return: Словарь настроек парсера. При отстутствии таковых возвращает стандартный набор.
+		:rtype: dict
 		"""
 
 		ParserSettingsDict = None
 		Paths = [
-			f"Configs/{parser_name}/settings.json",
-			f"Parsers/{parser_name}/settings.json"
+			f"Configs/{self.__ParserName}/settings.json",
+			f"Parsers/{self.__ParserName}/settings.json"
 		]
 
 		for Path in Paths:
@@ -621,26 +560,19 @@ class ParserSettings:
 	def __init__(self, parser_name: str, logger: Logger):
 		"""
 		Настройки парсера.
-			parser_name – название парсера.
+
+		:param parser_name: Имя парсера.
+		:type parser_name: str
+		:param logger: Оператор логгирования.
+		:type logger: Logger
 		"""
 
-		#---> Генерация динамических атрибутов.
-		#==========================================================================================#
+		self.__ParserName = parser_name
 		self.__Logger = logger
-		self.__Settings = self.__ReadSettings(parser_name)
+
+		self.__Settings = self.__ReadSettings()
 		self.__Common = Common(parser_name, self.__Settings, logger)
 		self.__Filters = Filters(self.__Settings)
-		self.__Proxy = Proxy(self.__Settings, logger)
+		self.__Proxies = self.__ParseProxies(self.__Settings)
 		self.__Custom = Custom(self.__Settings, logger)
-		self.__Ranobe = Ranobe(parser_name, self.__Settings, logger)
 		self.__Directories = Directories(self.__Common)
-
-	def __getitem__(self, category: str) -> dict:
-		"""
-		Возвращает словарь категории настроек.
-			category – название категории.
-		"""
-
-		if category not in self.__Settings.keys(): self.__Logger.warning(f"No settings category: \"{category}\".")
-		
-		return self.__Settings[category].copy()

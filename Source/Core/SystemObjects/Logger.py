@@ -7,14 +7,18 @@ from dublib.Engine.Bus import ExecutionStatus
 from dublib.CLI.TextStyler import TextStyler
 from dublib.WebRequestor import WebResponse
 from dublib.Polyglot import Markdown
-from datetime import datetime
 
+from typing import TYPE_CHECKING
+from datetime import datetime
 import logging
 import telebot
 import enum
 import sys
 import os
 import re
+
+if TYPE_CHECKING:
+	from Source.Core.SystemObjects import SystemObjects
 
 #==========================================================================================#
 # >>>>> ВСПОМОГАТЕЛЬНЫЕ СТРУКТУРЫ ДАННЫХ <<<<< #
@@ -576,7 +580,7 @@ class Logger:
 		self.__PointName = None
 		self.__ErrorCache = None
 		self.__SilentMode = False
-		self.__LoggerRule = LoggerRules.Save
+		self.__LoggerRule = LoggerRules.SaveIfHasWarnings
 		self.__IsLogHasError = False
 		self.__IsLogHasWarning = False
 

@@ -1,9 +1,9 @@
+from Source.Core.Base.Parser.Components.ImagesDownloader import ImagesDownloader
+from Source.Core.Base.Parser.Components.ParserSettings import ParserSettings
 from Source.Core.Formats import BaseChapter, BaseBranch, BaseTitle
-from Source.Core.ImagesDownloader import ImagesDownloader
-from Source.Core.ParserSettings import ParserSettings
 from Source.Core.SystemObjects import SystemObjects
 
-from dublib.WebRequestor import Protocols, WebConfig, WebLibs, WebRequestor
+from dublib.WebRequestor import WebConfig, WebLibs, WebRequestor
 from dublib.Engine.Bus import ExecutionStatus
 	
 #==========================================================================================#
@@ -25,6 +25,12 @@ class BaseParser:
 	#==========================================================================================#
 
 	@property
+	def images_downloader(self) -> ImagesDownloader:
+		"""Оператор скачивания изображений."""
+
+		return self._ImagesDownloader
+
+	@property
 	def settings(self) -> ParserSettings:
 		"""Настройки парсера."""
 
@@ -43,22 +49,17 @@ class BaseParser:
 	def _InitializeRequestor(self) -> WebRequestor:
 		"""Инициализирует модуль WEB-запросов."""
 
+		Site = self._SystemObjects.manager.get_parser_site()
+
 		Config = WebConfig()
 		Config.select_lib(WebLibs.requests)
 		Config.set_retries_count(self._Settings.common.retries)
 		Config.generate_user_agent()
-		Config.add_header("Referer", f"https://{SITE}/")
-		Config.requests.enable_proxy_protocol_switching(True)
+		Config.add_header("Referer", f"https://{Site}/")
+		Config.enable_proxy_protocol_switching(True)
 		WebRequestorObject = WebRequestor(Config)
+		WebRequestorObject.add_proxies(self._Settings.proxies)
 		
-		if self._Settings.proxy.enable: WebRequestorObject.add_proxy(
-			Protocols.HTTPS,
-			host = self._Settings.proxy.host,
-			port = self._Settings.proxy.port,
-			login = self._Settings.proxy.login,
-			password = self._Settings.proxy.password
-		)
-
 		return WebRequestorObject
 
 	def _PostInitMethod(self):
@@ -77,15 +78,15 @@ class BaseParser:
 			title – данные тайтла.
 		"""
 
-		#---> Генерация динамических атрибутов.
-		#==========================================================================================#
 		self._SystemObjects = system_objects
 		self._Title = title
 
 		self._Temper = self._SystemObjects.temper
 		self._Portals = self._SystemObjects.logger.portals
 		self._Settings = self._SystemObjects.manager.parser_settings
+
 		self._Requestor = self._InitializeRequestor()
+		self._ImagesDownloader = ImagesDownloader(self._SystemObjects, self._Requestor)
 
 		self._PostInitMethod()
 
@@ -103,10 +104,8 @@ class BaseParser:
 		Скачивает изображение с сайта во временный каталог парсера и возвращает имя файла.
 			url – ссылка на изображение.
 		"""
-
-		Status = ImagesDownloader(self._SystemObjects, self._Requestor).temp_image(url)
 		
-		return Status
+		return ImagesDownloader(self._SystemObjects, self._Requestor).temp_image(url)
 
 	def parse(self):
 		"""Получает основные данные тайтла."""

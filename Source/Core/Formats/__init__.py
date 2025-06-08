@@ -1,16 +1,16 @@
-from Source.Core.ImagesDownloader import ImagesDownloader
 from Source.Core.Exceptions import UnsupportedFormat
 from Source.Core.Timer import Timer
 
 from dublib.Methods.Filesystem import ListDir, ReadJSON, WriteJSON
 from dublib.Methods.Data import Zerotify
 
-from typing import Any, TYPE_CHECKING
+from typing import Any, Iterable, TYPE_CHECKING
 from time import sleep
 import enum
 import os
 
 if TYPE_CHECKING:
+	from Source.Core.Base.Parser.BaseParser import BaseParser
 	from Source.Core.SystemObjects import SystemObjects
 
 #==========================================================================================#
@@ -200,10 +200,10 @@ class BaseChapter:
 		return self._Chapter["is_paid"]
 	
 	@property
-	def translators(self) -> list[str]:
-		"""Список ников переводчиков."""
+	def workers(self) -> tuple[str]:
+		"""Набор идентификаторов лиц, адаптировавших контент."""
 
-		return self._Chapter["translators"]
+		return tuple(self._Chapter["workers"])
 	
 	#==========================================================================================#
 	# >>>>> ПРИВАТНЫЕ МЕТОДЫ <<<<< #
@@ -245,7 +245,7 @@ class BaseChapter:
 			"number": None,
 			"name": None,
 			"is_paid": None,
-			"translators": []
+			"workers": []
 		}
 
 		self._SetParagraphsMethod = self._Pass
@@ -268,13 +268,15 @@ class BaseChapter:
 
 		self._Chapter[key] = value
 
-	def add_translator(self, translator: str):
+	def add_worker(self, worker: str):
 		"""
-		Добавляет переводчика.
-			translator – ник переводчика.
+		Добавляет идентификатор лица, адаптировавшего контент.
+
+		:param worker: Идентификатор.
+		:type worker: str
 		"""
 
-		if translator: self._Chapter["translators"].append(translator)
+		if worker: self._Chapter["workers"].append(worker)
 
 	def remove_extra_data(self, key: str):
 		"""
@@ -296,7 +298,7 @@ class BaseChapter:
 			"volume": self.set_volume,
 			"name": self.set_name,
 			"is_paid": self.set_is_paid,
-			"translators": self.set_translators,
+			"workers": self.set_workers,
 			"slides": self._SetSlidesMethod,
 			"paragraphs": self._SetParagraphsMethod
 		}
@@ -344,13 +346,15 @@ class BaseChapter:
 		
 		self._Chapter["number"] = self.__PrettyNumber(number)
 
-	def set_translators(self, translators: list[str]):
+	def set_workers(self, workers: Iterable[str]):
 		"""
-		Задаёт переводчиков.
-			translators – список ников переводчика.
+		Задаёт идентификаторы лиц, адаптировавших контент.
+
+		:param workers: Набор идентификаторов.
+		:type workers: Iterable[str]
 		"""
 
-		for Translator in translators: self.add_translator(Translator)
+		for Worker in workers: self.add_worker(Worker)
 
 	def set_slug(self, slug: str | None):
 		"""
@@ -651,6 +655,64 @@ class BaseTitle:
 
 		return List
 
+	def _DownloadCovers(self):
+		"""Скачивает обложки."""
+
+		CoversDirectory = self._ParserSettings.directories.get_covers(self._UsedFilename)
+		DownloadedCoversCount = 0
+		CoversCount = len(self._Title["covers"])
+
+		for CoverIndex in range(CoversCount):
+			Link = self._Title["covers"][CoverIndex]["link"]
+			Filename = self._Title["covers"][CoverIndex]["filename"]
+			IsExists = self._Parser.images_downloader.is_exists(Link, CoversDirectory, Filename)
+			print(f"Downloading cover: \"{Filename}\"... ")
+
+			if IsExists and not self._SystemObjects.FORCE_MODE:
+				print("Already exists.")
+				continue
+
+			Result = self._Parser.image(Link)
+			
+			if Result.code == 200:
+				self._Parser.images_downloader.move_from_temp(CoversDirectory, Result.value, Filename)
+				if IsExists: print("Overwritten.")
+				DownloadedCoversCount += 1
+
+			if CoverIndex < CoversCount - 1: sleep(self._ParserSettings.common.delay)
+
+		self._SystemObjects.logger.info(f"Covers downloaded: {DownloadedCoversCount}.")
+
+	def _DownloadPersonsImages(self):
+		"""Скачивает портреты персонажей."""
+
+		if self._Persons: PersonsDirectory = self._ParserSettings.directories.get_persons(self._UsedFilename)
+		DownloadedImagesCount = 0
+		PersonsCount = len(self._Persons)
+
+		for PersonIndex in range(PersonsCount):
+
+			for ImageData in self._Persons[PersonIndex].images:
+				Link = ImageData["link"]
+				Filename = ImageData["filename"]
+				IsExists = self._Parser.images_downloader.is_exists(Link, PersonsDirectory, Filename)
+				print(f"Downloading person image: \"{Filename}\"... ")
+				
+				if IsExists and not self._SystemObjects.FORCE_MODE:
+					print("Already exists.")
+					continue
+
+				Result = self._Parser.image(Link)
+			
+				if Result.code == 200:
+					self._Parser.images_downloader.move_from_temp(PersonsDirectory, Result.value, Filename)
+					if IsExists: print("Overwritten.")
+					DownloadedImagesCount += 1
+
+				if PersonIndex < PersonsCount - 1: sleep(self._ParserSettings.common.delay)
+
+		self._SystemObjects.logger.info(f"Presons images downloaded: {DownloadedImagesCount}.")
+
 	def _FindChapterByID(self, chapter_id: int) -> tuple[BaseBranch, BaseChapter] | None:
 		"""
 		Возвращает данные ветви и главы для указанного ID.
@@ -731,7 +793,7 @@ class BaseTitle:
 		self._Branches: list[BaseBranch] = list()
 		self._Persons: list[Person] = list()
 		self._UsedFilename = None
-		self._Parser = None
+		self._Parser: "BaseParser" = None
 		self._Timer = None
 		
 		self._Title = {
@@ -802,57 +864,8 @@ class BaseTitle:
 	def download_images(self):
 		"""Скачивает изображения из данных тайтла."""
 
-		CoversDirectory = self._ParserSettings.directories.get_covers(self._UsedFilename)
-		DownloadedCoversCount = 0
-		
-		for CoverIndex in range(len(self._Title["covers"])):
-			Filename = self._Title["covers"][CoverIndex]["link"].split("/")[-1]
-			print(f"Downloading cover: \"{Filename}\"... ", end = "")
-
-			if os.path.exists(f"{CoversDirectory}/{Filename}"):
-					print("Already exists.")
-					continue
-
-			Result = self._Parser.image(self._Title["covers"][CoverIndex]["link"])
-			
-			if Result.code == 200:
-				ImagesDownloader(self._SystemObjects).move_from_temp(
-					directory = CoversDirectory,
-					original_filename = Result.value,
-					filename = self._Title["covers"][CoverIndex]["filename"],
-					is_full_filename = True
-				)
-				DownloadedCoversCount += 1
-
-			Result.print_messages()
-			sleep(0.25)
-
-		self._SystemObjects.logger.info(f"Title: \"{self.slug}\" (ID: {self.id}). Covers downloaded: {DownloadedCoversCount}.")
-		if self._Persons: PersonsDirectory = self._ParserSettings.directories.get_persons(self._UsedFilename)
-
-		for CurrentPerson in self._Persons:
-
-			for ImageData in CurrentPerson.images:
-				Filename = ImageData["filename"]
-				print(f"Downloading image: \"{Filename}\"... ", end = "")
-
-				if os.path.exists(f"{PersonsDirectory}/{Filename}"):
-					print("Already exists.")
-					continue
-
-				Result = self._Parser.image(ImageData["link"])
-			
-				if Result.code == 200:
-					ImagesDownloader(self._SystemObjects).move_from_temp(
-						directory = PersonsDirectory,
-						original_filename = Result.value,
-						filename = Filename,
-						is_full_filename = True
-					)
-					DownloadedCoversCount += 1
-
-				Result.print_messages()
-				sleep(0.25)
+		if self.covers: self._DownloadCovers()
+		if self._Persons: self._DownloadPersonsImages()
 
 	def open(self, identificator: int | str, selector_type: By = By.Filename):
 		"""
@@ -956,7 +969,7 @@ class BaseTitle:
 		for CurrentPerson in self._Persons: self._Title["persons"].append(CurrentPerson.to_dict(not self._ParserSettings.common.sizing_images))
 
 		WriteJSON(f"{self._ParserSettings.common.titles_directory}/{self._UsedFilename}.json", self._Title)
-		self._SystemObjects.logger.info(f"Title: \"{self.slug}\" (ID: {self.id}). Saved.")
+		self._SystemObjects.logger.info("Saved.")
 
 		if end_timer: 
 			ElapsedTime = self._Timer.ends()

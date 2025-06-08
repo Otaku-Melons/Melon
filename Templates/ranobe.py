@@ -1,5 +1,5 @@
 from Source.Core.Formats.Ranobe import Branch, Chapter, ChaptersTypes, Ranobe, Statuses
-from Source.Core.Base.RanobeParser import RanobeParser
+from Source.Core.Base.Parser.RanobeParser import RanobeParser
 
 #==========================================================================================#
 # >>>>> ОПРЕДЕЛЕНИЯ <<<<< #

@@ -1,4 +1,4 @@
-from Source.Core.Builders.BaseBuilder import BaseBuilder
+from Source.Core.Base.Builder.BaseBuilder import BaseBuilder
 
 from dublib.Methods.Filesystem import ListDir, NormalizePath
 
@@ -8,7 +8,7 @@ import enum
 import os
 
 if TYPE_CHECKING:
-	from Source.Core.Base.MangaParser import MangaParser
+	from Source.Core.Base.Parser.MangaParser import MangaParser
 	from Source.Core.Formats.Manga import Branch, Chapter, Manga
 
 #==========================================================================================#

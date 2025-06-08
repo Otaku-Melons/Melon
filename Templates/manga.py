@@ -1,5 +1,5 @@
 from Source.Core.Formats.Manga import Branch, Chapter, Manga, Statuses, Types
-from Source.Core.Base.MangaParser import MangaParser
+from Source.Core.Base.Parser.MangaParser import MangaParser
 
 #==========================================================================================#
 # >>>>> ОПРЕДЕЛЕНИЯ <<<<< #

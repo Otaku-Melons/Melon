@@ -1,5 +1,5 @@
 from Source.Core.Exceptions import ParsingError, TitleNotFound
-from Source.Core.Base.BaseExtension import BaseExtension
+from Source.Core.Base.Extension.BaseExtension import BaseExtension
 
 from ...main import NAME as PARSER_NAME
 from ...main import TYPE as PARSER_TYPE

@@ -1,6 +1,6 @@
 from Source.Core.SystemObjects import SystemObjects
 
-from dublib.Methods.Filesystem import ReadTextFile, WriteTextFile
+from dublib.Methods.Filesystem import ListDir
 from dublib.CLI.TextStyler import TextStyler
 from dublib.Engine.Patcher import Patch
 
@@ -94,7 +94,7 @@ class Installer:
 			self.__InstallConfig(Parser)
 
 			try:
-				for Extension in os.listdir(f"Parsers/{Parser}/extensions"): self.__InstallConfig(Parser, Extension)
+				for Extension in ListDir(f"Parsers/{Parser}/extensions"): self.__InstallConfig(Parser, Extension)
 			except FileNotFoundError: pass
 
 	def requirements(self):

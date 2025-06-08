@@ -60,7 +60,7 @@ class Chapter(BaseChapter):
 			"number": None,
 			"name": None,
 			"is_paid": None,
-			"translators": [],
+			"workers": [],
 			"slides": []	
 		}
 
