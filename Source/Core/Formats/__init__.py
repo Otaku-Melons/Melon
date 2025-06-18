@@ -664,9 +664,10 @@ class BaseTitle:
 
 		for CoverIndex in range(CoversCount):
 			Link = self._Title["covers"][CoverIndex]["link"]
+			if CoverIndex == 2: Link = "https://renovels.org/media/titles/i-was-an-economist-and-then-i-became-demon-emperor/cover_fd3e4f3885.webp"
 			Filename = self._Title["covers"][CoverIndex]["filename"]
 			IsExists = self._Parser.images_downloader.is_exists(Link, CoversDirectory, Filename)
-			print(f"Downloading cover: \"{Filename}\"... ")
+			print(f"Downloading cover: \"{Filename}\"... ", end = "", flush = True)
 
 			if IsExists and not self._SystemObjects.FORCE_MODE:
 				print("Already exists.")
@@ -677,6 +678,7 @@ class BaseTitle:
 			if Result.code == 200:
 				self._Parser.images_downloader.move_from_temp(CoversDirectory, Result.value, Filename)
 				if IsExists: print("Overwritten.")
+				else: print("Done.")
 				DownloadedCoversCount += 1
 
 			if CoverIndex < CoversCount - 1: sleep(self._ParserSettings.common.delay)
@@ -696,7 +698,7 @@ class BaseTitle:
 				Link = ImageData["link"]
 				Filename = ImageData["filename"]
 				IsExists = self._Parser.images_downloader.is_exists(Link, PersonsDirectory, Filename)
-				print(f"Downloading person image: \"{Filename}\"... ")
+				print(f"Downloading person image: \"{Filename}\"... ", end = "", flush = True)
 				
 				if IsExists and not self._SystemObjects.FORCE_MODE:
 					print("Already exists.")
@@ -707,6 +709,7 @@ class BaseTitle:
 				if Result.code == 200:
 					self._Parser.images_downloader.move_from_temp(PersonsDirectory, Result.value, Filename)
 					if IsExists: print("Overwritten.")
+					else: print("Done.")
 					DownloadedImagesCount += 1
 
 				if PersonIndex < PersonsCount - 1: sleep(self._ParserSettings.common.delay)
@@ -874,7 +877,7 @@ class BaseTitle:
 		:param identificator: Идентификатор тайтла: ID или алиас.
 		:type identificator: int | str
 		:param selector_type: Режим поиска файла. По умолчанию `By.Filename` – идентификатор соответствует имени файла без расширения.
-		:type selector_type: By, optional
+		:type selector_type: By
 		:raises FileNotFoundError: Не удалось найти файл с указанным именем. Выбрасывается только при идентификации через `By.Filename`.
 		:raises JSONDecodeError: Ошибка десериализации JSON.
 		:raises UnsupportedFormat: Неподдерживаемый формат JSON.
@@ -895,7 +898,14 @@ class BaseTitle:
 
 		if selector_type == By.Slug:
 		
-			if not self._ParserSettings.common.use_id_as_filename:
+			if self._ParserSettings.common.use_id_as_filename and self._SystemObjects.CACHING_ENABLED:
+				ID = self._SystemObjects.temper.shared_data.journal.get_id_by_slug(identificator)
+
+				if ID:
+					PathBuffer = f"{Directory}/{ID}.json"
+					if os.path.exists(PathBuffer): Data = self._SafeRead(PathBuffer)
+
+			else:
 				Path = f"{Directory}/{identificator}.json"
 				if os.path.exists(Path): Data = self._SafeRead(f"{Directory}/{identificator}.json")
 				
@@ -916,8 +926,15 @@ class BaseTitle:
 		if selector_type == By.ID:
 
 			if self._ParserSettings.common.use_id_as_filename:
-				Path = f"{Directory}/{identificator}.json"
+				
 				if os.path.exists(Path): Data = self._SafeRead(f"{Directory}/{identificator}.json")
+
+			elif self._SystemObjects.CACHING_ENABLED:
+				Slug = self._SystemObjects.temper.shared_data.journal.get_slug_by_id(identificator)
+
+				if Slug:
+					PathBuffer = f"{Directory}/{Slug}.json"
+					if os.path.exists(PathBuffer): Data = self._SafeRead(PathBuffer)
 
 			if not Data:
 				LocalTitles = ListDir(Directory)
@@ -935,6 +952,7 @@ class BaseTitle:
 
 		if Data:
 			self._Title = Data
+			if self._SystemObjects.CACHING_ENABLED: self._SystemObjects.temper.shared_data.journal.update(self.id, self.slug)
 			self._UsedFilename = str(self.id) if self._ParserSettings.common.use_id_as_filename else self.slug
 
 		self._ParseBranchesToObjects()
@@ -969,6 +987,7 @@ class BaseTitle:
 		for CurrentPerson in self._Persons: self._Title["persons"].append(CurrentPerson.to_dict(not self._ParserSettings.common.sizing_images))
 
 		WriteJSON(f"{self._ParserSettings.common.titles_directory}/{self._UsedFilename}.json", self._Title)
+		self._SystemObjects.temper.shared_data.journal.update(self.id, self.slug)
 		self._SystemObjects.logger.info("Saved.")
 
 		if end_timer: 

@@ -1,17 +1,78 @@
-from Source.Core.SystemObjects.Logger import Logger, LoggerRules
 from Source.Core.SystemObjects.Manager import Manager
+from Source.Core.SystemObjects.Logger import Logger
 from Source.Core.SystemObjects.Temper import Temper
-from Source.CLI import Templates
+
+#==========================================================================================#
+# >>>>> ВСПОМОГАТЕЛЬНЫЕ СТРУКТУРЫ ДАННЫХ <<<<< #
+#==========================================================================================#
+
+class GlobalFlag:
+	"""Глоабльный флаг."""
+
+	@property
+	def status(self) -> bool:
+		"""Статус активации флага."""
+
+		return self.__Value
+
+	def __init__(self, status: bool):
+		"""Глоабльный флаг."""
+
+		self.__Value = status
+
+	def __bool__(self) -> bool:
+		"""Интерпретирует объект в логическое значение."""
+
+		return self.__Value
+
+	def disable(self):
+		"""Отключает флаг."""
+
+		self.__Value = False
+
+	def enable(self):
+		"""Включает флаг."""
+
+		self.__Value = True
+
+	def set_status(self, status: bool):
+		"""
+		Задаёт статус активации флага.
+
+		:param status: Статус активации.
+		:type status: bool
+		"""
+
+		self.__Value = status
+
+#==========================================================================================#
+# >>>>> ОСНОВНОЙ КЛАСС <<<<< #
+#==========================================================================================#
 
 class SystemObjects:
 	"""Коллекция системных объектов."""
 
 	#==========================================================================================#
-	# >>>>> СТАТИЧЕСКИЕ АТРИБУТЫ <<<<< #
+	# >>>>> ГЛОБАЛЬНЫЕ ДАННЫЕ <<<<< #
 	#==========================================================================================#
 
-	FORCE_MODE = False
-	LIVE_MODE = False
+	@property
+	def CACHING_ENABLED(self) -> GlobalFlag:
+		"""Глоабльный флаг: включено ли кэширование объектов."""
+
+		return self.__CachingEnabled
+
+	@property
+	def FORCE_MODE(self) -> GlobalFlag:
+		"""Глоабльный флаг: включен ли режим перезаписи."""
+
+		return self.__ForceMode
+	
+	@property
+	def LIVE_MODE(self) -> GlobalFlag:
+		"""Глоабльный флаг: активирован ли Live-режим."""
+
+		return self.__LiveMode
 
 	EXIT_CODE = 0
 	VERSION = "0.6.0-alpha"
@@ -57,14 +118,16 @@ class SystemObjects:
 	def __init__(self):
 		"""Коллекция системных объектов."""
 
-		#---> Генерация динамических атрибутов.
-		#==========================================================================================#
 		self.__Manager = Manager(self)
 		self.__Logger = Logger(self)
 		self.__Temper = Temper()
 
 		self.__ExtensionName = None
 		self.__ParserName = None
+
+		self.__ForceMode = GlobalFlag(False)
+		self.__LiveMode = GlobalFlag(False)
+		self.__CachingEnabled = GlobalFlag(True)
 
 	def select_extension(self, extension_name: str):
 		"""

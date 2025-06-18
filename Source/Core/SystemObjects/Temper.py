@@ -1,151 +1,244 @@
-from dublib.Methods.Filesystem import NormalizePath, RemoveDirectoryContent
+from Source.Core.Exceptions import TempOwnerNotSpecified
 
-from typing import Any
+from dublib.Methods.Filesystem import ReadJSON, RemoveDirectoryContent, WriteJSON
+
+from os import PathLike
 import os
 
-class SharedMemory:
-	"""Разделяемая в контексте одного парсера память."""
+#==========================================================================================#
+# >>>>> ВСПОМОГАТЕЛЬНЫЕ СТРУКТУРЫ ДАННЫХ <<<<< #
+#==========================================================================================#
 
-	def __init__(self, temper: "Temper", parser_name: str):
+class Journal:
+	"""Журнал определений тайтлов."""
+
+	def __init__(self, shared_data: "SharedData"):
 		"""
-		_summary_
+		Журнал определений тайтлов.
 
-		:param temper: _description_
-		:type temper: Temper
-		:param parser_name: _description_
-		:type parser_name: str
-		:return: _description_
-		:rtype: _type_
-		"""
-
-		self.__Temper = temper
-		self.__ParserName = parser_name
-
-		self.__Memory = dict()
-
-	def get_memory_point(self, point: str) -> dict[str, Any]:
-		"""
-		Осуществляет доступ к разделяемому словарю.
-
-		:param point: Идентификатор разделяемого словаря.
-		:type point: str
-		:return: Словарь разделяемой памяти.
-		:rtype: _type_
+		:param shared_data: Разделяемые в контексте одного парсера данные.
+		:type shared_data: SharedData
 		"""
 
-		pass
+		self.__SharedData = shared_data
 
+		self.__Data = dict()
 
+	def get_id_by_slug(self, slug: str) -> int | None:
+		"""
+		Ищет ID тайтла по его алиасу.
 
-class Temper:
-	"""Дескриптор временных каталогов и объектов."""
+		:param slug: Алиас тайтла.
+		:type slug: str
+		"""
+
+		for ID, Slug in self.__Data.items():
+			if slug == Slug: return int(ID)
+
+	def get_slug_by_id(self, title_id: int) -> str | None:
+		"""
+		Ищет алиас тайтла по его ID.
+
+		:param slug: Алиас тайтла.
+		:type slug: str
+		"""
+
+		try: return self.__Data[str(title_id)]
+		except KeyError: pass
+
+	def drop(self):
+		"""Сбрасывает журнал."""
+
+		self.__Data = dict()
+		self.save()
+
+	def load(self):
+		"""Загружает журнал."""
+
+		Path = f"{self.__SharedData.path}/journal.json"
+		if os.path.exists(Path): self.__Data = ReadJSON(Path)
+
+	def save(self):
+		"""Сохраняет журнал."""
+
+		WriteJSON(f"{self.__SharedData.path}/journal.json", self.__Data)
+
+	def update(self, title_id: int, slug: str):
+		"""
+		Обновляет запись об алиасе тайтла.
+
+		:param title_id: ID тайтла.
+		:type title_id: int
+		:param slug: Алиас тайтла.
+		:type slug: str
+		"""
+
+		self.__Data[str(title_id)] = slug
+		self.save()
+
+class SharedData:
+	"""Разделяемые в контексте одного парсера данные."""
 
 	#==========================================================================================#
 	# >>>>> СВОЙСТВА <<<<< #
 	#==========================================================================================#
 
 	@property
-	def builder_temp(self) -> str:
+	def journal(self) -> Journal:
+		"""Журнал определений тайтлов."""
+
+		return self.__Journal
+
+	@property
+	def last_parsed_slug(self) -> str | None:
+		"""Алиас последнего тайтла, обработанного парсером."""
+
+		return self.__Data["last_parsed_slug"]
+
+	@property
+	def path(self) -> PathLike:
+		"""Путь к каталогу разделяемых данных."""
+
+		Path = f"{self.__Temper.parser_temp}/shared"
+		if not os.path.exists(Path): os.makedirs(Path)
+
+		return Path
+
+	#==========================================================================================#
+	# >>>>> СВОЙСТВА <<<<< #
+	#==========================================================================================#
+
+	def __init__(self, temper: "Temper"):
+		"""
+		Разделяемые в контексте одного парсера данные.
+
+		:param temper: Дескриптор временных каталогов и объектов.
+		:type temper: Temper
+		"""
+
+		self.__Temper = temper
+
+		self.__Journal = Journal(self)
+		self.__Data = {
+			"last_parsed_slug": None
+		}
+
+	def load(self):
+		"""Загружает разделяемые данные."""
+
+		Path = f"{self.path}/shared.json"
+		if os.path.exists(Path): self.__Data = ReadJSON(Path)
+		self.__Journal.load()
+
+	def set_last_parsed_slug(self, slug: str):
+		"""
+		Задаёт алиас последнего обработанного парсером тайтла.
+
+		:param slug: Алиас.
+		:type slug: str
+		"""
+
+		self.__Data["last_parsed_slug"] = slug
+		self.save()
+		
+	def save(self):
+		"""Сохраняет разделяемые данные."""
+
+		WriteJSON(f"{self.path}/shared.json", self.__Data)
+
+#==========================================================================================#
+# >>>>> ОСНОВНОЙ КЛАСС <<<<< #
+#==========================================================================================#
+
+class Temper:
+	"""Дескриптор временных каталогов и объектов."""
+
+	#==========================================================================================#
+	# >>>>> ПУТИ К КАТАЛОГАМ <<<<< #
+	#==========================================================================================#
+
+	@property
+	def builder_temp(self) -> PathLike:
 		"""Путь к выделенному для сборки контента каталогу временных файлов."""
 
-		return self.get_builder_temp()
+		Path = f"{self.parser_temp}/build"
+		if not os.path.exists(Path): os.makedirs(Path)
+
+		return Path
 
 	@property
-	def extension_temp(self) -> str:
+	def extension_temp(self) -> PathLike:
 		"""Путь к выделенному для конкретного расширения каталогу временных файлов."""
 
-		return self.get_extension_temp()
+		if not self.__ParserName or not self.__ExtensionName: raise TempOwnerNotSpecified()
+		Path = f"{self.__Temp}/{self.__ParserName}/extensions/{self.__ExtensionName}"
+		if not os.path.exists(Path): os.makedirs(Path)
+
+		return Path
 
 	@property
-	def parser_temp(self) -> str:
+	def parser_temp(self) -> PathLike:
 		"""Путь к выделенному для конкретного парсера каталогу временных файлов."""
 
-		return self.get_parser_temp()
+		if not self.__ParserName: raise TempOwnerNotSpecified()
+		Path = f"{self.__Temp}/{self.__ParserName}"
+		if not os.path.exists(Path): os.makedirs(Path)
+
+		return Path
+
+	#==========================================================================================#
+	# >>>>> СВОЙСТВА <<<<< #
+	#==========================================================================================#
 
 	@property
-	def path(self) -> list[str]:
-		"""Путь к корню каталога временных файлов."""
+	def shared_data(self) -> SharedData:
+		"""Разделяемые в контексте одного парсера данные."""
 
-		if not os.path.exists(self.__Temp): os.makedirs(self.__Temp)
-
-		return self.__Temp
+		return self.__SharedData
 
 	#==========================================================================================#
 	# >>>>> ПУБЛИЧНЫЕ МЕТОДЫ <<<<< #
 	#==========================================================================================#
 
-	def __init__(self):
-		"""Дескриптор временных каталогов и объектов."""
+	def __init__(self, parser: str | None = None, extension: str | None = None):
+		"""
+		Дескриптор временных каталогов и объектов.
 
-		#---> Генерация динамических атрибутов.
-		#==========================================================================================#
+		:param parser: Имя парсера.
+		:type parser: str | None
+		:param extension: Имя расширения.
+		:type extension: str | None
+		"""
+
+		self.__ParserName = parser
+		self.__ExtensionName = extension
+
 		self.__Temp = "Temp"
-		self.__Extension = None
-		self.__ParserName = None
+	
+		self.__SharedData = SharedData(self)
+
+	def clear_parser_temp(self):
+		"""Очищает выделенный для конкретного парсера каталог временных файлов."""
+
+		if os.path.exists(self.__ParserPath): RemoveDirectoryContent(self.__ParserPath)
 
 	def select_extension(self, extension: str):
-		"""Задаёт имя используемого расширения."""
+		"""
+		Задаёт имя используемого расширения.
 
-		self.__Extension = extension
+		:param extension: Имя расширения.
+		:type extension: str
+		"""
+
+		self.__ExtensionName = extension
 
 	def select_parser(self, parser_name: str):
-		"""Задаёт имя используемого парсера."""
+		"""
+		Задаёт имя используемого парсера.
+
+		:param parser_name: Имя парсера.
+		:type parser_name: str
+		"""
 
 		self.__ParserName = parser_name
-
-	#==========================================================================================#
-	# >>>>> ПУБЛИЧНЫЕ МЕТОДЫ РАБОТЫ С ВРЕМЕННЫМИ КАТАЛОГАМИ <<<<< #
-	#==========================================================================================#
-
-	def clear_parser_temp(self, parser_name: str | None = None):
-		"""
-		Очищает выделенный для конкретного парсера каталог временных файлов.
-			parser_name – название парсера.
-		"""
-
-		if not parser_name: parser_name = self.__ParserName
-		Path = f"{self.__Temp}/{parser_name}"
-		if os.path.exists(Path): RemoveDirectoryContent(Path)
-
-	def get_builder_temp(self, parser_name: str | None = None) -> str:
-		"""
-		Возвращает путь к выделенному для сборки контента каталогу временных файлов.
-			parser_name – имя парсера.
-		"""
-
-		if not parser_name: parser_name = self.__ParserName
-		ParserTemp = self.get_parser_temp(parser_name)
-		Path = f"{ParserTemp}/build"
-		if not os.path.exists(Path): os.makedirs(Path)
-		Path = NormalizePath(Path)
-		
-		return Path
-
-	def get_parser_temp(self, parser_name: str | None = None) -> str:
-		"""
-		Возвращает путь к выделенному для конкретного парсера каталогу временных файлов.
-			parser_name – имя парсера.
-		"""
-
-		if not parser_name: parser_name = self.__ParserName
-		Path = f"{self.__Temp}/{parser_name}"
-		if not os.path.exists(Path): os.makedirs(Path)
-		Path = NormalizePath(Path)
-
-		return Path
-	
-	def get_extension_temp(self, parser_name: str | None = None, extension: str | None = None) -> str:
-		"""
-		Возвращает путь к выделенному для конкретного расшриения каталогу временных файлов.
-			parser_name – имя парсера;\n
-			extension – расширение.
-		"""
-
-		if not parser_name: parser_name = self.__ParserName
-		if not extension: extension = self.__Extension
-		ParserTemp = self.get_parser_temp(parser_name)
-		Path = f"{ParserTemp}/extensions/{extension}"
-		if not os.path.exists(Path): os.makedirs(Path)
-		Path = NormalizePath(Path)
-		
-		return Path
+		self.__SharedData.load()

@@ -1,4 +1,3 @@
-from dublib.WebRequestor import Protocols, WebConfig, WebLibs, WebRequestor
 from dublib.Methods.Filesystem import NormalizePath
 from dublib.Engine.Bus import ExecutionStatus
 from dublib.WebRequestor import WebRequestor
@@ -65,7 +64,7 @@ class ImagesDownloader:
 		if not is_full_filename: Filetype = ParsedURL.suffix
 		if not filename: filename = ParsedURL.stem
 
-		if not directory: directory = self.__SystemObjects.temper.get_parser_temp()
+		if not directory: directory = self.__SystemObjects.temper.parser_temp
 		else: directory = NormalizePath(directory)
 
 		return os.path.exists(f"{directory}/{filename}{Filetype}")
@@ -88,7 +87,7 @@ class ImagesDownloader:
 
 		Status = ExecutionStatus()
 		Status["exists"] = False
-		if not directory: directory = self.__SystemObjects.temper.get_parser_temp()
+		if not directory: directory = self.__SystemObjects.temper.parser_temp
 		else: directory = NormalizePath(directory)
 
 		#---> Определение параметров файла.

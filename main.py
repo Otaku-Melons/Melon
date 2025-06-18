@@ -31,18 +31,20 @@ if CommandDataStruct == None:
 	Objects.logger.close()
 	print("Unknown command!")
 
-elif CommandDataStruct.name in ("help", "list", "tagger"): Objects.LIVE_MODE = True
+elif CommandDataStruct.name in ("help", "list", "tagger"): Objects.LIVE_MODE.enable()
 
 if not Objects.LIVE_MODE:
-	if "f" in CommandDataStruct.flags: Objects.FORCE_MODE = True
-	Objects.logger.templates.title(SystemObjects.VERSION)
-	Objects.logger.templates.option_status("Force mode", Objects.FORCE_MODE)
+	if "f" in CommandDataStruct.flags: Objects.FORCE_MODE.enable()
+	Objects.logger.templates.option_status("Force mode", Objects.FORCE_MODE.status)
+	Objects.logger.templates.option_status("Caching", Objects.CACHING_ENABLED.set_status)
 
 #==========================================================================================#
 # >>>>> ОБРАБОТКА КОММАНД <<<<< #
 #==========================================================================================#
 
 try:
+	Objects.logger.select_cli_point(CommandDataStruct.name)
+	if CommandDataStruct.check_key("use"): Objects.select_parser(CommandDataStruct.get_key_value("use"))
 	CommandName = CommandDataStruct.name.replace("-", "_")
 	exec(f"Commands.com_{CommandName}(Objects, CommandDataStruct)")
 	

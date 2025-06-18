@@ -30,7 +30,7 @@ class BaseExtension:
 	def force_mode(self) -> bool:
 		"""Состояние: включён ли глобальный режим перезаписи."""
 
-		return self._SystemObjects.FORCE_MODE
+		return self._SystemObjects.FORCE_MODE.status
 
 	@property
 	def parser_settings(self) -> ParserSettings:
@@ -66,7 +66,7 @@ class BaseExtension:
 	def temp(self) -> str:
 		"""Путь к каталогу."""
 
-		return self._Temper.get_extension_temp()
+		return self._Temper.extension_temp
 
 	#==========================================================================================#
 	# >>>>> ПЕРЕОПРЕДЕЛЯЕМЫЕ МЕТОДЫ <<<<< #

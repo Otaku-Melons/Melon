@@ -102,3 +102,19 @@ class UnresolvedTag(Exception):
 			
 	def __str__(self):
 		return self.__Message
+	
+#==========================================================================================#
+# >>>>> СИСТЕМНЫЕ ИСКЛЮЧЕНИЯ <<<<< #
+#==========================================================================================#
+
+class TempOwnerNotSpecified(Exception):
+	"""Исключение: владалец временного каталога не определён."""
+
+	def __init__(self):
+		"""Исключение: неразрешённый тег."""
+
+		self.__Message = f"Parser or extension not specified for temper. Unable to load directory."
+		super().__init__(self.__Message) 
+			
+	def __str__(self):
+		return self.__Message
