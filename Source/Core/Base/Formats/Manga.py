@@ -1,11 +1,14 @@
-from . import BaseChapter, BaseBranch, BaseTitle, By, Statuses, Person
-from Source.Core.SystemObjects import SystemObjects
+from Source.Core.Base.Formats.BaseFormat import BaseChapter, BaseBranch, BaseTitle
 from Source.Core.Exceptions import ChapterNotFound
 
 from dublib.Methods.Filesystem import ReadJSON
 
+from typing import TYPE_CHECKING
 import enum
 import os
+
+if TYPE_CHECKING:
+	from Source.Core.SystemObjects import SystemObjects
 
 #==========================================================================================#
 # >>>>> ПЕРЕЧИСЛЕНИЯ ТИПОВ <<<<< #
@@ -43,14 +46,12 @@ class Chapter(BaseChapter):
 	# >>>>> МЕТОДЫ <<<<< #
 	#==========================================================================================#
 
-	def __init__(self, system_objects: SystemObjects):
+	def __init__(self, system_objects: "SystemObjects"):
 		"""
 		Глава манги.
 			system_objects – коллекция системных объектов.
 		"""
 
-		#---> Генерация динамических атрибутов.
-		#==========================================================================================#
 		self._SystemObjects = system_objects
 
 		self._Chapter = {
@@ -75,7 +76,7 @@ class Chapter(BaseChapter):
 			height – высота слайда.
 		"""
 
-		ParserSettings = self._SystemObjects.manager.parser_settings
+		ParserSettings = self._SystemObjects.manager.current_parser_settings
 		SlideInfo = {
 			"index": len(self._Chapter["slides"]) + 1,
 			"link": link,
@@ -308,7 +309,7 @@ class Manga(BaseTitle):
 		ChapterData: Chapter = SearchResult[1]
 		ChapterData.clear_slides()
 		self._Parser.amend(BranchData, ChapterData)
-
+		
 		if ChapterData.slides: self._SystemObjects.logger.chapter_repaired(self, ChapterData)
 
 	#==========================================================================================#

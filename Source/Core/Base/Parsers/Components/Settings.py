@@ -4,6 +4,7 @@ from Source.Core.Exceptions import BadSettings
 from dublib.Methods.Filesystem import NormalizePath, ReadJSON
 from dublib.WebRequestor import Proxy
 
+from types import MappingProxyType
 from os import PathLike
 from typing import Any
 import hashlib
@@ -14,7 +15,7 @@ import re
 # >>>>> СТАНДАРТНЫЕ НАСТРОЙКИ <<<<< #
 #==========================================================================================#
 
-Settings = {
+Settings = MappingProxyType({
 	"common": {
 		"archives_directory": "",
 		"images_directory": "",
@@ -23,7 +24,6 @@ Settings = {
 		"pretty": False,
 		"use_id_as_filename": False,
 		"sizing_images": False,
-		"legacy": False,
 		"retries": 1,
 		"delay": 1
 	},
@@ -38,7 +38,7 @@ Settings = {
 	},
 	"proxies": [],
 	"custom": {}
-}
+})
 
 #==========================================================================================#
 # >>>>> ДОПОЛНИТЕЛЬНЫЕ СТРУКТУРЫ ДАННЫХ <<<<< #

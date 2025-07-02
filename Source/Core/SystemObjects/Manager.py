@@ -1,29 +1,27 @@
-from Source.Core.Base.Parser.Components.ParserSettings import ParserSettings
-from Source.Core.Formats import ContentTypes
+from Source.Core.Base.Parsers.Components import ParserSettings, ParserManifest
 
 from dublib.Methods.Filesystem import ReadJSON, ListDir
 from dublib.CLI.TextStyler import TextStyler
 
-from typing import Any, TYPE_CHECKING
-import subprocess
+from typing import TYPE_CHECKING
 import importlib
-import os
 
 if TYPE_CHECKING:
+	from Source.Core.Base.Extensions.BaseExtension import BaseExtension
+	from Source.Core.Base.Parsers.RanobeParser import RanobeParser
+	from Source.Core.Base.Parsers.MangaParser import MangaParser
 	from Source.Core.SystemObjects import SystemObjects
-	from Source.Core.Formats.Ranobe import Ranobe
-	from Source.Core.Formats.Manga import Manga
 	
 class Manager:
-	"""Менеджер парсеров."""
+	"""Менеджер парсеров и расширений."""
 
 	#==========================================================================================#
 	# >>>>> СВОЙСТВА <<<<< #
 	#==========================================================================================#
 
 	@property
-	def all_parsers_names(self) -> list[str]:
-		"""Список названий доступных парсеров."""
+	def parsers_names(self) -> tuple[str]:
+		"""Последовательность названий всех доступных парсеров."""
 
 		Parsers = ListDir("Parsers")
 		if "Templates" in Parsers: Parsers.remove("Templates")
@@ -31,28 +29,22 @@ class Manager:
 		return Parsers
 
 	@property
-	def extension_settings(self) -> ParserSettings:
+	def current_extension_settings(self) -> dict | None:
 		"""Настройки используемого расширения."""
 
 		return self.get_extension_settings(cache = True)
 
 	@property
-	def parser_settings(self) -> ParserSettings:
+	def current_parser_settings(self) -> ParserSettings:
 		"""Настройки используемого парсера."""
 
 		return self.get_parser_settings(cache = True)
 
 	@property
-	def parser_site(self) -> str:
-		"""Название источника."""
+	def current_parser_manifest(self) -> ParserManifest:
+		"""Манифест используемого парсера."""
 
-		return self.get_parser_site()
-
-	@property
-	def parser_version(self) -> str:
-		"""Версия используемого парсера."""
-
-		return self.get_parser_version()
+		return self.get_parser_manifest()
 
 	#==========================================================================================#
 	# >>>>> ПРИВАТНЫЕ МЕТОДЫ <<<<< #
@@ -60,30 +52,22 @@ class Manager:
 
 	def __CheckParser(self, parser: str | None) -> str:
 		"""
-		Проверяет наличие парсера.
-			parser – название парсера.
+		Проверяет наличие модуля парсера в системе.
+
+		:param parser: Имя парсера. По умолчанию будет проверен последний использованный парсер.
+		:type parser: str | None
+		:return: Имя парсера.
+		:rtype: str
 		"""
 
 		if not parser: parser = self.__Parser
 
-		if parser != None and parser not in self.all_parsers_names:
+		if parser != None and parser not in self.parsers_names:
 			self.__SystemObjects.logger.critical(f"No parser \"{parser}\".")
 			print(f"No parser: \"{parser}\".")
 			exit(-1)
 
 		return parser
-
-	def __GetLegacyParserVersion(self, parser: str | None = None) -> str | None:
-		"""
-		Возвращает версию парсера из констант главного файла.
-			parser – название парсера.
-		"""
-
-		Version = None
-		try: Version = importlib.import_module(f"Parsers.{parser}.main").VERSION
-		except AttributeError: pass
-
-		return Version
 
 	#==========================================================================================#
 	# >>>>> ПУБЛИЧНЫЕ МЕТОДЫ <<<<< #
@@ -91,40 +75,30 @@ class Manager:
 
 	def __init__(self, system_objects: "SystemObjects"):
 		"""
-		Менеджер парсеров.
-			system_objects – коллекция системных объектов.
+		Менеджер парсеров и расширений.
+
+		:param system_objects: Коллекция системных объектов.
+		:type system_objects: SystemObjects
 		"""
 
-		#---> Генерация динамических атрибутов.
-		#==========================================================================================#
 		self.__SystemObjects = system_objects
 
 		self.__ExtensionSettings = None
 		self.__ParserSettings = None
+		self.__ParserManifest = None
 		self.__Extension = None
 		self.__Parser = None
 
-	def launch(self, parser: str | None = None) -> Any:
+	def launch_extension(self, parser: str, extension: str) -> "BaseExtension":
 		"""
-		Запускает парсер и возвращает его объект.
-			parser – название парсера.
-		"""
+		Запускает расширение.
 
-		parser = self.__CheckParser(parser)
-		Module = importlib.import_module(f"Parsers.{parser}.main")
-		Parser = Module.Parser(self.__SystemObjects)
-
-		ParserName = TextStyler(parser).decorate.bold
-		Version = self.get_parser_version(parser)
-		Text = f"Parser: {ParserName} (version {Version})."
-		self.__SystemObjects.logger.info(Text, stdout = True)
-
-		return Parser
-
-	def launch_extension(self, parser: str, extension: str) -> Any:
-		"""
-		Запускает парсер и возвращает его объект.
-			parser – название парсера.
+		:param parser: Имя парсера.
+		:type parser: str
+		:param extension: Имя расширения.
+		:type extension: str
+		:return: Объект расширения.
+		:rtype: BaseExtension
 		"""
 
 		parser = self.__CheckParser(parser)
@@ -138,24 +112,61 @@ class Manager:
 
 		return Extension
 
+	def launch_parser(self, parser: str | None = None) -> "MangaParser | RanobeParser":
+		"""
+		Запускает парсер.
+
+		:param parser: Имя парсера. По умолчанию будет запущен последний установленный парсер.
+		:type parser: str | None
+		:return: Объект парсера.
+		:rtype: MangaParser | RanobeParser
+		"""
+
+		parser = self.__CheckParser(parser)
+		Module = importlib.import_module(f"Parsers.{parser}.main")
+		Parser = Module.Parser(self.__SystemObjects)
+
+		ParserName = TextStyler(parser).decorate.bold
+		Version = self.get_parser_manifest(parser).version
+		if Version: Version = f" (version {Version})"
+		else: Version = ""
+		Text = f"Parser: {ParserName}{Version}."
+		self.__SystemObjects.logger.info(Text)
+
+		return Parser
+
 	def select_extension(self, extension: str):
-		"""Задаёт имя используемого расширения."""
+		"""
+		Задаёт имя используемого расширения.
+
+		:param extension: Имя расширения.
+		:type extension: str
+		"""
 
 		self.__Extension = extension
 
 	def select_parser(self, parser: str):
-		"""Задаёт имя используемого парсера."""
+		"""
+		Задаёт имя используемого парсера.
+
+		:param parser: Имя парсера.
+		:type parser: str
+		"""
 
 		self.__Parser = parser
 
 	#==========================================================================================#
-	# >>>>> ПУБЛИЧНЫЕ МЕТОДЫ ПРОВЕРКИ ИМПЛЕМЕНТАЦИЙ ПАРСЕРОВ <<<<< #
+	# >>>>> ПУБЛИЧНЫЕ МЕТОДЫ РАБОТЫ С ПАРСЕРАМИ <<<<< #
 	#==========================================================================================#
 
-	def check_method_collect(self, parser: str | None = None) -> bool | None:
+	def check_method_collect(self, parser: str | None = None) -> bool:
 		"""
-		Проверяет, доступна ли в парсере имплементация метода collect.
-			parser – название парсера.
+		Проверяет, доступна ли в парсере имплементация метода *collect()*.
+
+		:param parser: Имя парсера. По умолчанию будет произведена проверка для последнего выбранного парсера.
+		:type parser: str | None
+		:return: Возвращает `True`, если метод *collect()* имплементирован верно.
+		:rtype: bool
 		"""
 		
 		parser = self.__CheckParser(parser)
@@ -165,20 +176,61 @@ class Manager:
 
 		try: Parser.collect
 		except AttributeError: IsImplemented = False
-		except: IsImplemented = None
 
 		return IsImplemented
 
+	def get_parser_settings(self, parser: str | None = None, cache: bool = True) -> ParserSettings:
+		"""
+		Возвращает настройки парсера.
+
+		:param parser: Имя парсера. По умолчанию будут получены настройки для последнего выбранного парсера.
+		:type parser: str | None
+		:param cache: Указывает, можно ли взять объект из кэша или нужно инициализировать его занового.
+		:type cache: bool
+		:return: Настройки парсера.
+		:rtype: ParserSettings
+		"""
+
+		parser = self.__CheckParser(parser)
+		if cache and self.__ParserSettings and parser == self.__SystemObjects.parser_name: return self.__ParserSettings
+		self.__ParserSettings = ParserSettings(parser, self.__SystemObjects.logger)
+
+		return self.__ParserSettings
+
+	def get_parser_manifest(self, parser: str | None = None, cache: bool = True) -> ParserManifest:
+		"""
+		Возвращает манифест парсера.
+
+		:param parser: Имя парсера. По умолчанию будет получен манифест для последнего выбранного парсера.
+		:type parser: str | None
+		:param cache: Указывает, можно ли взять объект из кэша или нужно инициализировать его занового.
+		:type cache: bool
+		:return: Манифест парсера.
+		:rtype: ParserManifest
+		"""
+
+		parser = self.__CheckParser(parser)
+		if cache and self.__ParserManifest and parser == self.__SystemObjects.parser_name: return self.__ParserManifest
+		self.__ParserManifest = ParserManifest(parser)
+
+		return self.__ParserManifest
+
 	#==========================================================================================#
-	# >>>>> ПУБЛИЧНЫЕ МЕТОДЫ ПОЛУЧЕНИЯ ПАРАМЕТРОВ РАСШИРЕНИЙ <<<<< #
+	# >>>>> ПУБЛИЧНЫЕ МЕТОДЫ РАБОТЫ С РАСШИРЕНИЯМИ <<<<< #
 	#==========================================================================================#
 
 	def get_extension_settings(self, parser: str | None = None, extension: str | None = None, cache: bool = False) -> dict | None:
 		"""
 		Возвращает словарь настроек расширения.
-			parser – имя парсера;\n
-			extension – имя расширения;\n
-			cache – указывает, использовать ли кэшированные настройки.
+
+		:param parser: Имя парсера. По умолчанию будет использовано последнее заданное.
+		:type parser: str | None
+		:param extension: Имя расширения. По умолчанию будет использовано последнее заданное.
+		:type extension: str | None
+		:param cache: Указывает, следует ли использовать кэш или прочитать данные заново.
+		:type cache: bool
+		:return: Словарь настроек или `None` в случае отсутствия файла.
+		:rtype: dict | None
 		"""
 
 		if not parser: parser = self.__Parser
@@ -200,68 +252,3 @@ class Manager:
 				except FileNotFoundError: pass
 
 		return self.__ExtensionSettings
-
-	#==========================================================================================#
-	# >>>>> ПУБЛИЧНЫЕ МЕТОДЫ ПОЛУЧЕНИЯ ПАРАМЕТРОВ ПАРСЕРОВ <<<<< #
-	#==========================================================================================#
-
-	def get_parser_settings(self, parser: str | None = None, cache: bool = True) -> ParserSettings:
-		"""
-		Возвращает контейнер настроек парсера.
-			parser – название парсера;\n
-			cache – указывает, использовать ли кэшированные настройки.
-		"""
-
-		parser = self.__CheckParser(parser)
-		if cache and self.__ParserSettings and parser == self.__SystemObjects.parser_name: return self.__ParserSettings
-		self.__ParserSettings = ParserSettings(parser, self.__SystemObjects.logger)
-
-		return self.__ParserSettings
-
-	def get_parser_site(self, parser: str | None = None) -> str:
-		"""
-		Возвращает поддерживаемый парсером сайт.
-			parser – название парсера.
-		"""
-
-		parser = self.__CheckParser(parser)
-		Module = importlib.import_module(f"Parsers.{parser}.main")
-		importlib.reload(Module)
-
-		return Module.SITE
-
-	def get_parser_content_struct(self, parser: str | None = None) -> "Manga | Ranobe":
-		"""
-		Возвращает тип контента парсера.
-			parser – название парсера.
-		"""
-
-		parser = self.__CheckParser(parser)
-		Module = importlib.import_module(f"Parsers.{parser}.main")
-
-		return Module.TYPE
-	
-	def get_parser_type(self, parser: str | None = None) -> ContentTypes:
-		"""
-		Возвращает название типа контента парсера.
-			parser – название парсера.
-		"""
-
-		parser = self.__CheckParser(parser)
-		Module = importlib.import_module(f"Parsers.{parser}.main")
-
-		return ContentTypes(Module.TYPE.__name__.lower())
-
-	def get_parser_version(self, parser: str | None = None) -> str:
-		"""
-		Возвращает версию парсера.
-			parser – название парсера.
-		"""
-
-		parser = self.__CheckParser(parser)
-		Version = subprocess.getoutput(f"cd Parsers/{parser} && git describe --tags $(git rev-list --tags --max-count=1)")
-		
-		if Version.startswith("fatal"): Version = self.__GetLegacyParserVersion(parser)
-		if Version.startswith("v"): Version = Version.lstrip("v")
-
-		return Version

@@ -1,4 +1,4 @@
-from Source.Core.Base.Parser.Components.ParserSettings import ParserSettings
+from Source.Core.Base.Parsers.Components.Settings import ParserSettings
 from Source.Core.SystemObjects.Logger import Portals
 from Source.Core.SystemObjects import SystemObjects
 

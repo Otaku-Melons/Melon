@@ -1,27 +1,27 @@
 from Source.Core.Exceptions import ParsingError, TitleNotFound
-from Source.Core.Formats import BaseChapter, BaseTitle
-from Source.CLI import Templates
+from Source.Core.Base.Formats.BaseFormat import BaseChapter, BaseTitle
+from Source.CLI.Templates import Templates
 
+from dublib.CLI.Templates.Bus import PrintWarning, PrintError, PrintCritical
 from dublib.Methods.Filesystem import ReadJSON
-from dublib.Engine.Bus import ExecutionStatus
 from dublib.CLI.TextStyler import TextStyler
 from dublib.WebRequestor import WebResponse
-from dublib.Polyglot import Markdown
 
 from typing import TYPE_CHECKING
 from datetime import datetime
 import logging
-import telebot
 import enum
 import sys
 import os
 import re
 
+import telebot
+
 if TYPE_CHECKING:
 	from Source.Core.SystemObjects import SystemObjects
 
 #==========================================================================================#
-# >>>>> ВСПОМОГАТЕЛЬНЫЕ СТРУКТУРЫ ДАННЫХ <<<<< #
+# >>>>> ПЕРЕЧИСЛЕНИЯ <<<<< #
 #==========================================================================================#
 
 class LoggerRules(enum.Enum):
@@ -42,15 +42,22 @@ class CleanerSettings:
 	def __init__(self, data: dict):
 		"""
 		Правила очистки логов.
-			data – словарь прафил очистки.
+
+		:param data: Словарь правил очистки логов.
+		:type data: dict
 		"""
 
-		#---> Генерация динамических атрибутов.
-		#==========================================================================================#
 		self.__Rules = data.copy()
 
 	def __getitem__(self, command: str) -> LoggerRules:
-		"""Возвращает правило очистки логов."""
+		"""
+		Возвращает правило очистки логов.
+
+		:param command: Имя команды.
+		:type command: str
+		:return: Правило очистки логов.
+		:rtype: LoggerRules
+		"""
 
 		Rule = LoggerRules(0)
 		if command in self.__Rules.keys(): Rule = LoggerRules(self.__Rules[command])
@@ -60,9 +67,13 @@ class CleanerSettings:
 class ReportsRules:
 	"""Набор правил отправки отчётов."""
 
+	#==========================================================================================#
+	# >>>>> НАСТРОЙКИ ОТПРАВКИ <<<<< #
+	#==========================================================================================#
+
 	@property 
 	def attach_log(self) -> bool:
-		"""Состояние: требуется ли прикреплять файл лога к отчёту."""
+		"""Переключатель: требуется ли прикреплять файл лога к отчёту."""
 
 		return self.__Data["attach_log"]
 	
@@ -71,6 +82,10 @@ class ReportsRules:
 		"""Список команд, для которых запрещена отправка отчётов."""
 
 		return self.__Data["forbidden_commands"]
+	
+	#==========================================================================================#
+	# >>>>> ПЕРЕКЛЮЧАТЕЛИ ОТПРАВКИ ШАБЛОНОВ <<<<< #
+	#==========================================================================================#
 	
 	@property 
 	def ignored_requests_errors(self) -> list[int, None]:
@@ -96,6 +111,10 @@ class ReportsRules:
 
 		return self.__Data["downloading_error"]
 	
+	#==========================================================================================#
+	# >>>>> ПЕРЕКЛЮЧАТЕЛИ ОТПРАВКИ СООБЩЕНИЙ ОБ ОШИБКАХ И ПРЕДУПРЕЖДЕНИЙ <<<<< #
+	#==========================================================================================#
+
 	@property 
 	def critical(self) -> bool:
 		"""Указывает, нужно ли отправлять отчёт для данного типа записи."""
@@ -114,14 +133,17 @@ class ReportsRules:
 
 		return self.__Data["warnings"]
 	
+	#==========================================================================================#
+	# >>>>> ПУБЛИЧНЫЕ МЕТОДЫ <<<<< #
+	#==========================================================================================#
+
 	def __init__(self, data: dict):
 		"""
-		Набор правил отправки отчётов.
-			data – словарь правил.
+
+		:param data: Словарь правил.
+		:type data: dict
 		"""
 
-		#---> Генерация динамических атрибутов.
-		#==========================================================================================#
 		self.__Data = data.copy()
 		
 		Default = {
@@ -178,11 +200,11 @@ class TelebotSettings:
 	def __init__(self, data: dict | None = None):
 		"""
 		Настройки бота Telegram
-			data – словарь настроек для парсинга.
+
+		:param data: Словарь настроек или `None` при отсутствии оных.
+		:type data: dict | None
 		"""
 
-		#---> Генерация динамических атрибутов.
-		#==========================================================================================#
 		self.__Data = data or {
 			"enable": False,
 			"bot_token": None,
@@ -211,21 +233,16 @@ class LoggerSettings:
 	def __init__(self, data: dict | None = None):
 		"""
 		Настройки логов.
-			data – словарь настроек для парсинга.
+
+		:param data: Словарь со всеми настройками логов или `None` при отсутствии.
+		:type data: dict | None
 		"""
 
-		#---> Генерация динамических атрибутов.
-		#==========================================================================================#
 		self.__Data = data or {
 			"telebot": {},
 			"cleaner": {}
 		}
 
-		self.__Telebot = None
-		self.__Cleaner = None
-
-		#---> Парсинг настроек.
-		#==========================================================================================#
 		for Key in ["telebot", "cleaner"]:
 			if Key not in self.__Data.keys(): self.__Data[Key] = dict()
 
@@ -245,8 +262,6 @@ class Portals:
 			logger – менеджер портов CLI и логов.
 		"""
 
-		#---> Генерация динамических атрибутов.
-		#==========================================================================================#
 		self.__Logger = logger
 
 	#==========================================================================================#
@@ -384,8 +399,13 @@ class Logger:
 	#==========================================================================================#
 
 	def __ReadSettings(self) -> LoggerSettings:
-		"""Считвает настройки логов для конкретного парсера."""
-		
+		"""
+		Считвает настройки логов для конкретного парсера.
+
+		:return: Настройки логов.
+		:rtype: LoggerSettings
+		"""
+
 		LoggerSettingsObject = LoggerSettings()
 
 		if self.__ParserName:
@@ -397,7 +417,11 @@ class Logger:
 	def __RemoveEscapesANSI(self, text: str) -> str:
 		"""
 		Удаляет управляющие последовательности ANSI.
-			text – обрабатываемый текст.
+
+		:param text: Обрабатываемый текст.
+		:type text: str
+		:return: Обработанный текст.
+		:rtype: str
 		"""
 
 		Regex = r'\x1b(' \
@@ -417,33 +441,27 @@ class Logger:
 		CompiledRegex = re.compile(Regex, flags = re.IGNORECASE)
 
 		return CompiledRegex.sub("", text)
-	
-	def __BoldANSItoQuotes(self, text: str) -> str:
-		"""
-		Заменяет полужирные последовательности ANSI на кавычки.
-			text – обрабатываемый текст.
-		"""
-
-		text = text.replace("\033[1m", "\"")
-		text = text.replace("\033[0m", "\"")
-
-		return text
 
 	def __SendReport(self, description: str):
 		"""
-		Отправляет сообщение в чат Telegram.
-			description – описание ошибки.
+		Отправляет отчёт об ошибке в чат Telegram.
+
+		:param description: Описание ошибки.
+		:type description: str
 		"""
 
 		if self.__LoggerSettings.telebot.enable and self.__PointName not in self.__LoggerSettings.telebot.rules.forbidden_commands:
 			Token = self.__LoggerSettings.telebot.bot_token
-			description = Markdown(description).escaped_text
 			Bot = telebot.TeleBot(Token)
 			LaunchArguments = list(sys.argv)
 			LaunchArguments.pop(0)
-			Command = Markdown(" ".join(LaunchArguments)).escaped_text
-			Comment = ("*Comment:* " + self.__LoggerSettings.telebot.comment + "\n") if self.__LoggerSettings.telebot.comment else ""
-			Message = f"*Parser:* {self.__ParserName}\n{Comment}*Command:* `{Command}`\n\n_{description}_"
+			Command = " ".join(LaunchArguments)
+
+			Message = list()
+			Message.append(f"<b>Parser:</b> {self.__ParserName}")
+			if self.__LoggerSettings.telebot.comment: Message.append(f"<b>Comment:</b> {self.__LoggerSettings.telebot.comment}")
+			Message.append(f"<b>Command:</b> <pre>{Command}</pre>\n\n<i>{description}</i>")
+			Message = "\n".join(Message)
 
 			if Message != self.__ErrorCache:
 				self.__ErrorCache = Message
@@ -454,17 +472,17 @@ class Logger:
 							self.__LoggerSettings.telebot.chat_id,
 							document = open(self.__LogFilename, "rb"), 
 							caption = Message,
-							parse_mode = "MarkdownV2"
+							parse_mode = "HTML"
 						)
 
 					else:
 						Bot.send_message(
-							self.__LoggerSettings.telebot.chat_id,
-							Message,
-							parse_mode = "MarkdownV2"
+							chat_id = self.__LoggerSettings.telebot.chat_id,
+							text = Message,
+							parse_mode = "HTML"
 						)
 
-				except: logging.error("TeleBot error occurs during sending report.")
+				except Exception as ExceptionData: self.error(f"TeleBot error occurs during sending report: \"{ExceptionData}\".")
 
 		self.__SilentMode = False
 
@@ -515,50 +533,6 @@ class Logger:
 		logging.info(text)
 
 	#==========================================================================================#
-	# >>>>> ПРИВАТНЫЕ МЕТОДЫ ВЫВОДА В КОНСОЛЬ <<<<< #
-	#==========================================================================================#
-
-	def __PrintCritical(self, text: str):
-		"""
-		Записывает в лог критическую ошибку.
-			text – текст критической ошибки.
-		"""
-
-		Status = ExecutionStatus()
-		Status.push_critical(text)
-		Status.print_messages()
-
-	def __PrintError(self, text: str):
-		"""
-		Записывает в лог ошибку.
-			text – текст ошибки.
-		"""
-
-		Status = ExecutionStatus()
-		Status.push_error(text)
-		Status.print_messages()
-
-	def __PrintWarning(self, text: str):
-		"""
-		Записывает в лог предупреждение.
-			text – описание предупреждения.
-		"""
-
-		Status = ExecutionStatus()
-		Status.push_warning(text)
-		Status.print_messages()
-
-	def __PrintInfo(self, text: str):
-		"""
-		Записывает в лог информацию.
-			text – информация.
-		"""
-
-		Status = ExecutionStatus()
-		Status.push_message(text)
-		Status.print_messages()
-
-	#==========================================================================================#
 	# >>>>> ПУБЛИЧНЫЕ МЕТОДЫ <<<<< #
 	#==========================================================================================#
 
@@ -568,8 +542,6 @@ class Logger:
 			system_objects – коллекция системных объектов.
 		"""
 		
-		#---> Генерация динамических атрибутов.
-		#==========================================================================================#
 		self.__SystemObjects = system_objects
 
 		self.__Portals = Portals(self)
@@ -622,6 +594,19 @@ class Logger:
 	# >>>>> БАЗОВЫЕ ТИПЫ ЗАПИСЕЙ<<<<< #
 	#==========================================================================================#
 
+	def header(self, header: str):
+		"""
+		Выводит в консоль и логи заголовок.
+
+		:param header: Текст заголовка.
+		:type header: str
+		"""
+
+		header = header.upper()
+		header = f"===== {header} ====="
+		print(header)
+		self.__LogInfo(header)
+
 	def critical(self, text: str, stdout: bool = True, log: bool = True):
 		"""
 		Записывает в лог критическую ошибку.
@@ -630,7 +615,7 @@ class Logger:
 			log – указывает, делать ли запись в лог.
 		"""
 
-		if stdout: self.__PrintCritical(text)
+		if stdout: PrintCritical(text)
 		if log: self.__LogCritical(text)
 
 	def error(self, text: str, stdout: bool = True, log: bool = True):
@@ -641,7 +626,7 @@ class Logger:
 			logs – указывает, делать ли запись в лог.
 		"""
 
-		if stdout: self.__PrintError(text)
+		if stdout: PrintError(text)
 		if log: self.__LogError(text)
 
 	def warning(self, text: str, stdout: bool = True, log: bool = True):
@@ -652,7 +637,7 @@ class Logger:
 			log – указывает, делать ли запись в лог.
 		"""
 
-		if stdout: self.__PrintWarning(text)
+		if stdout: PrintWarning(text)
 		if log: self.__LogWarning(text)
 
 	def info(self, text: str, stdout: bool = True, log: bool = True):
@@ -663,7 +648,7 @@ class Logger:
 			log – указывает, делать ли запись в лог.
 		"""
 
-		if stdout: self.__PrintInfo(text)
+		if stdout: print(text)
 		if log: self.__LogInfo(text)
 
 	#==========================================================================================#
@@ -678,7 +663,7 @@ class Logger:
 		"""
 
 		self.__LogInfo(f"Title: \"{title.slug}\" (ID: {title.id}). Chapter {chapter.id} not found.")
-		self.__PrintInfo(f"Chapter {chapter.id} not found.")
+		print(f"Chapter {chapter.id} not found.")
 
 	def request_error(self, response: WebResponse, text: str | None = None, exception: bool = True):
 		"""
@@ -696,7 +681,7 @@ class Logger:
 			self.__SilentMode = True
 
 		self.__LogError(Text)
-		self.__PrintError(Text)
+		PrintError(Text)
 		self.__SilentMode = False
 		if exception: raise ParsingError()
 
@@ -719,7 +704,7 @@ class Logger:
 			self.__SilentMode = True
 
 		self.__LogWarning(Text)
-		self.__PrintWarning(TextStyler("Title not found.").colorize.yellow)
+		PrintWarning(TextStyler("Title not found.").colorize.yellow)
 		self.__SilentMode = False
 		if exception: raise TitleNotFound(title)
 
@@ -732,7 +717,7 @@ class Logger:
 
 		Text = "Unsupported JSON format."
 		self.__LogWarning(f"Title: \"{title.slug}\" (ID: {title.id}). {Text}")
-		self.__PrintWarning(Text)
+		PrintWarning(Text)
 		if exception: raise ParsingError()
 
 	#==========================================================================================#
@@ -747,7 +732,7 @@ class Logger:
 		"""
 
 		self.__LogInfo(f"Title: \"{title.slug}\" (ID: {title.id}). Amended chapters count: {amended_chapter_count}.")
-		self.__PrintInfo(f"Amended chapters count: {amended_chapter_count}.")
+		print(f"Amended chapters count: {amended_chapter_count}.")
 
 	def chapter_amended(self, title: BaseTitle, chapter: BaseChapter):
 		"""
@@ -758,7 +743,7 @@ class Logger:
 
 		ChapterNote = "Paid chapter" if chapter.is_paid else "Chapter"
 		self.__LogInfo(f"Title: \"{title.slug}\" (ID: {title.id}). {ChapterNote} {chapter.id} amended.")
-		self.__PrintInfo(f"{ChapterNote} {chapter.id} amended.")
+		print(f"{ChapterNote} {chapter.id} amended.")
 
 	def chapter_repaired(self, title: BaseTitle, chapter: BaseChapter):
 		"""
@@ -769,7 +754,7 @@ class Logger:
 
 		ChapterNote = "Paid chapter" if chapter.is_paid else "Chapter"
 		self.__LogInfo(f"Title: \"{title.slug}\" (ID: {title.id}). {ChapterNote} {chapter.id} repaired.")
-		self.__PrintInfo(f"{ChapterNote} {chapter.id} repaired.")
+		print(f"{ChapterNote} {chapter.id} repaired.")
 		
 	def merging_end(self, title: BaseTitle, merged_chapter_count: int):
 		"""
@@ -780,11 +765,11 @@ class Logger:
 
 		if self.__SystemObjects.FORCE_MODE:
 			self.__LogInfo(f"Title: \"{title.slug}\" (ID: {title.id}). Local data will be removed.")
-			self.__PrintInfo("Local data will be removed.")
+			print("Local data will be removed.")
 
 		else:
 			self.__LogInfo(f"Title: \"{title.slug}\" (ID: {title.id}). Merged chapters count: {merged_chapter_count}.")
-			self.__PrintInfo(f"Merged chapters count: {merged_chapter_count}.")
+			print(f"Merged chapters count: {merged_chapter_count}.")
 
 	def parsing_start(self, title: BaseTitle, index: int, titles_count: int):
 		"""
@@ -798,7 +783,7 @@ class Logger:
 		self.__LogInfo(f"Title: \"{title.slug}\"{NoteID}. Parsing...")
 		BoldSlug = TextStyler(title.slug).decorate.bold
 		if titles_count > 1: Templates.parsing_progress(index, titles_count)
-		self.__PrintInfo(f"Parsing {BoldSlug}{NoteID}...")
+		print(f"Parsing {BoldSlug}{NoteID}...")
 
 	def titles_collected(self, count: int):
 		"""
@@ -807,7 +792,7 @@ class Logger:
 		"""
 
 		self.__LogInfo(f"Collected titles count: {count}.")
-		self.__PrintInfo(f"Titles collected: {count}.")
+		print(f"Titles collected: {count}.")
 
 	#==========================================================================================#
 	# >>>>> МЕТОДЫ УПРАВЛЕНИЯ ЛОГАМИ <<<<< #
@@ -818,7 +803,7 @@ class Logger:
 
 		if not self.__LoggerRule: self.set_rule(self.__LoggerSettings.cleaner[self.__PointName])
 
-		self.__LogInfo("====== End ======")
+		self.header("End")
 		logging.shutdown()
 
 		IsClean = False

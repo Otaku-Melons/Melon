@@ -1,15 +1,19 @@
-from Source.Core.SystemObjects import SystemObjects
-
 from dublib.Methods.Filesystem import ListDir
 from dublib.CLI.TextStyler import TextStyler
 from dublib.Engine.Patcher import Patch
 
+from typing import TYPE_CHECKING
 import shutil
 import sys
 import os
 
+from dulwich import porcelain
+
+if TYPE_CHECKING:
+	from Source.Core.SystemObjects import SystemObjects
+
 class Installer:
-	"""Менеджер установки."""
+	"""Оператор установки."""
 
 	#==========================================================================================#
 	# >>>>> ПРИВАТНЫЕ МЕТОДЫ <<<<< #
@@ -17,21 +21,28 @@ class Installer:
 
 	def __CheckVenv(self, feature: str) -> bool:
 		"""
-		Проверяет, создано ли вирутальное окружение Python в стандартном каталоге.
-			feature – описание функционала, для которого проводится проверка.
+		Проверяет, создано ли вирутальное окружение Python в стандартном каталоге. Если отсутствует, выводит предупреждение.
+
+		:param feature: Описание функционала, для которого требуется наличие виртуального окружения.
+		:type feature: str
+		:return: Возвращает `True`, если виртуальное окружение создано.
+		:rtype: bool
 		"""
 
 		if not os.path.exists(".venv"):
-			self.__Logger.warning(f"{feature} isn't supported without Python Virtual Enviroment.", stdout = True)
+			self.__Logger.warning(f"{feature} isn't supported without Python Virtual Enviroment.")
 			return False
 		
 		return True
 	
 	def __InstallConfig(self, parser: str, extension: str | None = None):
 		"""
-		Устанавливает настройки парсера или расширения в каталог конфигураций.
-			parser – название парсера;\n
-			extension – название расширения.
+		Копирует настройки парсера или расширения в каталог конфигураций.
+
+		:param parser: Имя парсера.
+		:type parser: str
+		:param extension: Имя расширения парсера, если устанавливается его конфигурация.
+		:type extension: str | None
 		"""
 
 		Title = f"Parser: " + TextStyler(parser).decorate.bold + "."
@@ -49,24 +60,24 @@ class Installer:
 
 			if not os.path.exists(ConfigsPath):
 				shutil.copy2(OriginalPath, ConfigsPath)
-				self.__Logger.info(f"{Title} Config installed.", stdout = True)
+				self.__Logger.info(f"{Title} Config installed.")
 
-			else: self.__Logger.info(f"{Title} Already have configuration. Skipped.", stdout = True)
+			else: self.__Logger.info(f"{Title} Already have configuration. Skipped.")
 
-		else: self.__Logger.info(f"{Title} No default settings.", stdout = True)
+		else: self.__Logger.info(f"{Title} No default settings.")
 
 	#==========================================================================================#
 	# >>>>> ПУБЛИЧНЫЕ МЕТОДЫ <<<<< #
 	#==========================================================================================#
 
-	def __init__(self, system_objects: SystemObjects):
+	def __init__(self, system_objects: "SystemObjects"):
 		"""
-		Менеджер установки.
-			system_objects – коллекция системных объектов.
+		Оператор установки.
+
+		:param system_objects: Коллекция системных объектов.
+		:type system_objects: SystemObjects
 		"""
 
-		#---> Генерация динамических атрибутов.
-		#==========================================================================================#
 		self.__SystemObjects = system_objects
 
 		self.__Logger = self.__SystemObjects.logger
@@ -90,19 +101,32 @@ class Installer:
 	def configs(self):
 		"""Копирует настройки парсеров и расширений в каталог конфигураций, если таковые ещё не существуют."""
 
-		for Parser in self.__SystemObjects.manager.all_parsers_names:
+		for Parser in self.__SystemObjects.manager.parsers_names:
 			self.__InstallConfig(Parser)
 
 			try:
 				for Extension in ListDir(f"Parsers/{Parser}/extensions"): self.__InstallConfig(Parser, Extension)
 			except FileNotFoundError: pass
 
+	def releases(self):
+		"""Переводит все подмодули парсеров в последний релиз."""
+
+		for Parser in self.__SystemObjects.manager.parsers_names:
+			Path = f"Parsers/{Parser}"
+			Manifest = self.__SystemObjects.manager.get_parser_manifest(Parser)
+
+			if Manifest.latest_git_tag:
+				porcelain.checkout(Path, Manifest.version, force = self.__SystemObjects.FORCE_MODE)
+				self.__Logger.info(f"Parser \"{Parser}\" rebased to {Manifest.version}.")
+				
+			else: self.__Logger.warning(f"No release tag found for \"{Parser}\" parser.")
+
 	def requirements(self):
 		"""Устанавливает зависимости парсеров."""
 
 		if not self.__CheckVenv("Automatic requirements installation"): return
 
-		for Parser in self.__SystemObjects.manager.all_parsers_names:
+		for Parser in self.__SystemObjects.manager.parsers_names:
 			Path = f"Parsers/{Parser}/requirements.txt"
 			ParserBold = TextStyler(Parser).decorate.bold
 
@@ -121,7 +145,7 @@ class Installer:
 			"win32": "bat"
 		}
 
-		for Parser in self.__SystemObjects.manager.all_parsers_names:
+		for Parser in self.__SystemObjects.manager.parsers_names:
 			Path = f"Parsers/{Parser}/install." + ScriptTypes[sys.platform]
 			ParserBold = TextStyler(Parser).decorate.bold
 

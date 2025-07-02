@@ -1,14 +1,14 @@
-from Source.Core.Base.Builder.MangaBuilder import MangaBuilder
-from Source.Core.Base.Parser.BaseParser import BaseParser
+from Source.Core.Base.Formats.Components import By, ContentTypes
+from Source.Core.Base.Builders.MangaBuilder import MangaBuilder
+from Source.Core.Base.Parsers.BaseParser import BaseParser
 from Source.Core.Development import DevelopmeptAssistant
 from Source.Core.SystemObjects import SystemObjects
-from Source.Core.Formats import By, ContentTypes
 from Source.Core.Collector import Collector
 from Source.Core.Installer import Installer
+from Source.CLI.Templates import Templates
 from Source.Core.Tagger import Tagger
 from Source.Core.Timer import Timer
 from Source.Core import Exceptions
-from Source.CLI import Templates
 
 from dublib.CLI.Terminalyzer import ParsedCommandData
 from dublib.Methods.Filesystem import WriteJSON
@@ -19,9 +19,9 @@ from typing import TYPE_CHECKING
 from time import sleep
 
 if TYPE_CHECKING:
-	from Source.Core.Formats.Ranobe import Ranobe
-	from Source.Core.Formats.Manga import Manga
-	from Source.Core.Formats import BaseTitle
+	from Source.Core.Base.Formats.BaseFormat import BaseTitle
+	from Source.Core.Base.Formats.Ranobe import Ranobe
+	from Source.Core.Base.Formats.Manga import Manga
 
 def com_build_manga(system_objects: SystemObjects, command: ParsedCommandData):
 	"""
@@ -34,7 +34,7 @@ def com_build_manga(system_objects: SystemObjects, command: ParsedCommandData):
 	"""
 
 	TimerObject = Timer(start = True)
-	system_objects.logger.info("====== Building ======")
+	system_objects.logger.header("Building")
 	BuildSystemName = None
 
 	for MangaBuilderSystem in ("simple", "zip", "cbz"):
@@ -82,7 +82,7 @@ def com_collect(system_objects: SystemObjects, command: ParsedCommandData):
 	CollectedTitlesCount = 0
 	Collection = list()
 	CollectorObject = Collector(system_objects, merge = system_objects.FORCE_MODE.status)
-	system_objects.logger.info("====== Collecting ======")
+	system_objects.logger.header("Collecting")
 	if system_objects.FORCE_MODE: system_objects.logger.warning("Collection will be overwritten.", stdout = True)
 
 	if command.check_flag("local"):
@@ -121,7 +121,7 @@ def com_get(system_objects: SystemObjects, command: ParsedCommandData):
 	Filename = command.get_key_value("name") if command.check_key("name") else None
 	FullName = command.check_key("fullname")
 	if FullName: Filename = command.get_key_value("fullname")
-	system_objects.logger.info("====== Downloading ======")
+	system_objects.logger.header("Downloading")
 	Parser: BaseParser = system_objects.manager.launch()
 	IsImageExists = Parser.images_downloader.is_exists(Link, Directory, Filename, FullName)
 	print(f"URL: {command.arguments[0]}")
@@ -158,7 +158,7 @@ def com_init(system_objects: SystemObjects, command: ParsedCommandData):
 
 	Name = command.arguments[0]
 	Type = ContentTypes(command.get_key_value("content"))
-	system_objects.logger.info("====== Initializing ======")
+	system_objects.logger.header("Initializing")
 	Assistang = DevelopmeptAssistant(system_objects)
 
 	if command.check_flag("p"): Assistang.init_parser(Name, Type)
@@ -176,7 +176,7 @@ def com_install(system_objects: SystemObjects, command: ParsedCommandData):
 
 	FullInstallation = command.check_flag("all")
 	HaveFalgs = bool(command.flags)
-	system_objects.logger.info("====== Installation ======")
+	system_objects.logger.header("Installation")
 	print("Running installation...")
 	InstallerObject = Installer(system_objects)
 	TimerObject = Timer(start = True)
@@ -189,7 +189,7 @@ def com_install(system_objects: SystemObjects, command: ParsedCommandData):
 	if command.check_flag("r") or FullInstallation: InstallerObject.requirements()
 	if command.check_flag("s") or FullInstallation: InstallerObject.scripts()
 	if command.check_flag("c") or FullInstallation: InstallerObject.configs()
-	if command.check_flag("t") or FullInstallation: system_objects.logger.warning("Switching parsers submodules to the latest stable tag not available yet.")
+	if command.check_flag("t") or FullInstallation: InstallerObject.releases()
 	TimerObject.done()
 
 def com_list(system_objects: SystemObjects, command: ParsedCommandData):
@@ -202,6 +202,7 @@ def com_list(system_objects: SystemObjects, command: ParsedCommandData):
 	:type command: ParsedCommandData
 	"""
 
+	Status = ExecutionStatus()
 	TableData = {
 		"NAME": [],
 		"VERSION": [],
@@ -210,33 +211,39 @@ def com_list(system_objects: SystemObjects, command: ParsedCommandData):
 		"collect": []
 	}
 
-	for Parser in system_objects.manager.all_parsers_names:
+	for Parser in system_objects.manager.parsers_names:
 
 		try:
-			Version = system_objects.manager.get_parser_version(Parser)
-			Site = system_objects.manager.get_parser_site(Parser)
-			Type = system_objects.manager.get_parser_content_struct(Parser).__name__.lower()
+			Manifest = system_objects.manager.get_parser_manifest(Parser)
+			TypeName = Manifest.content_struct.__name__.lower()
 			TypesEmoji = {
 				"anime": "🎬",
 				"manga": "🌄",
 				"ranobe": "📘"
 			}
 
+			# Генерация переменных нужна для отлова исключений до записи в таблицу.
+			Version = Manifest.version or ""
+			Type = TypesEmoji[TypeName] + " " + Manifest.content_struct.__name__.lower()
+			Site = "https://" + Manifest.site
+			Collect = system_objects.manager.check_method_collect(Parser)
+
+			TableData["NAME"].append(Parser)
+			TableData["VERSION"].append(Version)
+			TableData["TYPE"].append(Type)
+			TableData["SITE"].append(Site)
+			TableData["collect"].append(Collect)
+
 		except Exception as ExceptionData:
 			TableData["NAME"].append(Parser)
-			TableData["VERSION"].append(str(ExceptionData))
+			TableData["VERSION"].append("")
 			TableData["TYPE"].append("")
 			TableData["SITE"].append("")
 			TableData["collect"].append(None)
-
-		else:
-			TableData["NAME"].append(Parser)
-			TableData["VERSION"].append(Version)
-			TableData["TYPE"].append(TypesEmoji[Type] + " " + Type)
-			TableData["SITE"].append("https://" + Site)
-			TableData["collect"].append(system_objects.manager.check_method_collect(Parser))
+			Status.push_error(str(ExceptionData), Parser)
 
 	Templates.parsers_table(TableData)
+	Status.print_messages()
 
 def com_parse(system_objects: SystemObjects, command: ParsedCommandData):
 	"""
@@ -250,12 +257,12 @@ def com_parse(system_objects: SystemObjects, command: ParsedCommandData):
 
 	Slugs = list()
 	StartIndex = 0
-	system_objects.logger.info("====== Parsing ======")
+	system_objects.logger.header("Parsing")
 	
-	ContentType = system_objects.manager.get_parser_content_struct()
+	ContentType = system_objects.manager.current_parser_manifest.content_struct
 	Title: BaseTitle = ContentType(system_objects)
-	Parser: BaseParser = system_objects.manager.launch()
-	ParserSettings = system_objects.manager.parser_settings
+	Parser = system_objects.manager.launch_parser()
+	ParserSettings = system_objects.manager.current_parser_settings
 
 	if command.check_flag("last"):
 
@@ -347,11 +354,12 @@ def com_repair(system_objects: SystemObjects, command: ParsedCommandData):
 	"""
 
 	ChapterID = command.get_key_value("chapter")
-	Title: BaseTitle = system_objects.manager.get_parser_content_struct()
+	Title: BaseTitle = system_objects.manager.current_parser_manifest.content_struct
 	Title = Title(system_objects)
-	Parser: BaseParser = system_objects.manager.launch()
-	system_objects.logger.info("====== Repairing ======")
+	Parser: BaseParser = system_objects.manager.launch_parser()
+	system_objects.logger.header("Repairing")
 	Filename = Filename[:-5] if command.arguments[0].endswith(".json") else command.arguments[0]
+	system_objects.EXIT_CODE = -1
 
 	try:
 		Title.set_parser(Parser)
@@ -360,7 +368,10 @@ def com_repair(system_objects: SystemObjects, command: ParsedCommandData):
 		Title.repair(ChapterID)
 		Title.save(end_timer = True)
 
-	except (Exceptions.TitleNotFound, Exceptions.ChapterNotFound, Exceptions.ParsingError): system_objects.EXIT_CODE = -1
+	except Exceptions.ChapterNotFound: system_objects.logger.error(f"Chapter with ID {ChapterID} not found in JSON.")
+	except FileNotFoundError: system_objects.logger.error(f"File \"{Filename}.json\" not found in titles directory.")
+	except (Exceptions.TitleNotFound, Exceptions.ParsingError): pass
+	else: system_objects.EXIT_CODE = 0
 
 def com_run(system_objects: SystemObjects, command: ParsedCommandData):
 	"""
@@ -378,7 +389,7 @@ def com_run(system_objects: SystemObjects, command: ParsedCommandData):
 	ExtensionCommand = command.get_key_value("command")
 
 	Extension = system_objects.manager.launch_extension(ParserName, ExtensionName)
-	system_objects.logger.info(f"====== {ParserName}:{ExtensionName} ======", stdout = True)
+	system_objects.logger.header(f"{ParserName}:{ExtensionName}")
 	Status: ExecutionStatus = Extension.run(ExtensionCommand)
 	Status.print_messages()
 

@@ -1,21 +1,14 @@
-from Source.Core.Base.Parser.Components.ImagesDownloader import ImagesDownloader
-from Source.Core.Base.Parser.Components.ParserSettings import ParserSettings
-from Source.Core.Formats import BaseChapter, BaseBranch, BaseTitle
-from Source.Core.SystemObjects import SystemObjects
+from Source.Core.Base.Formats.BaseFormat import BaseChapter, BaseBranch, BaseTitle
+from Source.Core.Base.Parsers.Components.ImagesDownloader import ImagesDownloader
 
 from dublib.WebRequestor import WebConfig, WebLibs, WebRequestor
 from dublib.Engine.Bus import ExecutionStatus
 	
-#==========================================================================================#
-# >>>>> ОПРЕДЕЛЕНИЯ <<<<< #
-#==========================================================================================#
+from typing import TYPE_CHECKING
 
-NAME = None
-SITE = None
-
-#==========================================================================================#
-# >>>>> ОСНОВНОЙ КЛАСС <<<<< #
-#==========================================================================================#
+if TYPE_CHECKING:
+	from Source.Core.Base.Parsers.Components import ParserManifest, ParserSettings
+	from Source.Core.SystemObjects import SystemObjects
 
 class BaseParser:
 	"""Базовый парсер."""
@@ -31,7 +24,13 @@ class BaseParser:
 		return self._ImagesDownloader
 
 	@property
-	def settings(self) -> ParserSettings:
+	def manifest(self) -> "ParserManifest":
+		"""Манифест парсера."""
+
+		return self._Manifest
+
+	@property
+	def settings(self) -> "ParserSettings":
 		"""Настройки парсера."""
 
 		return self._Settings
@@ -49,13 +48,11 @@ class BaseParser:
 	def _InitializeRequestor(self) -> WebRequestor:
 		"""Инициализирует модуль WEB-запросов."""
 
-		Site = self._SystemObjects.manager.get_parser_site()
-
 		Config = WebConfig()
 		Config.select_lib(WebLibs.requests)
 		Config.set_retries_count(self._Settings.common.retries)
 		Config.generate_user_agent()
-		Config.add_header("Referer", f"https://{Site}/")
+		Config.add_header("Referer", f"https://{self._Manifest.site}/")
 		Config.enable_proxy_protocol_switching(True)
 		WebRequestorObject = WebRequestor(Config)
 		WebRequestorObject.add_proxies(self._Settings.proxies)
@@ -71,7 +68,7 @@ class BaseParser:
 	# >>>>> ПУБЛИЧНЫЕ МЕТОДЫ <<<<< #
 	#==========================================================================================#
 
-	def __init__(self, system_objects: SystemObjects, title: BaseTitle | None = None):
+	def __init__(self, system_objects: "SystemObjects", title: BaseTitle | None = None):
 		"""
 		Базовый парсер.
 			system_objects – коллекция системных объектов;\n
@@ -83,7 +80,8 @@ class BaseParser:
 
 		self._Temper = self._SystemObjects.temper
 		self._Portals = self._SystemObjects.logger.portals
-		self._Settings = self._SystemObjects.manager.parser_settings
+		self._Settings = self._SystemObjects.manager.current_parser_settings
+		self._Manifest = self._SystemObjects.manager.current_parser_manifest
 
 		self._Requestor = self._InitializeRequestor()
 		self._ImagesDownloader = ImagesDownloader(self._SystemObjects, self._Requestor)

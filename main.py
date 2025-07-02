@@ -22,14 +22,15 @@ Objects = SystemObjects()
 Analyzer.helper.enable()
 CommandDataStruct = Analyzer.check_commands(CommandsList)
 
-Objects.logger.info("====== Preparing to starting ======", stdout = False)
-Objects.logger.info(f"Starting with Python {sys.version_info.major}.{sys.version_info.minor}.{sys.version_info.micro} on {sys.platform}.", stdout = False)
+Objects.logger.header("Starting")
+Objects.logger.info(f"Running with Python {sys.version_info.major}.{sys.version_info.minor}.{sys.version_info.micro} on {sys.platform}.", stdout = False)
 Objects.logger.info("Command: \"" + " ".join(sys.argv[1:len(sys.argv)]) + "\".", stdout = False)
 
 if CommandDataStruct == None:
+	Objects.logger.error("Unknown command!")
 	Objects.logger.set_rule(3)
 	Objects.logger.close()
-	print("Unknown command!")
+	exit()
 
 elif CommandDataStruct.name in ("help", "list", "tagger"): Objects.LIVE_MODE.enable()
 

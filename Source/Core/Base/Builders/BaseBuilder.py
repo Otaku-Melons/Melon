@@ -1,10 +1,10 @@
-from Source.Core.Base.Parser.Components.ImagesDownloader import ImagesDownloader
+from Source.Core.Base.Parsers.Components.ImagesDownloader import ImagesDownloader
 
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
+	from Source.Core.Base.Formats.BaseFormat import BaseBranch, BaseChapter
 	from Source.Core.SystemObjects import SystemObjects
-	from Source.Core.Formats import BaseBranch, BaseChapter
 
 #==========================================================================================#
 # >>>>> БАЗОВЫЙ СБОРЩИК <<<<< #

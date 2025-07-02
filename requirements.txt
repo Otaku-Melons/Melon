@@ -1,3 +1,4 @@
 pyTelegramBotAPI
 BeautifulSoup4
-dublib==0.20.1
+dulwich>=0.23.1
+dublib==0.20.3

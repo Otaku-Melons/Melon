@@ -1,7 +1,6 @@
+from Source.Core.Base.Formats.BaseFormat import BaseChapter, BaseBranch, BaseTitle
+from Source.Core.Base.Parsers.Components.ImagesDownloader import ImagesDownloader
 from Source.Core.Exceptions import ChapterNotFound, UnresolvedTag
-from . import BaseChapter, BaseBranch, BaseTitle, By, Statuses
-from Source.Core.Base.Parser.Components.ImagesDownloader import ImagesDownloader
-from Source.Core.SystemObjects import SystemObjects
 
 from dublib.Methods.Data import RemoveRecurringSubstrings
 from dublib.Methods.Filesystem import ReadJSON
@@ -9,8 +8,12 @@ from dublib.Polyglot import HTML
 from bs4 import BeautifulSoup
 from time import sleep
 
+from typing import TYPE_CHECKING
 import enum
 import os
+
+if TYPE_CHECKING:
+	from Source.Core.SystemObjects import SystemObjects
 
 #==========================================================================================#
 # >>>>> ПЕРЕЧИСЛЕНИЯ ТИПОВ <<<<< #
@@ -219,7 +222,7 @@ class Chapter(BaseChapter):
 	# >>>>> ПУБЛИЧНЫЕ МЕТОДЫ <<<<< #
 	#==========================================================================================#
 
-	def __init__(self, system_objects: SystemObjects, title: "Ranobe"):
+	def __init__(self, system_objects: "SystemObjects", title: "Ranobe"):
 		"""
 		Глава ранобэ.
 			system_objects – коллекция системных объектов;\n

@@ -1,3 +1,4 @@
+from Source.Core.Base.Formats.Components.Structs import *
 from Source.Core.Exceptions import UnsupportedFormat
 from Source.Core.Timer import Timer
 
@@ -6,42 +7,14 @@ from dublib.Methods.Data import Zerotify
 
 from typing import Any, Iterable, TYPE_CHECKING
 from time import sleep
-import enum
 import os
 
 if TYPE_CHECKING:
-	from Source.Core.Base.Parser.BaseParser import BaseParser
+	from Source.Core.Base.Parsers.BaseParser import BaseParser
 	from Source.Core.SystemObjects import SystemObjects
 
 #==========================================================================================#
-# >>>>> ДОПОЛНИТЕЛЬНЫЕ СТРУКТУРЫ ДАННЫХ <<<<< #
-#==========================================================================================#
-
-class By(enum.Enum):
-	"""Типы идентификаторов описательных файлов."""
-	
-	Filename = None
-	Slug = "slug"
-	ID = "id"
-
-class ContentTypes(enum.Enum):
-	"""Перечисление типов контента."""
-
-	Anime = "anime"
-	Manga = "manga"
-	Ranobe = "ranobe"
-	Unknown = None
-	
-class Statuses(enum.Enum):
-	"""Определения статусов."""
-
-	announced = "announced"
-	ongoing = "ongoing"
-	completed = "completed"
-	dropped = "dropped"
-
-#==========================================================================================#
-# >>>>> БАЗОВЫЕ СТРУКТУРЫ ТАЙТЛОВ <<<<< #
+# >>>>> ВСПОМОГАТЕЛЬНЫЕ СТРУКТУРЫ ДАННЫХ <<<<< #
 #==========================================================================================#
 
 class Person:
@@ -251,14 +224,6 @@ class BaseChapter:
 		self._SetParagraphsMethod = self._Pass
 		self._SetSlidesMethod = self._Pass
 
-	def __getitem__(self, key: str) -> bool | int | list | str | None:
-		"""
-		Возвращает значение ключа из словаря данных главы. Не рекомендуется к использованию!
-			key – ключ данных.
-		"""
-
-		return self._Chapter[key]
-
 	def add_extra_data(self, key: str, value: Any):
 		"""
 		Добавляет дополнительные данные о главе.
@@ -280,11 +245,14 @@ class BaseChapter:
 
 	def remove_extra_data(self, key: str):
 		"""
-		Удаляет дополнительные данные о главе.
-			key – ключ для доступа.
+		Удаляет дополнительные данные главы.
+
+		:param key: Ключ, под которым хранятся дополнительные данные.
+		:type key: str
 		"""
 
-		del self._Chapter[key]
+		try: del self._Chapter[key]
+		except KeyError: pass
 
 	def set_dict(self, dictionary: dict):
 		"""
@@ -480,6 +448,10 @@ class BaseBranch:
 
 		return BranchList
 	
+#==========================================================================================#
+# >>>>> ОСНОВНОЙ КЛАСС <<<<< #
+#==========================================================================================#
+
 class BaseTitle:
 	"""Базовый тайтл."""
 
@@ -788,11 +760,9 @@ class BaseTitle:
 			system_objects – коллекция системных объектов.
 		"""
 
-		#---> Генерация динамических атрибутов.
-		#==========================================================================================#
 		self._SystemObjects = system_objects
 
-		self._ParserSettings = self._SystemObjects.manager.parser_settings
+		self._ParserSettings = self._SystemObjects.manager.current_parser_settings
 		self._Branches: list[BaseBranch] = list()
 		self._Persons: list[Person] = list()
 		self._UsedFilename = None
@@ -829,16 +799,6 @@ class BaseTitle:
 		}
 
 		self._PostInitMethod()
-
-	def __getitem__(self, key: str) -> Any:
-		"""Метод прямого получения данных тайтла."""
-		
-		return self._Title[key]
-
-	def __setitem__(self, key: str, value: Any):
-		"""Метод прямого добавления данных в тайтл."""
-
-		self._Title[key] = value
 
 	def amend(self):
 		"""Дополняет контент содержимым."""
@@ -889,12 +849,8 @@ class BaseTitle:
 		if selector_type == By.Filename:
 			Path = f"{Directory}/{identificator}.json"
 
-			if os.path.exists(Path): 
-				Data = self._SafeRead(f"{Directory}/{identificator}.json")
-
-			else:
-				self._SystemObjects.logger.error(f"Couldn't open file \"{Path}\".")
-				raise FileNotFoundError(f"{identificator}.json")
+			if os.path.exists(Path): Data = self._SafeRead(f"{Directory}/{identificator}.json")
+			else: raise FileNotFoundError(f"{identificator}.json")
 
 		if selector_type == By.Slug:
 		
@@ -994,7 +950,7 @@ class BaseTitle:
 			ElapsedTime = self._Timer.ends()
 			self._Timer = None
 			print(f"Done in {ElapsedTime}.")
-		
+			
 	def set_parser(self, parser: Any):
 		"""Задаёт парсер для вызова методов."""
 
@@ -1223,7 +1179,7 @@ class BaseTitle:
 
 		if status: self._Title["status"] = status.value
 		else: self._Title["status"] = None
-		
+	
 	def set_is_licensed(self, is_licensed: bool | None):
 		"""
 		Задаёт статус лицензирования манги.

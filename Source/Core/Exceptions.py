@@ -1,7 +1,7 @@
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
-	from Source.Core.Formats import BaseTitle
+	from Source.Core.Base.Formats.BaseFormat import BaseTitle
 
 #==========================================================================================#
 # >>>>> ИСКЛЮЧЕНИЯ ПАРСЕРОВ <<<<< #
@@ -111,9 +111,26 @@ class TempOwnerNotSpecified(Exception):
 	"""Исключение: владалец временного каталога не определён."""
 
 	def __init__(self):
-		"""Исключение: неразрешённый тег."""
+		"""Исключение: владалец временного каталога не определён."""
 
 		self.__Message = f"Parser or extension not specified for temper. Unable to load directory."
+		super().__init__(self.__Message) 
+			
+	def __str__(self):
+		return self.__Message
+	
+class BadManifest(Exception):
+	"""Исключение: неверное определение манифеста."""
+
+	def __init__(self, message: str):
+		"""
+		Исключение: неверное определение манифеста.
+
+		:param message: Сообщение об ошибке.
+		:type message: str
+		"""
+
+		self.__Message = message
 		super().__init__(self.__Message) 
 			
 	def __str__(self):

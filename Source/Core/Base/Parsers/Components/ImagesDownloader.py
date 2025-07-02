@@ -41,7 +41,7 @@ class ImagesDownloader:
 		self.__SystemObjects = system_objects
 		self.__Requestor = requestor
 
-		self.__ParserSettings = self.__SystemObjects.manager.parser_settings
+		self.__ParserSettings = self.__SystemObjects.manager.current_parser_settings
 
 	def is_exists(self, url: str, directory: Optional[PathLike] = None, filename: Optional[str] = None, is_full_filename: bool = True) -> bool:
 		"""
