@@ -13,7 +13,7 @@ Manifest = MappingProxyType({
 	"object": "parser",
 	"site": None,
 	"content_type": None,
-	"melon_version": None
+	"melon_required_version": None
 })
 
 class ParserManifest:
@@ -38,6 +38,12 @@ class ParserManifest:
 		except (TypeError, IndexError): pass
 		
 		return LatestTag
+
+	@property
+	def melon_required_version(self) -> str | None:
+		"""Требуемая версия Melon."""
+		
+		return self.__Data["melon_required_version"]
 
 	@property
 	def name(self) -> str:

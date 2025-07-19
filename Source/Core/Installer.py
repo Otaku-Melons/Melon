@@ -1,5 +1,5 @@
 from dublib.Methods.Filesystem import ListDir
-from dublib.CLI.TextStyler import TextStyler
+from dublib.CLI.TextStyler.FastStyler import FastStyler
 from dublib.Engine.Patcher import Patch
 
 from typing import TYPE_CHECKING
@@ -45,8 +45,8 @@ class Installer:
 		:type extension: str | None
 		"""
 
-		Title = f"Parser: " + TextStyler(parser).decorate.bold + "."
-		if extension: Title += f" Extension: " + TextStyler(extension).decorate.bold + "."
+		Title = f"Parser: " + FastStyler(parser).decorate.bold + "."
+		if extension: Title += f" Extension: " + FastStyler(extension).decorate.bold + "."
 
 		OriginalPath = f"Parsers/{parser}/settings.json" if not extension else f"Parsers/{parser}/extensions/{extension}/settings.json"
 		ConfigsPath = f"Configs/{parser}/settings.json" if not extension else f"Configs/{parser}/extensions/{extension}.json"
@@ -115,9 +115,9 @@ class Installer:
 			Path = f"Parsers/{Parser}"
 			Manifest = self.__SystemObjects.manager.get_parser_manifest(Parser)
 
-			if Manifest.latest_git_tag:
-				porcelain.checkout(Path, Manifest.version, force = self.__SystemObjects.FORCE_MODE)
-				self.__Logger.info(f"Parser \"{Parser}\" rebased to {Manifest.version}.")
+			if Manifest.version:
+				porcelain.checkout(Path, Manifest.latest_git_tag, force = self.__SystemObjects.FORCE_MODE)
+				self.__Logger.info(f"Parser \"{Parser}\" rebased to {Manifest.version} version.")
 				
 			else: self.__Logger.warning(f"No release tag found for \"{Parser}\" parser.")
 
@@ -128,7 +128,7 @@ class Installer:
 
 		for Parser in self.__SystemObjects.manager.parsers_names:
 			Path = f"Parsers/{Parser}/requirements.txt"
-			ParserBold = TextStyler(Parser).decorate.bold
+			ParserBold = FastStyler(Parser).decorate.bold
 
 			if os.path.exists(Path):
 				self.__Logger.info(f"Installing requirements for {ParserBold}...", stdout = True)
@@ -147,7 +147,7 @@ class Installer:
 
 		for Parser in self.__SystemObjects.manager.parsers_names:
 			Path = f"Parsers/{Parser}/install." + ScriptTypes[sys.platform]
-			ParserBold = TextStyler(Parser).decorate.bold
+			ParserBold = FastStyler(Parser).decorate.bold
 
 			if os.path.exists(Path):
 				print(f"Running script for {ParserBold}...")

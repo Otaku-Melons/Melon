@@ -1,7 +1,7 @@
 from Source.Core.Base.Parsers.Components import ParserSettings, ParserManifest
 
 from dublib.Methods.Filesystem import ReadJSON, ListDir
-from dublib.CLI.TextStyler import TextStyler
+from dublib.CLI.TextStyler.FastStyler import FastStyler
 
 from typing import TYPE_CHECKING
 import importlib
@@ -105,8 +105,8 @@ class Manager:
 		Module = importlib.import_module(f"Parsers.{parser}.extensions.{parser}-{extension}.main")
 		Extension = Module.Extension(self.__SystemObjects)
 
-		ParserName = TextStyler(parser).decorate.bold
-		ExtensionName = TextStyler(extension).decorate.bold
+		ParserName = FastStyler(parser).decorate.bold
+		ExtensionName = FastStyler(extension).decorate.bold
 		self.__SystemObjects.logger.info(f"Parser: {ParserName} (version {self.parser_version}).", stdout = True)
 		self.__SystemObjects.logger.info(f"Running extension: {ExtensionName}...", stdout = True)
 
@@ -126,12 +126,16 @@ class Manager:
 		Module = importlib.import_module(f"Parsers.{parser}.main")
 		Parser = Module.Parser(self.__SystemObjects)
 
-		ParserName = TextStyler(parser).decorate.bold
-		Version = self.get_parser_manifest(parser).version
+		ParserName = FastStyler(parser).decorate.bold
+		Manifest = self.get_parser_manifest(parser)
+		Version = Manifest.version
 		if Version: Version = f" (version {Version})"
 		else: Version = ""
 		Text = f"Parser: {ParserName}{Version}."
 		self.__SystemObjects.logger.info(Text)
+		
+		if all((self.__SystemObjects.MELON_VERSION, Manifest.melon_required_version)) and Manifest.melon_required_version != self.__SystemObjects.MELON_VERSION:
+			self.__SystemObjects.logger.warning(f"Melon required version: {Manifest.melon_required_version}.")
 
 		return Parser
 

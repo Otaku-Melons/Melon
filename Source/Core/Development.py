@@ -4,7 +4,7 @@ from Source.Core.Base.Formats.Components.Structs import ContentTypes
 from Source.Core.Timer import Timer
 
 from dublib.Methods.Filesystem import WriteJSON
-from dublib.CLI.TextStyler import TextStyler
+from dublib.CLI.TextStyler.FastStyler import FastStyler
 from dublib.Engine.Patcher import Patch
 
 import shutil
@@ -77,7 +77,7 @@ class DevelopmeptAssistant:
 			Filename = files[File] if files[File] else File
 			Path = f"{path}/{Filename}"
 			shutil.copy(OriginalPath, Path)
-			print("File " + TextStyler(Filename).decorate.italic + " installed.")
+			print("File " + FastStyler(Filename).decorate.italic + " installed.")
 
 	#==========================================================================================#
 	# >>>>> ПУБЛИЧНЫЕ МЕТОДЫ <<<<< #
@@ -107,7 +107,7 @@ class DevelopmeptAssistant:
 		Parser = name.split(".")[0]
 
 		Path = f"Parsers/{Parser}/extensions/{name}"
-		BoldName = TextStyler(name).decorate.bold
+		BoldName = FastStyler(name).decorate.bold
 		self.__Logger.info(f"Initializing extension {BoldName}...", stdout = True)
 		os.makedirs(Path)
 		
@@ -120,7 +120,7 @@ class DevelopmeptAssistant:
 			}
 			self.__IntallFiles(Files, Path)
 			WriteJSON(f"{Path}/settings.json", dict())
-			print("File " + TextStyler("settings.json").decorate.italic + " installed.")
+			print("File " + FastStyler("settings.json").decorate.italic + " installed.")
 			self.__InsertModuleName(Path, "README.md", name)
 
 		except Exception as ExceptionData: 
@@ -138,7 +138,7 @@ class DevelopmeptAssistant:
 
 		TimerObject = Timer(start = True)
 		Path = f"Parsers/{name}"
-		BoldName = TextStyler(name).decorate.bold
+		BoldName = FastStyler(name).decorate.bold
 		self.__Logger.info(f"Initializing parser {BoldName}...", stdout = True)
 
 		if os.path.exists(Path):
@@ -156,7 +156,7 @@ class DevelopmeptAssistant:
 			}
 			self.__IntallFiles(Files, Path)
 			WriteJSON(f"{Path}/settings.json", Settings)
-			print("File " + TextStyler("settings.json").decorate.italic + " installed.")
+			print("File " + FastStyler("settings.json").decorate.italic + " installed.")
 			self.__InsertModuleName(Path, ("main.py", "README.md"), name)
 
 		except Exception as ExceptionData: 

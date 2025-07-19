@@ -2,6 +2,8 @@ from Source.Core.SystemObjects.Manager import Manager
 from Source.Core.SystemObjects.Logger import Logger
 from Source.Core.SystemObjects.Temper import Temper
 
+from dulwich.contrib.release_robot import get_current_version
+
 #==========================================================================================#
 # >>>>> ВСПОМОГАТЕЛЬНЫЕ СТРУКТУРЫ ДАННЫХ <<<<< #
 #==========================================================================================#
@@ -73,9 +75,18 @@ class SystemObjects:
 		"""Глоабльный флаг: активирован ли Live-режим."""
 
 		return self.__LiveMode
+	
+	@property
+	def MELON_VERSION(self) -> str | None:
+		"""Используемая версия Melon."""
+
+		Version = None
+		try: Version = get_current_version()
+		except TypeError: pass
+
+		return Version
 
 	EXIT_CODE = 0
-	VERSION = "0.6.0-alpha"
 
 	#==========================================================================================#
 	# >>>>> СВОЙСТВА <<<<< #

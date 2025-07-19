@@ -1,6 +1,6 @@
 from dublib.CLI.Terminalyzer import Command, ParsedCommandData, Terminalyzer
+from dublib.CLI.TextStyler import FastStyler, GetStyledTextFromHTML
 from dublib.Methods.Filesystem import ReadTextFile, WriteTextFile
-from dublib.CLI.TextStyler import Styles, TextStyler
 
 import shlex
 import enum
@@ -118,16 +118,8 @@ class Operation:
 	def print(self):
 		"""Выводит операцию в консоль."""
 
-		print(TextStyler("name: ", decorations = [Styles.Decorations.Bold]).text, end = "")
-		TextStyler(self.name, decorations = [Styles.Decorations.Italic]).print()
-		print(TextStyler("type: ", decorations = [Styles.Decorations.Bold]).text, end = "")
-		print(self.type.value)
-		print(TextStyler("delete: ", decorations = [Styles.Decorations.Bold]).text, end = "")
-		if self.is_deleted: TextStyler("true", text_color = Styles.Colors.Red).print()
-		else: TextStyler("false", text_color = Styles.Colors.Green).print()
-		print(TextStyler("rule: ", decorations = [Styles.Decorations.Bold]).text, end = "")
-		if self.rule: TextStyler("true", text_color = Styles.Colors.Green).print()
-		else: TextStyler("false", text_color = Styles.Colors.Red).print()
+		Data = self.to_dict()
+		for Key in Data.keys(): print(GetStyledTextFromHTML(f"<b>{Key}:</b>"), Data[Key])
 
 	def rename(self, text: str):
 		"""Переименовывает классификатор."""

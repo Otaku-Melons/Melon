@@ -1,5 +1,5 @@
 from dublib.CLI.Terminalyzer import Command, ParametersTypes
-from dublib.CLI.TextStyler import TextStyler
+from dublib.CLI.TextStyler.FastStyler import FastStyler
 
 CommandsList: list[Command] = list()
 
@@ -20,7 +20,7 @@ Com.base.add_key("vol-template", description = "Template for volumes naming. Ava
 Com.base.add_flag("v", description = "Enable chapters sorting by volumes directories.")
 CommandsList.append(Com)
 
-CollectionFileBold = TextStyler("Collection.txt").decorate.italic
+CollectionFileBold = FastStyler("Collection.txt").decorate.italic
 Com = Command("collect", f"Collect titles slugs into {CollectionFileBold} file.")
 ComPos = Com.create_position("PARSER", "Name of parser.", important = True)
 ComPos.add_key("use", ParametersTypes.Text, "Parser name.")
@@ -62,6 +62,7 @@ Com.base.add_flag("all", "Full installation.")
 Com.base.add_flag("r", "Install parsers requirements (only Python packages).")
 Com.base.add_flag("s", "Running parsers installation scripts.")
 Com.base.add_flag("t", "Switch parsers submodules to the latest stable tag.")
+Com.base.add_flag("f", "Enable force mode.")
 CommandsList.append(Com)
 
 Com = Command("list", "Print list of installed parsers.")

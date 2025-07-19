@@ -22,7 +22,6 @@ Objects = SystemObjects()
 Analyzer.helper.enable()
 CommandDataStruct = Analyzer.check_commands(CommandsList)
 
-Objects.logger.header("Starting")
 Objects.logger.info(f"Running with Python {sys.version_info.major}.{sys.version_info.minor}.{sys.version_info.micro} on {sys.platform}.", stdout = False)
 Objects.logger.info("Command: \"" + " ".join(sys.argv[1:len(sys.argv)]) + "\".", stdout = False)
 
@@ -47,6 +46,8 @@ try:
 	Objects.logger.select_cli_point(CommandDataStruct.name)
 	if CommandDataStruct.check_key("use"): Objects.select_parser(CommandDataStruct.get_key_value("use"))
 	CommandName = CommandDataStruct.name.replace("-", "_")
+
+	Commands
 	exec(f"Commands.com_{CommandName}(Objects, CommandDataStruct)")
 	
 except KeyboardInterrupt: pass
@@ -55,5 +56,6 @@ except KeyboardInterrupt: pass
 # >>>>> ЗАВЕРШЕНИЕ РАБОТЫ <<<<< #
 #==========================================================================================#
 
+if not Objects.LIVE_MODE: Objects.logger.header("End")
 Objects.logger.close()
 exit(Objects.EXIT_CODE)
