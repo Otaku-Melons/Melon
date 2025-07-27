@@ -215,7 +215,7 @@ class Manager:
 
 		parser = self.__CheckParser(parser)
 		if cache and self.__ParserManifest and parser == self.__SystemObjects.parser_name: return self.__ParserManifest
-		self.__ParserManifest = ParserManifest(parser)
+		self.__ParserManifest = ParserManifest(self.__SystemObjects, parser)
 
 		return self.__ParserManifest
 

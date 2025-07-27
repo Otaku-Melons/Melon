@@ -209,8 +209,6 @@ class BaseChapter:
 	def __init__(self):
 		"""Базовая глава."""
 
-		#---> Генерация динамических атрибутов.
-		#==========================================================================================#
 		self._Chapter = {
 			"id": None,
 			"slug": None,
@@ -223,6 +221,19 @@ class BaseChapter:
 
 		self._SetParagraphsMethod = self._Pass
 		self._SetSlidesMethod = self._Pass
+
+	def __getitem__(self, key: str) -> Any:
+		"""
+		Возвращает значение из внутреннего словаря.
+
+		:param key: Ключ.
+		:type key: str
+		:raise KeyError: Выбрасывается при отсутствии ключа в данных главы.
+		:return: Значение.
+		:rtype: Any
+		"""
+
+		return self._Chapter[key]
 
 	def add_extra_data(self, key: str, value: Any):
 		"""
