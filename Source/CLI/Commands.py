@@ -76,9 +76,9 @@ def com_collect(system_objects: SystemObjects, command: ParsedCommandData):
 	Sort = command.check_flag("sort")
 	Period = int(command.get_key_value("period")) if command.check_key("period") else None
 
-	Title = system_objects.manager.get_parser_content_struct()
+	Title = system_objects.manager.current_parser_manifest.content_struct
 	Title = Title(system_objects)
-	Parser: BaseParser = system_objects.manager.launch()
+	Parser: BaseParser = system_objects.manager.launch_parser()
 	CollectedTitlesCount = 0
 	Collection = list()
 	CollectorObject = Collector(system_objects, merge = system_objects.FORCE_MODE.status)

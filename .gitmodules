@@ -10,3 +10,6 @@
 [submodule "Parsers/ifreedom"]
 	path = Parsers/ifreedom
 	url = https://github.com/Otaku-Melons/ifreedom.git
+[submodule "Parsers/desu"]
+	path = Parsers/desu
+	url = https://github.com/otaku-melons/desu.git
