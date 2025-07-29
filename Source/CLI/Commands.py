@@ -365,6 +365,7 @@ def com_repair(system_objects: SystemObjects, command: ParsedCommandData):
 		Title.set_parser(Parser)
 		Title.open(Filename)
 		Title.parse()
+		Title.merge()
 		Title.repair(ChapterID)
 		Title.save(end_timer = True)
 
@@ -385,6 +386,7 @@ def com_run(system_objects: SystemObjects, command: ParsedCommandData):
 
 	ExtensionFullName: str = command.get_key_value("extension", exception = True)
 	ParserName, ExtensionName = ExtensionFullName.split("-")
+	system_objects.select_parser(ParserName)
 	system_objects.select_extension(ExtensionName)
 	ExtensionCommand = command.get_key_value("command")
 

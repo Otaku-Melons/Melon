@@ -6,7 +6,11 @@ from dublib.CLI.Terminalyzer import Command, ParsedCommandData, Terminalyzer
 from dublib.WebRequestor import Protocols, WebConfig, WebLibs, WebRequestor
 from dublib.Engine.Bus import ExecutionStatus
 
+from typing import TYPE_CHECKING
 import shlex
+
+if TYPE_CHECKING:
+	from Source.Core.Base.Parsers.BaseParser import BaseParser
 
 #==========================================================================================#
 # >>>>> ОПРЕДЕЛЕНИЯ <<<<< #
@@ -79,26 +83,15 @@ class BaseExtension:
 
 		return CommandsList
 
-	def _InitializeRequestor(self) -> WebRequestor:
-		"""Инициализирует модуль WEB-запросов."""
+	def _InitializeRequestor(self) -> WebRequestor | None:
+		"""
+		Инициализирует оператор WEB-запросов.
 
-		Config = WebConfig()
-		Config.select_lib(WebLibs.requests)
-		Config.set_retries_count(2)
-		Config.generate_user_agent()
-		Config.add_header("Referer", f"https://{self._SystemObjects.manager.parser_site}/")
-		Config.requests.enable_proxy_protocol_switching(True)
-		WebRequestorObject = WebRequestor(Config)
-		
-		if self._ParserSettings.proxy.enable: WebRequestorObject.add_proxy(
-			Protocols.HTTPS,
-			host = self._ParserSettings.proxy.host,
-			port = self._ParserSettings.proxy.port,
-			login = self._ParserSettings.proxy.login,
-			password = self._ParserSettings.proxy.password
-		)
+		:return: Оператор запросов или `None` для использования стандартного запросчика из парсера.
+		:rtype: WebRequestor | None
+		"""
 
-		return WebRequestorObject
+		pass
 
 	def _PostInitMethod(self):
 		"""Метод, выполняющийся после инициализации объекта."""
@@ -117,21 +110,28 @@ class BaseExtension:
 	# >>>>> ПУБЛИЧНЫЕ МЕТОДЫ <<<<< #
 	#==========================================================================================#
 
-	def __init__(self, system_objects: SystemObjects):
+	def __init__(self, system_objects: SystemObjects, parser: "BaseParser"):
 		"""
 		Базовое расширение.
-			system_objects – коллекция системных объектов.
+
+		:param system_objects: Коллекция системных объектов.
+		:type system_objects: SystemObjects
+		:param parser: Парсер.
+		:type parser: BaseParser
 		"""
 
-		#---> Генерация динамических атрибутов.
-		#==========================================================================================#
 		self._SystemObjects = system_objects
-
+		self._Parser = parser
+		
 		self._Temper = self._SystemObjects.temper
 		self._Portals = self._SystemObjects.logger.portals
-		self._ParserSettings = self._SystemObjects.manager.get_parser_settings()
-		self._Settings = self._SystemObjects.manager.get_extension_settings()
-		self._Requestor: WebRequestor = self._InitializeRequestor()
+		self._ParserSettings = self._Parser.settings
+		self._Manifest = self._Parser.manifest
+		self._Settings = self._SystemObjects.manager.current_extension_settings
+		self._Requestor = self._Parser.requestor
+
+		BufferedRequestor = self._InitializeRequestor()
+		if BufferedRequestor: self._Requestor = BufferedRequestor
 
 		self._PostInitMethod()
 

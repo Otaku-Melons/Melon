@@ -103,11 +103,12 @@ class Manager:
 
 		parser = self.__CheckParser(parser)
 		Module = importlib.import_module(f"Parsers.{parser}.extensions.{parser}-{extension}.main")
-		Extension = Module.Extension(self.__SystemObjects)
+		Parser = self.launch_parser(parser)
+		Extension = Module.Extension(self.__SystemObjects, Parser)
 
 		ParserName = FastStyler(parser).decorate.bold
 		ExtensionName = FastStyler(extension).decorate.bold
-		self.__SystemObjects.logger.info(f"Parser: {ParserName} (version {self.parser_version}).", stdout = True)
+		self.__SystemObjects.logger.info(f"Parser: {ParserName} (version {self.current_parser_manifest.version}).", stdout = True)
 		self.__SystemObjects.logger.info(f"Running extension: {ExtensionName}...", stdout = True)
 
 		return Extension

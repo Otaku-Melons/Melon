@@ -811,6 +811,30 @@ class BaseTitle:
 
 		self._PostInitMethod()
 
+	def __getitem__(self, key: str) -> Any:
+		"""
+		Возвращает значение из внутреннего словаря.
+
+		:param key: Ключ.
+		:type key: str
+		:return: Значение.
+		:rtype: Any
+		"""
+
+		return self._Title[key]
+	
+	def __setitem__(self, key: str, value: Any):
+		"""
+		Задаёт значение для внутреннего словаря.
+
+		:param key: Ключ.
+		:type key: str
+		:param value: Значение.
+		:type value: Any
+		"""
+
+		self._Title[key] = value
+
 	def amend(self):
 		"""Дополняет контент содержимым."""
 
@@ -849,7 +873,7 @@ class BaseTitle:
 		:type identificator: int | str
 		:param selector_type: Режим поиска файла. По умолчанию `By.Filename` – идентификатор соответствует имени файла без расширения.
 		:type selector_type: By
-		:raises FileNotFoundError: Не удалось найти файл с указанным именем. Выбрасывается только при идентификации через `By.Filename`.
+		:raises FileNotFoundError: Не удалось найти файл с указанным именем.
 		:raises JSONDecodeError: Ошибка десериализации JSON.
 		:raises UnsupportedFormat: Неподдерживаемый формат JSON.
 		"""
@@ -859,9 +883,7 @@ class BaseTitle:
 
 		if selector_type == By.Filename:
 			Path = f"{Directory}/{identificator}.json"
-
 			if os.path.exists(Path): Data = self._SafeRead(f"{Directory}/{identificator}.json")
-			else: raise FileNotFoundError(f"{identificator}.json")
 
 		if selector_type == By.Slug:
 		
@@ -891,9 +913,9 @@ class BaseTitle:
 							break
 
 		if selector_type == By.ID:
-
+			
 			if self._ParserSettings.common.use_id_as_filename:
-				
+				Path = f"{Directory}/{identificator}.json"
 				if os.path.exists(Path): Data = self._SafeRead(f"{Directory}/{identificator}.json")
 
 			elif self._SystemObjects.CACHING_ENABLED:
@@ -921,6 +943,8 @@ class BaseTitle:
 			self._Title = Data
 			if self._SystemObjects.CACHING_ENABLED: self._SystemObjects.temper.shared_data.journal.update(self.id, self.slug)
 			self._UsedFilename = str(self.id) if self._ParserSettings.common.use_id_as_filename else self.slug
+
+		else: raise FileNotFoundError()
 
 		self._ParseBranchesToObjects()
 
