@@ -13,3 +13,6 @@
 [submodule "Parsers/desu"]
 	path = Parsers/desu
 	url = https://github.com/otaku-melons/desu.git
+[submodule "Parsers/ranobes"]
+	path = Parsers/ranobes
+	url = https://github.com/otaku-melons/ranobes.git

@@ -320,7 +320,11 @@ def com_parse(system_objects: SystemObjects, command: ParsedCommandData):
 		Title.set_parser(Parser)
 
 		try:
-			if not system_objects.FORCE_MODE: Title.open(Slugs[Index], By.Slug)
+
+			if not system_objects.FORCE_MODE: 
+				try: Title.open(Slugs[Index], By.Slug)
+				except FileNotFoundError: pass
+				
 			Title.parse(Index, TotalCount)
 			Title.merge()
 			Title.amend()

@@ -957,8 +957,9 @@ class BaseTitle:
 
 		self._Timer = Timer()
 		self._Timer.start()
-
 		self._SystemObjects.logger.parsing_start(self, index, titles_count)
+
+		self.set_site(self._Parser.manifest.site)
 		self._Parser.parse()
 		self._UsedFilename = str(self.id) if self._ParserSettings.common.use_id_as_filename else self.slug
 
@@ -1031,7 +1032,7 @@ class BaseTitle:
 			del CoverInfo["width"]
 			del CoverInfo["height"]
 
-		self._Title["covers"].append(CoverInfo)
+		if link not in tuple(CoverData["link"] for CoverData in self.covers): self._Title["covers"].append(CoverInfo)
 
 	def add_author(self, author: str):
 		"""
@@ -1158,19 +1159,23 @@ class BaseTitle:
 
 	def set_publication_year(self, publication_year: int | None):
 		"""
-		Задаёт год публикации манги.
-			publication_year – год.
+		Задаёт год публикации тайтла.
+
+		:param publication_year: Год публикации.
+		:type publication_year: int | None
 		"""
 
-		self._Title["publication_year"] = publication_year
+		self._Title["publication_year"] = int(publication_year)
 
 	def set_description(self, description: str | None):
 		"""
-		Задаёт описание манги.
-			description – описание.
+		Задаёт описание тайтла.
+
+		:param description: Описание тайтла.
+		:type description: str | None
 		"""
 
-		self._Title["description"] = Zerotify(description)
+		self._Title["description"] = Zerotify(description) if not description else description.strip()
 
 	def set_age_limit(self, age_limit: int | None):
 		"""

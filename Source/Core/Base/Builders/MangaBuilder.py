@@ -9,7 +9,7 @@ import os
 
 if TYPE_CHECKING:
 	from Source.Core.Base.Parsers.MangaParser import MangaParser
-	from Source.Core.Formats.Manga import Branch, Chapter, Manga
+	from Source.Core.Base.Formats.Manga import Branch, Chapter, Manga
 
 #==========================================================================================#
 # >>>>> ВСПОМОГАТЕЛЬНЫЕ СТРУКТУРЫ ДАННЫХ <<<<< #

@@ -1,17 +1,6 @@
-from Source.Core.Formats.Manga import Branch, Chapter, Manga, Statuses, Types
+from Source.Core.Base.Formats.Manga import Branch, Chapter, Manga, Types
 from Source.Core.Base.Parsers.MangaParser import MangaParser
-
-#==========================================================================================#
-# >>>>> ОПРЕДЕЛЕНИЯ <<<<< #
-#==========================================================================================#
-
-NAME = None
-SITE = None
-TYPE = Manga
-
-#==========================================================================================#
-# >>>>> ОСНОВНОЙ КЛАСС <<<<< #
-#==========================================================================================#
+from Source.Core.Base.Formats.BaseFormat import Statuses
 
 class Parser(MangaParser):
 	"""Парсер."""
@@ -32,8 +21,11 @@ class Parser(MangaParser):
 	def amend(self, branch: Branch, chapter: Chapter):
 		"""
 		Дополняет главу дайными о слайдах.
-			branch – данные ветви;\n
-			chapter – данные главы.
+
+		:param branch: Данные ветви.
+		:type branch: Branch
+		:param chapter: Данные главы.
+		:type chapter: Chapter
 		"""
 
 		pass

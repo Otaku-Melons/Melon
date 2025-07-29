@@ -1,6 +1,6 @@
-from Source.Core.SystemObjects import SystemObjects
-from Source.Core.Base.Parsers.Components.Settings import Settings
 from Source.Core.Base.Formats.Components.Structs import ContentTypes
+from Source.Core.Base.Parsers.Components.Settings import Settings
+from Source.Core.SystemObjects import SystemObjects
 from Source.Core.Timer import Timer
 
 from dublib.Methods.Filesystem import WriteJSON
@@ -155,7 +155,7 @@ class DevelopmeptAssistant:
 				f"{type.value}.py": "main.py"
 			}
 			self.__IntallFiles(Files, Path)
-			WriteJSON(f"{Path}/settings.json", Settings)
+			WriteJSON(f"{Path}/settings.json", Settings.copy())
 			print("File " + FastStyler("settings.json").decorate.italic + " installed.")
 			self.__InsertModuleName(Path, ("main.py", "README.md"), name)
 

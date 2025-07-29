@@ -82,17 +82,20 @@ class Chapter(BaseChapter):
 				Filename = Link.split("/")[-1]
 				Result = None
 
+				Directory = f"{Parser.settings.common.images_directory}/{self.__Title.used_filename}/illustrations/{self.id}"
+				ImageTagSource = Path(f"{Directory}/{Filename}")
+				ImageTagSource = Path(*ImageTagSource.parts[1:]).as_posix()
+				if ImageTagSource == Link: continue
+
 				print(f"Downloading image: \"{Filename}\"... ", end = "")
 				Status = Parser.image(Link)
+				if Status.has_errors: continue
 				if not Status["exists"]: sleep(Parser.settings.common.delay)
 				Filename = Status.value
-				Directory = f"{Parser.settings.common.images_directory}/{self.__Title.used_filename}/illustrations/{self.id}"
 
 				if Filename: 
 					TempPath = f"{self._SystemObjects.temper.parser_temp}/{Filename}"
-					ImageTagSource = Path(f"{Directory}/{Filename}")
-					ImageTagSource = Path(*ImageTagSource.parts[1:])
-					Image.attrs = {"src": ImageTagSource.as_posix()}
+					Image.attrs = {"src": ImageTagSource}
 
 					if Parser.settings.filters.image.check_hash(TempPath):
 						Message = "Filtered by MD5 hash."
@@ -102,12 +105,12 @@ class Chapter(BaseChapter):
 					else:
 						if not os.path.exists(Directory): os.makedirs(Directory)
 						Result = Parser.images_downloader.move_from_temp(Directory, Filename)
-						if Result["exists"]: Message = "Already exists."
-						else: Message = "Error."
 
-				else: Message = "Error."
+						if Result.value and Result["exists"]:
+							if self._SystemObjects.FORCE_MODE: Message = "Overwritten."
+							else: Message = "Already exists."
 
-				print(Message)
+					print(Message)
 
 			else: 
 				self._SystemObjects.logger.warning("Image decomposed because has not source.")
@@ -287,15 +290,15 @@ class Chapter(BaseChapter):
 			InnerHTML = Tag.decode_contents().strip()
 			if Tag.has_attr("align"): Align = " align=\"" + Tag["align"] + "\""
 			InnerHTML = HTML(InnerHTML)
-			InnerHTML.remove_tags(["br"])
+			InnerHTML.remove_tags(["br", "ol", "ul"])
 			InnerHTML.replace_tag("em", "i")
 			InnerHTML.replace_tag("strong", "b")
 			InnerHTML.replace_tag("strike", "s")
 			InnerHTML.replace_tag("del", "s")
+			InnerHTML.replace_tag("li", "p")
 			InnerHTML.unescape()
 			Tag = BeautifulSoup(f"<p{Align}>{InnerHTML.text}</p>", "html.parser")
-			# input(self.__MergeSimilarTags(BeautifulSoup("<p><i>начало</i>  	<i>конец</i><b>текста</b><i>123</i></p>", "html.parser"), "i"))
-			# for TagName in ("i", "b", "s"): Tag = self.__MergeSimilarTags(Tag, TagName)
+
 			Tag = self.__UnwrapTags(Tag)
 			self.__ValidateHTML(Tag)
 

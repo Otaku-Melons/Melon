@@ -1,18 +1,6 @@
-from Source.Core.Formats.Ranobe import Branch, Chapter, ChaptersTypes, Ranobe, Statuses
+from Source.Core.Base.Formats.Ranobe import Branch, Chapter, ChaptersTypes, Ranobe
 from Source.Core.Base.Parsers.RanobeParser import RanobeParser
-
-#==========================================================================================#
-# >>>>> ОПРЕДЕЛЕНИЯ <<<<< #
-#==========================================================================================#
-
-VERSION = None
-NAME = None
-SITE = None
-TYPE = Ranobe
-
-#==========================================================================================#
-# >>>>> ОСНОВНОЙ КЛАСС <<<<< #
-#==========================================================================================#
+from Source.Core.Base.Formats.BaseFormat import Statuses
 
 class Parser(RanobeParser):
 	"""Парсер."""
@@ -29,17 +17,18 @@ class Parser(RanobeParser):
 	#==========================================================================================#
 	# >>>>> ПУБЛИЧНЫЕ МЕТОДЫ <<<<< #
 	#==========================================================================================#
-	
+
 	def amend(self, branch: Branch, chapter: Chapter):
 		"""
 		Дополняет главу дайными о слайдах.
-			branch – данные ветви;\n
-			chapter – данные главы.
+
+		:param branch: Данные ветви.
+		:type branch: Branch
+		:param chapter: Данные главы.
+		:type chapter: Chapter
 		"""
 
 		pass
 	
 	def parse(self):
 		"""Получает основные данные тайтла."""
-
-		pass
