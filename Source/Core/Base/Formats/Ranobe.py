@@ -9,6 +9,7 @@ from bs4 import BeautifulSoup
 from time import sleep
 
 from typing import TYPE_CHECKING
+from pathlib import Path
 import enum
 import os
 
@@ -58,60 +59,61 @@ class Chapter(BaseChapter):
 	# >>>>> ПРИВАТНЫЕ МЕТОДЫ <<<<< #
 	#==========================================================================================#
 
-	def __DownloadImages(self, paragraph: str):
+	def __DownloadImages(self, paragraph: str) -> str:
 		"""
 		Скачивает иллюстрации из абзаца.
 
 		:param paragraph: Абзац текста.
 		:type paragraph: str
+		:return: Параграф с заменённым путями изображений в тегах `img`.
+		:rtype: str
 		"""
 
 		Parser = self.__Title.parser
-		Images = BeautifulSoup(paragraph, "lxml").find_all("img")
+		Soup = BeautifulSoup(paragraph, "html.parser")
+		Images = Soup.find_all("img")
 		
 		for Image in Images:
 			Image: BeautifulSoup
 			Message = "Done."
 			
 			if Image.has_attr("src"):
-				Image.attrs = {"src": Image["src"]}
 				Link = Image["src"]
 				Filename = Link.split("/")[-1]
 				Result = None
 
 				print(f"Downloading image: \"{Filename}\"... ", end = "")
-				
-				Filename = Parser.image(Link)
-				sleep(Parser.settings.common.delay)
-
-				Directory = f"{Parser.settings.ranobe.images_directory}/{self.__Title.used_filename}/{self.id}"
+				Status = Parser.image(Link)
+				if not Status["exists"]: sleep(Parser.settings.common.delay)
+				Filename = Status.value
+				Directory = f"{Parser.settings.common.images_directory}/{self.__Title.used_filename}/illustrations/{self.id}"
 
 				if Filename: 
-					Path = f"{self._SystemObjects.temper.parser_temp}/{Filename}"
+					TempPath = f"{self._SystemObjects.temper.parser_temp}/{Filename}"
+					ImageTagSource = Path(f"{Directory}/{Filename}")
+					ImageTagSource = Path(*ImageTagSource.parts[1:])
+					Image.attrs = {"src": ImageTagSource.as_posix()}
 
-					if Parser.settings.filters.image.check_hash(Path):
+					if Parser.settings.filters.image.check_hash(TempPath):
 						Message = "Filtered by MD5 hash."
 						Image.decompose()
-						os.remove(Path)
+						os.remove(TempPath)
 
 					else:
 						if not os.path.exists(Directory): os.makedirs(Directory)
-						Result = ImagesDownloader(self._SystemObjects).move_from_temp(Directory, Filename)
-
-						if Result: Image["src"] = f"{Directory}/{Filename}"
+						Result = Parser.images_downloader.move_from_temp(Directory, Filename)
+						if Result["exists"]: Message = "Already exists."
 						else: Message = "Error."
 
-				else:
-					Message = "Error."
-					
-
-				if Message != "Done." and Parser.settings.common.bad_image_stub:
-					Image["src"] = Parser.settings.common.bad_image_stub
-					Message += " Replaced by stub."
+				else: Message = "Error."
 
 				print(Message)
 
-			else: Image.decompose()
+			else: 
+				self._SystemObjects.logger.warning("Image decomposed because has not source.")
+				Image.decompose()
+
+		return str(Soup)
 
 	def __GetLocalizedChapterWord(self) -> str | None:
 		"""Возвращает слово в нижнем регистре, обозначающее главу."""
@@ -211,10 +213,14 @@ class Chapter(BaseChapter):
 				if exceptions: raise UnresolvedTag(Tag)
 
 			else:
+				Attributes = Tag.attrs.copy()
+
 				for Attribute in Tag.attrs:
 					if Attribute not in self.__AllowedTags[Tag.name]:
-						del Tag[Attribute]
+						del Attributes[Attribute]
 						self._SystemObjects.logger.warning(f"Unresolved attribute \"{Attribute}\" in \"{Tag.name}\" tag. Removed.")
+
+				Tag.attrs = Attributes
 
 		return paragraph
 
@@ -229,8 +235,6 @@ class Chapter(BaseChapter):
 			title – данные тайтла.
 		"""
 
-		#---> Генерация динамических атрибутов.
-		#==========================================================================================#
 		self._SystemObjects = system_objects
 		self.__Title = title
 
@@ -245,18 +249,18 @@ class Chapter(BaseChapter):
 			"workers": [],
 			"paragraphs": []	
 		}
-		self._ParserSettings = system_objects.manager.parser_settings
+		self._ParserSettings = system_objects.manager.current_parser_settings
 
 		self.__AllowedTags = {
-			"p": ("align"),
+			"p": ("align",),
 			"b": (),
 			"i": (),
 			"s": (),
 			"u": (),
 			"sup": (),
 			"sub": (),
-			"img": ("src"),
-			"blockquote": ("data-name")
+			"img": ("src",),
+			"blockquote": ("data-name",)
 		}
 
 		self._SetParagraphsMethod = self.set_paragraphs
@@ -274,10 +278,9 @@ class Chapter(BaseChapter):
 		if not paragraph.startswith("<p"): paragraph = f"<p>{paragraph}</p>"
 		
 		if self._ParserSettings.common.pretty:
-
 			Tag = BeautifulSoup(paragraph, "html.parser").find("p")
-			if not Tag.text: return
-
+			if not Tag.text and not Tag.find("img"): return
+			
 			#---> Форматирование тегов и атрибутов.
 			#==========================================================================================#
 			Align = ""
@@ -325,8 +328,8 @@ class Chapter(BaseChapter):
 
 			if not IsValid: return
 
+		paragraph = self.__DownloadImages(paragraph)
 		self._Chapter["paragraphs"].append(self._ParserSettings.filters.text.clear(paragraph))
-		self.__DownloadImages(paragraph)
 
 	def clear_paragraphs(self):
 		"""Удаляет содержимое главы."""
@@ -546,9 +549,7 @@ class Ranobe(BaseTitle):
 			chapter_id – уникальный идентификатор целевой главы.
 		"""
 
-		print()
 		SearchResult = self._FindChapterByID(chapter_id)
-
 		if not SearchResult: raise ChapterNotFound(chapter_id)
 
 		BranchData: Branch = SearchResult[0]

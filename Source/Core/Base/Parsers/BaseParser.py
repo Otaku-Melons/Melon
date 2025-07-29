@@ -30,6 +30,12 @@ class BaseParser:
 		return self._Manifest
 
 	@property
+	def requestor(self) -> WebRequestor:
+		"""Менеджер запросов."""
+
+		return self._Requestor
+
+	@property
 	def settings(self) -> "ParserSettings":
 		"""Настройки парсера."""
 
@@ -103,7 +109,7 @@ class BaseParser:
 			url – ссылка на изображение.
 		"""
 		
-		return ImagesDownloader(self._SystemObjects, self._Requestor).temp_image(url)
+		return self._ImagesDownloader.temp_image(url)
 
 	def parse(self):
 		"""Получает основные данные тайтла."""

@@ -97,7 +97,10 @@ class ImagesDownloader:
 		if not is_full_filename: Filetype = ParsedURL.suffix
 		if not filename: filename = ParsedURL.stem
 		ImagePath = f"{directory}/{filename}{Filetype}"
-		Status["exists"] = os.path.exists(ImagePath)
+
+		if os.path.exists(ImagePath):
+			Status["exists"] = True
+			Status.value = filename + Filetype
 
 		#---> Определение параметров файла.
 		#==========================================================================================#

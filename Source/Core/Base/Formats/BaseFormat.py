@@ -471,7 +471,7 @@ class BaseTitle:
 	#==========================================================================================#
 
 	@property
-	def parser(self) -> Any:
+	def parser(self) -> "BaseParser":
 		"""Установленный парсер контента."""
 
 		return self._Parser
@@ -945,10 +945,16 @@ class BaseTitle:
 		"""
 
 		try:
-			for BranchID in self._Title["content"].keys(): self._Title["content"][BranchID] = sorted(self._Title["content"][BranchID], key = lambda Value: (list(map(int, Value["volume"].split("."))), list(map(int, Value["number"].split(".")))))
+			for BranchID in self._Title["content"]:
+				self._Title["content"][BranchID] = sorted(
+					self._Title["content"][BranchID],
+					key = lambda Value: (
+						list(map(int, Value["volume"].split(".") if Value["volume"] else "")),
+						list(map(int, Value["number"].split(".") if Value["number"] else ""))
+					)
+				)
 
-		except:
-			self._SystemObjects.logger.warning(f"Title: \"{self.slug}\" (ID: {self.id}). Error occurs during sorting chapters.")
+		except: self._SystemObjects.logger.warning(f"Title: \"{self.slug}\" (ID: {self.id}). Error occurs during sorting chapters.")
 
 		self._Title["persons"] = list()
 		for CurrentPerson in self._Persons: self._Title["persons"].append(CurrentPerson.to_dict(not self._ParserSettings.common.sizing_images))
