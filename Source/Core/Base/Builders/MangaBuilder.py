@@ -114,10 +114,13 @@ class MangaBuilder(BaseBuilder):
 			DownloadingStatus = Parser.image(Link)
 			DownloadingStatus.print_messages()
 
-			if not DownloadingStatus.has_errors: self._SystemObjects.logger.info(f"Slide \"{Filename}\" downloaded.", stdout = False)
+			if not DownloadingStatus.has_errors:
+				print("Done.")
+				self._SystemObjects.logger.info(f"Slide \"{Filename}\" downloaded.", stdout = False)
+
 			else: self._Logger.error(f"Unable download slide \"{Filename}\". Response code: {DownloadingStatus.code}.")
 
-			MovingStatus = self._Downloader.move_from_temp(WorkDirectory, Filename, f"{Index}", is_full_filename = False)
+			MovingStatus = self._Parser.images_downloader.move_from_temp(WorkDirectory, Filename, f"{Index}", is_full_filename = False)
 			MovingStatus.print_messages()
 			self.__BuildSystemsMethods[self._BuildSystem](title, TargetChapter, WorkDirectory)
 

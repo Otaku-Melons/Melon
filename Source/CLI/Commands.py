@@ -42,16 +42,16 @@ def com_build_manga(system_objects: SystemObjects, command: ParsedCommandData):
 			BuildSystemName = MangaBuilderSystem
 			break
 
-	Builder = MangaBuilder(system_objects)
+	Title = system_objects.manager.current_parser_manifest.content_struct
+	Title: "Manga | Ranobe" = Title(system_objects)
+	Parser: BaseParser = system_objects.manager.launch_parser()
+	Title.set_parser(Parser)
+
+	Builder = MangaBuilder(system_objects, Parser)
 	Builder.select_build_system(BuildSystemName)
 	Builder.enable_sorting_by_volumes(command.check_flag("v"))
 	if command.check_key("ch-template"): Builder.set_chapter_name_template(command.get_key_value("ch-template"))
 	if command.check_key("vol-template"): Builder.set_volume_name_template(command.get_key_value("vol-template"))
-
-	Title = system_objects.manager.get_parser_content_struct()
-	Title: "Manga | Ranobe" = Title(system_objects)
-	Parser: BaseParser = system_objects.manager.launch()
-	Title.set_parser(Parser)
 
 	try: Title.open(command.arguments[0])
 	except FileNotFoundError: return

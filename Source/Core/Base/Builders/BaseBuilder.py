@@ -4,6 +4,7 @@ from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
 	from Source.Core.Base.Formats.BaseFormat import BaseBranch, BaseChapter
+	from Source.Core.Base.Parsers.BaseParser import BaseParser
 	from Source.Core.SystemObjects import SystemObjects
 
 #==========================================================================================#
@@ -84,15 +85,20 @@ class BaseBuilder:
 	# >>>>> ПУБЛИЧНЫЕ МЕТОДЫ <<<<< #
 	#==========================================================================================#
 
-	def __init__(self, system_objects: "SystemObjects"):
-		"""Базовый сборщик."""
+	def __init__(self, system_objects: "SystemObjects", parser: "BaseParser"):
+		"""
+		Базовый сборщик.
 
-		#---> Генерация динамических атрибутов.
-		#==========================================================================================#
+		:param system_objects: Коллекция системных объектов.
+		:type system_objects: SystemObjects
+		:param parser: Парсер.
+		:type parser: BaseParser
+		"""
+
 		self._SystemObjects = system_objects
+		self._Parser = parser
 
-		self._Downloader = ImagesDownloader(self._SystemObjects)
-		self._ParserSettings = self._SystemObjects.manager.parser_settings
+		self._ParserSettings = self._Parser.settings
 		self._Temper = self._SystemObjects.temper
 		self._Logger = self._SystemObjects.logger
 
