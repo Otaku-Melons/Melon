@@ -122,7 +122,7 @@ def com_get(system_objects: SystemObjects, command: ParsedCommandData):
 	FullName = command.check_key("fullname")
 	if FullName: Filename = command.get_key_value("fullname")
 	system_objects.logger.header("Downloading")
-	Parser: BaseParser = system_objects.manager.launch()
+	Parser: BaseParser = system_objects.manager.launch_parser()
 	IsImageExists = Parser.images_downloader.is_exists(Link, Directory, Filename, FullName)
 	print(f"URL: {command.arguments[0]}")
 	if IsImageExists: print("Already exists.")
