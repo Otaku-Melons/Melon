@@ -29,9 +29,9 @@ ComPos = Com.create_position("TARGET", "Target for building.")
 ComPos.add_key("branch", ParametersTypes.Number, "Branch ID.")
 CommandsList.append(Com)
 
-Com = Command("cacher", "To cache ID-slugs pairs for file searching speed increase.")
-ComPos = Com.create_position("TARGET", "Target parser output catalog for caching.")
-ComPos.add_key("use", ParametersTypes.Alpha, "Parser name.")
+Com = Command("cacher", "Cache ID-slugs pairs for file searching speed increase in all parsers by default.")
+ComPos = Com.create_position("TARGETS", "List of parsers names to caching.")
+ComPos.add_key("use", ParametersTypes.Alpha, "One or more parsers separated by comma.")
 CommandsList.append(Com)
 
 CollectionFileBold = FastStyler("Collection.txt").decorate.italic

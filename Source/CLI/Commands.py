@@ -106,18 +106,17 @@ def com_cacher(system_objects: SystemObjects, command: ParsedCommandData):
 	if not system_objects.CACHING: PrintWarning("Cache disabled.")
 	ParsersToCache = system_objects.controller.parsers_names
 
-	ParserName = command.get_key_value("use")
-
-	if ParserName and ParserName in ParsersToCache:
-		ParsersToCache = (ParserName,)
-
-	elif ParserName:
-		PrintError(f"Parser not found: \"{ParserName}\".")
-		return
+	ParserNames: str = command.get_key_value("use")
+	if ParserNames: ParsersToCache = ParserNames.split(",")
 	
 	CacherObject = Cacher(system_objects)
 
 	for CurrentParser in ParsersToCache:
+
+		if CurrentParser not in system_objects.controller.parsers_names:
+			PrintError(f"Parser not found: \"{CurrentParser}\".")
+			continue
+
 		TimerObject = Timer(start = True)
 		print(GetStyledTextFromHTML(f"Caching titles for <b>{CurrentParser}</b>…"))
 		Result = CacherObject.cache_parser_output(CurrentParser)
@@ -167,6 +166,8 @@ def com_collect(system_objects: SystemObjects, command: ParsedCommandData):
 
 	CollectorObject.save(sort = IS_SORTING_ENABLED)
 	system_objects.logger.titles_collected(CollectedTitlesCount)
+
+	
 
 def com_get(system_objects: SystemObjects, command: ParsedCommandData):
 	"""
