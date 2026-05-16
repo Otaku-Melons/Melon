@@ -167,7 +167,44 @@ def com_collect(system_objects: SystemObjects, command: ParsedCommandData):
 	CollectorObject.save(sort = IS_SORTING_ENABLED)
 	system_objects.logger.titles_collected(CollectedTitlesCount)
 
-	
+def com_fid(system_objects: SystemObjects, command: ParsedCommandData):
+	"""
+	Выводит ID татйла по его алиасу.
+		
+	:param system_objects: Коллекция системных объектов.
+	:type system_objects: SystemObjects
+	:param command: Данные команды.
+	:type command: ParsedCommandData
+	"""
+
+	system_objects.logger.header("Searching")
+	if not system_objects.CACHING: PrintWarning("Cache disabled.")
+	ParsersToCache = system_objects.controller.parsers_names
+	Results = 0
+
+	ParserNames: str = command.get_key_value("use")
+	if ParserNames: ParsersToCache = ParserNames.split(",")
+	TimerObject = Timer(start = True)
+
+	for CurrentParser in ParsersToCache:
+		ID = None
+		
+		if CurrentParser not in system_objects.controller.parsers_names:
+			PrintError(f"Parser not found: \"{CurrentParser}\".")
+			continue
+
+		system_objects.temper.select_parser(CurrentParser)
+		ID = system_objects.temper.shared_data.journal.get_id_by_slug(command.arguments[0])
+
+		if ID:
+			Results += 1
+			print(f"Found ID {ID} for parser \"{CurrentParser}\".")
+			if not command.check_flag("all"): break
+			continue
+
+	if Results: print(f"Total cache cache entries found: {Results}.")
+	else: print("Tite with same slug not found in scanned cache.")
+	TimerObject.done()
 
 def com_get(system_objects: SystemObjects, command: ParsedCommandData):
 	"""

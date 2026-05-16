@@ -30,8 +30,8 @@ ComPos.add_key("branch", ParametersTypes.Number, "Branch ID.")
 CommandsList.append(Com)
 
 Com = Command("cacher", "Cache ID-slugs pairs for file searching speed increase in all parsers by default.")
-ComPos = Com.create_position("TARGETS", "List of parsers names to caching.")
-ComPos.add_key("use", ParametersTypes.Alpha, "One or more parsers separated by comma.")
+ComPos = Com.create_position("PARSERS", "List of parsers names to caching.")
+ComPos.add_key("use", description = "One or more parsers names separated by comma.")
 CommandsList.append(Com)
 
 CollectionFileBold = FastStyler("Collection.txt").decorate.italic
@@ -44,6 +44,14 @@ Com.base.add_flag("no-sort", "Disable slugs sorting.")
 Com.base.add_key("filters", description = "Query string for filtering titles (supporting optional).")
 Com.base.add_key("pages", ParametersTypes.Number, "Count of pages to collecting.")
 Com.base.add_key("period", ParametersTypes.Number, "Period in hours for parsing updates.")
+CommandsList.append(Com)
+
+Com = Command("fid", "Find title ID by slug in cache.")
+ComPos = Com.create_position("SLUG", "Title slug.")
+ComPos.add_argument()
+ComPos = Com.create_position("PARSERS", "List of parsers names to searching.")
+ComPos.add_key("use", description = "One or more parsers names separated by comma.")
+Com.base.add_flag("all", "Print all search results instead only first.")
 CommandsList.append(Com)
 
 Com = Command("get", "Download image.")

@@ -59,6 +59,7 @@ class Journal:
 
 		Path = f"{self.__SharedData.path}/journal.json"
 		if os.path.exists(Path): self.__Data = ReadJSON(Path)
+		else: self.__Data = dict()
 
 	def save(self):
 		"""Сохраняет журнал."""
@@ -134,6 +135,7 @@ class SharedData:
 
 		Path = f"{self.path}/shared.json"
 		if os.path.exists(Path): self.__Data = ReadJSON(Path)
+		else: self.__Data = dict()
 		self.__Journal.load()
 
 	def set_last_parsed_slug(self, slug: str):
