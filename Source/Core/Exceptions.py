@@ -7,6 +7,19 @@ if TYPE_CHECKING:
 # >>>>> ИСКЛЮЧЕНИЯ ПАРСЕРОВ <<<<< #
 #==========================================================================================#
 	
+class AuthorizationRequired(Exception):
+	"""Исключение: требуется авторизация."""
+
+	def __init__(self, description: str):
+		"""
+		Исключение: требуется авторизация.
+
+		:param description: Описание требования авторизации.
+		:type description: str
+		"""
+
+		super().__init__(description) 
+
 class BadEntryPoint(Exception):
 	"""Исключение: ошибка точки входа."""
 

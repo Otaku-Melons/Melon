@@ -460,8 +460,9 @@ def com_parse(system_objects: SystemObjects, command: ParsedCommandData):
 			system_objects.logger.error(str(ExceptionData))
 			ErrorsCount += 1
 
-		except Exceptions.TitleNotFound: NotFoundCount += 1
+		except Exceptions.AuthorizationRequired: break
 		except Exceptions.ParsingError: ErrorsCount += 1
+		except Exceptions.TitleNotFound: NotFoundCount += 1
 		
 		except Exception as ExceptionData:
 			print(FastStyler(traceback.format_exc().rstrip()).colorize.red)

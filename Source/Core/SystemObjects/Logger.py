@@ -330,12 +330,12 @@ class Portals:
 		:type text: str | None
 		:param exception: Указывает, выбрасывать ли исключение.
 		:type exception: bool
-		:raises ParsingError: Выбрасывается при активации соответствующего аргумента.
+		:raises ParsingError: Активирована опция выброса исключения.
 		"""
 
-		if not text: text = "Should use authorization method for used parser if provides."
-		self.__Logger.error(text)
-		if exception: raise Exceptions.ParsingError(text)
+		if not text: text = "Should use authorization method for selected parser."
+		self.__Logger.critical(text)
+		if exception: raise Exceptions.AuthorizationRequired(text)
 
 	def request_error(self, response: WebResponse, text: str | None = None, exception: bool = True):
 		"""
