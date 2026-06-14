@@ -4,7 +4,7 @@ from Source.Core.SystemObjects import SystemObjects
 
 from dublib.CLI.Terminalyzer import Command, ParsedCommandData, Terminalyzer
 from dublib.WebRequestor import Protocols, WebConfig, WebLibs, WebRequestor
-from dublib.Engine.Bus import ExecutionStatus
+from dublib.Engine.Bus import ExecutionResult
 
 from typing import TYPE_CHECKING
 import shlex
@@ -137,17 +137,17 @@ class BaseExtension:
 
 		self._PostInitMethod()
 
-	def run(self, command: str | None) -> ExecutionStatus:
+	def run(self, command: str | None) -> ExecutionResult:
 		"""
 		Запускает расширение.
 
 		:param command: Команда для выполнения расширением или `None` при отсутствии таковой.
 		:type command: str | None
 		:return: Статус выполнения.
-		:rtype: ExecutionStatus
+		:rtype: ExecutionResult
 		"""
 
-		Status = ExecutionStatus()
+		Status = ExecutionResult()
 
 		if command: 
 			command = shlex.split(command)

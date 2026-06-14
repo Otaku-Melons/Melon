@@ -273,12 +273,12 @@ class Temper:
 		self.__ParserName = parser_name
 		self.__SharedData.load()
 
-	def set_whitelist(self, whitelist: Iterable[str]):
+	def set_whitelist(self, whitelist: Sequence[str]):
 		"""
 		Задаёт белый список имён файлов и каталогов, по умолчанию не удаляемых при очистке.
 
 		:param whitelist: Последовательность имён файлов и каталогов.
-		:type whitelist: Iterable[str]
+		:type whitelist: Sequence[str]
 		"""
 
 		self.__CustomWhitelist = tuple(whitelist)

@@ -79,12 +79,12 @@ class Chapter(BaseChapter):
 
 		self._Chapter["slides"].append(slide.to_dict())
 
-	def set_slides(self, slides: Iterable[Slide]):
+	def set_slides(self, slides: Sequence[Slide]):
 		"""
 		Задаёт последовательность слайдов.
 
 		:param slides: Последовательность слайдов.
-		:type slides: Iterable[Slide]
+		:type slides: Sequence[Slide]
 		"""
 
 		for Slide in slides: self.add_slide(Slide)

@@ -1,7 +1,7 @@
 from Source.Core.Base.Parsers.Components.ImagesDownloader import ImageDownloadingStatus, ImagesDownloader
 
 from dublib.WebRequestor import WebConfig, WebLibs, WebRequestor
-from dublib.Engine.Bus import ExecutionStatus
+from dublib.Engine.Bus import ExecutionResult
 	
 from typing import TYPE_CHECKING
 
@@ -94,7 +94,7 @@ class BaseSourceOperator:
 
 		self._PostInitMethod()
 
-	def get_slug_from_string(self, data: str) -> ExecutionStatus:
+	def get_slug_from_string(self, data: str) -> ExecutionResult:
 		"""
 		Получает алиас тайтла из переданной строки. Может использоваться для обработки тайтлов по ссылкам.
 
@@ -102,10 +102,10 @@ class BaseSourceOperator:
 		:type data: str
 		:return: Контейнер ответа. Значение должно содержать строку-алиас или `None`, если получить алиас не удалось.
 		В данные статуса также помещается логический ключ _implemented_, говорящий об определении метода в парсере. Отсутствие ключа интерпретируется как наличие имплементации.
-		:rtype: ExecutionStatus
+		:rtype: ExecutionResult
 		"""
 
-		Status = ExecutionStatus()
+		Status = ExecutionResult()
 		Status["implemented"] = False
 		Status.value = data
 

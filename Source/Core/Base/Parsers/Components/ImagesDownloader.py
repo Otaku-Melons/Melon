@@ -1,5 +1,4 @@
-from dublib.Methods.Filesystem import NormalizePath
-from dublib.Engine.Bus import ExecutionStatus
+from dublib.Engine.Bus import ExecutionResult
 from dublib.WebRequestor import WebRequestor
 
 from dataclasses import dataclass
@@ -24,7 +23,7 @@ class ImageResolution:
 	width: int
 	height: int
 
-class ImageDownloadingStatus(ExecutionStatus):
+class ImageDownloadingStatus(ExecutionResult):
 	"""Статус скачивания изображения."""
 
 	#==========================================================================================#
@@ -175,7 +174,7 @@ class ImagesDownloader:
 		if not filename: filename = ParsedURL.stem
 
 		if not directory: directory = self.__SystemObjects.temper.parser_temp
-		else: directory = NormalizePath(directory)
+		else: directory = Path(directory).as_posix()
 
 		return os.path.exists(f"{directory}/{filename}{Filetype}")
 
@@ -197,7 +196,7 @@ class ImagesDownloader:
 
 		Status = ImageDownloadingStatus()
 		if not directory: directory = self.__SystemObjects.temper.parser_temp
-		else: directory = NormalizePath(directory)
+		else: directory = Path(directory).as_posix()
 
 		#---> Определение параметров файла.
 		#==========================================================================================#
@@ -252,7 +251,7 @@ class ImagesDownloader:
 			
 		return Status
 
-	def move_from_temp(self, directory: PathLike, original_filename: str, filename: str | None = None, is_full_filename: bool = True) -> ExecutionStatus:
+	def move_from_temp(self, directory: PathLike, original_filename: str, filename: str | None = None, is_full_filename: bool = True) -> ExecutionResult:
 		"""
 		Перемещает изображение из временного каталога парсера в друкгую директорию.
 
@@ -265,10 +264,10 @@ class ImagesDownloader:
 		:param is_full_filename: Указывает, является ли новое имя файла полным. Если имя неполное, то расширение для файла будет сгенерировано автоматически (например, для имени *image* будет создан файл *image.jpg* на основе оригинального имени), в ином случае имя файла задаётся жёстко. 
 		:type is_full_filename: bool
 		:return: Контейнер статуса выполнения. Под ключём `is_exists` содержится информация о том, существовал ли файл в целевом каталоге на момент вызова метода.
-		:rtype: ExecutionStatus
+		:rtype: ExecutionResult
 		"""
 		
-		Status = ExecutionStatus()
+		Status = ExecutionResult()
 		Status["exists"] = False
 		Filetype = ""
 
@@ -278,7 +277,7 @@ class ImagesDownloader:
 			
 		elif not filename: filename = original_filename
 
-		directory = NormalizePath(directory)
+		directory = Path(directory).as_posix()
 		OriginalPath = f"Temp/{self.__SystemObjects.parser_name}/{original_filename}"
 		TargetPath = f"{directory}/{filename}{Filetype}"
 

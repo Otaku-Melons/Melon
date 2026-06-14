@@ -5,14 +5,14 @@ from typing import TYPE_CHECKING
 from prettytable import PLAIN_COLUMNS, PrettyTable
 
 if TYPE_CHECKING:
-	from dublib.Engine.Bus import ExecutionStatus
+	from dublib.Engine.Bus import ExecutionResult
 
-def CachingSummary(result: "ExecutionStatus"):
+def CachingSummary(result: "ExecutionResult"):
 	"""
 	Выводит в консоль результат кэширования пар ID-алиас тайтлов.
 
 	:param result: Результат кэширования.
-	:type result: ExecutionStatus
+	:type result: ExecutionResult
 	"""
 
 	Total = result["total"]

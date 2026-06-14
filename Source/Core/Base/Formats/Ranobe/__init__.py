@@ -92,12 +92,12 @@ class Chapter(BaseChapter):
 
 		else: self._Chapter["paragraphs"].append(element.to_html())
 
-	def set_elements(self, elements: "Iterable[Paragraph | Image | Header | Blockquote]"):
+	def set_elements(self, elements: "Sequence[Paragraph | Image | Header | Blockquote]"):
 		"""
 		Задаёт набор элементов главы.
 
 		:param elements: Набор элементов главы.
-		:type elements: Iterable[Paragraph | Image | Header | Blockquote]
+		:type elements: Sequence[Paragraph | Image | Header | Blockquote]
 		"""
 
 		for Element in elements: self.add_element(Element)

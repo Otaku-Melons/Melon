@@ -1,6 +1,6 @@
 from Source.Core.Base.Formats.Components.Functions import SafelyReadTitleJSON
 
-from dublib.Engine.Bus import ExecutionStatus
+from dublib.Engine.Bus import ExecutionResult
 
 from typing import TYPE_CHECKING
 import os
@@ -22,7 +22,7 @@ class Cacher:
 		self.__Controller = system_objects.controller
 		self.__Temper = system_objects.temper
 
-	def cache_parser_output(self, parser_name: str) -> ExecutionStatus:
+	def cache_parser_output(self, parser_name: str) -> ExecutionResult:
 		"""
 		Кэширует пары ID-алиас файлов в выходном каталоге парсера.
 
@@ -35,10 +35,10 @@ class Cacher:
 			* _cached_ – кэшировано;
 			* _errors_ – последовательность имён файлов (без расширения), в которых возникли ошибки.
 
-		:rtype: ExecutionStatus
+		:rtype: ExecutionResult
 		"""
 
-		Status = ExecutionStatus()
+		Status = ExecutionResult()
 		Status["total"] = None
 		Status["in_cache"] = 0
 		Status["cached"] = 0

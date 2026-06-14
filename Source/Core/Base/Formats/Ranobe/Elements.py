@@ -577,7 +577,7 @@ class Paragraph(Header):
 		:param text: Текст абзаца.
 		:type text: str
 		:param footnotes: Одна или несколько заметок.
-		:type footnotes: Footnote | Iterable[Footnote] | None
+		:type footnotes: Footnote | Sequence[Footnote] | None
 		:raise ValueError: Выбрасывается при передаче неверно отформатированного текста.
 		:raise UnresolvedTag: Выбрасывается при наличии неразрешённого тега в тексте.
 		"""

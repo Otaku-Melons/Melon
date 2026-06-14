@@ -1,0 +1,25 @@
+[tool.mypy]
+ignore_missing_imports = true
+check_untyped_defs = true
+non_interactive = true
+follow_imports = "silent"
+files = [
+	"main.py",
+
+	"Source/Core/Exceptions",
+
+	"Source/Utils"
+]
+exclude = ["__pycache__"]
+
+[tool.ruff]
+include = [
+	"main.py",
+
+	"Source/Core/Exceptions",
+
+	"Source/Utils"
+]
+
+[tool.ruff.lint]
+ignore = ["E701"]

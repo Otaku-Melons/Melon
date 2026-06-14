@@ -1,10 +1,11 @@
 from Source.Core.SystemObjects.Logger import Logger
 from Source.Core.Exceptions import BadSettings
 
-from dublib.Methods.Filesystem import NormalizePath, ReadJSON
+from dublib.Methods.Filesystem import ReadJSON
 from dublib.WebRequestor import Proxy
 
 from types import MappingProxyType
+from pathlib import Path
 from os import PathLike
 from typing import Any
 import hashlib
@@ -279,7 +280,7 @@ class Common:
 				if not os.path.exists(self.__Settings[Key]): os.makedirs(self.__Settings[Key])
 
 			else:
-				self.__Settings[Key] = NormalizePath(self.__Settings[Key])
+				self.__Settings[Key] = Path(self.__Settings[Key]).as_posix()
 				if not os.path.exists(self.__Settings[Key]): raise FileNotFoundError(self.__Settings[Key])
 
 	def __init__(self, parser_name: str, settings: dict, logger: Logger):
@@ -314,7 +315,7 @@ class Common:
 				if Key in settings["common"].keys(): self.__Settings[Key] = settings["common"][Key]
 
 			if self.__Settings["bad_image_stub"]:
-				BadImageStub = NormalizePath(self.__Settings["bad_image_stub"])
+				BadImageStub = Path(self.__Settings["bad_image_stub"]).as_posix()
 				if not os.path.exists(BadImageStub): self.__Settings["bad_image_stub"] = None
 				else: self.__Settings["bad_image_stub"] = BadImageStub
 

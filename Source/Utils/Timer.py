@@ -6,17 +6,25 @@ class Timer:
 	def __init__(self, start: bool = False):
 		"""
 		Таймер времени исполнения.
-			start – автоматический запуск таймера сразу после инициализации.
+
+		:param start: Указывает, нужно ли запустить таймер при инициализации.
+		:type start: bool
 		"""
 		
-		#---> Генерация динамических атрибутов.
-		#==========================================================================================#
-		self.__StartTime = None
+		self.__StartTime: float | None = None
 
 		if start: self.start()
 
 	def end(self) -> float:
-		"""Завершает отсчёт интервала. Возвращает количество прошедших секунд."""
+		"""
+		Завершает отсчёт интервала. Возвращает количество прошедших секунд.
+
+		:return: Время исполнения в секундах.
+		:rtype: float
+		:raises RuntimeError: Таймер не запущен.
+		"""
+
+		if not self.__StartTime: raise RuntimeError("Timer not started.")
 
 		Delay = time.time() - self.__StartTime
 		self.__StartTime = None
@@ -24,7 +32,12 @@ class Timer:
 		return Delay
 	
 	def ends(self) -> str:
-		"""Завершает отсчёт интервала и возвращает форматированную строку времени."""
+		"""
+		Завершает отсчёт интервала и возвращает форматированную строку времени.
+
+		:return: Строковое представление времени исполнения.
+		:rtype: str
+		"""
 
 		OriginalDelay = self.end()
 		Delay = round(OriginalDelay, 2)
@@ -38,11 +51,6 @@ class Timer:
 		StrTime = f"{StrMinutes}{Seconds} seconds"
 
 		return StrTime
-	
-	def done(self):
-		"""Останавливает таймер и выводит в консоль время исполнения."""
-
-		print("Done in " + self.ends() + ".")
 
 	def start(self):
 		"""Начинает отсчёт интервала времени."""

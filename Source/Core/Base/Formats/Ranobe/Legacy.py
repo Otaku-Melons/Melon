@@ -5,7 +5,7 @@ from ..BaseFormat import BaseChapter
 from Source.Core import Exceptions
 
 from dublib.Methods.Data import RemoveRecurringSubstrings
-from dublib.Engine.Bus import ExecutionStatus
+from dublib.Engine.Bus import ExecutionResult
 from dublib.Polyglot import HTML
 
 from typing import Any, Iterable, Literal, TYPE_CHECKING
@@ -162,7 +162,7 @@ class LegacyChapter(BaseChapter):
 				Parser.images_downloader.move_from_temp(Illustration.directory, Status.value)
 
 			if Illustration.is_exists and Status:
-				Status = ExecutionStatus()
+				Status = ExecutionResult()
 				Status.push_message("Overwritten.")
 
 			Status.print_messages()
@@ -396,12 +396,12 @@ class LegacyChapter(BaseChapter):
 
 		super().set_name(name)
 
-	def set_paragraphs(self, paragraphs: Iterable[str]):
+	def set_paragraphs(self, paragraphs: Sequence[str]):
 		"""
 		Задаёт набор абзацев.
 
 		:param paragraphs: Набор абзацев.
-		:type paragraphs: Iterable[str]
+		:type paragraphs: Sequence[str]
 		"""
 
 		for Paragraph in paragraphs: self.add_paragraph(Paragraph)

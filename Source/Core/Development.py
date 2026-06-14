@@ -2,11 +2,11 @@ from Source.Core.Base.Formats.Components.Enums import ContentTypes
 from Source.Core.Base.Parsers.Components.Manifest import Manifest
 from Source.Core.Base.Parsers.Components.Settings import Settings
 from Source.Core.SystemObjects import SystemObjects
-from Source.Core.Timer import Timer
+from Source.Utils.Timer import Timer
 
 from dublib.Methods.Filesystem import ListDir, WriteJSON
 from dublib.CLI.TextStyler.FastStyler import FastStyler
-from dublib.Methods.Data import ToIterable
+from dublib.Methods.Data import ToSequence
 from dublib.Engine.Patcher import Patch
 
 from typing import Iterable
@@ -54,14 +54,14 @@ class DevelopmeptAssistant:
 	# >>>>> ПРИВАТНЫЕ МЕТОДЫ ИНИЦИАЛИЗАЦИИ ПАРСЕРОВ <<<<< #
 	#==========================================================================================#
 
-	def __InitParserManifest(self, path: PathLike[str], types: Iterable[ContentTypes]):
+	def __InitParserManifest(self, path: PathLike[str], types: Sequence[ContentTypes]):
 		"""
 		Инициализирует манифест парсера.
 
 		:param path: Путь к домашнему каталогу парсера.
 		:type path: PathLike[str]
 		:param types: Тип контента.
-		:type types: Iterable[ContentTypes]
+		:type types: Sequence[ContentTypes]
 		"""
 		
 		ManifestDict = Manifest.copy()
@@ -138,7 +138,7 @@ class DevelopmeptAssistant:
 		:type module: str
 		"""
 
-		files = ToIterable(files)
+		files = ToSequence(files)
 
 		for File in files:
 			File = Patch(f"{path}/{File}")
@@ -214,14 +214,14 @@ class DevelopmeptAssistant:
 
 		else: TimerObject.done()
 
-	def init_parser(self, name: str, types: Iterable[ContentTypes], git: bool = False):
+	def init_parser(self, name: str, types: Sequence[ContentTypes], git: bool = False):
 		"""
 		Инициализирует новый репозиторий расширения.
 
 		:param name: Имя парсера.
 		:type name: str
 		:param types: Тип контента.
-		:type types: Iterable[ContentTypes]
+		:type types: Sequence[ContentTypes]
 		:param git: Указывает, нужно ли инициализировать новый Git-репозиторий.
 		:type git: bool
 		"""

@@ -43,14 +43,14 @@ def SplitParagraph(soup: BeautifulSoup, paragraph: Tag, splitter: str | re.Patte
 
 	return tuple(soup.new_tag("p", string = Part, attrs = paragraph.attrs.copy()) for Part in Parts)
 
-def UnwrapInnerTags(tag: Tag, unwrapable_tags: Iterable[str] = ("blockquote", "img", "h3"), recursive: bool = False) -> Tag:
+def UnwrapInnerTags(tag: Tag, unwrapable_tags: Sequence[str] = ("blockquote", "img", "h3"), recursive: bool = False) -> Tag:
 	"""
 	Производит поиск разворачиваемых тегов внутри обрабатываемого.
 
 	:param tag: Обрабатываемый тег.
 	:type tag: Tag
 	:param unwrapable_tags: Последовательность имён разворачиваемых тегов.
-	:type unwrapable_tags: Iterable[str]
+	:type unwrapable_tags: Sequence[str]
 	:param recursive: При активации поиск вложенных тегов будет производиться рекурсивно внутри каждого дочернего тега.
 	:type recursive: bool
 	:return: Первый найденный разворачиваемый тег или оригинальный тег.

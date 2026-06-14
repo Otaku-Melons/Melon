@@ -10,15 +10,15 @@ if TYPE_CHECKING:
 class AuthorizationRequired(Exception):
 	"""Исключение: требуется авторизация."""
 
-	def __init__(self, description: str):
+	def __init__(self, message: str):
 		"""
 		Исключение: требуется авторизация.
 
-		:param description: Описание требования авторизации.
-		:type description: str
+		:param message: Описание требования авторизации.
+		:type message: str
 		"""
 
-		super().__init__(description) 
+		super().__init__(message) 
 
 class BadEntryPoint(Exception):
 	"""Исключение: ошибка точки входа."""
@@ -146,28 +146,3 @@ class UnresolvedTag(Exception):
 		"""
 
 		super().__init__(f"Unresolved tag \"{tag}\".") 
-
-#==========================================================================================#
-# >>>>> СИСТЕМНЫЕ ИСКЛЮЧЕНИЯ <<<<< #
-#==========================================================================================#
-
-class TempOwnerNotSpecified(Exception):
-	"""Исключение: владалец временного каталога не определён."""
-
-	def __init__(self):
-		"""Исключение: владалец временного каталога не определён."""
-
-		super().__init__("Parser or extension not specified for temper. Unable to load directory.") 
-	
-class BadManifest(Exception):
-	"""Исключение: неверное определение манифеста."""
-
-	def __init__(self, message: str):
-		"""
-		Исключение: неверное определение манифеста.
-
-		:param message: Сообщение об ошибке.
-		:type message: str
-		"""
-
-		super().__init__(message) 

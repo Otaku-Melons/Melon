@@ -31,17 +31,17 @@
 По умолчанию метод содержит в себе обработку строки через [Terminalyzer](https://github.com/DUB1401/dublib/blob/main/docs/CLI/Terminalyzer.md) и передаёт результат в **_ProcessCommand()**. При необходимости собственной обработки параметров вы можете переопределять его по шаблону ниже.
 
 ```Python
-def run(self, command: str | None) -> ExecutionStatus:
+def run(self, command: str | None) -> ExecutionResult:
 	"""
 	Запускает расширение.
 
 	:param command: Команда для выполнения расширением или `None` при отсутствии таковой.
 	:type command: str | None
 	:return: Статус выполнения.
-	:rtype: ExecutionStatus
+	:rtype: ExecutionResult
 	"""
 
-	Status = ExecutionStatus()
+	Status = ExecutionResult()
 
 	pass
 

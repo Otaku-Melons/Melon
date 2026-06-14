@@ -1,8 +1,9 @@
 from Source.Core.Base.Builders.BaseBuilder import BaseBuilder
 
-from dublib.Methods.Filesystem import ListDir, NormalizePath
+from dublib.Methods.Filesystem import ListDir
 
 from typing import TYPE_CHECKING
+from pathlib import Path
 import shutil
 import enum
 import os
@@ -49,7 +50,7 @@ class MangaBuilder(BaseBuilder):
 		Volume = ""
 		if self.__SortingByVolumes and chapter.volume: Volume = self._GenerateVolumeNameByTemplate(chapter)
 		OutputPath = f"{self._ParserSettings.common.archives_directory}/{title.used_filename}/{Volume}/{ChapterName}"
-		OutputPath = NormalizePath(OutputPath)
+		OutputPath = Path(OutputPath).as_posix()
 
 		if not os.path.exists(OutputPath): os.makedirs(OutputPath)
 		Files = ListDir(directory)
@@ -64,7 +65,7 @@ class MangaBuilder(BaseBuilder):
 		Volume = ""
 		if self.__SortingByVolumes and chapter.volume: Volume = self._GenerateVolumeNameByTemplate(chapter)
 		OutputPath = f"{self._ParserSettings.common.archives_directory}/{title.used_filename}/{Volume}/{ChapterName}"
-		OutputPath = NormalizePath(OutputPath)
+		OutputPath = Path(OutputPath).as_posix()
 
 		shutil.make_archive(OutputPath, "zip", directory)
 

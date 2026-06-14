@@ -3,11 +3,11 @@ from Source.Core.Base.Formats.Components import By, ContentTypes
 from Source.Core.Base.Builders.MangaBuilder import MangaBuilder
 from Source.Core.Development import DevelopmeptAssistant
 from Source.Core.SystemObjects import SystemObjects
-from Source.Core.Collector import Collector
+from Source.Utils.Collector import Collector
 from Source.Core.Installer import Installer
 from Source.Core.Cacher import Cacher
-from Source.Core.Tagger import Tagger
-from Source.Core.Timer import Timer
+from Source.Utils.Classificator import Classificator
+from Source.Utils.Timer import Timer
 from Source.Core import Exceptions
 from Source.CLI import Templates
 
@@ -15,7 +15,7 @@ from dublib.CLI.TextStyler import FastStyler, GetStyledTextFromHTML
 from dublib.CLI.Templates.Bus import PrintError, PrintWarning
 from dublib.CLI.Terminalyzer import ParsedCommandData
 from dublib.Methods.Filesystem import WriteJSON
-from dublib.Engine.Bus import ExecutionStatus
+from dublib.Engine.Bus import ExecutionResult
 
 from json.decoder import JSONDecodeError
 from typing import TYPE_CHECKING
@@ -307,7 +307,7 @@ def com_list(system_objects: SystemObjects, command: ParsedCommandData):
 	:type command: ParsedCommandData
 	"""
 
-	Status = ExecutionStatus()
+	Status = ExecutionResult()
 	TableData = {
 		"NAME": [],
 		"VERSION": [],
@@ -373,13 +373,13 @@ def com_parse(system_objects: SystemObjects, command: ParsedCommandData):
 	if command.check_flag("last"):
 
 		if not system_objects.CACHING:
-			Status = ExecutionStatus()
+			Status = ExecutionResult()
 			Status.push_error("Caching disabled. Last slug unavailable.")
 			Status.print_messages()
 			return
 
 		if not system_objects.temper.shared_data.last_parsed_slug:
-			Status = ExecutionStatus()
+			Status = ExecutionResult()
 			Status.push_error("Last slug undefined. Parse anything firstly.")
 			Status.print_messages()
 			return
@@ -526,7 +526,7 @@ def com_run(system_objects: SystemObjects, command: ParsedCommandData):
 
 	Extension = system_objects.controller.launch_extension(ParserName, ExtensionName)
 	system_objects.logger.header(f"{ParserName}:{ExtensionName}")
-	Status: ExecutionStatus = Extension.run(ExtensionCommand)
+	Status: ExecutionResult = Extension.run(ExtensionCommand)
 	Status.print_messages()
 
 def com_tagger(system_objects: SystemObjects, command: ParsedCommandData):

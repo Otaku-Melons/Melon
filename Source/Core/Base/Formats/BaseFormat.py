@@ -523,12 +523,12 @@ class BaseChapter:
 		
 		self._Chapter["number"] = self.__PrettyNumber(number)
 
-	def set_workers(self, workers: Iterable[str]):
+	def set_workers(self, workers: Sequence[str]):
 		"""
 		Задаёт идентификаторы лиц, адаптировавших контент.
 
 		:param workers: Набор идентификаторов.
-		:type workers: Iterable[str]
+		:type workers: Sequence[str]
 		"""
 
 		for Worker in workers: self.add_worker(Worker)
@@ -1438,33 +1438,33 @@ class BaseTitle:
 
 		self._Title["eng_name"] = eng_name.strip() if eng_name else None
 
-	def set_another_names(self, another_names: Iterable[str]):
+	def set_another_names(self, another_names: Sequence[str]):
 		"""
 		Задаёт набор альтернативных названий.
 
 		:param another_names: Набор альтернативных названий.
-		:type another_names: Iterable[str]
+		:type another_names: Sequence[str]
 		"""
 
 		for Name in another_names: self.add_another_name(Name)
 
-	def set_covers(self, covers: Iterable[Cover]):
+	def set_covers(self, covers: Sequence[Cover]):
 		"""
 		Задаёт последовательность обложек.
 
 		:param covers: Последовательность обложек.
-		:type covers: Iterable[Cover]
+		:type covers: Sequence[Cover]
 		:raises ValueError: Выбрасывается при отсутствии ссылки в данных обложки.
 		"""
 
 		for CurrentCover in covers: self.add_cover(CurrentCover)
 
-	def set_authors(self, authors: Iterable[str]):
+	def set_authors(self, authors: Sequence[str]):
 		"""
 		Задаёт список авторов.
 
 		:param authors: Список авторов.
-		:type authors: Iterable[str]
+		:type authors: Sequence[str]
 		"""
 
 		for Author in authors: self.add_author(Author)
@@ -1497,42 +1497,42 @@ class BaseTitle:
 
 		self._Title["age_limit"] = age_limit
 
-	def set_genres(self, genres: Iterable[str]):
+	def set_genres(self, genres: Sequence[str]):
 		"""
 		Задаёт список жанров.
 
 		:param genres: Список жанров.
-		:type genres: Iterable[str]
+		:type genres: Sequence[str]
 		"""
 
 		for Genre in genres: self.add_genre(Genre)
 
-	def set_tags(self, tags: Iterable[str]):
+	def set_tags(self, tags: Sequence[str]):
 		"""
 		Задаёт список тегов.
 
 		:param tags: Список тегов.
-		:type tags: Iterable[str]
+		:type tags: Sequence[str]
 		"""
 
 		for Tag in tags: self.add_tag(Tag)
 
-	def set_franchises(self, franchises: Iterable[str]):
+	def set_franchises(self, franchises: Sequence[str]):
 		"""
 		Задаёт список франшиз.
 
 		:param franchises: Список франшиз.
-		:type franchises: Iterable[str]
+		:type franchises: Sequence[str]
 		"""
 
 		for Franchise in franchises: self.add_franshise(Franchise)
 
-	def set_persons(self, persons: Iterable[Person]):
+	def set_persons(self, persons: Sequence[Person]):
 		"""
 		Задаёт список персонажей.
 
 		:param persons: Список персонажей.
-		:type persons: Iterable[Person]
+		:type persons: Sequence[Person]
 		"""
 		
 		for CurrentPerson in persons: self.add_person(CurrentPerson)

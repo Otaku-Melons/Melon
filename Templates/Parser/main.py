@@ -2,7 +2,7 @@ from Source.Core.Base.Parsers.Components.ImagesDownloader import ImageDownloadin
 from Source.Core.Base.SourceOperator import BaseSourceOperator
 
 from dublib.WebRequestor import WebConfig, WebLibs, WebRequestor
-from dublib.Engine.Bus import ExecutionStatus
+from dublib.Engine.Bus import ExecutionResult
 
 class SourceOperator(BaseSourceOperator):
 	"""Оператор источника."""
@@ -46,7 +46,7 @@ class SourceOperator(BaseSourceOperator):
 
 		return tuple()
 	
-	def get_slug_from_string(self, data: str) -> ExecutionStatus:
+	def get_slug_from_string(self, data: str) -> ExecutionResult:
 		"""
 		Получает алиас тайтла из переданной строки. Может использоваться для обработки тайтлов по ссылкам.
 
@@ -54,7 +54,7 @@ class SourceOperator(BaseSourceOperator):
 		:type data: str
 		:return: Контейнер ответа. Значение должно содержать строку-алиас или `None`, если получить алиас не удалось.
 		В данные статуса также помещается логический ключ _implemented_, говорящий об определении метода в парсере. Отсутствие ключа интерпретируется как наличие имплементации.
-		:rtype: ExecutionStatus
+		:rtype: ExecutionResult
 		"""
 
 		return super().get_slug_from_string(data)
