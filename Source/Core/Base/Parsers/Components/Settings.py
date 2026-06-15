@@ -1,5 +1,5 @@
 from Source.Core.SystemObjects.Logger import Logger
-from Source.Core.Exceptions import BadSettings
+from Source.Core.Exceptions.Parsers import BadSettings
 
 from dublib.Methods.Filesystem import ReadJSON
 from dublib.WebRequestor import Proxy

@@ -1,4 +1,4 @@
-from Source.Core.Exceptions import BadManifest
+from Source.Core.Exceptions.System import BadManifest
 
 from dublib.Methods.Filesystem import ReadJSON
 from dublib.Methods.Data import Zerotify

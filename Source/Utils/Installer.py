@@ -45,8 +45,8 @@ class Installer:
 		:type extension: str | None
 		"""
 
-		Title = f"Parser: " + FastStyler(parser).decorate.bold + "."
-		if extension: Title += f" Extension: " + FastStyler(extension).decorate.bold + "."
+		Title = "Parser: " + FastStyler(parser).decorate.bold + "."
+		if extension: Title += " Extension: " + FastStyler(extension).decorate.bold + "."
 
 		OriginalPath = f"Parsers/{parser}/settings.json" if not extension else f"Parsers/{parser}/extensions/{extension}/settings.json"
 		ConfigsPath = f"Configs/{parser}/settings.json" if not extension else f"Configs/{parser}/extensions/{extension}.json"
@@ -116,7 +116,7 @@ class Installer:
 			Manifest = self.__SystemObjects.controller.get_parser_manifest(Parser)
 
 			if Manifest.version:
-				porcelain.checkout(Path, Manifest.latest_git_tag, force = self.__SystemObjects.FORCE_MODE)
+				porcelain.checkout(Path, Manifest.latest_git_tag, force = self.__SystemObjects.FORCE_MODE.status)
 				self.__Logger.info(f"Parser \"{Parser}\" rebased to {Manifest.version} version.")
 				
 			else: self.__Logger.warning(f"No release tag found for \"{Parser}\" parser.")

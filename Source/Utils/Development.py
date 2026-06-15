@@ -9,7 +9,7 @@ from dublib.CLI.TextStyler.FastStyler import FastStyler
 from dublib.Methods.Data import ToSequence
 from dublib.Engine.Patcher import Patch
 
-from typing import Iterable
+from typing import Sequence
 from pathlib import Path
 from os import PathLike
 import shutil
@@ -54,25 +54,25 @@ class DevelopmeptAssistant:
 	# >>>>> ПРИВАТНЫЕ МЕТОДЫ ИНИЦИАЛИЗАЦИИ ПАРСЕРОВ <<<<< #
 	#==========================================================================================#
 
-	def __InitParserManifest(self, path: PathLike[str], types: Sequence[ContentTypes]):
+	def __InitParserManifest(self, path: str | PathLike[str], types: Sequence[ContentTypes]):
 		"""
 		Инициализирует манифест парсера.
 
 		:param path: Путь к домашнему каталогу парсера.
-		:type path: PathLike[str]
+		:type path: str | PathLike[str]
 		:param types: Тип контента.
 		:type types: Sequence[ContentTypes]
 		"""
 		
-		ManifestDict = Manifest.copy()
+		ManifestDict: dict = Manifest.copy()
 		ManifestDict["content_types"] = tuple(CurrentType.value for CurrentType in types)
 		ManifestDict["version"] = "$last_git_tag"
-		ManifestDict["melon_required_version"] = f">={self.__SystemObjects.MELON_VERSION.tag}"
+		ManifestDict["melon_required_version"] = f">={self.__SystemObjects.MELON_VERSION.tag}" if self.__SystemObjects.MELON_VERSION else None
 		WriteJSON(f"{path}/manifest.json", ManifestDict)
 
 		self.__Logger.info("Manifest created.")
 
-	def __InitParserSettings(self, path: PathLike[str]):
+	def __InitParserSettings(self, path: str | PathLike[str]):
 		"""
 		Инициализирует настройки парсера.
 
@@ -87,12 +87,12 @@ class DevelopmeptAssistant:
 	# >>>>> ПРИВАТНЫЕ МЕТОДЫ <<<<< #
 	#==========================================================================================#
 
-	def __CheckTargetDirectory(self, path: PathLike[str]):
+	def __CheckTargetDirectory(self, path: str | PathLike[str]):
 		"""
 		Обрабатывает наличие файлов в целевой директории.
 
 		:param PathLike: Путь ко временному каталогу парсера.
-		:type PathLike: PathLike[str]
+		:type PathLike: str | PathLike[str]
 		"""
 
 		FilesCount = None
@@ -109,14 +109,14 @@ class DevelopmeptAssistant:
 				self.__Logger.error("Parser with this name already exists.")
 				return
 			
-		elif FilesCount == None: os.makedirs(path, exist_ok = True)
+		elif FilesCount is None: os.makedirs(path, exist_ok = True)
 
-	def __InitGitReporitory(self, path: PathLike[str]):
+	def __InitGitReporitory(self, path: str | PathLike[str]):
 		"""
 		Инициализирует Git-репозиторий.
 
 		:param path: Путь к будущему репозиторию.
-		:type path: PathLike[str]
+		:type path: str | PathLike[str]
 		"""
 
 		try:
@@ -126,12 +126,12 @@ class DevelopmeptAssistant:
 		except Exception as ExceptionData:
 			self.__Logger.error(f"Unable to initialize Git repository due to error: \"{ExceptionData}\".")
 
-	def __InsertModuleName(self, path: PathLike[str], files: str | tuple[str], module: str):
+	def __InsertModuleName(self, path: str | PathLike[str], files: str | tuple[str], module: str):
 		"""
 		Подставляет название модуля в текстовые файлы на место вхождений `{NAME}`.
 
 		:param path: Путь к домашнему каталогу модуля.
-		:type path: PathLike[str]
+		:type path: str | PathLike[str]
 		:param files: Набор названий файлов для замены.
 		:type files: str | tuple[str]
 		:param module: Название модуля.
@@ -141,18 +141,18 @@ class DevelopmeptAssistant:
 		files = ToSequence(files)
 
 		for File in files:
-			File = Patch(f"{path}/{File}")
-			File.replace("{NAME}", module)
-			File.save()
+			FilePatch = Patch(f"{path}/{File}")
+			FilePatch.replace("{NAME}", module)
+			FilePatch.save()
 
-	def __CopyFiles(self, files: dict[str, str | None], path: PathLike[str]):
+	def __CopyFiles(self, files: dict[str, str | None], path: str | PathLike[str]):
 		"""
 		Копирует файлы шаблонов в домашний каталог парсера.
 
 		:param files: Словарь устанавливаемых файлов, где ключ это путь к шаблону, а значение – имя файла. Если значение `None`, используется оригинальное имя файла.
 		:type files: dict[str, str | None]
 		:param path: Путь к домашнему каталогу парсера.
-		:type path: PathLike[str]
+		:type path: str | PathLike[str]
 		"""
 
 		for File in files.keys():
@@ -197,13 +197,13 @@ class DevelopmeptAssistant:
 		
 		try:
 			self.__InitGitReporitory(Path)
-			Files = {
+			Files: dict = {
 				".gitignore": None,
 				"Extension/README.md": None,
 				"Extension/main.py": None,
 				"Extension/manifest.json": None
 			}
-			self.__InstallFiles(Files, Path)
+			self.__CopyFiles(Files, Path)
 			WriteJSON(f"{Path}/settings.json", dict())
 			print("Settings installed.")
 			self.__InsertModuleName(Path, "README.md", name)
@@ -212,7 +212,7 @@ class DevelopmeptAssistant:
 			shutil.rmtree(Path)
 			self.__Logger.error(str(ExceptionData))
 
-		else: TimerObject.done()
+		else: print(f"Done in {TimerObject.ends()}.")
 
 	def init_parser(self, name: str, types: Sequence[ContentTypes], git: bool = False):
 		"""
@@ -230,10 +230,10 @@ class DevelopmeptAssistant:
 		ParserHomeDirectoryPath = f"Parsers/{name}"
 		self.__Logger.info(f"Initializing parser <b>{name}</b>…")
 
-		Files = {
+		Files: dict = {
 			".gitignore": None,
 			"Parser/README.md": None,
-			f"Parser/main.py": None
+			"Parser/main.py": None
 		}
 		for CurrentType in types: Files[f"Parser/{CurrentType.value}.py"] = None
 
@@ -249,10 +249,10 @@ class DevelopmeptAssistant:
 			shutil.rmtree(ParserHomeDirectoryPath)
 			self.__Logger.error(str(ExceptionData))
 
-		else: TimerObject.done()
+		else: print(f"Done in {TimerObject.ends()}.")
 
 	@staticmethod
-	def parse_content_types(data: str) -> tuple[ContentTypes]:
+	def parse_content_types(data: str) -> tuple[ContentTypes, ...]:
 		"""
 		Получает последовательность типов контента из строкового представления.
 

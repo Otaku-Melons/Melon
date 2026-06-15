@@ -1,3 +1,1 @@
-from .WordsDictionary import GetDictionaryPreset, WordsDictionary
-from .Functions import *
-from .Enums import *
+from .WordsDictionary import GetDictionaryPreset as GetDictionaryPreset, WordsDictionary as WordsDictionary

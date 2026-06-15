@@ -1,4 +1,4 @@
-from Source.Core.Exceptions import TempOwnerNotSpecified
+from Source.Core.Exceptions.System import TempOwnerNotSpecified
 
 from dublib.Methods.Filesystem import ReadJSON, RemoveDirectoryContent, WriteJSON
 

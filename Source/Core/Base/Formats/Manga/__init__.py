@@ -6,7 +6,7 @@ from Source.Core import Exceptions
 
 from dublib.Methods.Filesystem import ReadJSON
 
-from typing import Any, Iterable, TYPE_CHECKING
+from typing import Any, Sequence, TYPE_CHECKING
 import os
 
 if TYPE_CHECKING:
@@ -87,7 +87,8 @@ class Chapter(BaseChapter):
 		:type slides: Sequence[Slide]
 		"""
 
-		for Slide in slides: self.add_slide(Slide)
+		for CurrentSlide in slides:
+			self.add_slide(CurrentSlide)
 
 class Branch(BaseBranch):
 	"""Ветвь."""
@@ -112,8 +113,6 @@ class Branch(BaseBranch):
 			ID – уникальный идентификатор ветви.
 		"""
 
-		#---> Генерация динамических атрибутов.
-		#==========================================================================================#
 		self._ID = id
 		self._Chapters: list[Chapter] = list()
 

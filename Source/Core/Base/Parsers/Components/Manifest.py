@@ -1,7 +1,7 @@
 from Source.Core.Base.Formats.Components.Enums import ContentTypes
 from Source.Core.Base.Formats.Ranobe import Ranobe
 from Source.Core.Base.Formats.Manga import Manga
-from Source.Core.Exceptions import BadManifest
+from Source.Core.Exceptions.System import BadManifest
 
 from dublib.Methods.Filesystem import ReadJSON
 from dublib.Methods.Data import Zerotify

@@ -1,4 +1,4 @@
-from Source.Core.Exceptions import UnsupportedFormat
+from Source.Core.Exceptions.Parsers import UnsupportedFormat
 
 from dublib.Methods.Filesystem import ListDir, ReadJSON
 
@@ -14,7 +14,7 @@ def SafelyReadTitleJSON(path: str) -> dict:
 	:rtype: dict
 	"""
 
-	Formats: tuple[str] = tuple(File[:-3] for File in ListDir("Docs/Examples"))
+	Formats: tuple[str, ...] = tuple(File[:-3] for File in ListDir("Docs/Examples"))
 	Data = ReadJSON(path)
 	if "format" not in Data.keys(): raise UnsupportedFormat()
 	elif Data["format"] not in Formats: raise UnsupportedFormat(Data["format"])

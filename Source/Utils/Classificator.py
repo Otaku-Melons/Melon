@@ -25,8 +25,9 @@ class ClassificatorsTypes(Enum):
 class ClassificationResult:
 	"""Результат классификации."""
 
-	name: str
+	input: str
 	is_procedure_found: bool
+	name: str | None = None
 	type: ClassificatorsTypes | None = None
 	delete: bool | None = None
 	rename: str | None = None
@@ -40,8 +41,9 @@ class ClassificationResult:
 		"""
 
 		return {
-			"name": self.name,
+			"input": self.input,
 			"is_procedure_found": self.is_procedure_found,
+			"name": self.name,
 			"type": self.type.value if self.type else None,
 			"delete": self.delete,
 			"rename": self.rename
@@ -201,7 +203,7 @@ class Classificator:
 		"""
 
 		ScriptPath: Path = Path(script_file)
-		ScriptLines: tuple[str, ...] = ReadTextFile(ScriptPath, split = True)
+		ScriptLines: list[str] = ReadTextFile(ScriptPath, split = True)
 		FileOperationsLines: list[ExecutableLine] = list()
 
 		for Index in range(len(ScriptLines)):
@@ -329,7 +331,7 @@ class Classificator:
 		self.__MainFilePath: Path = Path(main_file)
 		self.__ScriptDirectory: Path = self.__MainFilePath.parent
 
-	def classify(self, target: str, procedures: Sequence[Procedure], ignore_case: bool = True) -> ClassificationResult:
+	def classify(self, target: str, procedures: Sequence[Procedure], ignore_case: bool = False) -> ClassificationResult:
 		"""
 		Обрабатывает классификатор.
 
@@ -354,14 +356,15 @@ class Classificator:
 
 		if TargetProcedure:
 			return ClassificationResult(
-				name = target,
+				input = target,
 				is_procedure_found = True,
+				name = TargetProcedure.name,
 				type = TargetProcedure.type,
 				delete = TargetProcedure.delete,
-				rename = TargetProcedure.rename
+				rename = TargetProcedure.rename if TargetProcedure.rename != target else None
 			)
 		
-		return ClassificationResult(target, is_procedure_found = False)
+		return ClassificationResult(input = target, is_procedure_found = False)
 
 	def parse_procedures(self, script_lines: Sequence[ExecutableLine]) -> tuple[Procedure, ...]:
 		"""
@@ -434,8 +437,8 @@ class Classificator:
 					Buffer = LineOperation.target
 					if Format == "low": Buffer = LineOperation.target.lower()
 					elif Format == "up": Buffer = LineOperation.target.upper()
-
-					if LineOperation.target != Buffer: NewName = Buffer
+					if LineOperation.target == Buffer: NewName = None
+					else: NewName = Buffer
 				
 				Procedures.append(Procedure(LineOperation.target, Type, Operation == -1, NewName))
 

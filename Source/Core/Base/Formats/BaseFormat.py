@@ -1,26 +1,26 @@
 from .Components.WordsDictionary import CheckLanguageCode, GetDictionaryPreset, WordsDictionary
 from .Components.Functions import SafelyReadTitleJSON
 from .Components.Structs import ChapterSearchResult
-from .Components.Enums import *
+from .Components.Enums import By, Statuses
 
 from Source.Core.Base.Parsers.Components.ImagesDownloader import ImageDownloadingStatus, ImageResolution
 from Source.Core import Exceptions
 
 from dublib.Methods.Data import RemoveRecurringSubstrings, Zerotify
 from dublib.Methods.Filesystem import ReadJSON, WriteJSON
+from dublib.Engine.Bus import ExecutionResult
 
-from typing import Any, Iterable, TYPE_CHECKING
+from typing import Any, cast, Sequence, TYPE_CHECKING
 from pathlib import Path
 from os import PathLike
 from time import sleep
 import hashlib
+import json
 import os
 
 import validators
 
 if TYPE_CHECKING:
-	from Source.Core.Base.Parsers.RanobeParser import Chapter as RanobeChapter
-	from Source.Core.Base.Parsers.MangaParser import Chapter as MangaChapter
 	from Source.Core.Base.Parsers.BaseParser import BaseParser
 	from Source.Core.SystemObjects import SystemObjects
 
@@ -78,25 +78,33 @@ class Cover:
 
 		self.__Title = self.__Parser.title
 
+		if not self.__Title.used_filename:
+			raise RuntimeError("Title uninitialized.")
+
 		self.__Directory = self.__Parser.settings.directories.get_covers(self.__Title.used_filename)
 		self.__Link: str | None = None
 		self.__Filename: str | None = None
 		self.__Resolution: ImageResolution | None = None
 		self.__IsExists: bool | None = None
 
-	def download(self) -> ImageDownloadingStatus:
+	def download(self) -> ExecutionResult:
 		"""
 		Скачивает обложку в выходной каталог парсера.
 
-		:return: Статус скачивания изображения.
-		:rtype: ImageDownloadingStatus
+		:return: Результат скачивания изображения.
+		:rtype: ExecutionResult
 		"""
+
+		if not self.__Link:
+			raise RuntimeError("Unable download cover without link.")
+		
+		self.__Filename = cast(str, self.__Filename)
 
 		if self.__IsExists and not self.__SystemObjects.FORCE_MODE:
 			Status = ImageDownloadingStatus()
 			Status.set_is_exists(True)
 			Status.value = self.__Filename
-			Status.push_message("Already exists.")
+			Status.messages.push_info("Already exists.")
 			return Status
 		
 		Result = self.__Parser.source_operator.image(self.__Link)
@@ -191,8 +199,6 @@ class Person:
 			name – имя персонажа.
 		"""
 
-		#---> Генерация динамических атрибутов.
-		#==========================================================================================#
 		self.__Data = {
 			"name": name,
 			"another_names": [],
@@ -319,16 +325,16 @@ class BaseChapter:
 	# >>>>> ПРИВАТНЫЕ МЕТОДЫ <<<<< #
 	#==========================================================================================#
 
-	def __PrettyNumber(self, number: str | None) -> str | None:
+	def __PrettyNumber(self, number: float | int | str | None) -> str | None:
 		"""Преобразует номер главы или тома в корректное значение."""
 
-		if number == None: number = ""
-		elif type(number) != str: number = str(number)
+		if number is None: number = ""
+		elif type(number) is not str: number = str(number)
 		if "-" in number: number = number.split("-")[0]
 		number = number.strip("\t .\n")
-		number = Zerotify(number)
+		Number = cast(str | None, Zerotify(number))
 
-		return number
+		return Number
 
 	#==========================================================================================#
 	# >>>>> НАСЛЕДУЕМЫЕ МЕТОДЫ <<<<< #
@@ -562,7 +568,7 @@ class BaseBranch:
 	#==========================================================================================#
 
 	@property
-	def chapters(self) -> tuple[BaseChapter]:
+	def chapters(self) -> tuple[BaseChapter, ...]:
 		"""Последовательность глав."""
 
 		return tuple(self._Chapters)
@@ -582,10 +588,10 @@ class BaseBranch:
 		for CurrentChapter in self._Chapters:
 
 			try:
-				if not CurrentChapter.slides: EmptyChaptersCount += 1
+				if not getattr(CurrentChapter, "slides"): EmptyChaptersCount += 1
 
 			except AttributeError:
-				if not CurrentChapter.paragraphs: EmptyChaptersCount += 1
+				if not getattr(CurrentChapter, "paragraphs"): EmptyChaptersCount += 1
 
 		return EmptyChaptersCount
 
@@ -619,7 +625,7 @@ class BaseBranch:
 		:raises ParsingError: Выбрасывается при отсутствии у добавляемой главы ID.
 		"""
 
-		if chapter.id == None: raise Exceptions.ParsingError("Chapter must have unique ID.")
+		if chapter.id is None: raise Exceptions.Parsers.ParsingError("Chapter must have unique ID.")
 		if chapter.id in tuple(Value.id for Value in self._Chapters): return
 		self._Chapters.append(chapter)
 
@@ -634,14 +640,16 @@ class BaseBranch:
 		:rtype: BaseChapter
 		"""
 
-		Data = None
+		SearchResult: BaseChapter | None = None
 
 		for CurrentChapter in self._Chapters:
-			if CurrentChapter.id == id: Data = CurrentChapter
+			if CurrentChapter.id == id:
+				SearchResult = CurrentChapter
+				break
 
-		if not Data: raise KeyError(id)
+		if not SearchResult: raise KeyError(id)
 
-		return CurrentChapter
+		return SearchResult
 	
 	def remove_chapter(self, id: int):
 		"""
@@ -716,13 +724,13 @@ class BaseTitle:
 	#==========================================================================================#
 
 	@property
-	def parser(self) -> "BaseParser":
+	def parser(self) -> "BaseParser | None":
 		"""Установленный парсер контента."""
 
 		return self._Parser
 	
 	@property
-	def path(self) -> PathLike | None:
+	def path(self) -> Path | None:
 		"""Путь к локальному файлу."""
 
 		return self._TitlePath
@@ -786,25 +794,19 @@ class BaseTitle:
 		return self._Title["eng_name"]
 
 	@property
-	def another_names(self) -> tuple[str]:
+	def another_names(self) -> tuple[str, ...]:
 		"""Последовательность альтернативных названий."""
 
 		return tuple(self._Title["another_names"])
-
-	@property
-	def content_language(self) -> str | None:
-		"""Язык контента по стандарту ISO 639-3."""
-
-		return self._Title["content_language"]
 	
 	@property
-	def covers(self) -> tuple[Cover]:
+	def covers(self) -> tuple[Cover, ...]:
 		"""Последовательность описаний обложки."""
 
 		return tuple(self._Covers)
 
 	@property
-	def authors(self) -> tuple[str]:
+	def authors(self) -> tuple[str, ...]:
 		"""Последовательность авторов."""
 
 		return tuple(self._Title["authors"])
@@ -828,25 +830,25 @@ class BaseTitle:
 		return self._Title["age_limit"]
 
 	@property
-	def genres(self) -> tuple[str]:
+	def genres(self) -> tuple[str, ...]:
 		"""Последовательность жанров."""
 
 		return tuple(self._Title["genres"])
 
 	@property
-	def tags(self) -> tuple[str]:
+	def tags(self) -> tuple[str, ...]:
 		"""Последовательность тегов."""
 
 		return tuple(self._Title["tags"])
 
 	@property
-	def franchises(self) -> tuple[str]:
+	def franchises(self) -> tuple[str, ...]:
 		"""Последовательность франшиз."""
 
 		return tuple(self._Title["franchises"])
 	
 	@property
-	def perons(self) -> tuple[Person]:
+	def perons(self) -> tuple[Person, ...]:
 		"""Последовательность персонажей."""
 
 		return tuple(self._Persons)
@@ -864,10 +866,10 @@ class BaseTitle:
 		return self._Title["is_licensed"]
 
 	@property
-	def branches(self) -> tuple[BaseBranch]:
+	def branches(self) -> tuple[BaseBranch, ...]:
 		"""Последовательность ветвей тайтла."""
 
-		return self._Branches
+		return tuple(self._Branches)
 	
 	#==========================================================================================#
 	# >>>>> НАСЛЕДУЕМЫЕ МЕТОДЫ <<<<< #
@@ -890,14 +892,21 @@ class BaseTitle:
 			print(f"Downloading cover: \"{CurrentCover.filename}\"… ", end = "", flush = True)
 			Result = CurrentCover.download()
 			if Result: DownloadedCoversCount += 1
-			Result.print_messages()
+			Result.messages.print()
 
 		self._SystemObjects.logger.info(f"Covers downloaded: {DownloadedCoversCount}.")
 
 	def _DownloadPersonsImages(self):
 		"""Скачивает портреты персонажей."""
 
-		if self._Persons: PersonsDirectory = self._ParserSettings.directories.get_persons(self._UsedFilename)
+		if not self._UsedFilename: 
+			raise RuntimeError("Used filename not determined.")
+		
+		if not self._Parser:
+			raise RuntimeError("Parser not setted.")
+		
+		PersonsDirectory = self._ParserSettings.directories.get_persons(self._UsedFilename)
+
 		DownloadedImagesCount = 0
 		PersonsCount = len(self._Persons)
 
@@ -931,21 +940,20 @@ class BaseTitle:
 			chapter_id – уникальный идентификатор главы.
 		"""
 
-		BranchResult = None
-		ChapterResult = None
+		BranchResult: BaseBranch | None = None
+		ChapterResult: BaseChapter | None = None
 
 		for CurrentBranch in self._Branches:
-
 			for CurrentChapter in CurrentBranch.chapters:
-
 				if CurrentChapter.id == chapter_id:
 					BranchResult = CurrentBranch
 					ChapterResult = CurrentChapter
 					break
 
-		Result = ChapterSearchResult(BranchResult, ChapterResult) if ChapterResult else None
+		if all((BranchResult, ChapterResult)):
+			return ChapterSearchResult(cast(BaseBranch, BranchResult), ChapterResult) if ChapterResult else None
 
-		return Result
+		return None
 	
 	def _IsLocalFileEqual(self) -> bool:
 		"""
@@ -955,19 +963,19 @@ class BaseTitle:
 		:rtype: bool
 		"""
 
-		if not os.path.exists(self._TitlePath): return False
+		if not self._TitlePath or self._TitlePath.exists(): return False
 
 		LocalHasher = hashlib.sha256(str(ReadJSON(self._TitlePath)).encode())
 		MemoryHasher = hashlib.sha256(str(self._Title).encode())
 
 		return LocalHasher.hexdigest() == MemoryHasher.hexdigest()
 
-	def _SearchFileInDirectory(self, directory: PathLike, identificator: str, type: By) -> dict | None:
+	def _SearchFileInDirectory(self, directory: str | PathLike[str], identificator: str, type: By) -> dict | None:
 		"""
 		Находит файл JSON в директории по идентификатору определённого типа.
 
 		:param directory: Путь к каталогу файлов.
-		:type directory: PathLike
+		:type directory: str | PathLike[str]
 		:param identificator: Идентификатор: ID или алиас.
 		:type identificator: str
 		:param type: Тип идентификатора: `By.Slug` или `By.ID`.
@@ -983,7 +991,7 @@ class BaseTitle:
 				Data = SafelyReadTitleJSON(Element.path)
 				if Data.get(type.value) == identificator: return Data
 
-			except: pass
+			except (json.JSONDecodeError, Exceptions.Parsers.UnsupportedFormat): pass
 
 	def _SetUsedFilename(self, filename: str):
 		"""
@@ -994,7 +1002,7 @@ class BaseTitle:
 		"""
 
 		self._UsedFilename = filename
-		self._TitlePath = f"{self._ParserSettings.common.titles_directory}/{filename}.json"
+		self._TitlePath = Path(f"{self._ParserSettings.common.titles_directory}/{filename}.json")
 
 	#==========================================================================================#
 	# >>>>> НАСЛЕДУЕМЫЕ МЕТОДЫ ОБНОВЛЕНИЯ СЛОВАРНОЙ СТРУКТУРЫ <<<<< #
@@ -1057,7 +1065,7 @@ class BaseTitle:
 	def merge(self):
 		"""Выполняет слияние содержимого описанных локально глав с текущей структурой."""
 
-		raise Exceptions.MergingError("Called not implemented method.")
+		raise Exceptions.Parsers.MergingError("Called not implemented method.")
 
 	#==========================================================================================#
 	# >>>>> ПУБЛИЧНЫЕ МЕТОДЫ <<<<< #
@@ -1077,11 +1085,11 @@ class BaseTitle:
 		self._Branches: list[BaseBranch] = list()
 		self._Persons: list[Person] = list()
 		self._Covers: list[Cover] = list()
-		self._Parser: "BaseParser" = None
+		self._Parser: "BaseParser | None" = None
 		self._WordsDictionary: WordsDictionary | None = None
 		
 		self._UsedFilename = None
-		self._TitlePath = None
+		self._TitlePath: Path | None = None
 		self._Title = {
 			"format": None,
 			"site": None,
@@ -1116,6 +1124,9 @@ class BaseTitle:
 	def amend(self):
 		"""Дополняет контент содержимым."""
 
+		if not self._Parser:
+			raise RuntimeError("Parser not setted.")
+
 		AmendedChaptersCount = 0
 		ProgressIndex = 0
 
@@ -1126,20 +1137,19 @@ class BaseTitle:
 		for CurrentBranch in self._Branches:
 
 			for CurrentChapter in CurrentBranch.chapters:
-				CurrentChapter: "MangaChapter | RanobeChapter"
 				ChapterContent = list()
 
-				if self.format == "melon-manga": ChapterContent = CurrentChapter.slides
-				elif self.format == "melon-ranobe": ChapterContent = CurrentChapter.paragraphs
+				if self.format == "melon-manga": ChapterContent = getattr(CurrentChapter, "slides")
+				elif self.format == "melon-ranobe": ChapterContent = getattr(CurrentChapter, "paragraphs")
 
 				if not ChapterContent:
 					ProgressIndex += 1
 					
 					try: self._Parser.amend(CurrentBranch, CurrentChapter)
-					except Exceptions.ChapterNotFound: continue
+					except Exceptions.Parsers.ChapterNotFound: continue
 
-					if self.format == "melon-manga": ChapterContent = CurrentChapter.slides
-					elif self.format == "melon-ranobe": ChapterContent = CurrentChapter.paragraphs
+					if self.format == "melon-manga": ChapterContent = getattr(CurrentChapter, "slides")
+					elif self.format == "melon-ranobe": ChapterContent = getattr(CurrentChapter, "paragraphs")
 
 					if ChapterContent:
 						AmendedChaptersCount += 1
@@ -1182,7 +1192,7 @@ class BaseTitle:
 			case By.Slug:
 			
 				if self._ParserSettings.common.use_id_as_filename and self._SystemObjects.CACHING:
-					ID = self._SystemObjects.temper.shared_data.journal.get_id_by_slug(identificator)
+					ID = self._SystemObjects.temper.shared_data.journal.get_id_by_slug(str(identificator))
 
 					if ID:
 						PathBuffer = f"{Directory}/{ID}.json"
@@ -1192,7 +1202,7 @@ class BaseTitle:
 					Path = f"{Directory}/{identificator}.json"
 					if os.path.exists(Path): Data = SafelyReadTitleJSON(f"{Directory}/{identificator}.json")
 				
-				if not Data: Data = self._SearchFileInDirectory(Directory, identificator, By.Slug)
+				if not Data: Data = self._SearchFileInDirectory(Directory, str(identificator), By.Slug)
 
 			case By.ID:
 				
@@ -1201,17 +1211,17 @@ class BaseTitle:
 					if os.path.exists(Path): Data = SafelyReadTitleJSON(f"{Directory}/{identificator}.json")
 
 				elif self._SystemObjects.CACHING:
-					Slug = self._SystemObjects.temper.shared_data.journal.get_slug_by_id(identificator)
+					Slug = self._SystemObjects.temper.shared_data.journal.get_slug_by_id(int(identificator))
 
 					if Slug:
 						PathBuffer = f"{Directory}/{Slug}.json"
 						if os.path.exists(PathBuffer): Data = SafelyReadTitleJSON(PathBuffer)
 
-				if not Data: Data = self._SearchFileInDirectory(Directory, identificator, By.ID)
+				if not Data: Data = self._SearchFileInDirectory(Directory, str(identificator), By.ID)
 
 		if Data:
 			self._Title = Data
-			self._SetUsedFilename(str(self.id) if self._ParserSettings.common.use_id_as_filename else self.slug)
+			self._SetUsedFilename(str(self.id) if self._ParserSettings.common.use_id_as_filename else cast(str, self.slug))
 
 		else: raise FileNotFoundError()
 
@@ -1224,6 +1234,9 @@ class BaseTitle:
 			index – индекс текущего тайтла;\n
 			titles_count – количество тайтлов в задаче.
 		"""
+
+		if not self._Parser:
+			raise RuntimeError("Parser not setted.")
 	
 		self._SystemObjects.logger.parsing_start(self, index, titles_count)
 
@@ -1239,16 +1252,22 @@ class BaseTitle:
 		:raises ChapterNotFound: Выбрасывается, если в локальном JSON не найдена глава с указанным ID.
 		"""
 
-		SearchResult = self._FindChapterByID(chapter_id)
-		if not SearchResult: raise Exceptions.ChapterNotFound(chapter_id)
+		if not self._Parser:
+			raise RuntimeError("Parser not setted.")
 
-		BranchData: "BaseBranch" = SearchResult.branch
-		ChapterData: "MangaChapter | RanobeChapter" = SearchResult.chapter
+		SearchResult = self._FindChapterByID(chapter_id)
+		if not SearchResult:
+			BufferForException = BaseChapter(self._SystemObjects)
+			BufferForException.set_id(chapter_id)
+			raise Exceptions.Parsers.ChapterNotFound(BufferForException)
+
+		BranchData: BaseBranch = SearchResult.branch
+		ChapterData: BaseChapter = SearchResult.chapter
 		
 		ChapterData.clear()
 		self._Parser.amend(BranchData, ChapterData)
 		
-		if self.format == "melon-manga" and ChapterData.slides or self.format == "melon-ranobe" and ChapterData.paragraphs:
+		if self.format == "melon-manga" and getattr(ChapterData, "slides") or self.format == "melon-ranobe" and getattr(ChapterData, "paragraphs"):
 			self._SystemObjects.logger.chapter_repaired(ChapterData)
 
 	def save(self, sorting: bool = False):
@@ -1258,6 +1277,12 @@ class BaseTitle:
 		:param sorting: Указывает, нужно ли провести сортировку глав на основе их нумерации.
 		:type sorting: bool
 		"""
+		
+		if not self._Parser:
+			raise RuntimeError("Parser not setted.")
+		
+		if not self._TitlePath:
+			raise RuntimeError("Title path undefined.")
 
 		self._Parser.postprocessor()
 		self._UpdateCovers()
@@ -1271,7 +1296,8 @@ class BaseTitle:
 
 		else: self._SystemObjects.logger.info("No changes. Saving skipped.")
 
-		if self._SystemObjects.CACHING and all((self.id, self.slug)): self._SystemObjects.temper.shared_data.journal.update(self.id, self.slug)
+		if self._SystemObjects.CACHING and all((self.id, self.slug)):
+			self._SystemObjects.temper.shared_data.journal.update(cast(int, self.id), cast(str, self.slug))
 			
 	def set_parser(self, parser: "BaseParser"):
 		"""
@@ -1372,7 +1398,7 @@ class BaseTitle:
 		:raises ParsingError: Выбрасывается при отсутствии у добавляемой ветви ID.
 		"""
 
-		if branch.id == None: raise Exceptions.ParsingError("Branch must have unique ID.")
+		if branch.id: raise Exceptions.Parsers.ParsingError("Branch must have unique ID.")
 		if branch.id in tuple(Element.id for Element in self._Branches): return
 		self._Branches.append(branch)
 		self._Branches = sorted(self._Branches, key = lambda Value: Value.chapters_count, reverse = True)
@@ -1392,8 +1418,11 @@ class BaseTitle:
 		"""
 
 		self._Title["id"] = id
-		if not self.slug: self.set_slug(self._SystemObjects.temper.shared_data.journal.get_slug_by_id(id))
-		if self._ParserSettings.common.use_id_as_filename: self._SetUsedFilename(id)
+		if not self.slug:
+			CachedSlug = self._SystemObjects.temper.shared_data.journal.get_slug_by_id(id)
+			if CachedSlug: self.set_slug(CachedSlug)
+
+		if self._ParserSettings.common.use_id_as_filename: self._SetUsedFilename(str(id))
 
 	def set_slug(self, slug: str):
 		"""
@@ -1402,7 +1431,9 @@ class BaseTitle:
 		"""
 
 		self._Title["slug"] = slug
-		if not self.id: self.set_id(self._SystemObjects.temper.shared_data.journal.get_id_by_slug(slug))
+		if not self.id:
+			CachedID = self._SystemObjects.temper.shared_data.journal.get_id_by_slug(slug)
+			if CachedID: self.set_id(CachedID)
 		if not self._ParserSettings.common.use_id_as_filename: self._SetUsedFilename(slug)
 
 	def set_content_language(self, language_code: str | None) -> WordsDictionary | None:

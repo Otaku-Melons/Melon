@@ -1,9 +1,9 @@
-from typing import Iterable
+from typing import cast, Sequence
 import re
 
 from bs4 import BeautifulSoup, Tag
 
-def SplitParagraph(soup: BeautifulSoup, paragraph: Tag, splitter: str | re.Pattern | None = None) -> tuple[Tag]:
+def SplitParagraph(soup: BeautifulSoup, paragraph: Tag, splitter: str | re.Pattern | None = None) -> tuple[Tag, ...]:
 	"""
 	Разбивает абзац на несколько абзацев по вхождению указанного идентификатора разрыва.
 
@@ -23,16 +23,16 @@ def SplitParagraph(soup: BeautifulSoup, paragraph: Tag, splitter: str | re.Patte
 	if not splitter: splitter = re.compile(r"<br\s*/?>")
 	Text = paragraph.decode_contents()
 
-	Parts: list[Tag] = list()
+	Parts: list[str] = list()
 
-	if type(splitter) == re.Pattern:
+	if type(splitter) is re.Pattern:
 		if not re.findall(splitter, Text): return (paragraph,)
 		
 		for Line in re.split(splitter, Text):
 			Line = Line.strip()
 			if Line: Parts.append(Line)
 		 
-	elif type(splitter) == str:
+	elif type(splitter) is str:
 		if splitter not in Text: return (paragraph,)
 
 		for Line in Text.split(splitter):
@@ -41,7 +41,7 @@ def SplitParagraph(soup: BeautifulSoup, paragraph: Tag, splitter: str | re.Patte
 
 	else: raise TypeError("Pattern must be str or re.Pattern.")
 
-	return tuple(soup.new_tag("p", string = Part, attrs = paragraph.attrs.copy()) for Part in Parts)
+	return tuple(soup.new_tag("p", string = Part, attrs = cast(dict[str, str], paragraph.attrs.copy())) for Part in Parts)
 
 def UnwrapInnerTags(tag: Tag, unwrapable_tags: Sequence[str] = ("blockquote", "img", "h3"), recursive: bool = False) -> Tag:
 	"""

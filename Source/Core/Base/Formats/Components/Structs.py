@@ -6,5 +6,7 @@ if TYPE_CHECKING:
 
 @dataclass
 class ChapterSearchResult:
+	"""Результат поиска главы."""
+	
 	branch: "BaseBranch"
 	chapter: "BaseChapter"

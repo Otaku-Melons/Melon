@@ -1,5 +1,5 @@
 from Source.Core import Exceptions
-from Source.CLI import Templates
+from Source.CLI.Legacy import Templates
 
 from dublib.CLI.Templates.Bus import MessagesTypes, PrintMessage
 from dublib.CLI.TextStyler import GetStyledTextFromHTML

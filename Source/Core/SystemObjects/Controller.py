@@ -10,7 +10,7 @@ from dublib.CLI.TextStyler.FastStyler import FastStyler
 
 from packaging.version import Version
 from difflib import get_close_matches
-from typing import TYPE_CHECKING
+from typing import cast, TYPE_CHECKING
 import importlib
 
 if TYPE_CHECKING:
@@ -62,9 +62,9 @@ class Controller:
 		:rtype: str
 		"""
 
-		if not parser: parser = self.__Parser
+		if not parser and self.__Parser: parser = self.__Parser
 
-		if parser != None and parser not in self.parsers_names:
+		if parser is not None and parser not in self.parsers_names:
 			BestMatch = get_close_matches(parser, self.parsers_names, n = 1)
 			if BestMatch: BestMatch = BestMatch[0]
 			MatchMessage = ""
@@ -116,11 +116,6 @@ class Controller:
 		self.__Extension = None
 		self.__Parser = None
 
-		self.__ContentStructs = {
-			ContentTypes.Manga: Manga,
-			ContentTypes.Ranobe: Ranobe
-		}
-
 	def check_required_melon_version(self, required_versions: str) -> bool | None:
 		"""
 		Проверяет, соответствует ли требуемая для парсера версия Melon.
@@ -136,7 +131,7 @@ class Controller:
 		if required_versions.count(";") > 1: raise ValueError("Versions checker supports only two rules.")
 		
 		for Rule in required_versions.split(";"):
-			if self.__CheckRequiredMelonVersion(Rule) == False: return False
+			if self.__CheckRequiredMelonVersion(Rule) is False: return False
 
 		return True
 
@@ -184,7 +179,7 @@ class Controller:
 		Text = f"Parser: {ParserName}{Version}."
 		self.__SystemObjects.logger.info(Text, stdout = verbose)
 		
-		if self.check_required_melon_version(Manifest.melon_required_version) == False:
+		if self.check_required_melon_version(Manifest.melon_required_version) is False:
 			self.__SystemObjects.logger.warning(f"Melon required version: \"{Manifest.melon_required_version}\".", stdout = verbose)
 
 		Module = importlib.import_module(f"Parsers.{parser}.main")

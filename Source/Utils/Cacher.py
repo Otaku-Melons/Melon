@@ -53,7 +53,6 @@ class Cacher:
 			if not Element.is_file() or not Element.name.endswith(".json"): continue
 			else: Files.append(Element.name[:-5])
 
-		Files = tuple(Files)
 		Status["total"] = len(Files)
 
 		for CurrentFile in Files:
@@ -68,7 +67,7 @@ class Cacher:
 					self.__Temper.shared_data.journal.update(Data["id"], Data["slug"])
 					Status["cached"] += 1
 
-			except:
+			except Exception:
 				Status["errors"].append(CurrentFile)
 				continue
 

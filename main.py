@@ -1,5 +1,5 @@
 from Source.Core.SystemObjects import SystemObjects
-from Source.CLI.Templates import OptionStatus
+from Source.CLI.Legacy.Templates import OptionStatus
 from Source.CLI.Descriptions import COMMANDS
 from Source.CLI import Commands as Commands
 
@@ -32,7 +32,7 @@ if CommandData is None:
 	Objects.logger.close()
 	exit()
 
-elif CommandData.name in ("help", "list", "tagger"): Objects.LIVE_MODE.enable()
+elif CommandData.name in ("help", "list", "classify"): Objects.LIVE_MODE.enable()
 
 if not Objects.LIVE_MODE:
 	if CommandData.check_flag("-f"): Objects.FORCE_MODE.enable()
@@ -50,7 +50,7 @@ try:
 	if CommandData.check_key("--use"): Objects.select_parser(CommandData.get_position_value("PARSER", expected_type = str))
 	CommandName = CommandData.name.replace("-", "_")
 
-	exec(f"Commands.com_{CommandName}(Objects, CommandDataStruct)")
+	exec(f"Commands.com_{CommandName}(Objects, CommandData)")
 	
 except KeyboardInterrupt: pass
 
