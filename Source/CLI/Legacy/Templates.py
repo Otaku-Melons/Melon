@@ -2,8 +2,6 @@ from dublib.CLI.TextStyler.FastStyler import FastStyler
 
 from typing import TYPE_CHECKING
 
-from prettytable import PLAIN_COLUMNS, PrettyTable
-
 if TYPE_CHECKING:
 	from dublib.Engine.Bus import ExecutionResult
 
@@ -26,49 +24,7 @@ def CachingSummary(result: "ExecutionResult"):
 		print(FastStyler("Errors:").decorate.bold)
 		for Error in Errors: print(" - " + FastStyler(Error + ".json").colorize.red)
 
-def OptionStatus(text: str, status: bool):
-	"""
-	Выводит в консоль форматированный статус опции.
-		text – название опции;\n
-		status – статус.
-	"""
 
-	status = FastStyler("enabled").colorize.green if status else FastStyler("disabled").colorize.red
-	print(f"{text}: {status}")
-
-def ParsersTable(columns: dict[str, list], sort_by: str = "NAME"):
-	"""
-	Выводит в консоль форматированную таблицу установленных парсеров.
-		columns – данные для вывода;\n
-		sort_by – название колонки для сортировки.
-	"""
-
-	TableObject = PrettyTable()
-	TableObject.set_style(PLAIN_COLUMNS)
-	Implementations = ["collect"]
-	ImplementationStatuses = {
-		True: FastStyler("true").colorize.green,
-		False: FastStyler("false").colorize.yellow,
-		None: FastStyler("error").colorize.red,
-	}
-
-	for SiteIndex in range(len(columns["SITE"])):
-		columns["SITE"][SiteIndex] = FastStyler(columns["SITE"][SiteIndex]).decorate.italic
-
-	for ColumnName in Implementations:
-
-		for StatusIndex in range(len(columns[ColumnName])):
-			columns[ColumnName][StatusIndex] = ImplementationStatuses[columns[ColumnName][StatusIndex]]
-
-	for ColumnName in columns.keys():
-		Buffer = FastStyler(ColumnName).decorate.bold
-		TableObject.add_column(Buffer, columns[ColumnName])
-
-	TableObject.align = "l"
-	TableObject.sortby = FastStyler(sort_by).decorate.bold
-	TableObject = str(TableObject).strip()
-	Link = FastStyler("https://github.com/Otaku-Melons").decorate.underlined
-	print(TableObject if TableObject else f"Parsers not installed. See {Link} for more info.")
 
 def ParsingProgress(index: int, count: int):
 	"""

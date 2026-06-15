@@ -1,14 +1,16 @@
-from Source.Core.Base.Parsers.Components.ImagesDownloader import ImageDownloadingStatus, ImagesDownloader
+from Source.Core.Base.Parsers.Components.ImagesDownloader import ImageDownloadingResult, ImagesDownloader
 
 from dublib.WebRequestor import WebConfig, WebLibs, WebRequestor
-from dublib.Engine.Bus import ExecutionResult
-	
+from dublib.CLI.Validators import Validator_URL
+
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
 	from .EntryPoint import BaseEntryPoint
 	
 	from Source.Core.Base.Parsers.Components import ParserManifest, ParserSettings
+	from Source.Core.SystemObjects.Temper import SharedData
+	from Source.Core.SystemObjects import SystemObjects
 
 class BaseSourceOperator:
 	"""Базовый оператор источника."""
@@ -34,6 +36,18 @@ class BaseSourceOperator:
 		"""Настройки парсера."""
 
 		return self._Settings
+	
+	@property
+	def shared_data(self) -> "SharedData":
+		"""Разделяемые в контексте сессий одного парсера данные."""
+		
+		return self._EntryPoint.shared_data
+
+	@property
+	def system_objects(self) -> "SystemObjects":
+		"""Коллекция системных объектов."""
+
+		return self._SystemObjects
 
 	@property
 	def requestor(self) -> WebRequestor:
@@ -64,10 +78,34 @@ class BaseSourceOperator:
 		
 		return WebRequestorObject
 
+	def _ParseSlugFromString(self, string: str) -> str | None:
+		"""
+		Парсит алиас тайтла из переданной строки. Может использоваться для обработки тайтлов по ссылкам.
+
+		:param string: Строка, из которой требуется получить алиас.
+		:type string: str
+		:return: Алиас или `None` в случае неудачи или отсутствия имплементации.
+		:rtype: str | None
+		"""
+
+		return None
+
 	def _PostInitMethod(self):
 		"""Метод, выполняющийся после инициализации объекта."""
 
 		pass
+
+	def _TempImage(self, url: str) -> ImageDownloadingResult:
+		"""
+		Скачивает изображение по ссылке и сохраняет во временный каталог парсера.
+
+		:param url: Ссылка на изображение.
+		:type url: str
+		:return: Результат скачивания изображения.
+		:rtype: ImageDownloadingResult
+		"""
+
+		return self._ImagesDownloader.temp_image(url)
 
 	#==========================================================================================#
 	# >>>>> ПУБЛИЧНЫЕ МЕТОДЫ <<<<< #
@@ -86,39 +124,38 @@ class BaseSourceOperator:
 		self._SystemObjects = entry_point.system_objects
 		self._Temper = self._SystemObjects.temper
 		self._Portals = self._SystemObjects.logger.portals
+
 		self._Settings = entry_point.settings
 		self._Manifest = entry_point.manifest
 
 		self._Requestor = self._InitializeRequestor()
-		self._ImagesDownloader = ImagesDownloader(self._SystemObjects, self._Requestor)
+		self._ImagesDownloader = ImagesDownloader(self)
 
 		self._PostInitMethod()
 
-	def get_slug_from_string(self, data: str) -> ExecutionResult:
+	def parse_slug_from_string(self, string: str) -> str | None:
 		"""
-		Получает алиас тайтла из переданной строки. Может использоваться для обработки тайтлов по ссылкам.
+		Парсит алиас тайтла из переданной строки. Может использоваться для обработки тайтлов по ссылкам.
 
-		:param data: Строка, из которой требуется получить алиас.
-		:type data: str
-		:return: Контейнер ответа. Значение должно содержать строку-алиас или `None`, если получить алиас не удалось.
-		В данные статуса также помещается логический ключ _implemented_, говорящий об определении метода в парсере. Отсутствие ключа интерпретируется как наличие имплементации.
-		:rtype: ExecutionResult
+		:param string: Строка, из которой требуется получить алиас.
+		:type string: str
+		:return: Алиас или `None` в случае неудачи или отсутствия имплементации.
+		:rtype: str | None
 		"""
 
-		Status = ExecutionResult()
-		Status["implemented"] = False
-		Status.value = data
+		return self._ParseSlugFromString(string)
 
-		return Status
-
-	def image(self, url: str) -> ImageDownloadingStatus:
+	def image(self, url: str) -> ImageDownloadingResult:
 		"""
 		Скачивает изображение по ссылке и сохраняет во временный каталог парсера.
 
 		:param url: Ссылка на изображение.
 		:type url: str
-		:return: Статус скачивания изображения. В случае успеха значение должно содержать имя файла во временном каталоге парсера.
-		:rtype: ImageDownloadingStatus
+		:return: Результат скачивания изображения.
+		:rtype: ImageDownloadingResult
+		:raises ValidationError: Неверный формат ссылки.
 		"""
+
+		url = Validator_URL.parse(url)
 		
-		return self._ImagesDownloader.temp_image(url)
+		return self._TempImage(url)

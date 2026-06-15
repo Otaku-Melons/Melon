@@ -239,18 +239,6 @@ def com_get(system_objects: SystemObjects, command: ParsedCommandData):
 
 	TimerObject.done()
 
-def com_help(system_objects: SystemObjects, command: ParsedCommandData):
-	"""
-	Заглушка для обработки помощи.
-		
-	:param system_objects: Коллекция системных объектов.
-	:type system_objects: SystemObjects
-	:param command: Данные команды.
-	:type command: ParsedCommandData
-	"""
-
-	pass
-
 def com_init(system_objects: SystemObjects, command: ParsedCommandData):
 	"""
 	Производит инициализацию новых модулей для начала разработки.
@@ -507,42 +495,3 @@ def com_repair(system_objects: SystemObjects, command: ParsedCommandData):
 	except FileNotFoundError: system_objects.logger.error(f"File \"{Filename}.json\" not found in titles directory.")
 	except (Exceptions.TitleNotFound, Exceptions.ParsingError): pass
 	else: system_objects.EXIT_CODE = 0
-
-def com_run(system_objects: SystemObjects, command: ParsedCommandData):
-	"""
-	Восстанавливает содержимое главы, заново получая его из источника.
-	
-	:param system_objects: Коллекция системных объектов.
-	:type system_objects: SystemObjects
-	:param command: Данные команды.
-	:type command: ParsedCommandData
-	"""
-
-	ExtensionFullName: str = command.get_key_value("extension", exception = True)
-	ParserName, ExtensionName = ExtensionFullName.split("-")
-	system_objects.select_parser(ParserName)
-	system_objects.select_extension(ExtensionName)
-	ExtensionCommand = command.get_key_value("command")
-
-	Extension = system_objects.controller.launch_extension(ParserName, ExtensionName)
-	system_objects.logger.header(f"{ParserName}:{ExtensionName}")
-	Status: ExecutionResult = Extension.run(ExtensionCommand)
-	Status.print_messages()
-
-def com_tagger(system_objects: SystemObjects, command: ParsedCommandData):
-	"""
-	Запускает обработчик классификаторов тайтлов.
-	
-	:param system_objects: Коллекция системных объектов.
-	:type system_objects: SystemObjects
-	:param command: Данные команды.
-	:type command: ParsedCommandData
-	"""
-
-	TaggerObject = Tagger()
-	Type, Name = TaggerObject.get_classificator_data(command)
-	Operation = TaggerObject.process(Name, Type, system_objects.parser_name)
-
-	if command.check_flag("json"): print(Operation.to_json())
-	elif command.check_key("file"): WriteJSON(command.get_key_value("file"), Operation.to_dict())
-	else: Operation.print()

@@ -1,21 +1,33 @@
 from .Formats.Components.Enums import ContentTypes
 from .SourceOperator import BaseSourceOperator
 
+from Source.Core.Base.Parsers.Components import ParserSettings
 from Source.Core.Base.Formats.Ranobe import Ranobe
 from Source.Core.Base.Formats.Manga import Manga
-from Source.Core import Exceptions
-
-from dublib.Methods.Filesystem import ReadJSON
 
 from types import MappingProxyType
 from typing import TYPE_CHECKING
 import importlib
 
+from dulwich import errors, porcelain
+
 if TYPE_CHECKING:
-	from Source.Core.Base.Parsers.Components import ParserManifest, ParserSettings
-	from Source.Core.Base.Parsers.RanobeParser import RanobeParser
-	from Source.Core.Base.Parsers.MangaParser import MangaParser
+	from Source.Core.Base.Parsers.Components import ParserManifest
+	from Source.Core.SystemObjects.Temper import SharedData
 	from Source.Core.SystemObjects import SystemObjects
+
+#==========================================================================================#
+# >>>>> ВСПОМОГАТЕЛЬНЫЕ СТРУКТУРЫ ДАННЫХ <<<<< #
+#==========================================================================================#
+
+_CONTENT_STRUCTS = MappingProxyType({
+	ContentTypes.Manga: Manga,
+	ContentTypes.Ranobe: Ranobe
+})
+
+#==========================================================================================#
+# >>>>> ОСНОВНОЙ КЛАСС <<<<< #
+#==========================================================================================#
 
 class BaseEntryPoint:
 	"""Базовая точка входа в модуль парсера."""
@@ -28,12 +40,9 @@ class BaseEntryPoint:
 	def is_supported_collect(self) -> bool:
 		"""Состояние: поддерживается ли метод **collect**."""
 
-		Module = importlib.import_module(f"Parsers.{self._Manifest.name}.main")
+		Module = importlib.import_module(f"Parsers.{self._Manifest.parser_name}.main")
 
-		try: Module.SourceOperator.collect
-		except AttributeError: return False
-
-		return True
+		return hasattr(Module.SourceOperator, "collect")
 
 	@property
 	def manifest(self) -> "ParserManifest":
@@ -42,18 +51,20 @@ class BaseEntryPoint:
 		return self._Manifest
 
 	@property
-	def settings(self) -> "ParserSettings":
+	def settings(self) -> ParserSettings:
 		"""Настройки парсера."""
 
-		return self._SystemObjects.controller.get_parser_settings(self._Manifest.name)
+		return self._ParserSettings
+
+	@property
+	def shared_data(self) -> "SharedData":
+		"""Разделяемые в контексте сессий одного парсера данные."""
+		
+		return self._SharedData
 
 	@property
 	def source_operator(self) -> BaseSourceOperator:
-		"""Базовый оператор источника."""
-
-		if not self._SourceOperator:
-			Module = importlib.import_module(f"Parsers.{self._Manifest.name}.main")
-			self._SourceOperator = Module.SourceOperator(self)
+		"""Оператор источника."""
 
 		return self._SourceOperator
 
@@ -62,6 +73,20 @@ class BaseEntryPoint:
 		"""Коллекция системных объектов."""
 
 		return self._SystemObjects
+
+	@property
+	def version(self) -> str | None:
+		"""Версия парсера."""
+
+		try:
+			ParserTags = porcelain.tag_list(f"Parsers/{self._Manifest.parser_name}")
+		except errors.NotGitRepository:
+			return None
+		
+		if ParserTags:
+			return ParserTags[-1].decode().lstrip("v")
+		
+		return None
 
 	#==========================================================================================#
 	# >>>>> ПЕРЕОПРЕДЕЛЯЕМЫЕ МЕТОДЫ <<<<< #
@@ -90,74 +115,11 @@ class BaseEntryPoint:
 
 		self._SystemObjects = system_objects
 		self._Manifest = manifest
+		self._SharedData = self._SystemObjects.temper.load_parser_shared_data(self._Manifest.parser_name)
 
-		self._SourceOperator: BaseSourceOperator | None = None
-		self._ContentStructs = MappingProxyType({
-			ContentTypes.Manga: Manga,
-			ContentTypes.Ranobe: Ranobe
-		})
+		Module = importlib.import_module(f"Parsers.{self._Manifest.parser_name}.main")
+
+		self._ParserSettings = ParserSettings(self._Manifest.parser_name)
+		self._SourceOperator: BaseSourceOperator = Module.SourceOperator(self)
 
 		self._PostInitMethod()
-
-	def create_title(self, content_type: ContentTypes, slug: str | None = None) -> "Manga | Ranobe":
-		"""
-		Создаёт тайтл определённого типа.
-
-		:param content_type: Тип контента.
-		:type content_type: ContentTypes
-		:param slug: Алиас тайтла.
-		:type slug: str | None
-		:return: Данные тайтла.
-		:rtype: Manga | Ranobe
-		"""
-
-		Title = self._ContentStructs[content_type](self._SystemObjects)
-		if slug: Title.set_slug(slug)
-
-		return Title
-
-	def get_content_type_by_file(self, filename: str) -> ContentTypes:
-		"""
-		Определяет тип контента по JSON файлу.
-
-		:param filename: Имя файла в выходном каталоге парсера.
-		:type filename: str
-		:return: Тип контента.
-		:rtype: ContentTypes
-		"""
-
-		Path = f"{self.settings.directories.titles}/{filename}.json"
-		Data = ReadJSON(Path)
-		ContentType = Data.get("format").split("-")[-1]
-
-		return ContentTypes(ContentType)
-
-	def get_content_type_by_slug(self, slug: str) -> ContentTypes:
-		"""
-		Определяет тип контента по алиасу тайтла.
-
-		:param slug: Алиас тайтла.
-		:type slug: str
-		:return: Тип контента.
-		:rtype: ContentTypes
-		"""
-
-		SupportedTypes = self._Manifest.content_types
-
-		if len(SupportedTypes) == 1: return SupportedTypes[0]
-		else: raise Exceptions.BadEntryPoint("No content types specificator.")
-
-	def launch_parser(self, content_type: ContentTypes) -> "MangaParser | RanobeParser":
-		"""
-		Запускает парсер определённого типа контента.
-
-		:param content_type: Тип контента.
-		:type content_type: ContentTypes
-		:return: Объект парсера.
-		:rtype: MangaParser | RanobeParser
-		"""
-
-		Module = importlib.import_module(f"Parsers.{self._Manifest.name}.{content_type.value}")
-		Parser: "MangaParser | RanobeParser" = Module.Parser(self)
-
-		return Parser

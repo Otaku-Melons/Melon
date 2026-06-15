@@ -3,7 +3,7 @@ from dublib.Methods.Filesystem import ListDir
 
 from difflib import get_close_matches
 from urllib.parse import urlparse
-from typing import Iterable
+from typing import Sequence
 from pathlib import Path
 import shutil
 import io

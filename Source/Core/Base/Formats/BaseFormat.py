@@ -1,9 +1,11 @@
-from .Components.WordsDictionary import CheckLanguageCode, GetDictionaryPreset, WordsDictionary
+from Source.Core.Base.Formats.Components.WordsDictionary import CheckLanguageCode, GetDictionaryPreset
+
+from .Components.WordsDictionary import WordsDictionary
 from .Components.Functions import SafelyReadTitleJSON
 from .Components.Structs import ChapterSearchResult
 from .Components.Enums import By, Statuses
 
-from Source.Core.Base.Parsers.Components.ImagesDownloader import ImageDownloadingStatus, ImageResolution
+from Source.Core.Base.Parsers.Components.ImagesDownloader import ImageDownloadingResult, ImageResolution
 from Source.Core import Exceptions
 
 from dublib.Methods.Data import RemoveRecurringSubstrings, Zerotify
@@ -101,7 +103,7 @@ class Cover:
 		self.__Filename = cast(str, self.__Filename)
 
 		if self.__IsExists and not self.__SystemObjects.FORCE_MODE:
-			Status = ImageDownloadingStatus()
+			Status = ImageDownloadingResult()
 			Status.set_is_exists(True)
 			Status.value = self.__Filename
 			Status.messages.push_info("Already exists.")

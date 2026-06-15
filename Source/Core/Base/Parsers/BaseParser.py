@@ -73,7 +73,7 @@ class BaseParser:
 	# >>>>> ПУБЛИЧНЫЕ МЕТОДЫ <<<<< #
 	#==========================================================================================#
 
-	def __init__(self, entry_point: "BaseEntryPoint", title: BaseTitle | None = None):
+	def __init__(self, entry_point: "BaseEntryPoint"):
 		"""
 		Базовый парсер.
 

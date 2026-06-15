@@ -19,7 +19,7 @@ import os
 from bs4 import BeautifulSoup
 
 if TYPE_CHECKING:
-	from ..Ranobe import Ranobe
+	from . import Ranobe
 
 	from Source.Core.SystemObjects import SystemObjects
 

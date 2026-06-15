@@ -6,11 +6,15 @@ follow_imports = "silent"
 files = [
 	"main.py",
 
+	"Source/CLI",
 	"Source/Core/Exceptions",
 
 	"Source/Utils"
 ]
-exclude = ["__pycache__"]
+exclude = [
+	"Source/CLI/Legacy",
+	"__pycache__"
+]
 
 [tool.ruff]
 include = [

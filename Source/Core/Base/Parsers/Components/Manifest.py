@@ -1,26 +1,19 @@
 from Source.Core.Base.Formats.Components.Enums import ContentTypes
-from Source.Core.Base.Formats.Ranobe import Ranobe
-from Source.Core.Base.Formats.Manga import Manga
-from Source.Core.Exceptions.System import BadManifest
+from Source.Core import Exceptions
 
 from dublib.Methods.Filesystem import ReadJSON
-from dublib.Methods.Data import Zerotify
 
 from types import MappingProxyType
 from typing import TYPE_CHECKING
 
-from dulwich.contrib.release_robot import get_current_version, get_recent_tags
-from dulwich.errors import NotGitRepository
-
 if TYPE_CHECKING:
 	from Source.Core.SystemObjects import SystemObjects
 
-Manifest = MappingProxyType({
+_BASE_MANIFEST = MappingProxyType({
 	"object": "parser",
 	"site": None,
 	"content_types": [],
 	"parent": None,
-	"version": None,
 	"melon_required_version": None
 })
 
@@ -32,24 +25,10 @@ class ParserManifest:
 	#==========================================================================================#
 
 	@property
-	def latest_git_tag(self) -> str | None:
-		"""Имя самого свежего тега Git."""
-
-		LatestTag = None
-		try: LatestTag = get_recent_tags(f"Parsers/{self.__ParserName}")[0][0]
-		except (TypeError, IndexError): pass
-		
-		return LatestTag
-
-	@property
-	def name(self) -> str:
+	def parser_name(self) -> str:
 		"""Имя парсера."""
 
 		return self.__ParserName
-
-	#==========================================================================================#
-	# >>>>> СВОЙСТВА <<<<< #
-	#==========================================================================================#
 
 	@property
 	def site(self) -> str:
@@ -58,45 +37,25 @@ class ParserManifest:
 		return self.__Data["site"]
 	
 	@property
-	def content_types(self) -> tuple[ContentTypes]:
+	def content_types(self) -> tuple[ContentTypes, ...]:
 		"""Типы поддерживаемого контента."""
 
 		return tuple(ContentTypes(Value) for Value in self.__Data["content_types"])
 	
 	@property
-	def parent(self) -> str:
+	def parent_name(self) -> str | None:
 		"""Имя родительского парсера."""
 
 		return self.__Data["parent"]
-
-	@property
-	def version(self) -> str | None:
-		"""Версия парсера."""
-
-		Version: str | None = self.__Data["version"]
-
-		if Version and Version.startswith("$"):
-			
-			if Version == "$last_git_tag":
-				try: Version = get_current_version(f"Parsers/{self.__ParserName}")
-				except NotGitRepository: Version = None # Обработать вывод в CLI и логи.
-				except TypeError: Version = None
-
-			elif Version == "$from_parent":
-				Version = self.__SystemObjects.controller.get_parser_manifest(self.parent).version
-
-			elif Version.startswith("$from_parser:"):
-				Ancestor = Version[13:]
-				Version = self.__SystemObjects.controller.get_parser_manifest(Ancestor).version
-
-		return Version
 
 	@property
 	def melon_required_version(self) -> str | None:
 		"""Требуемая версия Melon."""
 
 		Version: str | None = self.__Data["melon_required_version"]
-		if Version == "$from_parent": Version = self.__SystemObjects.controller.get_parser_manifest(self.parent).melon_required_version
+
+		if Version == "$from_parent" and self.parent_name:
+			Version = self.__SystemObjects.driver.load_parser_manifest(self.parent_name).melon_required_version
 		
 		return Version
 
@@ -111,20 +70,27 @@ class ParserManifest:
 		:raises BadManifest: Выбрасывается при ошибке валидации манифеста.
 		"""
 		
-		for Key in Manifest:
-			if Key not in self.__Data: raise BadManifest(f"Key \"{Key}\" not found.")
+		for Key in _BASE_MANIFEST.keys():
+			if Key not in self.__Data:
+				raise Exceptions.System.BadManifest(f"Key \"{Key}\" not found.")
 
-		if self.__Data["object"] != "parser": raise BadManifest("Parser manifest required, not other object.")
-		if not self.__Data["site"]: raise BadManifest("Site must be specified.")
+		if self.__Data["object"] != "parser":
+			raise Exceptions.System.BadManifest("Parser manifest required, not other object.")
+		if not self.__Data["site"]:
+			raise Exceptions.System.BadManifest("Site must be specified.")
 
-		if not self.__Data["content_types"]: raise BadManifest("Types must be specified.")
+		if not self.__Data["content_types"]:
+			raise Exceptions.System.BadManifest("Types must be specified.")
 		for ContentType in self.__Data["content_types"]:
-			if ContentType not in ("manga", "ranobe", "anime"): raise BadManifest(f"Unsupported content type \"{ContentType}\".")
+			if ContentType not in ("manga", "ranobe", "anime"):
+				raise Exceptions.System.BadManifest(f"Unsupported content type \"{ContentType}\".")
 
 		for Key in ("version", "melon_required_version"):
-			if self.__Data[Key] == "$from_parent" and not self.__Data["parent"]: raise BadManifest("Parent must be specified if using \"$from_parent\".")
+			if self.__Data[Key] == "$from_parent" and not self.__Data["parent"]:
+				raise Exceptions.System.BadManifest("Parent must be specified if using \"$from_parent\".")
 
-		if self.__Data["parent"] and self.__Data["parent"] not in self.__SystemObjects.controller.parsers_names: raise BadManifest("Parent \"" + self.__Data["parent"] + "\" not found.")
+		if self.__Data["parent"] and self.__Data["parent"] not in self.__SystemObjects.driver.parsers_names:
+			raise Exceptions.System.BadManifest("Parent \"" + self.__Data["parent"] + "\" not found.")
 
 	#==========================================================================================#
 	# >>>>> ПУБЛИЧНЫЕ МЕТОДЫ <<<<< #
@@ -145,4 +111,3 @@ class ParserManifest:
 
 		self.__Data = ReadJSON(f"Parsers/{self.__ParserName}/manifest.json")
 		self.__Validate()
-		self.__Data["version"] = Zerotify(self.__Data["version"])

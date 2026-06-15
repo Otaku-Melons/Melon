@@ -1,29 +1,6 @@
-# from Source.Core.Base.Builders.RanobeBuilder import RanobeBuilder
-# from Source.Core.Base.Formats.Components import By, ContentTypes
-# from Source.Core.Base.Builders.MangaBuilder import MangaBuilder
-# from Source.Utils.Development import DevelopmeptAssistant
-# from Source.Core.SystemObjects import SystemObjects
-# from Source.Utils.Collector import Collector
-# from Source.Utils.Installer import Installer
-# from Source.Utils.Cacher import Cacher
-# from Source import Utils
-# from Source.Utils.Timer import Timer
-# from Source.Core import Exceptions
-# from Source.CLI.Legacy import Templates
-
-# from dublib.CLI.TextStyler import FastStyler, GetStyledTextFromHTML
-# from dublib.CLI.Templates.Bus import PrintError, PrintWarning
-# from dublib.CLI.Terminalyzer import ParsedCommandData
-# from dublib.Methods.Filesystem import WriteJSON
-# from dublib.Engine.Bus import ExecutionResult
-
-# from json.decoder import JSONDecodeError
-
-# from time import sleep
-# import traceback
-
 from . import Templates
 
+from Source.Core.Base.Formats.Components.Enums import ContentTypes
 from Source.Core import Exceptions
 from Source import Utils
 
@@ -91,3 +68,41 @@ def com_classify(system_objects: "SystemObjects", command: "ParsedCommandData"):
 	if FileToWrite:
 		WriteJSON(FileToWrite, ClassificationResult.to_dict())
 		system_objects.logger.info(f"Classification result dumped in file: \"{FileToWrite}\".")
+
+def com_list(system_objects: "SystemObjects", command: "ParsedCommandData"):
+	"""
+	Выводит список парсеров.
+		
+	:param system_objects: Коллекция системных объектов.
+	:type system_objects: SystemObjects
+	:param command: Данные команды.
+	:type command: ParsedCommandData
+	"""
+
+	TableData: dict[str, list[str]] = {
+		"NAME": [],
+		"VERSION": [],
+		"TYPES": [],
+		"SITE": [],
+		"collect": []
+	}
+
+	for ParserName in system_objects.driver.parsers_names:
+		EntryPoint = system_objects.driver.get_entry_point(ParserName)
+		TypesEmoji = {
+			ContentTypes.Anime: "a",
+			ContentTypes.Manga: "m",
+			ContentTypes.Ranobe: "r"
+		}
+
+		ParserVersion = EntryPoint.version or ""
+		ParserContentTypes: list[str] = [TypesEmoji[CurrentType] for CurrentType in EntryPoint.manifest.content_types]
+		ParserSite: str = "https://" + EntryPoint.manifest.site
+
+		TableData["NAME"].append(ParserName)
+		TableData["VERSION"].append(ParserVersion)
+		TableData["TYPES"].append(", ".join(ParserContentTypes))
+		TableData["SITE"].append(ParserSite)
+		TableData["collect"].append(str(EntryPoint.is_supported_collect))
+
+	Templates.PrintParsersTable(TableData)

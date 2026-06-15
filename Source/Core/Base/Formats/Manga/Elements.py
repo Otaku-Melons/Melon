@@ -8,7 +8,7 @@ from pathlib import Path
 import validators
 
 if TYPE_CHECKING:
-	from ..Manga import Chapter
+	from . import Chapter
 
 	from Source.Core.SystemObjects import SystemObjects
 

@@ -1,4 +1,4 @@
-from Source.Core.Base.Parsers.Components.ImagesDownloader import ImageDownloadingStatus
+from Source.Core.Base.Parsers.Components.ImagesDownloader import ImageDownloadingResult
 from Source.Core.Base.SourceOperator import BaseSourceOperator
 
 from dublib.WebRequestor import WebConfig, WebLibs, WebRequestor
@@ -59,14 +59,14 @@ class SourceOperator(BaseSourceOperator):
 
 		return super().get_slug_from_string(data)
 	
-	def image(self, url: str) -> ImageDownloadingStatus:
+	def image(self, url: str) -> ImageDownloadingResult:
 		"""
 		Скачивает изображение по ссылке и сохраняет во временный каталог парсера.
 
 		:param url: Ссылка на изображение.
 		:type url: str
 		:return: Статус скачивания изображения. В случае успеха значение должно содержать имя файла во временном каталоге парсера.
-		:rtype: ImageDownloadingStatus
+		:rtype: ImageDownloadingResult
 		"""
 		
 		return super().image(url)

@@ -88,9 +88,6 @@ Com.base.add_flag("-t", description = "Switch parsers submodules to the latest s
 Com.base.add_flag("-f", description = "Enable force mode.")
 COMMANDS.append(Com)
 
-Com = Command("list", "Print list of installed parsers.")
-COMMANDS.append(Com)
-
 # Com = Command("parse", "Start titles parsing.")
 # ComPos = Com.create_position("TARGET", "Target for parsing.", important = True)
 # ComPos.add_argument(description = "Title slug.")
