@@ -123,7 +123,6 @@ class BaseSourceOperator:
 
 		self._SystemObjects = entry_point.system_objects
 		self._Temper = self._SystemObjects.temper
-		self._Portals = self._SystemObjects.logger.portals
 
 		self._Settings = entry_point.settings
 		self._Manifest = entry_point.manifest

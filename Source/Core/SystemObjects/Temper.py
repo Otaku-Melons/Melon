@@ -62,7 +62,7 @@ class Journal:
 		"""Загружает журнал."""
 
 		if self.__JournalPath.exists():
-			self.__Data = {int(Key): Value for Key, Value in ReadJSON(self.__JournalPath)}
+			self.__Data = {int(Key): Value for Key, Value in ReadJSON(self.__JournalPath).items()}
 		else:
 			self.__Data = dict()
 

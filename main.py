@@ -40,22 +40,18 @@ if not HIDE_HEADERS:
 	if Objects.MELON_VERSION: print(f"Melon: {Objects.MELON_VERSION}")
 	PrintOptionStatus("Force mode", Objects.FORCE_MODE.status)
 	PrintOptionStatus("Caching", Objects.CACHING.status)
-	Objects.logger.header(CommandData.name)
+	Templates.PrintHeader(CommandData.name)
 
 try:
-	Objects.logger.select_cli_point(CommandData.name)
-
-	# if CommandData.check_key("--use"): Objects.select_parser(CommandData.get_position_value("PARSER", expected_type = str))
 	CommandName = CommandData.name.replace("-", "_")
-
 	if CommandName != "help": exec(f"Commands.com_{CommandName}(Objects, CommandData)")
-	
-except KeyboardInterrupt: pass
+except KeyboardInterrupt:
+	pass
 
 #==========================================================================================#
 # >>>>> ЗАВЕРШЕНИЕ РАБОТЫ <<<<< #
 #==========================================================================================#
 
-if not HIDE_HEADERS: Objects.logger.header("End")
+if not HIDE_HEADERS: Templates.PrintHeader("END")
 Objects.logger.close()
 exit(Objects.EXIT_CODE)

@@ -1,11 +1,3 @@
-class TempOwnerNotSpecified(Exception):
-	"""Исключение: владалец временного каталога не определён."""
-
-	def __init__(self):
-		"""Исключение: владалец временного каталога не определён."""
-
-		super().__init__("Parser or extension not specified for temper. Unable to load directory.") 
-	
 class BadManifest(Exception):
 	"""Исключение: неверное определение манифеста."""
 
@@ -18,3 +10,16 @@ class BadManifest(Exception):
 		"""
 
 		super().__init__(message) 
+
+class ParserNotFound(Exception):
+	"""Исключение: парсер не найден."""
+
+	def __init__(self, parser_name: str):
+		"""
+		Исключение: парсер не найден.
+
+		:param parser_name: Имя парсера.
+		:type parser_name: str
+		"""
+
+		super().__init__(parser_name) 

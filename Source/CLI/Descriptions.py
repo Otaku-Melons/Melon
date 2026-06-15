@@ -2,6 +2,11 @@ from dublib.CLI.Terminalyzer import Command, ValidableTypes
 
 COMMANDS: list[Command] = list()
 
+Com = Command("cacher", "Run ID-slug caching.")
+ComPos = Com.create_position("PARSERS", "One or more parsers names separated by comma. By default all.")
+ComPos.add_key("--use")
+COMMANDS.append(Com)
+
 Com = Command("classify", "Process titles classificators.")
 ComPos = Com.create_position("VALUE", "Input value to classification.", important = True)
 ComPos.set_argument()

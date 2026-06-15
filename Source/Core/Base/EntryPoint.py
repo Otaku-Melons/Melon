@@ -14,6 +14,7 @@ from dulwich import errors, porcelain
 if TYPE_CHECKING:
 	from Source.Core.Base.Parsers.Components import ParserManifest
 	from Source.Core.SystemObjects.Temper import SharedData
+	from Source.Core.SystemObjects.Logger import Portals
 	from Source.Core.SystemObjects import SystemObjects
 
 #==========================================================================================#
@@ -49,6 +50,12 @@ class BaseEntryPoint:
 		"""Манифест парсера."""
 
 		return self._Manifest
+
+	@property
+	def portals(self) -> "Portals":
+		"""Порталы вывода парсера."""
+
+		return self._Portals
 
 	@property
 	def settings(self) -> ParserSettings:
@@ -116,6 +123,7 @@ class BaseEntryPoint:
 		self._SystemObjects = system_objects
 		self._Manifest = manifest
 		self._SharedData = self._SystemObjects.temper.load_parser_shared_data(self._Manifest.parser_name)
+		self._Portals = self._SystemObjects.logger.get_parser_portals(self._Manifest.parser_name)
 
 		Module = importlib.import_module(f"Parsers.{self._Manifest.parser_name}.main")
 

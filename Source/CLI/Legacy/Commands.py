@@ -285,57 +285,7 @@ def com_install(system_objects: SystemObjects, command: ParsedCommandData):
 	if command.check_flag("t") or FullInstallation: InstallerObject.releases()
 	TimerObject.done()
 
-def com_list(system_objects: SystemObjects, command: ParsedCommandData):
-	"""
-	Выводит список парсеров в консоль.
-		
-	:param system_objects: Коллекция системных объектов.
-	:type system_objects: SystemObjects
-	:param command: Данные команды.
-	:type command: ParsedCommandData
-	"""
 
-	Status = ExecutionResult()
-	TableData = {
-		"NAME": [],
-		"VERSION": [],
-		"TYPES": [],
-		"SITE": [],
-		"collect": []
-	}
-
-	for Parser in system_objects.controller.parsers_names:
-
-		try:
-			EntryPoint = system_objects.controller.get_entry_point(Parser, verbose = False)
-			TypesEmoji = {
-				ContentTypes.Anime: "🎬",
-				ContentTypes.Manga: "🌄",
-				ContentTypes.Ranobe: "📘"
-			}
-
-			# Генерация переменных нужна для отлова исключений до записи в таблицу.
-			Version = EntryPoint.manifest.version or ""
-			Types = list()
-			for CurrentType in EntryPoint.manifest.content_types: Types.append(TypesEmoji[CurrentType])
-			Site = "https://" + EntryPoint.manifest.site
-
-			TableData["NAME"].append(Parser)
-			TableData["VERSION"].append(Version)
-			TableData["TYPES"].append(", ".join(Types))
-			TableData["SITE"].append(Site)
-			TableData["collect"].append(EntryPoint.is_supported_collect)
-
-		except Exception as ExceptionData:
-			TableData["NAME"].append(Parser)
-			TableData["VERSION"].append("")
-			TableData["TYPES"].append("")
-			TableData["SITE"].append("")
-			TableData["collect"].append(None)
-			Status.push_error(str(ExceptionData), Parser)
-
-	Templates.ParsersTable(TableData)
-	Status.print_messages()
 
 def com_parse(system_objects: SystemObjects, command: ParsedCommandData):
 	"""

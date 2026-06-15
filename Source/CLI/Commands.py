@@ -16,9 +16,50 @@ if TYPE_CHECKING:
 	
 	from dublib.CLI.Terminalyzer import ParsedCommandData
 
-def com_classify(system_objects: "SystemObjects", command: "ParsedCommandData"):
+def com_cacher(system_objects: "SystemObjects", command: "ParsedCommandData"):
 	"""
 	Кэширует пары ID-алиас для ускорения файловых операций.
+		
+	:param system_objects: Коллекция системных объектов.
+	:type system_objects: SystemObjects
+	:param command: Данные команды.
+	:type command: ParsedCommandData
+	"""
+
+	#---> Парсинг параметров команды.
+	#==========================================================================================#
+	KeyValue: str | None = command.get_key_value("--use", expected_type = str)
+	Parsers: tuple[str, ...] = tuple()
+
+	if KeyValue:
+		Parsers = tuple(Element.strip() for Element in KeyValue.split(","))
+
+	AllParsers: tuple[str, ...] = system_objects.driver.parsers_names
+
+	if not Parsers:
+		Parsers = AllParsers
+	else:
+		for CurrentParser in Parsers:
+			if CurrentParser not in AllParsers:
+				raise Exceptions.System.ParserNotFound(CurrentParser)
+			
+	#---> Выполнение команды.
+	#==========================================================================================#
+	TimerObject = Utils.Timer(start = True)
+
+	for CurrentParser in Parsers:
+		system_objects.logger.info(f"Caching titles for <b>{CurrentParser}</b>…")
+		EntryPoint = system_objects.driver.get_entry_point(CurrentParser)
+		CacherObject = Utils.Cacher(EntryPoint)
+
+		Result = CacherObject.cache_parser_output()
+		Templates.PrintCachingSummary(Result)
+	
+	print(f"Done in {TimerObject.ends()}.")
+
+def com_classify(system_objects: "SystemObjects", command: "ParsedCommandData"):
+	"""
+	Определяет тип классификатора и требуемые для него операции преобразования.
 		
 	:param system_objects: Коллекция системных объектов.
 	:type system_objects: SystemObjects
@@ -79,6 +120,8 @@ def com_list(system_objects: "SystemObjects", command: "ParsedCommandData"):
 	:type command: ParsedCommandData
 	"""
 
+	#---> Выполнение команды.
+	#==========================================================================================#
 	TableData: dict[str, list[str]] = {
 		"NAME": [],
 		"VERSION": [],

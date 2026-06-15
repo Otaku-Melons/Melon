@@ -27,19 +27,21 @@ class Collector:
 	# >>>>> ПУБЛИЧНЫЕ МЕТОДЫ <<<<< #
 	#==========================================================================================#
 
-	def __init__(self, system_objects: "SystemObjects", merge: bool = True):
+	def __init__(self, system_objects: "SystemObjects", parser_name: str, merge: bool = True):
 		"""
 		Менеджер коллекций.
 
 		:param system_objects: Коллекция системных объектов.
 		:type system_objects: SystemObjects
+		:param parser_name: Имя парсера.
+		:type parser_name: str
 		:param merge: Указывает, нужно ли читать файл коллекции. По умолчанию `True`.
 		:type merge: boolt
 		"""
 
 		self.__SystemObjects: "SystemObjects" = system_objects
 
-		self.__Path: Path = Path(f"{system_objects.temper.parser_temp}/Collection.txt")
+		self.__Path = self.__SystemObjects.temper.get_parser_temp_directory(parser_name) / "Collection.txt"
 		self.__Collection: list[str] = list(ReadTextFile(self.__Path, split = True, strip = True)) if self.__Path.exists() and merge else list()
 
 	def append(self, slugs: str | Sequence[str]):
@@ -63,7 +65,7 @@ class Collector:
 		:rtype: list[int] | list[str]
 		"""
 		
-		ParserSettings = self.__SystemObjects.controller.current_parser_settings
+		ParserSettings = self.__SystemObjects.driver.current_parser_settings
 
 		LocalTitles = tuple(Entry.name for Entry in os.scandir(ParserSettings.common.titles_directory) if Entry.is_file() and Entry.name.endswith(".json"))
 		Identificators = list()

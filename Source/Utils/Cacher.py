@@ -1,76 +1,87 @@
 from Source.Core.Base.Formats.Components.Functions import SafelyReadTitleJSON
+from Source.Core import Exceptions
 
-from dublib.Engine.Bus import ExecutionResult
-
+from dataclasses import dataclass
 from typing import TYPE_CHECKING
 import os
 
 if TYPE_CHECKING:
-	from Source.Core.SystemObjects import SystemObjects
+	from Source.Core.Base.EntryPoint import BaseEntryPoint
+
+#==========================================================================================#
+# >>>>> ВСПОМОГАТЕЛЬНЫЕ СТРУКТУРЫ ДАННЫХ <<<<< #
+#==========================================================================================#
+
+@dataclass(frozen = True)
+class CachingResult:
+	"""Результат кэширования."""
+
+	total_files: int
+	found_in_cache: int
+	cached_files: int
+	errors: tuple[str, ...]
+
+#==========================================================================================#
+# >>>>> ОСНОВНОЙ КЛАСС <<<<< #
+#==========================================================================================#
 
 class Cacher:
 	"""Оператор кэширования пар ID-алиас."""
 
-	def __init__(self, system_objects: "SystemObjects"):
+	def __init__(self, entry_point: "BaseEntryPoint"):
 		"""
 		Оператор кэширования пар ID-алиас.
 
-		:param system_objects: Коллекция системных объектов.
-		:type system_objects: SystemObjects
+		:param entry_point: Точка входа в модуль парсера.
+		:type entry_point: BaseEntryPoint
 		"""
 
-		self.__Controller = system_objects.controller
-		self.__Temper = system_objects.temper
+		self.__EntryPoint = entry_point
 
-	def cache_parser_output(self, parser_name: str) -> ExecutionResult:
+	def cache_parser_output(self) -> CachingResult:
 		"""
 		Кэширует пары ID-алиас файлов в выходном каталоге парсера.
 
-		:param parser_name: Имя парсера.
-		:type parser_name: str
-		:return: Результат кэширования, в котором доступны ключи:
-
-			* _total_ – всего найдено файлов;
-			* _in\\_cache_ – из них уже находились в кэше;
-			* _cached_ – кэшировано;
-			* _errors_ – последовательность имён файлов (без расширения), в которых возникли ошибки.
-
-		:rtype: ExecutionResult
+		:return: Результат кэширования.
+		:rtype: CachingResult
 		"""
 
-		Status = ExecutionResult()
-		Status["total"] = None
-		Status["in_cache"] = 0
-		Status["cached"] = 0
-		Status["errors"] = list()
+		TotalFiles: int = 0
+		FoundInCache: int = 0
+		CachedFiles: int = 0
+		Errors: list[str] = list()
 
-		ParserSettings = self.__Controller.get_parser_settings(parser_name)
-		Files = list()
+		TitlesDirectory = self.__EntryPoint.settings.directories.titles
+		Files: list[str] = list()
+		SuffixCharactersCount: int = len(".json") * -1
 
-		if not os.path.exists(ParserSettings.directories.titles): return Status
+		for Element in os.scandir(TitlesDirectory):
+			if not Element.is_file() or not Element.name.endswith(".json"):
+				continue
+			else:
+				Files.append(Element.name[:SuffixCharactersCount])
 
-		for Element in os.scandir(ParserSettings.directories.titles):
-			if not Element.is_file() or not Element.name.endswith(".json"): continue
-			else: Files.append(Element.name[:-5])
-
-		Status["total"] = len(Files)
+		TotalFiles = len(Files)
 
 		for CurrentFile in Files:
+				try:
+					Data = SafelyReadTitleJSON(TitlesDirectory / f"{CurrentFile}.json")
+				except Exceptions.Parsers.UnsupportedFormat:
+					Errors.append(CurrentFile)
+					continue
 
-			try:
-				Data = SafelyReadTitleJSON(f"{ParserSettings.directories.titles}/{CurrentFile}.json")
+				DataID: int | None = Data.get("id")
+				DataSlug: str | None = Data.get("slug")
 
-				if self.__Temper.shared_data.journal.get_slug_by_id(Data["id"]):
-					Status["in_cache"] += 1
+				if not DataID or not DataSlug:
+					Errors.append(CurrentFile)
+					continue
+
+				if self.__EntryPoint.shared_data.journal.get_slug_by_id(DataID):
+					FoundInCache += 1
 
 				else:
-					self.__Temper.shared_data.journal.update(Data["id"], Data["slug"])
-					Status["cached"] += 1
+					self.__EntryPoint.shared_data.journal.update(DataID, DataSlug)
+					CachedFiles += 1
 
-			except Exception:
-				Status["errors"].append(CurrentFile)
-				continue
-
-		Status["errors"] = tuple(Status["errors"])
-
-		return Status
+		return CachingResult(TotalFiles, FoundInCache, CachedFiles, tuple(Errors))

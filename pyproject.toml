@@ -5,24 +5,25 @@ non_interactive = true
 follow_imports = "silent"
 files = [
 	"main.py",
-
-	"Source/CLI",
-	"Source/Core/Exceptions",
-
-	"Source/Utils"
+	"Source"
 ]
 exclude = [
 	"Source/CLI/Legacy",
+	"Source/Core/Base",
+	"Source/Utils/Development.py",
 	"__pycache__"
 ]
 
 [tool.ruff]
 include = [
 	"main.py",
-
-	"Source/Core/Exceptions",
-
-	"Source/Utils"
+	"Source"
+]
+exclude = [
+	"Source/CLI/Legacy",
+	"Source/Core/Base",
+	"Source/Utils/Development.py",
+	"__pycache__"
 ]
 
 [tool.ruff.lint]

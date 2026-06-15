@@ -1,3 +1,4 @@
+from dublib.Methods.Data import StringifyFloat
 from dublib.CLI.TextStyler import FastStyler
 
 from typing import TYPE_CHECKING
@@ -6,6 +7,22 @@ from prettytable import PLAIN_COLUMNS, PrettyTable
 
 if TYPE_CHECKING:
 	from Source.Utils.Classificator import ClassificationResult
+	from Source.Utils.Cacher import CachingResult
+
+def PrintCachingSummary(result: "CachingResult"):
+	"""
+	Выводит в терминал результат кэширования пар ID-алиас тайтлов.
+
+	:param result: Результат кэширования.
+	:type result: CachingResult
+	"""
+
+	print(f"Total: {result.total_files}. Found in cache: {result.found_in_cache}. Cached: {result.cached_files}.")
+
+	if result.errors:
+		print(FastStyler("Errors:").decorate.bold)
+		for Error in result.errors:
+			print(" - " + FastStyler(Error + ".json").colorize.red)
 
 def PrintClassificationResult(result: "ClassificationResult", input_value: str):
 	"""
@@ -31,9 +48,19 @@ def PrintClassificationResult(result: "ClassificationResult", input_value: str):
 		
 		print(FastStyler(f"{Key}:").decorate.bold, ResultDict[Key])
 
+def PrintHeader(header: str):
+	"""
+	Выводит в терминал заголовок.
+
+	:param header: Заголовок.
+	:type header: str
+	"""
+
+	print(f"===== {header.upper()} =====")
+
 def PrintOptionStatus(option: str, status: bool, inverse: bool = False):
 	"""
-	Выводит в консоль стилизованный статус активации опции.
+	Выводит в терминал стилизованный статус активации опции.
 
 	:param option: Имя опции.
 	:type option: str
@@ -50,7 +77,7 @@ def PrintOptionStatus(option: str, status: bool, inverse: bool = False):
 
 def PrintParsersTable(columns: dict[str, list[str]]):
 	"""
-	Выводит в консоль форматированную таблицу парсеров.
+	Выводит в терминал форматированную таблицу парсеров.
 
 	:param columns: Словарь данных для вывода.
 	:type columns: dict[str, list[str]]
@@ -79,6 +106,23 @@ def PrintParsersTable(columns: dict[str, list[str]]):
 
 	TableObject.align = "l"
 	TableObject.sortby = FastStyler("NAME").decorate.bold
-	TableObject = str(TableObject).strip()
+	TableString = str(TableObject).strip()
 	Link = FastStyler("https://github.com/Otaku-Melons").decorate.underlined
-	print(TableObject if TableObject else f"Parsers not installed. See {Link} for more info.")
+	print(TableString if TableString else f"Parsers not installed. See {Link} for more info.")
+
+def PrintParsingProgress(index: int, count: int):
+	"""
+	Выводит прогресс парсинга тайтлов.
+
+	:param index: Индекс обрабатываемого тайтла.
+	:type index: int
+	:param count: Количество тайтлов.
+	:type count: int
+	"""
+
+	Number = index + 1
+	Progress = round(Number / count * 100, 2)
+	NumberString = FastStyler(str(Number)).colorize.magenta
+	ProgressString = StringifyFloat(Progress)
+	ProgressString = FastStyler(ProgressString + "%").colorize.cyan
+	print(f"[{NumberString} / {count} | {Progress}] ", end = "")

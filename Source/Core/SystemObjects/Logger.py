@@ -1,20 +1,17 @@
 from Source.Core import Exceptions
-from Source.CLI.Legacy import Templates
+from Source.CLI import Templates
 
-from dublib.CLI.Templates.Bus import MessagesTypes, PrintMessage
+from dublib.CLI.Templates.Bus import GenerateMessage, MessagesTypes
 from dublib.CLI.TextStyler import GetStyledTextFromHTML
-from dublib.Methods.Filesystem import ReadJSON
 from dublib.WebRequestor import WebResponse
 
-from typing import TYPE_CHECKING
+from typing import cast, TYPE_CHECKING
 from datetime import datetime
+from pathlib import Path
 import logging
 import enum
-import sys
 import os
 import re
-
-import telebot
 
 if TYPE_CHECKING:
 	from Source.Core.Base.Formats.BaseFormat import BaseChapter, BaseTitle
@@ -33,293 +30,27 @@ class LoggerRules(enum.Enum):
 	Remove = 3
 
 #==========================================================================================#
-# >>>>> КОНТЕЙНЕРЫ НАСТРОЕК <<<<< #
-#==========================================================================================#
-
-class CleanerSettings:
-	"""Правила очистки логов."""
-
-	def __init__(self, data: dict):
-		"""
-		Правила очистки логов.
-
-		:param data: Словарь правил очистки логов.
-		:type data: dict
-		"""
-
-		self.__Rules = data.copy()
-
-	def __getitem__(self, command: str) -> LoggerRules:
-		"""
-		Возвращает правило очистки логов.
-
-		:param command: Имя команды.
-		:type command: str
-		:return: Правило очистки логов.
-		:rtype: LoggerRules
-		"""
-
-		Rule = LoggerRules(0)
-		if command in self.__Rules.keys(): Rule = LoggerRules(self.__Rules[command])
-
-		return Rule
-
-class ReportsRules:
-	"""Набор правил отправки отчётов."""
-
-	#==========================================================================================#
-	# >>>>> НАСТРОЙКИ ОТПРАВКИ <<<<< #
-	#==========================================================================================#
-
-	@property 
-	def attach_log(self) -> bool:
-		"""Переключатель: требуется ли прикреплять файл лога к отчёту."""
-
-		return self.__Data["attach_log"]
-	
-	@property 
-	def forbidden_commands(self) -> list[str]:
-		"""Список команд, для которых запрещена отправка отчётов."""
-
-		return self.__Data["forbidden_commands"]
-	
-	#==========================================================================================#
-	# >>>>> ПЕРЕКЛЮЧАТЕЛИ ОТПРАВКИ ШАБЛОНОВ <<<<< #
-	#==========================================================================================#
-	
-	@property 
-	def ignored_requests_errors(self) -> list[int, None]:
-		"""Список кодов HTTP, не вызывающих отправку отчётов."""
-
-		return self.__Data["ignored_requests_errors"]
-	
-	@property 
-	def title_not_found(self) -> bool:
-		"""Указывает, нужно ли отправлять отчёт для данного типа записи."""
-
-		return self.__Data["title_not_found"]
-	
-	@property 
-	def chapter_not_found(self) -> bool:
-		"""Указывает, нужно ли отправлять отчёт для данного типа записи."""
-
-		return self.__Data["chapter_not_found"]
-	
-	@property 
-	def downloading_error(self) -> bool:
-		"""Указывает, нужно ли отправлять отчёт для данного типа записи."""
-
-		return self.__Data["downloading_error"]
-	
-	#==========================================================================================#
-	# >>>>> ПЕРЕКЛЮЧАТЕЛИ ОТПРАВКИ СООБЩЕНИЙ ОБ ОШИБКАХ И ПРЕДУПРЕЖДЕНИЙ <<<<< #
-	#==========================================================================================#
-
-	@property 
-	def critical(self) -> bool:
-		"""Указывает, нужно ли отправлять отчёт для данного типа записи."""
-
-		return self.__Data["critical"]
-	
-	@property 
-	def errors(self) -> bool:
-		"""Указывает, нужно ли отправлять отчёт для данного типа записи."""
-
-		return self.__Data["errors"]
-	
-	@property 
-	def warnings(self) -> bool:
-		"""Указывает, нужно ли отправлять отчёт для данного типа записи."""
-
-		return self.__Data["warnings"]
-	
-	#==========================================================================================#
-	# >>>>> ПУБЛИЧНЫЕ МЕТОДЫ <<<<< #
-	#==========================================================================================#
-
-	def __init__(self, data: dict):
-		"""
-
-		:param data: Словарь правил.
-		:type data: dict
-		"""
-
-		self.__Data = data.copy()
-		
-		Default = {
-			"attach_log": True,
-
-			"forbidden_commands": [],
-			"ignored_requests_errors": [],
-
-			"title_not_found": True,
-			"chapter_not_found": True,
-			"downloading_error": True,
-
-			"critical": True,
-			"errors": True,
-			"warnings": True
-		}
-
-		for Rule in Default.keys():
-			if Rule not in self.__Data.keys(): self.__Data[Rule] = Default[Rule]
-
-class TelebotSettings:
-	"""Настройки бота Telegram."""
-
-	@property 
-	def enable(self) -> bool:
-		"""Состояние: включена ли отправка отчётов в Telegram."""
-
-		return self.__Data["enable"]
-	
-	@property 
-	def bot_token(self) -> str | None:
-		"""Токен бота Telegram."""
-
-		return self.__Data["bot_token"]
-	
-	@property 
-	def chat_id(self) -> int | None:
-		"""Идентификатор чата Telegram."""
-
-		return self.__Data["chat_id"]
-	
-	@property 
-	def comment(self) -> str | None:
-		"""Комментарий для отчёта."""
-
-		return self.__Data["comment"]
-	
-	@property 
-	def rules(self) -> ReportsRules:
-		"""Набор правил отправки отчётов."""
-
-		return self.__Rules
-	
-	def __init__(self, data: dict | None = None):
-		"""
-		Настройки бота Telegram
-
-		:param data: Словарь настроек или `None` при отсутствии оных.
-		:type data: dict | None
-		"""
-
-		self.__Data = data or {
-			"enable": False,
-			"bot_token": None,
-			"chat_id": None,
-			"comment": None,
-			"rules": {}
-		}
-
-		self.__Rules = ReportsRules(self.__Data["rules"])
-
-class LoggerSettings:
-	"""Настройки логов."""
-
-	@property 
-	def cleaner(self) -> CleanerSettings:
-		"""Правила очистки логов."""
-
-		return self.__Cleaner
-	
-	@property 
-	def telebot(self) -> TelebotSettings:
-		"""Настройки бота Telegram."""
-
-		return self.__Telebot
-
-	def __init__(self, data: dict | None = None):
-		"""
-		Настройки логов.
-
-		:param data: Словарь со всеми настройками логов или `None` при отсутствии.
-		:type data: dict | None
-		"""
-
-		self.__Data = data or {
-			"telebot": {},
-			"cleaner": {}
-		}
-
-		for Key in ["telebot", "cleaner"]:
-			if Key not in self.__Data.keys(): self.__Data[Key] = dict()
-
-		self.__Telebot = TelebotSettings(self.__Data["telebot"])
-		self.__Cleaner = CleanerSettings(self.__Data["cleaner"])
-
-#==========================================================================================#
-# >>>>> ОСНОВНОЙ КЛАСС <<<<< #
+# >>>>> ПОРТАЛЫ ВЫВОДА ПАРСЕРА <<<<< #
 #==========================================================================================#
 
 class Portals:
-	"""Коллекция порталов коммуникации."""
+	"""Порталы вывода парсера."""
 
-	def __init__(self, logger: "Logger"):
+	def __init__(self, logger: "Logger", parser_name: str):
 		"""
-		Коллекция порталов коммуникации.
+		Порталы вывода парсера.
 
 		:param logger: Оператор вывода и логов.
 		:type logger: Logger
+		:param parser_name: Имя парсера.
+		:type parser_name: str
 		"""
 
 		self.__Logger = logger
+		self.__ParserName = parser_name
 
 	#==========================================================================================#
-	# >>>>> БАЗОВЫЕ ТИПЫ ПОРТАЛОВ <<<<< #
-	#==========================================================================================#
-
-	def critical(self, text: str, exception: bool = True):
-		"""
-		Портал критической ошибки.
-
-		:param text: Текст сообщения.
-		:type text: str
-		:param exception: Указывает, нужно ли выбросить исключение `ParsingError` с таким же описанием.
-		:type exception: str
-		:raise SystemExit: Выбрасывается в качестве исключения портала.
-		"""
-
-		self.__Logger.critical(text)
-		if exception: raise SystemExit(text)
-
-	def error(self, text: str, exception: bool = True):
-		"""
-		Портал ошибки.
-
-		:param text: Текст сообщения.
-		:type text: str
-		:param exception: Указывает, нужно ли выбросить исключение `ParsingError` с таким же описанием.
-		:type exception: str
-		:raise ParsingError: Выбрасывается в качестве исключения портала.
-		"""
-
-		self.__Logger.error(text)
-		if exception: raise Exceptions.ParsingError(text)
-
-	def warning(self, text: str):
-		"""
-		Портал предупреждения.
-
-		:param text: Текст сообщения.
-		:type text: str
-		"""
-
-		self.__Logger.warning(text)
-
-	def info(self, text: str):
-		"""
-		Портал информационнного сообщения.
-
-		:param text: Текст сообщения.
-		:type text: str
-		"""
-
-		self.__Logger.info(text)
-
-	#==========================================================================================#
-	# >>>>> ШАБЛОНЫ ПОРТАЛОВ ОШИБОК <<<<< #
+	# >>>>> ШАБЛОНЫ ОШИБОК <<<<< #
 	#==========================================================================================#
 
 	def authorization_required(self, text: str | None = None, exception: bool = True):
@@ -333,9 +64,13 @@ class Portals:
 		:raises ParsingError: Активирована опция выброса исключения.
 		"""
 
-		if not text: text = "Should use authorization method for selected parser."
+		if not text:
+			text = "Should use authorization method for selected parser."
+
 		self.__Logger.critical(text)
-		if exception: raise Exceptions.AuthorizationRequired(text)
+
+		if exception:
+			raise Exceptions.Parsers.AuthorizationRequired(text)
 
 	def request_error(self, response: WebResponse, text: str | None = None, exception: bool = True):
 		"""
@@ -350,8 +85,15 @@ class Portals:
 		:raises ParsingError: Выбрасывается при активации соответствующего аргумента.
 		"""
 
-		self.__Logger.request_error(response, text)
-		if exception: raise Exceptions.ParsingError(text)
+		if not text:
+			text = "Request error."
+
+		Text = f"{text} Response code: {response.status_code}."
+
+		self.__Logger.error(Text)
+
+		if exception:
+			raise Exceptions.Parsers.ParsingError(text)
 
 	def unsupported_format(self, format: str | None = None, exception: bool = True):
 		"""
@@ -364,13 +106,16 @@ class Portals:
 		:raises UnsupportedFormat: Выбрасывается при активации соответствующего аргумента.
 		"""
 
-		Format = f" \"{format}\"" if format else ""
+		Format = f": \"{format}\"" if format else ""
 		Text = f"Unsupported JSON format{Format}."
-		self.__Logger.unsupported_format(format)
-		if exception: raise Exceptions.UnsupportedFormat(Text)
+
+		self.__Logger.error(Text)
+
+		if exception:
+			raise Exceptions.Parsers.UnsupportedFormat(Text)
 
 	#==========================================================================================#
-	# >>>>> ШАБЛОНЫ ПОРТАЛОВ ПРЕДУПРЕЖДЕНИЙ <<<<< #
+	# >>>>> ШАБЛОНЫ ПРЕДУПРЕЖДЕНИЙ <<<<< #
 	#==========================================================================================#
 
 	def chapter_not_found(self, chapter: "BaseChapter", exception: bool = True):
@@ -384,8 +129,11 @@ class Portals:
 		:raise ChapterNotFound: Выбрасывается в качестве исключения портала.
 		"""
 
-		self.__Logger.chapter_not_found(chapter)
-		if exception: raise Exceptions.ChapterNotFound(chapter)
+		Text = f"Chapter {chapter.id} not found."
+		self.__Logger.error(Text)
+
+		if exception:
+			raise Exceptions.Parsers.ChapterNotFound(chapter)
 
 	def title_not_found(self, title: "BaseTitle", exception: bool = True):
 		"""
@@ -398,12 +146,40 @@ class Portals:
 		:raises TitleNotFound: Выбрасывается в качестве исключения портала.
 		"""
 
-		self.__Logger.title_not_found(title)
-		if exception: raise Exceptions.TitleNotFound(title)
+		NoteID = f" (ID: {title.id})" if title.id else ""
+		Text = f"Title: \"{title.slug}\"{NoteID}. Not found."
+
+		self.__Logger.warning(Text)
+
+		if exception:
+			raise Exceptions.Parsers.TitleNotFound(title)
 
 	#==========================================================================================#
-	# >>>>> ШАБЛОНЫ ПОРТАЛОВ <<<<< #
+	# >>>>> ШАБЛОНЫ СООБЩЕНИЙ <<<<< #
 	#==========================================================================================#
+
+	def amending_end(self, amended_chapter_count: int):
+		"""
+		Шаблон сообщения: дополнение глав завершено.
+
+		:param amended_chapter_count: Количество дополненных глав.
+		:type amended_chapter_count: int
+		"""
+
+		Text = f"Amended chapters count: {amended_chapter_count}."
+		self.__Logger.info(Text)
+
+	def chapter_amended(self, chapter: "BaseChapter"):
+		"""
+		Шаблон сообщения: глава дополнена.
+
+		:param chapter: Данные главы.
+		:type chapter: BaseChapter
+		"""
+
+		ChapterNote = "Paid chapter" if chapter.is_paid else "Chapter"
+		Text = f"{ChapterNote} {chapter.id} amended."
+		self.__Logger.info(Text)
 
 	def chapter_skipped(self, chapter: "BaseChapter", comment: str | None = None):
 		"""
@@ -418,14 +194,15 @@ class Portals:
 		ChapterType = "Paid chapter " if chapter.is_paid else "Chapter "
 		ChapterIdentificator = ""
 
-		if chapter.id: ChapterIdentificator = str(chapter.id)
-		elif chapter.slug: ChapterIdentificator = f"\"{chapter.slug}\""
+		if chapter.id:
+			ChapterIdentificator = str(chapter.id)
+		elif chapter.slug:
+			ChapterIdentificator = f"\"{chapter.slug}\""
 
 		comment = f" {comment}" if comment else ""
 		Text = f"{ChapterType}{ChapterIdentificator} skipped.{comment}"
 
-		self.__Logger.info(Text, stdout = False)
-		PrintMessage(Text)
+		self.__Logger.info(Text)
 
 	def collect_progress_by_page(self, page: int):
 		"""
@@ -440,8 +217,81 @@ class Portals:
 	def covers_unstubbed(self):
 		"""Портал сообщения: обложки отфильтрованы, так как являются заглушками."""
 
-		self.__Logger.info(f"Stubs detected. Covers downloading will be skipped.", stdout = False)
-		PrintMessage("Stubs detected. Covers downloading will be skipped.")
+		self.__Logger.info("Stubs detected. Covers downloading skipped.")
+
+	def chapter_repaired(self, chapter: "BaseChapter"):
+		"""
+		Шаблон сообщения: глава восстановлена.
+
+		:param chapter: Данные главы.
+		:type chapter: BaseChapter
+		"""
+
+		ChapterNote = "Paid chapter" if chapter.is_paid else "Chapter"
+		Text = f"{ChapterNote} {chapter.id} repaired."
+		self.__Logger.info(Text)
+
+	def header(self, header: str, stdout: bool = True, log: bool = True):
+		"""
+		Шаблон сообщения: заголовок.
+
+		:param header: Текст заголовка.
+		:type header: str
+		:param stdout: Указывает, выводить ли данные в терминал.
+		:type stdout: bool
+		:param log: Указывает, записывать ли данные в логи.
+		:type log: bool
+		"""
+
+		header = header.upper()
+		header = f"===== {header} ====="
+		self.__Logger.info(header, stdout, log)
+
+	def merging_end(self, merged_chapter_count: int):
+		"""
+		Шаблон сообщения: объединение данных завершено.
+
+		:param merged_chapter_count: Количество полученных при слиянии глав.
+		:type merged_chapter_count: int
+		"""
+
+		if self.__Logger.system_objects.FORCE_MODE:
+			self.__Logger.info("Merging skipped by force mode.")
+		else:
+			self.__Logger.info(f"Merged chapters count: {merged_chapter_count}.")
+
+	def parsing_start(self, title: "BaseTitle", index: int, titles_count: int):
+		"""
+		Шаблон сообщения: парсинг начат.
+
+		:param title: Данные тайтла.
+		:type title: BaseTitle
+		:param index: Индекс текущей операции парсинга.
+		:type index: int
+		:param titles_count: Количество тайтлов.
+		:type titles_count: int
+		"""
+
+		NoteID = f" (ID: {title.id})" if title.id else ""
+
+		if titles_count > 1:
+			Templates.PrintParsingProgress(index, titles_count)
+
+		self.__Logger.info(f"Parsing <b>{title.slug}</b>{NoteID}…")
+
+	def titles_collected(self, count: int):
+		"""
+		Шаблон сообщения: коллекция собрана.
+
+		:param count: Количество добавленных в коллекцию тайтлов.
+		:type count: int
+		"""
+
+		self.__Logger.info(f"Titles collected: {count}.")
+
+#==========================================================================================#
+# >>>>> ОСНОВНОЙ КЛАСС <<<<< #
+#==========================================================================================#
 
 class Logger:
 	"""Оператор вывода и логов."""
@@ -451,30 +301,14 @@ class Logger:
 	#==========================================================================================#
 
 	@property
-	def portals(self) -> Portals:
-		"""Набор шаблонов ввода-вывода."""
+	def system_objects(self) -> "SystemObjects":
+		"""Коллекция системных объектов."""
 
-		return self.__Portals
+		return self.__SystemObjects
 
 	#==========================================================================================#
 	# >>>>> ПРИВАТНЫЕ МЕТОДЫ <<<<< #
 	#==========================================================================================#
-
-	def __ReadSettings(self) -> LoggerSettings:
-		"""
-		Считвает настройки логов для конкретного парсера.
-
-		:return: Настройки логов.
-		:rtype: LoggerSettings
-		"""
-
-		LoggerSettingsObject = LoggerSettings()
-
-		if self.__ParserName:
-			Path = f"Configs/{self.__ParserName}/logger.json"
-			if os.path.exists(Path): LoggerSettingsObject = LoggerSettings(ReadJSON(Path))
-
-		return LoggerSettingsObject
 
 	def __ReplaceTags(self, text: str) -> str:
 		"""
@@ -487,99 +321,6 @@ class Logger:
 		"""
 
 		return re.sub(r"<[^>]+>", "\"", text)
-
-	#==========================================================================================#
-	# >>>>> ПРИВАТНЫЕ МЕТОДЫ ВЫВОДА <<<<< #
-	#==========================================================================================#
-
-	def __LogMessage(self, text: str, message_type: MessagesTypes | None = None):
-		"""
-		Записывает сообщение в логи.
-
-		:param text: Текст сообщения.
-		:type text: str
-		:param message_type: Тип сообщения.
-		:type message_type: MessagesTypes | None
-		"""
-
-		text = self.__ReplaceTags(text)
-
-		match message_type:
-
-			case MessagesTypes.Critical: 
-				self.__IsLogHasError = True
-				if not self.__SilentMode and self.__LoggerSettings.telebot.rules.critical: self.__SendReport(text)
-				logging.critical(text)
-
-			case MessagesTypes.Error: 
-				self.__IsLogHasError = True
-				if not self.__SilentMode and self.__LoggerSettings.telebot.rules.errors: self.__SendReport(text)
-				logging.error(text)
-
-			case MessagesTypes.Warning: 
-				self.__IsLogHasWarning = True
-				if not self.__SilentMode and self.__LoggerSettings.telebot.rules.warnings: self.__SendReport(text)
-				logging.warning(text)
-
-			case MessagesTypes.Info | None:
-				logging.info(text)
-
-	def __PrintMessage(self, text: str, message_type: MessagesTypes | None = None):
-		"""
-		Отправляет стилизованное сообщение в поток вывода.
-
-		:param text: Текст сообщения.
-		:type text: str
-		:param message_type: Тип сообщения.
-		:type message_type: MessagesTypes | None
-		"""
-
-		text = GetStyledTextFromHTML(text)
-		PrintMessage(text, message_type)
-
-	def __SendReport(self, description: str):
-		"""
-		Отправляет отчёт об ошибке в чат Telegram.
-
-		:param description: Описание ошибки.
-		:type description: str
-		"""
-
-		if self.__LoggerSettings.telebot.enable and self.__PointName not in self.__LoggerSettings.telebot.rules.forbidden_commands:
-			Token = self.__LoggerSettings.telebot.bot_token
-			Bot = telebot.TeleBot(Token)
-			LaunchArguments = list(sys.argv)
-			LaunchArguments.pop(0)
-			Command = " ".join(LaunchArguments)
-
-			Message = list()
-			Message.append(f"<b>Parser:</b> {self.__ParserName}")
-			if self.__LoggerSettings.telebot.comment: Message.append(f"<b>Comment:</b> {self.__LoggerSettings.telebot.comment}")
-			Message.append(f"<b>Command:</b> <pre>{Command}</pre>\n\n<i>{description}</i>")
-			Message = "\n".join(Message)
-
-			if Message != self.__ErrorCache:
-				self.__ErrorCache = Message
-				
-				try:
-					if self.__LoggerSettings.telebot.rules.attach_log:
-						Bot.send_document(
-							self.__LoggerSettings.telebot.chat_id,
-							document = open(self.__LogFilename, "rb"), 
-							caption = Message,
-							parse_mode = "HTML"
-						)
-
-					else:
-						Bot.send_message(
-							chat_id = self.__LoggerSettings.telebot.chat_id,
-							text = Message,
-							parse_mode = "HTML"
-						)
-
-				except Exception as ExceptionData: self.error(f"TeleBot error occurs during sending report: \"{ExceptionData}\".")
-
-		self.__SilentMode = False
 
 	#==========================================================================================#
 	# >>>>> ПУБЛИЧНЫЕ МЕТОДЫ <<<<< #
@@ -595,46 +336,102 @@ class Logger:
 		
 		self.__SystemObjects = system_objects
 
-		self.__Portals = Portals(self)
-		self.__LoggerSettings = LoggerSettings()
-
-		self.__LogFilename = None
-		self.__ParserName = None
-		self.__PointName = None
-		self.__ErrorCache = None
-		self.__SilentMode = False
-		self.__LoggerRule = LoggerRules.SaveIfHasWarnings
+		self.__LoggerRule = LoggerRules.SaveIfHasErrors
 		self.__IsLogHasError = False
 		self.__IsLogHasWarning = False
 
 		#---> Настройка логов.
 		#==========================================================================================#
-		if not os.path.exists("Logs"): os.makedirs("Logs")
-		CurrentDate = datetime.now()
-		self.__LogFilename = "Logs/" + str(CurrentDate)[:-7] + ".log"
-		self.__LogFilename = self.__LogFilename.replace(":", "-")
-		logging.basicConfig(filename = self.__LogFilename, encoding = "utf-8", level = logging.INFO, format = "%(asctime)s %(levelname)s: %(message)s", datefmt = "%Y-%m-%d %H:%M:%S")
+		self.__LogsDirectoryPath = Path("Logs")
+		self.__LogsDirectoryPath.mkdir(exist_ok = True)
+		self.__LogFilePath = self.__LogsDirectoryPath / datetime.now().strftime("%Y-%m-%d %H-%M-%S.log")
+		logging.basicConfig(
+			filename = self.__LogFilePath,
+			encoding = "utf-8",
+			level = logging.INFO,
+			format = "%(asctime)s %(levelname)s: %(message)s",
+			datefmt = "%Y-%m-%d %H:%M:%S"
+		)
 
-	def select_cli_point(self, point_name: str):
+	def close(self):
+		"""Закрывает логи и обрабатывает правило очистки."""
+
+		logging.shutdown()
+
+		IsClean = False
+
+		if self.__LoggerRule == LoggerRules.Remove: IsClean = True
+		if self.__LoggerRule == LoggerRules.SaveIfHasErrors and not self.__IsLogHasError: IsClean = True
+		if self.__LoggerRule == LoggerRules.SaveIfHasWarnings and not self.__IsLogHasWarning and not self.__IsLogHasError: IsClean = True
+
+		if IsClean: 
+			try:
+				self.__LogFilePath.unlink()
+			except Exception: pass
+
+		try: 
+			os.rmdir("Logs")
+		except Exception:
+			pass
+
+	def emit_in_log(self, text: str, message_type: MessagesTypes | None = None, replace_html_tags: bool = True):
 		"""
-		Задаёт название точки CLI. Используется для обработки правил логов.
+		Отправляет сообщение в лог.
 
-		:param point_name: Название точки CLI.
-		:type point_name: str
+		:param text: Текст сообщения.
+		:type text: str
+		:param message_type: Тип сообщения.
+		:type message_type: MessagesTypes | None
+		:param replace_html_tags: Указывает, следует ли замещать теги HTML в строки на символы кавычек `"`.
+		:type replace_html_tags: bool
 		"""
 
-		self.__PointName = point_name
+		if replace_html_tags: text = self.__ReplaceTags(text)
 
-	def select_parser(self, parser_name: str):
+		match message_type:
+
+			case MessagesTypes.Critical: 
+				self.__IsLogHasError = True
+				logging.critical(text)
+
+			case MessagesTypes.Error: 
+				self.__IsLogHasError = True
+				logging.error(text)
+
+			case MessagesTypes.Warning: 
+				self.__IsLogHasWarning = True
+				logging.warning(text)
+
+			case MessagesTypes.Info | None:
+				logging.info(text)
+
+	def emit_in_stdout(self, text: str, message_type: MessagesTypes | None = None, end_line: bool = True, parse_html: bool = True):
 		"""
-		Задаёт парсер, для которого будут применены настройки логгирования.
+		Отправляет сообщение в поток вывода.
+
+		:param text: Текст сообщения.
+		:type text: str
+		:param message_type: Тип сообщения.
+		:type message_type: MessagesTypes | None
+		:param parse_html: Указывает, парсить HTML теги для применения стилей в терминале.
+		:type parse_html: bool
+		"""
+
+		if parse_html: text = GetStyledTextFromHTML(text)
+		MessageText = GenerateMessage(text, message_type)
+		print(MessageText, end = "\n" if end_line else "")
+
+	def get_parser_portals(self, parser_name: str) -> Portals:
+		"""
+		Возвращает порталы вывода парсера.
 
 		:param parser_name: Имя парсера.
 		:type parser_name: str
+		:return: Порталы вывода парсера.
+		:rtype: Portals
 		"""
 
-		self.__ParserName = parser_name
-		self.__LoggerSettings = self.__ReadSettings()
+		return Portals(self, parser_name)
 
 	def set_rule(self, rule: int | LoggerRules):
 		"""
@@ -642,13 +439,20 @@ class Logger:
 
 		:param rule: Индекс правила или само правило.
 		:type rule: int | LoggerRules
+		:raises ValueError: Неверный индекс правила.
 		"""
 
-		if type(rule) == int: self.__LoggerRule = LoggerRules(rule)
-		else: self.__LoggerRule = rule
+		ValueType = type(rule)
+
+		if ValueType is int:
+			self.__LoggerRule = LoggerRules(rule)
+		elif ValueType is LoggerRules:
+			self.__LoggerRule = cast(LoggerRules, rule)
+		else: 
+			raise TypeError(rule)
 
 	#==========================================================================================#
-	# >>>>> БАЗОВЫЕ МЕТОДЫ ВЫВОДА <<<<< #
+	# >>>>> ШАБЛОНЫ ВЫВОДА БАЗОВЫХ ТИПОВ СООБЩЕНИЙ <<<<< #
 	#==========================================================================================#
 
 	def critical(self, text: str, stdout: bool = True, log: bool = True):
@@ -663,8 +467,8 @@ class Logger:
 		:type log: bool
 		"""
 
-		if stdout: self.__PrintMessage(text, MessagesTypes.Critical)
-		if log: self.__LogMessage(text, MessagesTypes.Critical)
+		if stdout: self.emit_in_stdout(text, MessagesTypes.Critical)
+		if log: self.emit_in_log(text, MessagesTypes.Critical)
 
 	def error(self, text: str, stdout: bool = True, log: bool = True):
 		"""
@@ -678,8 +482,8 @@ class Logger:
 		:type log: bool
 		"""
 
-		if stdout: self.__PrintMessage(text, MessagesTypes.Error)
-		if log: self.__LogMessage(text, MessagesTypes.Error)
+		if stdout: self.emit_in_stdout(text, MessagesTypes.Error)
+		if log: self.emit_in_log(text, MessagesTypes.Error)
 
 	def warning(self, text: str, stdout: bool = True, log: bool = True):
 		"""
@@ -693,8 +497,8 @@ class Logger:
 		:type log: bool
 		"""
 
-		if stdout: self.__PrintMessage(text, MessagesTypes.Warning)
-		if log: self.__LogMessage(text, MessagesTypes.Warning)
+		if stdout: self.emit_in_stdout(text, MessagesTypes.Warning)
+		if log: self.emit_in_log(text, MessagesTypes.Warning)
 
 	def info(self, text: str, stdout: bool = True, log: bool = True):
 		"""
@@ -708,194 +512,5 @@ class Logger:
 		:type log: bool
 		"""
 
-		if stdout: self.__PrintMessage(text, None)
-		if log: self.__LogMessage(text, MessagesTypes.Info)
-
-	#==========================================================================================#
-	# >>>>> ШАБЛОНЫ ОШИБОК <<<<< #
-	#==========================================================================================#
-
-	def request_error(self, response: WebResponse, text: str | None = None):
-		"""
-		Шаблон ошибки: неудачный запрос.
-
-		:param response: Контейнер ответа.
-		:type response: WebResponse
-		:param text: Описание ошибки.
-		:type text: str | None
-		:param exception: Указывает, следует ли выбросить исключение.
-		:type exception: bool
-		"""
-
-		if not text: text = "Request error."
-		Text = f"{text} Response code: {response.status_code}."
-
-		if response.status_code not in self.__LoggerSettings.telebot.rules.ignored_requests_errors:
-			self.__SendReport(Text)
-			self.__SilentMode = True
-
-		self.__LogMessage(Text, MessagesTypes.Error)
-		self.__PrintMessage(Text, MessagesTypes.Error)
-		self.__SilentMode = False
-
-	def unsupported_format(self, format: str | None = None):
-		"""
-		Шаблон предупреждения: неподдерживаемый формат JSON.
-
-		:param format: Имя формата.
-		:type format: str | None
-		"""
-
-		Format = f" \"{format}\"" if format else ""
-		Text = f"Unsupported JSON format{Format}."
-		self.__LogMessage(Text, MessagesTypes.Error)
-		self.__PrintMessage(Text, MessagesTypes.Error)
-
-	#==========================================================================================#
-	# >>>>> ШАБЛОНЫ ПРЕДУПРЕЖДЕНИЙ <<<<< #
-	#==========================================================================================#
-
-	def chapter_not_found(self, chapter: "BaseChapter"):
-		"""
-		Шаблон ошибки: глава не найдена.
-
-		:param chapter: Данные главы.
-		:type chapter: BaseChapter
-		"""
-
-		Text = f"Chapter {chapter.id} not found."
-		self.__LogMessage(Text, MessagesTypes.Warning)
-		self.__PrintMessage(Text, MessagesTypes.Warning)
-
-	def title_not_found(self, title: "BaseTitle"):
-		"""
-		Шаблон предупреждения: тайтл не найден.
-
-		:param title: Данные тайтла.
-		:type title: BaseTitle
-		"""
-
-		NoteID = f" (ID: {title.id})" if title.id else ""
-		Text = f"Title: \"{title.slug}\"{NoteID}. Not found."
-
-		if self.__LoggerSettings.telebot.rules.title_not_found:
-			self.__SendReport(Text)
-			self.__SilentMode = True
-
-		self.__LogMessage(Text, MessagesTypes.Warning)
-		self.__PrintMessage("Title not found.", MessagesTypes.Warning)
-		self.__SilentMode = False
-
-	#==========================================================================================#
-	# >>>>> ШАБЛОНЫ СООБЩЕНИЙ <<<<< #
-	#==========================================================================================#
-
-	def amending_end(self, amended_chapter_count: int):
-		"""
-		Шаблон сообщения: дополнение глав завершено.
-
-		:param amended_chapter_count: Количество дополненных глав.
-		:type amended_chapter_count: int
-		"""
-
-		Text = f"Amended chapters count: {amended_chapter_count}."
-		self.info(Text)
-
-	def chapter_amended(self, chapter: "BaseChapter"):
-		"""
-		Шаблон сообщения: глава дополнена.
-
-		:param chapter: Данные главы.
-		:type chapter: BaseChapter
-		"""
-
-		ChapterNote = "Paid chapter" if chapter.is_paid else "Chapter"
-		Text = f"{ChapterNote} {chapter.id} amended."
-		self.info(Text)
-
-	def chapter_repaired(self, chapter: "BaseChapter"):
-		"""
-		Шаблон сообщения: глава восстановлена.
-
-		:param chapter: Данные главы.
-		:type chapter: BaseChapter
-		"""
-
-		ChapterNote = "Paid chapter" if chapter.is_paid else "Chapter"
-		Text = f"{ChapterNote} {chapter.id} repaired."
-		self.info(Text)
-		
-	def header(self, header: str, stdout: bool = True, log: bool = True):
-		"""
-		Шаблон сообщения: заголовок.
-
-		:param header: Текст заголовка.
-		:type header: str
-		:param stdout: Указывает, выводить ли данные в консоль.
-		:type stdout: bool
-		:param log: Указывает, записывать ли данные в логи.
-		:type log: bool
-		"""
-
-		header = header.upper()
-		header = f"===== {header} ====="
-		self.info(header, stdout, log)
-
-	def merging_end(self, merged_chapter_count: int):
-		"""
-		Шаблон сообщения: объединение данных завершено.
-
-		:param merged_chapter_count: Количество полученных при слиянии глав.
-		:type merged_chapter_count: int
-		"""
-
-		if self.__SystemObjects.FORCE_MODE: self.info("Local content data will be overwritten.")
-		else: self.info(f"Merged chapters count: {merged_chapter_count}.")
-
-	def parsing_start(self, title: "BaseTitle", index: int, titles_count: int):
-		"""
-		Шаблон сообщения: парсинг начат.
-
-		:param title: Данные тайтла.
-		:type title: BaseTitle
-		:param index: Индекс текущей операции парсинга.
-		:type index: int
-		:param titles_count: Количество тайтлов.
-		:type titles_count: int
-		"""
-
-		NoteID = f" (ID: {title.id})" if title.id else ""
-		if titles_count > 1: Templates.ParsingProgress(index, titles_count)
-		self.info(f"Parsing <b>{title.slug}</b>{NoteID}…")
-
-	def titles_collected(self, count: int):
-		"""
-		Шаблон сообщения: коллекция собрана.
-
-		:param count: Количество добавленных в коллекцию тайтлов.
-		:type count: int
-		"""
-
-		self.info(f"Titles collected: {count}.")
-
-	#==========================================================================================#
-	# >>>>> МЕТОДЫ УПРАВЛЕНИЯ ЛОГАМИ <<<<< #
-	#==========================================================================================#
-
-	def close(self):
-		"""Закрывает логи."""
-
-		if not self.__LoggerRule: self.set_rule(self.__LoggerSettings.cleaner[self.__PointName])
-
-		logging.shutdown()
-
-		IsClean = False
-
-		if self.__LoggerRule == LoggerRules.Remove: IsClean = True
-		if self.__LoggerRule == LoggerRules.SaveIfHasErrors and not self.__IsLogHasError: IsClean = True
-		if self.__LoggerRule == LoggerRules.SaveIfHasWarnings and not self.__IsLogHasWarning and not self.__IsLogHasError: IsClean = True
-
-		if IsClean and os.path.exists(self.__LogFilename): os.remove(self.__LogFilename)
-
-		try: os.rmdir("Logs")
-		except: pass
+		if stdout: self.emit_in_stdout(text, None)
+		if log: self.emit_in_log(text, MessagesTypes.Info)

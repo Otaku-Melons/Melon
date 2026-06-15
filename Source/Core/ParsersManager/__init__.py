@@ -9,7 +9,7 @@ import shutil
 import io
 import os
 
-from dulwich.porcelain import clone, fetch, merge, submodule_list
+from dulwich.porcelain import clone, submodule_list
 from dulwich.client import get_transport_and_path
 from dulwich.repo import Repo
 from dulwich import errors
@@ -76,7 +76,11 @@ class ParsersManager:
 		"""
 
 		BestMatch = get_close_matches(data, sequence, n = 1)
-		if BestMatch: return BestMatch[0]
+
+		if BestMatch:
+			return BestMatch[0]
+		
+		return None
 
 	def __GetRepositoryOwner(self, link: str) -> str:
 		"""
@@ -105,7 +109,7 @@ class ParsersManager:
 
 		try:
 			Client, Path = get_transport_and_path(url)
-			Client.get_refs(Path)
+			Client.get_refs(Path.encode())
 			return True
 		
 		except errors.GitProtocolError: return False
@@ -187,7 +191,10 @@ class ParsersManager:
 		"""
 
 		for Repository in self.__Repositories:
-			if Path(Repository).name == parser: return Repository
+			if Path(Repository).name == parser:
+				return Repository
+			
+		return None
 
 	def install(self, parser: str) -> ExecutionResult:
 		"""
@@ -205,19 +212,19 @@ class ParsersManager:
 		Repository = self.get_parser_repository(parser)
 
 		if parser in self.installed_parsers:
-			Status.push_message("Parser already installed.")
+			Status.messages.push_info("Parser already installed.")
 			Status.value = True
 			return Status
 		
 		if parser not in self.available_parsers or not Repository:
-			Status.push_error("Repository not found.")
+			Status.messages.push_error("Repository not found.")
 			return Status
 
 		try:
 			clone(Repository, f"Parsers/{parser}", errstream = io.BytesIO(), recurse_submodules = True)
 			Status.value = True
 
-		except Exception as ExceptionData: Status.push_error(str(ExceptionData))
+		except Exception as ExceptionData: Status.messages.push_error(str(ExceptionData))
 
 		return Status
 
@@ -233,33 +240,6 @@ class ParsersManager:
 
 		return parser in self.installed_parsers
 	
-	def update(self, parser: str) -> ExecutionResult:
-		"""
-		_summary_
-
-		:param parser: _description_
-		:type parser: str
-		:return: _description_
-		:rtype: ExecutionResult
-		"""
-
-		repo = Repo(f"")
-
-		# читаем URL origin
-		cfg = repo.get_config()
-		remote_url = cfg.get((b"remote", b"origin"), b"url").decode()
-
-		# fetch
-		fetch(repo, remote_url)
-
-		# определяем текущую ветку
-		head = repo.refs.read_ref(b"HEAD")
-		branch = head.split(b"/")[-1]
-
-		# merge origin/<branch>
-		merge(repo, b"origin/" + branch)
-
-
 	#==========================================================================================#
 	# >>>>> ПУБЛИЧНЫЕ РАСШИРЕННЫЕ МЕТОДЫ <<<<< #
 	#==========================================================================================#
@@ -279,7 +259,7 @@ class ParsersManager:
 
 		try: self.add_repository(link)
 		except ValueError:
-			Status.push_error("Link isn't supported Git protocol.")
+			Status.messages.push_error("Link isn't supported Git protocol.")
 			return Status
 		
 		Status += self.install(Path(link).name)

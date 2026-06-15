@@ -2,12 +2,15 @@ from Source.Core.Exceptions.Parsers import UnsupportedFormat
 
 from dublib.Methods.Filesystem import ListDir, ReadJSON
 
-def SafelyReadTitleJSON(path: str) -> dict:
+from pathlib import Path
+from os import PathLike
+
+def SafelyReadTitleJSON(path: str | PathLike[str]) -> dict:
 	"""
 	Безопасно читает файл JSON, проверяя его формат и валидность.
 
 	:param path: Путь к JSON файлу.
-	:type path: str
+	:type path: str | PathLike[str]
 	:raises JSONDecodeError: Ошибка десериализации JSON.
 	:raises UnsupportedFormat: Неподдерживаемый формат JSON.
 	:return: Словарное представление JSON тайтла.
@@ -16,7 +19,11 @@ def SafelyReadTitleJSON(path: str) -> dict:
 
 	Formats: tuple[str, ...] = tuple(File[:-3] for File in ListDir("Docs/Examples"))
 	Data = ReadJSON(path)
-	if "format" not in Data.keys(): raise UnsupportedFormat()
-	elif Data["format"] not in Formats: raise UnsupportedFormat(Data["format"])
+
+	# To-Do: в исключении также выводить путь к файлу.
+	if "format" not in Data.keys():
+		raise UnsupportedFormat()
+	elif Data["format"] not in Formats:
+		raise UnsupportedFormat(Data["format"])
 
 	return Data

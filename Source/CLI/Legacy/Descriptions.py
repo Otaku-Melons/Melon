@@ -29,11 +29,6 @@ ComPos = Com.create_position("TARGET", "Target for building.")
 ComPos.add_key("--branch", type = ValidableTypes.Number, description = "Branch ID.")
 COMMANDS.append(Com)
 
-Com = Command("cacher", "Cache ID-slugs pairs for file searching speed increase in all parsers by default.")
-ComPos = Com.create_position("PARSERS", "One or more parsers names separated by comma.")
-ComPos.add_key("--use")
-COMMANDS.append(Com)
-
 CollectionFileBold = FastStyler("Collection.txt").decorate.italic
 Com = Command("collect", f"Collect titles slugs into {CollectionFileBold} file.")
 ComPos = Com.create_position("PARSER", "Name of parser.", important = True)

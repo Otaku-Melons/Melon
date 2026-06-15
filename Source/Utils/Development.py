@@ -1,5 +1,5 @@
 from Source.Core.Base.Formats.Components.Enums import ContentTypes
-from Source.Core.Base.Parsers.Components.Manifest import ParserManifest
+from Source.Core.Base.Parsers.Components.Manifest import _BASE_MANIFEST
 from Source.Core.Base.Parsers.Components.Settings import ParserSettings
 from Source.Core.SystemObjects import SystemObjects
 from Source.Utils.Timer import Timer
@@ -64,10 +64,10 @@ class DevelopmeptAssistant:
 		:type types: Sequence[ContentTypes]
 		"""
 		
-		ManifestDict: dict = Manifest.copy()
+		ManifestDict: dict = _BASE_MANIFEST.copy()
 		ManifestDict["content_types"] = tuple(CurrentType.value for CurrentType in types)
 		ManifestDict["version"] = "$last_git_tag"
-		ManifestDict["melon_required_version"] = f">={self.__SystemObjects.MELON_VERSION.tag}" if self.__SystemObjects.MELON_VERSION else None
+		ManifestDict["melon_required_version"] = f">={self.__SystemObjects.MELON_VERSION}" if self.__SystemObjects.MELON_VERSION else None
 		WriteJSON(f"{path}/manifest.json", ManifestDict)
 
 		self.__Logger.info("Manifest created.")

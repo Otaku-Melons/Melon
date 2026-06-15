@@ -3,3 +3,4 @@ from .Classificator import Classificator as Classificator
 from .Collector import Collector as Collector
 from .Development import DevelopmeptAssistant as DevelopmeptAssistant
 from .Installer import Installer as Installer
+from .Timer import Timer as Timer

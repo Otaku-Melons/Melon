@@ -512,7 +512,7 @@ class BaseChapter:
 		name = Zerotify(name)
 		if name: name = name.strip()
 		
-		if name and self._SystemObjects.controller.current_parser_settings.common.pretty:
+		if name and self._SystemObjects.driver.current_parser_settings.common.pretty:
 			if name.endswith("..."): name = name.rstrip(".") + "…"
 			else: name = name.rstrip(".–")
 		
@@ -1083,7 +1083,7 @@ class BaseTitle:
 
 		self._SystemObjects = system_objects
 
-		self._ParserSettings = self._SystemObjects.controller.current_parser_settings
+		self._ParserSettings = self._SystemObjects.driver.current_parser_settings
 		self._Branches: list[BaseBranch] = list()
 		self._Persons: list[Person] = list()
 		self._Covers: list[Cover] = list()
