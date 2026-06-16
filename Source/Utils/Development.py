@@ -1,6 +1,4 @@
-from Source.Core.Base.Formats.Components.Enums import ContentTypes
-from Source.Core.Base.Parsers.Components.Manifest import _BASE_MANIFEST
-from Source.Core.Base.Parsers.Components.Settings import ParserSettings
+from Source.Core.Base.Parsers.Components.Manifest import _BASE_MANIFEST, ContentTypes
 from Source.Core.SystemObjects import SystemObjects
 from Source.Utils.Timer import Timer
 

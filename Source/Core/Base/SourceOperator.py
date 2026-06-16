@@ -1,15 +1,19 @@
 from Source.Core.Base.Parsers.Components.ImagesDownloader import ImageDownloadingResult, ImagesDownloader
+from Source.Core.Base.Parsers.Components.Manifest import ContentTypes, ParserManifest
+from Source.Core import Exceptions
 
 from dublib.WebRequestor import WebConfig, WebLibs, WebRequestor
 from dublib.CLI.Validators import Validator_URL
 
 from typing import Sequence, TYPE_CHECKING
 from os import PathLike
+import importlib
 
 if TYPE_CHECKING:
 	from .EntryPoint import BaseEntryPoint
-	
-	from Source.Core.Base.Parsers.Components import ParserManifest, ParserSettings
+
+	from Source.Core.Base.Parsers.Components import ParserSettings
+	from Source.Core.Base.Parsers.BaseParser import BaseParser
 	from Source.Core.SystemObjects.Temper import SharedData
 	from Source.Core.SystemObjects import SystemObjects
 
@@ -19,6 +23,12 @@ class BaseSourceOperator:
 	#==========================================================================================#
 	# >>>>> СВОЙСТВА <<<<< #
 	#==========================================================================================#
+
+	@property
+	def entry_point(self) -> "BaseEntryPoint":
+		"""Точка входа в модуль парсера."""
+
+		return self._EntryPoint
 
 	@property
 	def images_downloader(self) -> ImagesDownloader:
@@ -33,7 +43,7 @@ class BaseSourceOperator:
 		return type(self)._CollectSlugs is not BaseSourceOperator._CollectSlugs
 
 	@property
-	def manifest(self) -> "ParserManifest":
+	def manifest(self) -> ParserManifest:
 		"""Манифест парсера."""
 
 		return self._Manifest
@@ -221,6 +231,40 @@ class BaseSourceOperator:
 			path = ImageTargetPath,
 			error_message = None
 		)
+
+	def get_content_type_by_slug(self, slug: str) -> ContentTypes:
+		"""
+		Определяет тип контента по алиасу тайтла.
+
+		:param slug: Алиас тайтла.
+		:type slug: str
+		:return: Тип контента.
+		:rtype: ContentTypes
+		"""
+
+		# To-Do: метод для определения типа контента по алиасу.
+		return self._Manifest.content_types[0]
+
+	def launch_parser(self, content_type: ContentTypes | None = None) -> "BaseParser":
+		"""
+		Инициализирует парсер для контента определённого типа.
+
+		:param content_type: Тип контента. По умолчанию берётся первый описанный.
+		:type content_type: ContentTypes | None
+		:raises UnsupportedContent: Неподдерживаемый тип контента.
+		:return: Парсер.
+		:rtype: BaseParser
+		"""
+
+		if not content_type:
+			content_type = self._Manifest.content_types[0]
+		elif content_type not in self._Manifest.content_types:
+			raise Exceptions.Parsers.UnsupportedContent(content_type)
+
+		Module = importlib.import_module(f"Parsers.{self._Manifest.parser_name}.{content_type.value}")
+		Parser: "BaseParser" = Module.Parser(self)
+
+		return Parser
 
 	def parse_slug_from_string(self, string: str) -> str | None:
 		"""

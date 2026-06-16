@@ -1,3 +1,20 @@
+[project]
+name = "Melon"
+dynamic = ["version"]
+dependencies = [
+	"beautifulsoup4",
+	"EbookLib",
+	"dulwich>=1.2.6",
+	"dublib==0.28.2",
+	"pillow",
+]
+
+[project.optional-dependencies]
+dev = [
+	"mypy",
+	"ruff"
+]
+
 [tool.mypy]
 ignore_missing_imports = true
 check_untyped_defs = true

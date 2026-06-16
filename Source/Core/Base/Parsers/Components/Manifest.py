@@ -1,10 +1,10 @@
-from Source.Core.Base.Formats.Components.Enums import ContentTypes
 from Source.Core import Exceptions
 
 from dublib.Methods.Filesystem import ReadJSON
 
 from types import MappingProxyType
 from typing import TYPE_CHECKING
+from enum import Enum
 
 if TYPE_CHECKING:
 	from Source.Core.SystemObjects import SystemObjects
@@ -12,6 +12,13 @@ if TYPE_CHECKING:
 #==========================================================================================#
 # >>>>> ВСПОМОГАТЕЛЬНЫЕ СТРУКТУРЫ ДАННЫХ <<<<< #
 #==========================================================================================#
+
+class ContentTypes(Enum):
+	"""Перечисление типов контента."""
+
+	Anime = "anime"
+	Manga = "manga"
+	Ranobe = "ranobe"
 
 _BASE_MANIFEST: MappingProxyType = MappingProxyType({
 	"object": "parser",

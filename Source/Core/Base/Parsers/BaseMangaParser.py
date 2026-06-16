@@ -1,26 +1,17 @@
 from .BaseParser import BaseParser
 
+from Source.Core.Base.Formats.Manga import Chapter, Manga
 from Source.Core import Exceptions
 
-from typing import cast, TYPE_CHECKING
+from typing import cast
 from time import sleep
-
-if TYPE_CHECKING:
-	from Source.Core.Base.Formats.Manga import Chapter, Branch, Manga
 
 class BaseMangaParser(BaseParser):
 	"""Базовый парсер манги."""
 	
 	@BaseParser.require_title
-	def amend(self, branch: "Branch", chapter: "Chapter"):
-		"""
-		Дополняет главу дайными о слайдах.
-
-		:param branch: Ветвь.
-		:type branch: Branch
-		:param chapter: Глава.
-		:type chapter: Chapter
-		"""
+	def amend(self):
+		"""Дополняет главы дайными о контенте."""
 
 		self._Title = cast("Manga", self._Title)
 
@@ -38,6 +29,20 @@ class BaseMangaParser(BaseParser):
 					if CurrentChapter.slides:
 						AmendedChaptersCount += 1
 						sleep(self.settings.common.delay)
+
+	def load_title(self, slug: str, empty: bool = False):
+		"""
+		Загружает и устанавливает тайтл в парсер.
+
+		:param slug: Алиас тайтла.
+		:type slug: str
+		:param empty: Указывает, что нужно инициалазировать пустой тайтл, минуя операцию чтения локальных данных.
+		:type empty: bool
+		"""
+
+		self._Title = Manga(self, slug)
+		if not empty:
+			self._Title.load_data(slug)
 
 	@BaseParser.require_title
 	def repair(self, chapter_id: int) -> bool:

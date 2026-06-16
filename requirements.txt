@@ -1,5 +1,0 @@
-BeautifulSoup4
-EbookLib
-dulwich==1.1.0
-dublib[telebot]==0.28.2
-pillow

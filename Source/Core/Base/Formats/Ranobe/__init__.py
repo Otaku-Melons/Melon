@@ -8,11 +8,10 @@ from Source.Core import Exceptions
 
 from dublib.Methods.Filesystem import ReadJSON
 
-from typing import Iterable, TYPE_CHECKING
+from typing import Sequence, TYPE_CHECKING
 import os
 
 if TYPE_CHECKING:
-	from Source.Core.Base.Parsers.RanobeParser import RanobeParser
 	from Source.Core.SystemObjects import SystemObjects
 
 #==========================================================================================#
@@ -110,71 +109,6 @@ class Chapter(BaseChapter):
 
 		if type: self._Chapter["type"] = type.value
 		else: self._Chapter["type"] = None
-
-class Branch(BaseBranch):
-	"""Ветвь."""
-
-	#==========================================================================================#
-	# >>>>> СВОЙСТВА <<<<< #
-	#==========================================================================================#
-
-	@property
-	def chapters(self) -> tuple[Chapter]:
-		"""Последовательность глав."""
-
-		return super().chapters
-	
-	#==========================================================================================#
-	# >>>>> МЕТОДЫ <<<<< #
-	#==========================================================================================#
-
-	def __init__(self, id: int):
-		"""
-		Ветвь.
-			ID – уникальный идентификатор ветви.
-		"""
-
-		#---> Генерация динамических атрибутов.
-		#==========================================================================================#
-		self._ID = id
-		self._Chapters: list[Chapter] = list()
-
-	def add_chapter(self, chapter: Chapter):
-		"""
-		Добавляет главу в ветвь. Если глава с таким ID уже существует, добавление не происходит.
-
-		:param chapter: Данные главы.
-		:type chapter: Chapter
-		:raises ParsingError: Выбрасывается при отсутствии у добавляемой главы ID.
-		"""
-
-		super().add_chapter(chapter)
-
-	def get_chapter_by_id(self, id: int) -> Chapter:
-		"""
-		Возвращает главу по её уникальному идентификатору.
-
-		:param id: ID главы.
-		:type id: int
-		:raises KeyError: Выбрасывается при отсутствии главы в ветви.
-		:return: Глава.
-		:rtype: Chapter
-		"""
-
-		return super().get_chapter_by_id(id)
-
-	def replace_chapter_by_id(self, chapter: Chapter, id: int):
-		"""
-		Заменяет главу в ветви по её ID.
-
-		:param chapter: Новая глава.
-		:type chapter: Chapter
-		:param id: ID заменяемой главы.
-		:type id: int
-		:raises KeyError: Выбрасывается при отсутствии заменяемой главы в ветви.
-		"""
-
-		super().replace_chapter_by_id(chapter, id)
 
 #==========================================================================================#
 # >>>>> ОСНОВНОЙ КЛАСС <<<<< #

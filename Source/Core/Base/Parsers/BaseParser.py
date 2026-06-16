@@ -1,4 +1,4 @@
-from Source.Core.Base.Formats.BaseFormat import BaseChapter, BaseBranch, BaseTitle
+from Source.Core.Base.Formats.BaseFormat import BaseBranch, BaseTitle
 from Source.Core import Exceptions
 
 from typing import Any, cast, TYPE_CHECKING
@@ -9,8 +9,11 @@ if TYPE_CHECKING:
 	from Source.Core.Base.Parsers.Components.ImagesDownloader import ImagesDownloader
 	from Source.Core.Base.Parsers.Components import ParserManifest, ParserSettings
 	from Source.Core.Base.SourceOperator import BaseSourceOperator
+	from Source.Core.SystemObjects.Logger import Portals
 
 	from dublib.WebRequestor import WebRequestor
+
+	from pathlib import Path
 
 #==========================================================================================#
 # >>>>> ОСНОВНОЙ КЛАСС <<<<< #
@@ -34,6 +37,18 @@ class BaseParser(ABC):
 		"""Манифест парсера."""
 
 		return self._SourceOperator.manifest
+
+	@property
+	def parser_temp_directory(self) -> "Path":
+		"""Менеджер запросов."""
+
+		return self._SourceOperator.system_objects.temper.get_parser_temp_directory(self.manifest.parser_name)
+
+	@property
+	def portals(self) -> "Portals":
+		"""Порталы вывода парсера."""
+
+		return self._SourceOperator.entry_point.portals
 
 	@property
 	def requestor(self) -> "WebRequestor":
@@ -88,13 +103,13 @@ class BaseParser(ABC):
 	#==========================================================================================#
 
 	@abstractmethod
-	def _Amend(self, branch: BaseBranch, chapter: BaseChapter):
+	def _Amend(self, branch: BaseBranch, chapter: Any):
 		"""
 		Дополняет главу дайными о контенте.
 
-		:param branch: Данные ветви.
+		:param branch: Ветвь.
 		:type branch: BaseBranch
-		:param chapter: Данные главы.
+		:param chapter: Глава.
 		:type chapter: BaseChapter
 		"""
 
@@ -135,16 +150,22 @@ class BaseParser(ABC):
 		self._PostInitMethod()
 
 	@abstractmethod
-	def amend(self, branch: Any, chapter: Any):
-		"""
-		Дополняет главу дайными о контенте.
+	def amend(self):
+		"""Дополняет главы дайными о контенте."""
 
-		:param branch: Данные ветви.
-		:type branch: Any
-		:param chapter: Данные главы.
-		:type chapter: Any
-		"""
+		pass
 
+	@abstractmethod
+	def load_title(self, slug: str, empty: bool = False):
+		"""
+		Загружает и устанавливает тайтл в парсер.
+
+		:param slug: Алиас тайтла.
+		:type slug: str
+		:param empty: Указывает, что нужно инициалазировать пустой тайтл, минуя операцию чтения локальных данных.
+		:type empty: bool
+		"""
+		
 		pass
 
 	@require_title
@@ -153,22 +174,31 @@ class BaseParser(ABC):
 
 		self._Parse()
 
+	@abstractmethod
+	def repair(self, chapter_id: int) -> bool:
+		"""
+		Восстанавливает содержимое главы, заново получая его из источника.
+
+		:param chapter_id: Уникальный идентификатор целевой главы.
+		:type chapter_id: int
+		:raises ChapterNotFound: В локальном JSON не найдена глава с указанным ID.
+		:return: Возвращает `True`, если глава содержит контент после восстановления.
+		:rtype: bool
+		"""
+
+		pass
+
 	@require_title
-	def save(self):
-		"""Сохраняет тайтл и выгружает его из парсера."""
+	def save(self, sorting: bool = False):
+		"""
+		Сохраняет тайтл и выгружает его из парсера.
+
+		:param sorting: Указывает, нужно ли провести сортировку глав на основе их нумерации.
+		:type sorting: bool
+		"""
 
 		self._Title = cast(BaseTitle, self._Title)
 
 		self._PreSaver()
-		self._Title.save()
-		self._Title = None
-
-	def load_title(self, slug: str):
-		"""
-		Инициализирует структуру тайтла.
-
-		:param slug: Алиас тайтла.
-		:type slug: str
-		"""
-
+		self._Title.save(sorting)
 		self._Title = None

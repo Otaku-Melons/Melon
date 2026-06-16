@@ -147,19 +147,20 @@ class Person:
 		another_name = another_name.strip()
 		if another_name and another_name != self.name and another_name not in self.another_names: self.__Data["another_names"].append(another_name)
 
-	def add_image(self, link: str, filename: str | None = None, width: int | None = None, height: int | None = None):
+	def add_image(self, link: str, width: int | None = None, height: int | None = None):
 		"""
-		Добавляет портрет.
-			link – ссылка на изображение;\n
-			filename – имя локального файла;\n
-			width – ширина обложки;\n
-			height – высота обложки.
+		Добавляет иллюстрацию персонажа.
+
+		:param link: Ссылка на изображение.
+		:type link: str
+		:param width: Ширина изображения.
+		:type width: int
+		:param height: Высота изображения.
+		:type height: int
 		"""
 
-		if not filename: filename = link.split("/")[-1]
-		CoverInfo = {
+		CoverInfo: dict[str, int | str | None] = {
 			"link": link,
-			"filename": filename,
 			"width": width,
 			"height": height
 		}
@@ -168,8 +169,10 @@ class Person:
 
 	def set_description(self, description: str | None):
 		"""
-		Задаёт описание.
-			description – описание.
+		Задаёт описание персонажа.
+
+		:param description: Описание.
+		:type description: str | None
 		"""
 
 		self.__Data["description"] = Zerotify(description)
@@ -187,7 +190,6 @@ class Person:
 		Data = self.__Data.copy()
 
 		if not sizing_images:
-
 			for Index in range(len(Data["images"])):
 				del Data["images"][Index]["width"]
 				del Data["images"][Index]["height"]
@@ -230,6 +232,12 @@ class BaseChapter(ABC):
 		"""Название главы."""
 
 		return self._Data["name"]
+
+	@property
+	def is_empty(self) -> bool:
+		"""Состояние: пуста ли глава."""
+
+		return self._IsEmpty()
 
 	@property
 	def is_paid(self) -> bool | None:
@@ -275,8 +283,35 @@ class BaseChapter(ABC):
 
 		pass
 
+	@abstractmethod
+	def _FromDict(self, data: dict):
+		"""
+		Заполняет данные главы из словаря.
+
+		:param data: Словарь данных главы.
+		:type data: dict
+		"""
+
+		pass
+
+	@abstractmethod
+	def _IsEmpty(self) -> bool:
+		"""
+		Проверяет, пустая ли глава.
+
+		:return: Состояние: пуста ли глава.
+		:rtype: bool
+		"""
+
+		return False
+
 	def _PostInitMethod(self):
 		"""Метод, выполняющийся после инициализации объекта."""
+
+		pass
+
+	def _PreFormatter(self):
+		"""Метод, запускающийся перед генерацией словарного представления объекта."""
 
 		pass
 
@@ -336,6 +371,16 @@ class BaseChapter(ABC):
 
 		self._Clear()
 
+	def from_dict(self, data: dict):
+		"""
+		Заполняет данные главы из словаря.
+
+		:param data: Словарь данных главы.
+		:type data: dict
+		"""
+
+		self._FromDict(data)
+
 	def remove_extra_data(self, key: str):
 		"""
 		Удаляет дополнительные данные главы.
@@ -347,22 +392,22 @@ class BaseChapter(ABC):
 		if key in self._Data:
 			del self._Data[key]
 
-	def set_is_paid(self, is_paid: bool):
+	def set_is_paid(self, is_paid: bool | None):
 		"""
 		Указывает, является ли глава платной.
 
 		:param is_paid: Состояние: платная ли глава.
-		:type is_paid: bool
+		:type is_paid: bool | None
 		"""
 
 		self._Data["is_paid"] = is_paid
 
-	def set_name(self, name: str):
+	def set_name(self, name: str | None):
 		"""
 		Задаёт название главы.
 
 		:param name: Название главы.
-		:type name: str
+		:type name: str | None
 		"""
 
 		name = Zerotify(name)
@@ -379,12 +424,12 @@ class BaseChapter(ABC):
 
 		self._Data["name"] = name
 
-	def set_number(self, number: float | int | str):
+	def set_number(self, number: float | int | str | None):
 		"""
 		Задаёт номер главы.
 
 		:param number: Номер главы.
-		:type number: float | int | str
+		:type number: float | int | str | None
 		"""
 		
 		self._Data["number"] = self._PrettyNumber(number)
@@ -400,28 +445,30 @@ class BaseChapter(ABC):
 		for Worker in workers:
 			self.add_worker(Worker)
 
-	def set_slug(self, slug: str):
+	def set_slug(self, slug: str | None):
 		"""
 		Задаёт алиас главы.
 
 		:param slug: Алиас главы.
-		:type slug: str
+		:type slug: str | None
 		"""
 
 		self._Data["slug"] = slug
 
-	def set_volume(self, volume: float | int | str):
+	def set_volume(self, volume: float | int | str | None):
 		"""
 		Задаёт номер тома, к которому принадлежит глава.
 
 		:param volume: Номер тома.
-		:type volume: float | int | str
+		:type volume: float | int | str | None
 		"""
 
 		self._Data["volume"] = self._PrettyNumber(volume)
 
 	def to_dict(self) -> dict:
 		"""Возвращает копию словаря данных главы."""
+
+		self._PreFormatter()
 
 		return self._Data.copy()
 	
@@ -448,37 +495,27 @@ class BaseBranch(ABC):
 	def empty_chapters_count(self) -> int:
 		"""Количество глав без контента."""
 
-		return self._CalculateEmptyChaptersCount()
+		return sum(1 for CurrentChapter in self._Chapters if CurrentChapter.is_empty)
 
 	@property
 	def id(self) -> int:
 		"""Уникальный идентификатор ветви."""
 
 		return self._ID
-	
-	#==========================================================================================#
-	# >>>>> ПЕРЕОПРЕДЕЛЯЕМЫЕ МЕТОДЫ <<<<< #
-	#==========================================================================================#
-
-	@abstractmethod
-	def _CalculateEmptyChaptersCount(self) -> int:
-		"""Подсчитывает количество глав без контента."""
-
-		return 0
 
 	#==========================================================================================#
 	# >>>>> ПУБЛИЧНЫЕ МЕТОДЫ <<<<< #
 	#==========================================================================================#
 
-	def __init__(self, id: int):
+	def __init__(self, branch_id: int):
 		"""
 		Базовая ветвь.
 
-		:param id: Уникальный идентификатор ветви.
-		:type id: int
+		:param branch_id: ID ветви.
+		:type branch_id: int
 		"""
 
-		self._ID = id
+		self._ID = branch_id
 		self._Chapters: list[BaseChapter] = list()
 
 	def add_chapter(self, chapter: BaseChapter):
@@ -583,6 +620,16 @@ class BaseBranch(ABC):
 
 class BaseTitle(ABC):
 	"""Базовый тайтл."""
+
+	#==========================================================================================#
+	# >>>>> СВОЙСТВА <<<<< #
+	#==========================================================================================#
+
+	@property
+	def empty_chapters_count(self) -> int:
+		"""Количество глав без контента во всех ветвях."""
+
+		return sum(Branch.empty_chapters_count for Branch in self._Branches)
 
 	#==========================================================================================#
 	# >>>>> СВОЙСТВА ТАЙТЛА <<<<< #
@@ -705,11 +752,6 @@ class BaseTitle(ABC):
 	#==========================================================================================#
 	# >>>>> НАСЛЕДУЕМЫЕ МЕТОДЫ <<<<< #
 	#==========================================================================================#
-
-	def _CalculateEmptyChapters(self) -> int:
-		"""Подсчитывает количество глав без контента во всех ветвях."""
-
-		return sum(Branch.empty_chapters_count for Branch in self._Branches)
 	
 	def _IsLocalFileEqual(self) -> bool:
 		"""
@@ -719,7 +761,7 @@ class BaseTitle(ABC):
 		:rtype: bool
 		"""
 
-		if not self._DataPath or self._DataPath.exists(): return False
+		if not self._DataPath or not self._DataPath.exists(): return False
 
 		LocalHasher = hashlib.sha256(str(ReadJSON(self._DataPath)).encode())
 		MemoryHasher = hashlib.sha256(str(self._Data).encode())
@@ -752,8 +794,48 @@ class BaseTitle(ABC):
 			except (json.JSONDecodeError, Exceptions.Parsers.UnsupportedFormat): pass
 
 	#==========================================================================================#
-	# >>>>> НАСЛЕДУЕМЫЕ МЕТОДЫ ОБНОВЛЕНИЯ СЛОВАРНОЙ СТРУКТУРЫ <<<<< #
+	# >>>>> НАСЛЕДУЕМЫЕ МЕТОДЫ ПРЕОБРАЗОВАНИЯ СЛОВАРНОЙ СТРУКТУРЫ <<<<< #
 	#==========================================================================================#
+
+	def _ParseCovers(self):
+		"""Парсит обложки в объектные представления."""
+
+		self._Covers.clear()
+
+		for CoverData in self._Data["covers"]:
+			CoverData = cast(dict, CoverData)
+			Buffer = Cover(CoverData["link"])
+			Width, Height = CoverData.get("width"), CoverData.get("height")
+
+			if all((Width, Height)):
+				Buffer.set_resolution(ImageResolution(cast(int, Width), cast(int, Height)))
+
+			self._Covers.append(Buffer)
+
+	def _ParsePersons(self):
+		"""Парсит персонажей в объектные представления."""
+
+		self._Persons.clear()
+
+		for PersonData in self._Data["persons"]:
+			CoverData = cast(dict, PersonData)
+			Buffer = Person(CoverData["name"])
+			
+			AnotherNames = CoverData.get("another_names") or tuple()
+			Images = CoverData.get("images") or tuple()
+			Description = CoverData.get("description")
+
+			for AnotherName in AnotherNames:
+				Buffer.add_another_name(AnotherName)
+
+			for ImageData in Images:
+				ImageData = cast(dict, ImageData)
+				Buffer.add_image(ImageData["link"], ImageData.get("width"), ImageData.get("height"))
+
+			if Description:
+				Buffer.set_description(Description)
+
+			self._Persons.append(Buffer)
 
 	def _UpdateBranchesInfo(self):
 		"""Обновляет информацию о ветвях во внутреннем словарном хранилище тайтла."""
@@ -796,6 +878,43 @@ class BaseTitle(ABC):
 	# >>>>> ПЕРЕОПРЕДЕЛЯЕМЫЕ МЕТОДЫ <<<<< #
 	#==========================================================================================#
 
+	def _GenerateTitleData(self) -> dict[str, Any]:
+		"""
+		Генерирует базовое словарное представление тайтла.
+
+		:return: Базовое словарное представление тайтла.
+		:rtype: dict[str, Any]
+		"""
+
+		return {
+			"format": None,
+			"site": self._Parser.manifest.site,
+			"id": None,
+			"slug": None,
+			"content_language": None,
+
+			"localized_name": None,
+			"eng_name": None,
+			"another_names": [],
+			"covers": [],
+
+			"authors": [],
+			"publication_year": None,
+			"description": None,
+			"age_limit": None,
+
+			"status": None,
+			"is_licensed": None,
+			
+			"genres": [],
+			"tags": [],
+			"franchises": [],
+			"persons": [],
+			
+			"branches": [],
+			"content": {} 
+		}
+
 	@abstractmethod
 	def _ParseBranchesToObjects(self):
 		"""Преобразует данные ветвей в объекты."""
@@ -824,50 +943,27 @@ class BaseTitle(ABC):
 		self._SystemObjects = parser.source_operator.system_objects
 		
 		self._DataPath: Path = self._Parser.settings.directories.titles / f"{slug}.json"
-		self._Data: dict[str, Any] = {
-			"format": None,
-			"site": self._Parser.manifest.site,
-			"id": None,
-			"slug": slug,
-			"content_language": None,
-
-			"localized_name": None,
-			"eng_name": None,
-			"another_names": [],
-			"covers": [],
-
-			"authors": [],
-			"publication_year": None,
-			"description": None,
-			"age_limit": None,
-
-			"status": None,
-			"is_licensed": None,
-			
-			"genres": [],
-			"tags": [],
-			"franchises": [],
-			"persons": [],
-			
-			"branches": [],
-			"content": {} 
-		}
+		self._Data: dict[str, Any] = self._GenerateTitleData()
+		self._Data["slug"] = slug
 
 		self._Branches: list[BaseBranch] = list()
 		self._Persons: list[Person] = list()
 		self._Covers: list[Cover] = list()
 
-		self.load_data(slug)
 		self._PostInitMethod()
 
 	def find_chapter_by_id(self, chapter_id: int) -> ChapterSearchResult | None:
 		"""
-		Возвращает данные ветви и главы для указанного ID.
-			chapter_id – уникальный идентификатор главы.
+		Ищет главу по её ID.
+
+		:param chapter_id: ID главы.
+		:type chapter_id: int
+		:return: Результат поиска.
+		:rtype: ChapterSearchResult | None
 		"""
 
-		BranchResult: BaseBranch | None = None
-		ChapterResult: BaseChapter | None = None
+		BranchResult = None
+		ChapterResult = None
 
 		for CurrentBranch in self._Branches:
 			for CurrentChapter in CurrentBranch.chapters:
@@ -881,7 +977,7 @@ class BaseTitle(ABC):
 
 		return None
 
-	def load_data(self, identificator: int | str, selector_type: By = By.Slug):
+	def load_data(self, identificator: int | str, selector_type: By = By.Slug) -> bool:
 		"""
 		Открывает локальный JSON файл и интерпретирует его данные.
 
@@ -937,7 +1033,11 @@ class BaseTitle(ABC):
 		if DataBuffer:
 			self._Data = self._Data | DataBuffer
 
+		self._ParseCovers()
+		self._ParsePersons()
 		self._ParseBranchesToObjects()
+
+		return bool(DataBuffer)
 
 	def save(self, sorting: bool = False) -> bool:
 		"""
@@ -1070,27 +1170,27 @@ class BaseTitle(ABC):
 		self._Branches.append(branch)
 		self._Branches = list(sorted(self._Branches, key = lambda Value: Value.chapters_count, reverse = True))
 
-	def set_site(self, site: str):
+	def set_site(self, site: str | None):
 		"""
 		Задаёт домен сайта-источника.
 
 		:param site: Домен сайта.
-		:type site: str
+		:type site: str | None
 		"""
 
 		self._Data["site"] = site
 
-	def set_id(self, id: int):
+	def set_id(self, id: int | None):
 		"""
 		Задаёт ID тайтла.
 
 		:param id: ID тайтла.
-		:type id: int
+		:type id: int | None
 		"""
 
 		self._Data["id"] = id
 
-	def set_content_language(self, language_code: str):
+	def set_content_language(self, language_code: str | None):
 		"""
 		Задаёт язык контента по стандарту ISO 639-3.
 
@@ -1099,25 +1199,26 @@ class BaseTitle(ABC):
 		:raise ValueError: Выбрасывается при несоответствии кода языка стандарту.
 		"""
 
-		CheckLanguageCode(language_code)
+		if language_code:
+			CheckLanguageCode(language_code)
 		self._Data["content_language"] = language_code
 
-	def set_localized_name(self, localized_name: str):
+	def set_localized_name(self, localized_name: str | None):
 		"""
 		Задаёт локализованное название тайтла.
 
 		:param localized_name: Локализованное название.
-		:type localized_name: str
+		:type localized_name: str | None
 		"""
 
-		self._Data["localized_name"] = localized_name.strip()
+		self._Data["localized_name"] = localized_name.strip() if localized_name else None
 
-	def set_eng_name(self, eng_name: str):
+	def set_eng_name(self, eng_name: str | None):
 		"""
 		Задаёт название на английском языке.
 
 		:param eng_name: Название на английском языке.
-		:type eng_name: str
+		:type eng_name: str | None
 		"""
 
 		self._Data["eng_name"] = eng_name.strip() if eng_name else None
@@ -1166,22 +1267,22 @@ class BaseTitle(ABC):
 
 		self._Data["publication_year"] = publication_year
 
-	def set_description(self, description: str):
+	def set_description(self, description: str | None):
 		"""
 		Задаёт описание тайтла.
 
 		:param description: Описание тайтла.
-		:type description: str
+		:type description: str | None
 		"""
 
-		self._Data["description"] = description.strip()
+		self._Data["description"] = description.strip() if description else None
 
-	def set_age_limit(self, age_limit: int):
+	def set_age_limit(self, age_limit: int | None):
 		"""
 		Задаёт возрастной рейтинг.
 
 		:param age_limit: Возрастной рейтинг.
-		:type age_limit: int
+		:type age_limit: int | None
 		"""
 
 		self._Data["age_limit"] = age_limit
@@ -1230,22 +1331,22 @@ class BaseTitle(ABC):
 		for CurrentPerson in persons:
 			self.add_person(CurrentPerson)
 
-	def set_status(self, status: Statuses):
+	def set_status(self, status: Statuses | None):
 		"""
 		Задаёт статус тайтла.
 
 		:param status: Статус тайтла.
-		:type status: Statuses
+		:type status: Statuses | None
 		"""
 
-		self._Data["status"] = status.value
+		self._Data["status"] = status.value if status else None
 	
-	def set_is_licensed(self, is_licensed: bool):
+	def set_is_licensed(self, is_licensed: bool | None):
 		"""
 		Задаёт состояние: лицензирован ли тайтл в источнике.
 
 		:param is_licensed: Состояние: лицензирован ли тайтл в источнике.
-		:type is_licensed: bool
+		:type is_licensed: bool | None
 		"""
 
 		self._Data["is_licensed"] = is_licensed

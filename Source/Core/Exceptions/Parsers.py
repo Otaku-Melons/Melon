@@ -1,6 +1,7 @@
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
+	from Source.Core.Base.Parsers.Components.Manifest import ContentTypes
 	from Source.Core.Base.Formats.BaseFormat import BaseTitle
 
 #==========================================================================================#
@@ -37,7 +38,18 @@ class TitleNotSetted(Exception):
 
 		super().__init__("Open title before using methods, that it requires.") 
 
+class UnsupportedContent(Exception):
+	"""Исключение: неподдерживаемый тип контента."""
 
+	def __init__(self, content_type: "ContentTypes"):
+		"""
+		Исключение: неподдерживаемый тип контента.
+
+		:param content_type: Тип контента.
+		:type content_type: ContentTypes
+		"""
+
+		super().__init__(content_type.value) 
 
 
 

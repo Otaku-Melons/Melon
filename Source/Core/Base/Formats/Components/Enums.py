@@ -6,13 +6,6 @@ class By(enum.Enum):
 	Filename = None
 	Slug = "slug"
 	ID = "id"
-
-class ContentTypes(enum.Enum):
-	"""Перечисление типов контента."""
-
-	Anime = "anime"
-	Manga = "manga"
-	Ranobe = "ranobe"
 	
 class Statuses(enum.Enum):
 	"""Определения статусов."""

@@ -1,7 +1,7 @@
 from . import Functions
 from . import Templates
 
-from Source.Core.Base.Formats.Components.Enums import ContentTypes
+from Source.Core.Base.Parsers.Components.Manifest import ContentTypes
 from Source.Core import Exceptions
 from Source import Utils
 
@@ -13,8 +13,8 @@ from pathlib import Path
 import orjson
 
 if TYPE_CHECKING:
+	from Source.Core.Base.Parsers.BaseParser import BaseParser
 	from Source.Core.SystemObjects import SystemObjects
-	
 	from dublib.CLI.Terminalyzer import ParsedCommandData
 
 def com_cacher(system_objects: "SystemObjects", command: "ParsedCommandData"):
@@ -269,3 +269,126 @@ def com_list(system_objects: "SystemObjects", command: "ParsedCommandData"):
 		TableData["collect"].append(str(EntryPoint.source_operator.is_collector_implemented))
 
 	Templates.PrintParsersTable(TableData)
+
+def com_parse(system_objects: "SystemObjects", command: "ParsedCommandData"):
+	"""
+	Парсит тайтлы.
+		
+	:param system_objects: Коллекция системных объектов.
+	:type system_objects: SystemObjects
+	:param command: Данные команды.
+	:type command: ParsedCommandData
+	"""
+
+	#---> Выполнение команды.
+	#==========================================================================================#
+	Target: str = command.get_position_value("TARGET", expected_type = str)
+	ParserName: str = cast(str, command.get_key_value("--use", expected_type = str))
+
+	ForceMode: bool = command.check_flag("-f")
+	ParseFrom: str | None = command.get_key_value("--from", expected_type = str)
+	IsSortingEnabled: bool = command.check_flag("-sort")
+	IsAmendingEnabled: bool = not command.check_flag("-no-amend")
+
+	ParseLastTitle: bool = command.check_flag("-last")
+	ParseCollection: bool = command.check_flag("-collection")
+	ParseUpdates: bool = command.check_flag("-updates")
+	UpdatesPeriod: int | None = command.get_key_value("--period", expected_type = int)
+	ParseLocal: bool = command.check_flag("-local")
+	ParseByID: int | None = command.get_key_value("--id", expected_type = int)
+
+	if ParserName not in system_objects.driver.parsers_names:
+		raise Exceptions.System.ParserNotFound(ParserName)
+	
+	#---> Выполнение команды.
+	#==========================================================================================#
+	Timer = Utils.Timer(start = True)
+	EntryPoint = system_objects.driver.get_entry_point(ParserName)
+	SourceOperator = EntryPoint.source_operator
+
+	Slugs: list[str] = list()
+
+	if ParseLastTitle:
+		LastParsedSlug = SourceOperator.shared_data.last_parsed_slug
+
+		if LastParsedSlug:
+			Slugs.append(LastParsedSlug)
+		else:
+			system_objects.logger.warning("Last slug undefined. Parse anything firstly.")
+
+	elif ParseCollection:
+		Collector = Utils.Collector(EntryPoint)
+		Slugs = list(Collector.load())
+		system_objects.logger.info(f"Titles in collection: {len(Slugs)}.")
+
+	elif ParseUpdates:
+		system_objects.logger.info("Collecting updates…")
+		Slugs = list(EntryPoint.source_operator.collect_slugs(period = UpdatesPeriod or 24))
+		system_objects.logger.info(f"Updates collected: {len(Slugs)}.")
+
+	elif ParseLocal:
+		Collector = Utils.Collector(EntryPoint)
+		SlugsCount = Collector.scan_local()
+		Slugs = list(Collector.slugs)
+		system_objects.logger.info(f"Local titles to parseing: {SlugsCount}.")
+
+	elif ParseByID:
+		SlugByID = SourceOperator.shared_data.journal.get_slug_by_id(ParseByID)
+
+		if SlugByID:
+			Slugs.append(SlugByID)
+		else:
+			system_objects.logger.warning(f"Title with ID {SlugByID} uncached.")
+
+	else:
+		TargetSlug = EntryPoint.source_operator.parse_slug_from_string(Target)
+
+		if TargetSlug:
+			Slugs.append(TargetSlug)
+		else:
+			system_objects.logger.warning("Unable to parse title slug from target.")
+
+	if ParseFrom:
+		if ParseFrom in Slugs:
+			system_objects.logger.info(f"Parsing started from title: \"{ParseFrom}\".")
+			StartIndex = Slugs.index(ParseFrom)
+			Slugs = Slugs[StartIndex:]
+		else:
+			system_objects.logger.warning("Starting slug not found in targets. Ignored.")
+
+	if not Slugs:
+		system_objects.logger.error("No slugs for parsing.")
+		system_objects.logger.info(f"Done in {Timer.ends()}.")
+		return
+
+	ParsedCount: int = 0
+	NotFoundCount: int = 0
+	ErrorsCount: int = 0
+	TotalCount: int = len(Slugs)
+
+	CurrentContentType: ContentTypes | None = None
+	Parser: BaseParser = SourceOperator.launch_parser()
+
+	for Index in range(len(Slugs)):
+		Templates.PrintParsingProgress(Index, TotalCount)
+		Slug = Slugs[Index]
+		ContentType = SourceOperator.get_content_type_by_slug(Slug)
+
+		if ContentType is not CurrentContentType:
+			CurrentContentType = ContentType
+			Parser = SourceOperator.launch_parser(ContentType)
+
+		if not ForceMode:
+			Parser.load_title(Slug)
+
+		Parser.parse()
+
+		if IsAmendingEnabled:
+			Parser.amend()
+		else:
+			system_objects.logger.info("Amending skipped.")
+
+		Parser.save(IsSortingEnabled)
+
+	Templates.PrintParsingSummary(ParsedCount, NotFoundCount, ErrorsCount)
+	system_objects.logger.info(f"Done in {Timer.ends()}.")

@@ -1,11 +1,7 @@
-from .Formats.Components.Enums import ContentTypes
 from .SourceOperator import BaseSourceOperator
 
 from Source.Core.Base.Parsers.Components import ParserSettings
-from Source.Core.Base.Formats.Ranobe import Ranobe
-from Source.Core.Base.Formats.Manga import Manga
 
-from types import MappingProxyType
 from typing import TYPE_CHECKING
 import importlib
 
@@ -16,15 +12,6 @@ if TYPE_CHECKING:
 	from Source.Core.SystemObjects.Temper import SharedData
 	from Source.Core.SystemObjects.Logger import Portals
 	from Source.Core.SystemObjects import SystemObjects
-
-#==========================================================================================#
-# >>>>> ВСПОМОГАТЕЛЬНЫЕ СТРУКТУРЫ ДАННЫХ <<<<< #
-#==========================================================================================#
-
-_CONTENT_STRUCTS = MappingProxyType({
-	ContentTypes.Manga: Manga,
-	ContentTypes.Ranobe: Ranobe
-})
 
 #==========================================================================================#
 # >>>>> ОСНОВНОЙ КЛАСС <<<<< #

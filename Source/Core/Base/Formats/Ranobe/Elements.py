@@ -336,6 +336,16 @@ class Header:
 		return f"<{self._WrapperTag}{Align}>{Text}</{self._WrapperTag}>"
 
 class Image:
+
+
+
+
+
+
+
+
+
+	
 	"""Иллюстрация."""
 
 	def __init__(self, system_objects: "SystemObjects", parser: "RanobeParser", chapter: "Chapter"):

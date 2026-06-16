@@ -1,26 +1,17 @@
 from .BaseParser import BaseParser
 
+from Source.Core.Base.Formats.Ranobe import Chapter, Ranobe
 from Source.Core import Exceptions
 
-from typing import cast, TYPE_CHECKING
+from typing import cast
 from time import sleep
-
-if TYPE_CHECKING:
-	from Source.Core.Base.Formats.Ranobe import Chapter, Branch, Ranobe
 
 class BaseRanobeParser(BaseParser):
 	"""Базовый парсер ранобэ."""
 	
 	@BaseParser.require_title
-	def amend(self, branch: "Branch", chapter: "Chapter"):
-		"""
-		Дополняет главу дайными о слайдах.
-
-		:param branch: Ветвь.
-		:type branch: Branch
-		:param chapter: Глава.
-		:type chapter: Chapter
-		"""
+	def amend(self):
+		"""Дополняет главы дайными о контенте."""
 
 		self._Title = cast("Ranobe", self._Title)
 
@@ -38,6 +29,20 @@ class BaseRanobeParser(BaseParser):
 					if CurrentChapter.paragraphs:
 						AmendedChaptersCount += 1
 						sleep(self.settings.common.delay)
+
+	def load_title(self, slug: str, empty: bool = False):
+		"""
+		Загружает и устанавливает тайтл в парсер.
+
+		:param slug: Алиас тайтла.
+		:type slug: str
+		:param empty: Указывает, что нужно инициалазировать пустой тайтл, минуя операцию чтения локальных данных.
+		:type empty: bool
+		"""
+
+		self._Title = Ranobe(self, slug)
+		if not empty:
+			self._Title.load_data(slug)
 
 	@BaseParser.require_title
 	def repair(self, chapter_id: int) -> bool:
