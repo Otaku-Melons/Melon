@@ -126,3 +126,21 @@ def PrintParsingProgress(index: int, count: int):
 	ProgressString = StringifyFloat(Progress)
 	ProgressString = FastStyler(ProgressString + "%").colorize.cyan
 	print(f"[{NumberString} / {count} | {Progress}] ", end = "")
+
+def PrintParsingSummary(parsed: int, not_found: int, errors: int):
+	"""
+	Выводит результат парсинга.
+
+	:param parsed: Количество успешно собранных тайтлов.
+	:type parsed: int
+	:param not_found: Количество не найденных в источнике тайтлов.
+	:type not_found: int
+	:param errors: Количество ошибок.
+	:type errors: int
+	"""
+
+	PrintHeader("SUMMARY")
+	Parsed = FastStyler(str(parsed)).colorize.green if parsed else FastStyler(str(parsed)).colorize.red
+	NotFound = FastStyler(str(not_found)).colorize.yellow if not_found else FastStyler(str(not_found)).colorize.green
+	Errors = FastStyler(str(errors)).colorize.red if errors else FastStyler(str(errors)).colorize.green
+	print(f"Parsed: {Parsed}. Not found: {NotFound}. Errors: {Errors}.")

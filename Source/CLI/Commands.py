@@ -1,3 +1,4 @@
+from . import Functions
 from . import Templates
 
 from Source.Core.Base.Formats.Components.Enums import ContentTypes
@@ -6,7 +7,7 @@ from Source import Utils
 
 from dublib.Methods.Filesystem import WriteJSON
 
-from typing import TYPE_CHECKING
+from typing import cast, TYPE_CHECKING
 from pathlib import Path
 
 import orjson
@@ -29,19 +30,7 @@ def com_cacher(system_objects: "SystemObjects", command: "ParsedCommandData"):
 	#---> Парсинг параметров команды.
 	#==========================================================================================#
 	KeyValue: str | None = command.get_key_value("--use", expected_type = str)
-	Parsers: tuple[str, ...] = tuple()
-
-	if KeyValue:
-		Parsers = tuple(Element.strip() for Element in KeyValue.split(","))
-
-	AllParsers: tuple[str, ...] = system_objects.driver.parsers_names
-
-	if not Parsers:
-		Parsers = AllParsers
-	else:
-		for CurrentParser in Parsers:
-			if CurrentParser not in AllParsers:
-				raise Exceptions.System.ParserNotFound(CurrentParser)
+	Parsers: tuple[str, ...] = Functions.GetParsersNamesFromKey(system_objects, KeyValue)
 			
 	#---> Выполнение команды.
 	#==========================================================================================#
@@ -50,12 +39,12 @@ def com_cacher(system_objects: "SystemObjects", command: "ParsedCommandData"):
 	for CurrentParser in Parsers:
 		system_objects.logger.info(f"Caching titles for <b>{CurrentParser}</b>…")
 		EntryPoint = system_objects.driver.get_entry_point(CurrentParser)
-		CacherObject = Utils.Cacher(EntryPoint)
+		Cacher = Utils.Cacher(EntryPoint)
 
-		Result = CacherObject.cache_parser_output()
+		Result = Cacher.cache_parser_output()
 		Templates.PrintCachingSummary(Result)
 	
-	print(f"Done in {TimerObject.ends()}.")
+	system_objects.logger.info(f"Done in {TimerObject.ends()}.")
 
 def com_classify(system_objects: "SystemObjects", command: "ParsedCommandData"):
 	"""
@@ -102,13 +91,144 @@ def com_classify(system_objects: "SystemObjects", command: "ParsedCommandData"):
 	ClassificationResult = ClassificatorObject.classify(Target, Procedures, ignore_case = IgnoreCase)
 
 	if IsOutputJSON:
-		print(orjson.dumps(ClassificationResult.to_dict()).decode())
+		system_objects.logger.emit_in_stdout(orjson.dumps(ClassificationResult.to_dict()).decode())
+		system_objects.logger.emit_in_log("JSON string dumped in terminal.")
 	else:
 		Templates.PrintClassificationResult(ClassificationResult, Target)
 
 	if FileToWrite:
 		WriteJSON(FileToWrite, ClassificationResult.to_dict())
 		system_objects.logger.info(f"Classification result dumped in file: \"{FileToWrite}\".")
+
+def com_collect(system_objects: "SystemObjects", command: "ParsedCommandData"):
+	"""
+	Собирает алиасы тайтлов в файл _Collection.txt_ во временном каталоге парсера.
+		
+	:param system_objects: Коллекция системных объектов.
+	:type system_objects: SystemObjects
+	:param command: Данные команды.
+	:type command: ParsedCommandData
+	"""
+
+	#---> Парсинг параметров команды.
+	#==========================================================================================#
+	Parser: str = cast(str, command.get_key_value("--use", expected_type = str))
+	ForceMode: bool = command.check_flag("-f")
+	CollectLocal: bool = command.check_flag("-local")
+	IsSortingEnabled: bool = not command.check_flag("-no-sort")
+
+	Period: int | None = command.get_key_value("--period", expected_type = int)
+	Filters: str | None = command.get_key_value("--filters", expected_type = str)
+	Pages: int | None = command.get_key_value("--pages", expected_type = int)
+
+	if Parser not in system_objects.driver.parsers_names:
+		raise Exceptions.System.ParserNotFound(Parser)	
+			
+	#---> Выполнение команды.
+	#==========================================================================================#
+	Timer = Utils.Timer(start = True)
+	EntryPoint = system_objects.driver.get_entry_point(Parser)
+	Collector = Utils.Collector(EntryPoint)
+	if not ForceMode: Collector.load()
+	AddedSlugs: int = 0
+
+	if CollectLocal:
+		AddedSlugs = Collector.scan_local()
+	elif EntryPoint.source_operator.is_collector_implemented:
+		CollectedSlugs = EntryPoint.source_operator.collect_slugs(Period, Filters, Pages)
+		AddedSlugs = Collector.add(CollectedSlugs)
+	else:
+		system_objects.logger.critical("Collector method not implemented.")
+		return
+
+	Collector.save(sort = IsSortingEnabled)
+
+	if AddedSlugs:
+		system_objects.logger.info(f"Slugs collected: {AddedSlugs}.")
+	else:
+		system_objects.logger.info("No new slugs in collection.")
+
+	system_objects.logger.info(f"Done in {Timer.ends()}.")
+
+def com_fid(system_objects: "SystemObjects", command: "ParsedCommandData"):
+	"""
+	Ищет ID тайтла по алиасу в кэше.
+		
+	:param system_objects: Коллекция системных объектов.
+	:type system_objects: SystemObjects
+	:param command: Данные команды.
+	:type command: ParsedCommandData
+	"""
+
+	#---> Парсинг параметров команды.
+	#==========================================================================================#
+	Slug: str = command.get_position_value("SLUG", expected_type = str)
+	Parsers: tuple[str, ...] = Functions.GetParsersNamesFromKey(system_objects, command.get_key_value("--use", expected_type = str))
+	SearchAll: bool = command.check_flag("-all")
+
+	#---> Выполнение команды.
+	#==========================================================================================#
+	ResultsCount: int = 0
+	Timer = Utils.Timer(start = True)
+
+	for CurrentParser in Parsers:
+		EntryPoint = system_objects.driver.get_entry_point(CurrentParser)
+		ID = EntryPoint.shared_data.journal.get_id_by_slug(Slug)
+
+		if ID:
+			ResultsCount += 1
+			system_objects.logger.info(f"Found ID {ID} for parser \"{CurrentParser}\".")
+
+			if not SearchAll:
+				break
+
+	if ResultsCount:
+		system_objects.logger.info(f"Total ID found in cache: {ResultsCount}.")
+	else:
+		system_objects.logger.info("Tite with same slug not found in cache.")
+	
+	system_objects.logger.info(f"Done in {Timer.ends()}.")
+
+def com_get(system_objects: "SystemObjects", command: "ParsedCommandData"):
+	"""
+	Скачивает изображение.
+		
+	:param system_objects: Коллекция системных объектов.
+	:type system_objects: SystemObjects
+	:param command: Данные команды.
+	:type command: ParsedCommandData
+	"""
+
+	#---> Парсинг параметров команды.
+	#==========================================================================================#
+	Link: str = cast(str, command.get_position_value("URL", expected_type = str))
+	Parser: str = cast(str, command.get_key_value("--use", expected_type = str))
+	Directory: Path | None = command.get_key_value("--dir", expected_type = Path)
+	ForceMode: bool = command.check_flag("-f")
+
+	FullName: str | None = command.get_key_value("--fullname", expected_type = str)
+	Name: str | None = command.get_key_value("--name", expected_type = str)
+
+	if Parser not in system_objects.driver.parsers_names:
+		raise Exceptions.System.ParserNotFound(Parser)
+
+	#---> Выполнение команды.
+	#==========================================================================================#
+	Timer = Utils.Timer(start = True)
+	EntryPoint = system_objects.driver.get_entry_point(Parser)
+	Result = EntryPoint.source_operator.download_image(Link, Directory, FullName or Name, bool(FullName), ForceMode)
+
+	if Result.error_message:
+		system_objects.logger.error(Result.error_message)
+	elif Result.is_already_exists and not Result.is_downloaded:
+		system_objects.logger.info("Image already exists.")
+	elif Result.is_already_exists and Result.is_downloaded:
+		system_objects.logger.info("Image overwritten.")
+	
+	if Result.path:
+		system_objects.logger.info(f"Image path: \"{Result.path}\".")
+
+	system_objects.logger.info(f"Done in {Timer.ends()}.")
 
 def com_list(system_objects: "SystemObjects", command: "ParsedCommandData"):
 	"""
@@ -146,6 +266,6 @@ def com_list(system_objects: "SystemObjects", command: "ParsedCommandData"):
 		TableData["VERSION"].append(ParserVersion)
 		TableData["TYPES"].append(", ".join(ParserContentTypes))
 		TableData["SITE"].append(ParserSite)
-		TableData["collect"].append(str(EntryPoint.is_supported_collect))
+		TableData["collect"].append(str(EntryPoint.source_operator.is_collector_implemented))
 
 	Templates.PrintParsersTable(TableData)

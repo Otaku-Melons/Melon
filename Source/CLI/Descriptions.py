@@ -1,4 +1,5 @@
 from dublib.CLI.Terminalyzer import Command, ValidableTypes
+from dublib.CLI.TextStyler import GetStyledTextFromHTML
 
 COMMANDS: list[Command] = list()
 
@@ -14,6 +15,37 @@ ComPos = Com.create_position("MODE", "Output mode. By default styled print to te
 ComPos.add_flag("-j", aliases = ("--json",), description = "Prints JSON-string in terminal.")
 ComPos.add_key("--file", type = ValidableTypes.Path, description = "Path to dump JSON file.")
 Com.base.add_flag("-i", aliases = ("--ignorecase",), description = "Ignore characters case in procedures searching.")
+COMMANDS.append(Com)
+
+Com = Command("collect", GetStyledTextFromHTML("Collect titles slugs into <i>Collection.txt</i> file in parser's temporary directory."))
+ComPos = Com.create_position("PARSER", "Name of parser.", important = True)
+ComPos.add_key("--use")
+Com.base.add_flag("-f", description = "Enable force mode.")
+Com.base.add_flag("-local", description = "Scan local titles and put into collection.")
+Com.base.add_flag("-no-sort", description = "Disable slugs sorting.")
+Com.base.add_key("--filters", description = "Query string for filtering titles.")
+Com.base.add_key("--pages", type = ValidableTypes.UnsignedInteger, description = "Count of pages to collecting.")
+Com.base.add_key("--period", type = ValidableTypes.UnsignedInteger, description = "Period in hours for parsing updates.")
+COMMANDS.append(Com)
+
+Com = Command("fid", "Find title ID by slug in cache.")
+ComPos = Com.create_position("SLUG", "Title slug.")
+ComPos.set_argument()
+ComPos = Com.create_position("PARSERS", "One or more parsers names separated by comma. By default all.")
+ComPos.add_key("--use")
+Com.base.add_flag("-all", description = "Print all search results instead only first.")
+COMMANDS.append(Com)
+
+Com = Command("get", "Download image in temporary parser directory by default.")
+ComPos = Com.create_position("URL", "Link to image.", important = True)
+ComPos.set_argument(ValidableTypes.URL)
+ComPos = Com.create_position("PARSER", "Name of parser from which downloader will be used.", important = True)
+ComPos.add_key("--use")
+ComPos = Com.create_position("NAME", "Naming operation. By default save original.")
+ComPos.add_key("--fullname", description = "Set full name with filename extension.")
+ComPos.add_key("--name", description = "Rename, but save original filename extension.")
+Com.base.add_flag("-f", description = "Enable force mode.")
+Com.base.add_key("--dir", type = ValidableTypes.ValidPath, description = "Output directory.")
 COMMANDS.append(Com)
 
 Com = Command("list", "List installed parsers.")

@@ -1,17 +1,18 @@
-from Source.Core.Base.Formats.Components.Enums import By
+from Source.Core.Base.Formats.Components.Functions import SafelyReadTitleJSON
+from Source.Core import Exceptions
 
-from dublib.Methods.Filesystem import ReadJSON, ReadTextFile
+from dublib.Methods.Filesystem import ReadTextFile, WriteTextFile
 from dublib.Methods.Data import ToSequence
 
-from typing import cast, Literal, Sequence, TYPE_CHECKING
-from pathlib import Path
+from typing import Sequence, TYPE_CHECKING
+from json import JSONDecodeError
 import os
 
 if TYPE_CHECKING:
-	from Source.Core.SystemObjects import SystemObjects
+	from Source.Core.Base.EntryPoint import BaseEntryPoint
 
 class Collector:
-	"""Менеджер коллекций."""
+	"""Сборщик алиасов."""
 
 	#==========================================================================================#
 	# >>>>> СВОЙСТВА <<<<< #
@@ -27,60 +28,53 @@ class Collector:
 	# >>>>> ПУБЛИЧНЫЕ МЕТОДЫ <<<<< #
 	#==========================================================================================#
 
-	def __init__(self, system_objects: "SystemObjects", parser_name: str, merge: bool = True):
+	def __init__(self, entry_point: "BaseEntryPoint"):
 		"""
-		Менеджер коллекций.
+		Сборщик алиасов.
 
-		:param system_objects: Коллекция системных объектов.
-		:type system_objects: SystemObjects
-		:param parser_name: Имя парсера.
-		:type parser_name: str
-		:param merge: Указывает, нужно ли читать файл коллекции. По умолчанию `True`.
-		:type merge: boolt
+		:param entry_point: Точка входа в модуль парсера.
+		:type entry_point: BaseEntryPoint
 		"""
 
-		self.__SystemObjects: "SystemObjects" = system_objects
+		self.__EntryPoint = entry_point
 
-		self.__Path = self.__SystemObjects.temper.get_parser_temp_directory(parser_name) / "Collection.txt"
-		self.__Collection: list[str] = list(ReadTextFile(self.__Path, split = True, strip = True)) if self.__Path.exists() and merge else list()
+		self.__CollectionPath = self.__EntryPoint.system_objects.temper.get_parser_temp_directory(self.__EntryPoint.parser_name) / "Collection.txt"
+		self.__Collection: list[str] = list()
 
-	def append(self, slugs: str | Sequence[str]):
+	def add(self, slugs: str | Sequence[str]) -> int:
 		"""
 		Добавляет один или несколько алиасов в коллекцию.
 
 		:param slugs: Добавляемые алиасы.
 		:type slugs: str | Sequence[str]
+		:return: Количество уникальных добавленыых алиасов.
+		:rtype: int
 		"""
 
-		slugs = ToSequence(slugs)
-		self.__Collection += [Slug for Slug in slugs if Slug not in self.__Collection]
-
-	def get_local_identificators(self, identificator_type: Literal[By.ID, By.Slug]) -> list[int] | list[str]:
-		"""
-		Сканирует директорию татйлов текущего парсера и считывает из них идентификаторы.
-
-		:param identificator_type: Тип идентификаторов в возвращаемом списке.
-		:type identificator_type: Literal[By.ID, By.Slug]
-		:return: Список идентификаторов указанного типа.
-		:rtype: list[int] | list[str]
-		"""
+		SlugsSet = ToSequence(slugs, target_type = set)
+		CollectionSet = set(self.__Collection)
+		UniqueSlugsSet = SlugsSet - CollectionSet
 		
-		ParserSettings = self.__SystemObjects.driver.current_parser_settings
+		self.__Collection = list(CollectionSet | SlugsSet)
 
-		LocalTitles = tuple(Entry.name for Entry in os.scandir(ParserSettings.common.titles_directory) if Entry.is_file() and Entry.name.endswith(".json"))
-		Identificators = list()
+		return len(UniqueSlugsSet)
 
-		for Filename in LocalTitles:
+	def load(self) -> tuple[str, ...]:
+		"""
+		Считывает файл _Collection.txt_ во временном каталоге парсера.
 
-			try:
-				Title = ReadJSON(f"{ParserSettings.common.titles_directory}/{Filename}") 
-				Identificators.append(Title[identificator_type.value])
+		:return: Последовательность считанных алиасов.
+		:rtype: tuple[str, ...]
+		"""
 
-			except KeyError: pass
+		if self.__CollectionPath.exists():
+			CollectionSlugs: list[str] = ReadTextFile(self.__CollectionPath, split = True, strip = True)
+			self.add(CollectionSlugs)
+			return tuple(CollectionSlugs)
+		
+		return tuple()
 
-		return Identificators
-
-	def save(self, sort: bool = False):
+	def save(self, sort: bool = True):
 		"""
 		Сохраняет коллекцию в файл.
 
@@ -88,17 +82,42 @@ class Collector:
 		:type sort: bool
 		"""
 
-		self.__Collection = list(set(self.__Collection))
-		if sort: self.__Collection = sorted(self.__Collection)
+		CollectionToWrite: Sequence[str] = self.__Collection
 
-		with open(self.__Path, "w") as FileWriter:
-			for Slug in self.__Collection: FileWriter.write(Slug + "\n")
+		if sort:
+			CollectionToWrite = tuple(sorted(self.__Collection))
 
-	def from_local(self) -> int:
-		"""Сканирует директорию тайтлов и сторит из неё коллекцию."""
+		WriteTextFile(self.__CollectionPath, CollectionToWrite)
+	
+	def scan_local(self, allow_filenames: bool = True) -> int:
+		"""
+		Сканирует директорию тайтлов парсера и добавляет алиасы из неё в коллекцию.
+
+		:param allow_filenames: Разрешает считать названия файлов без расширения алиасами при активации соответствующего параметра в настройках парсера. Не требует чтения файла.
+		:type allow_filenames: bool
+		:return: Количество уникальных добавленыых алиасов.
+		:rtype: int
+		"""
 		
-		LocalTitles = cast(list[str], self.get_local_identificators(By.Slug))
-		TitlesCount = len(LocalTitles)
-		self.append(LocalTitles)
+		TitlesDirectoryPath = self.__EntryPoint.settings.directories.titles
+		LocalSlugs: list[str] = list()
 
-		return TitlesCount
+		for Entry in os.scandir(TitlesDirectoryPath):
+			if not Entry.is_file() or not Entry.name.endswith(".json"):
+				continue
+
+			if allow_filenames and not self.__EntryPoint.settings.common.use_id_as_filename:
+				LocalSlugs.append(Entry.name[:-5])
+				continue
+
+			try:
+				Title = SafelyReadTitleJSON(TitlesDirectoryPath / Entry.name) 
+				Slug = Title.get("slug")
+
+				if Slug:
+					LocalSlugs.append(Slug)
+
+			except (JSONDecodeError, Exceptions.Parsers.UnsupportedFormat):
+				pass
+
+		return self.add(LocalSlugs)

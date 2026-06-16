@@ -1,7 +1,7 @@
-from Source.CLI.Templates import PrintOptionStatus
 from Source.Core.SystemObjects import SystemObjects
 from Source.CLI.Descriptions import COMMANDS
 from Source.CLI import Commands as Commands
+from Source.CLI import Templates
 
 from dublib.Methods.System import CheckPythonMinimalVersion
 from dublib.CLI.Terminalyzer import Terminalyzer
@@ -38,8 +38,8 @@ elif CommandData.name in ("help", "list", "classify"): HIDE_HEADERS = True
 if not HIDE_HEADERS:
 	if CommandData.check_flag("-f"): Objects.FORCE_MODE.enable()
 	if Objects.MELON_VERSION: print(f"Melon: {Objects.MELON_VERSION}")
-	PrintOptionStatus("Force mode", Objects.FORCE_MODE.status)
-	PrintOptionStatus("Caching", Objects.CACHING.status)
+	Templates.PrintOptionStatus("Force mode", Objects.FORCE_MODE.status)
+	Templates.PrintOptionStatus("Caching", Objects.CACHING.status)
 	Templates.PrintHeader(CommandData.name)
 
 try:

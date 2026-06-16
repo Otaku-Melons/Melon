@@ -38,18 +38,16 @@ class BaseEntryPoint:
 	#==========================================================================================#
 
 	@property
-	def is_supported_collect(self) -> bool:
-		"""Состояние: поддерживается ли метод **collect**."""
-
-		Module = importlib.import_module(f"Parsers.{self._Manifest.parser_name}.main")
-
-		return hasattr(Module.SourceOperator, "collect")
-
-	@property
 	def manifest(self) -> "ParserManifest":
 		"""Манифест парсера."""
 
 		return self._Manifest
+
+	@property
+	def parser_name(self) -> str:
+		"""Имя парсера."""
+
+		return self._Manifest.parser_name
 
 	@property
 	def portals(self) -> "Portals":
