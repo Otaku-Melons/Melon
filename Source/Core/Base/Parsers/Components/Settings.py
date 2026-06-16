@@ -435,7 +435,8 @@ class ParserSettings:
 
 		for Index in range(len(Paths)):
 			CurrentPath = Paths[Index]
-			if Index: self.__IsLoadedFromRepository = True
+			if Index:
+				self.__IsLoadedFromRepository = True
 
 			if CurrentPath.exists():
 				ParserSettingsDict = ReadJSON(CurrentPath)
@@ -462,7 +463,7 @@ class ParserSettings:
 		self.__ParserName: str = parser_name
 
 		self.__Settings: dict = self.__ReadSettings()
-		self.__IsLoadedFromRepository: bool = False
+		self.__IsLoadedFromRepository = False
 
 		self.__Directories = Directories(self.__ParserName, self.__Settings)
 		self.__Common: Common = Common(self.__Settings)

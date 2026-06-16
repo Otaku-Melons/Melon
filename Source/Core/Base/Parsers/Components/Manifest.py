@@ -9,13 +9,21 @@ from typing import TYPE_CHECKING
 if TYPE_CHECKING:
 	from Source.Core.SystemObjects import SystemObjects
 
-_BASE_MANIFEST = MappingProxyType({
+#==========================================================================================#
+# >>>>> ВСПОМОГАТЕЛЬНЫЕ СТРУКТУРЫ ДАННЫХ <<<<< #
+#==========================================================================================#
+
+_BASE_MANIFEST: MappingProxyType = MappingProxyType({
 	"object": "parser",
 	"site": None,
 	"content_types": [],
 	"parent": None,
 	"melon_required_version": None
 })
+
+#==========================================================================================#
+# >>>>> ОСНОВНОЙ КЛАСС <<<<< #
+#==========================================================================================#
 
 class ParserManifest:
 	"""Манифест парсера."""

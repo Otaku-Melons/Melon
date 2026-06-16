@@ -133,7 +133,7 @@ class Portals:
 		self.__Logger.error(Text)
 
 		if exception:
-			raise Exceptions.Parsers.ChapterNotFound(chapter)
+			raise Exceptions.Parsers.ChapterNotFound(id = chapter.id, slug = chapter.slug)
 
 	def title_not_found(self, title: "BaseTitle", exception: bool = True):
 		"""

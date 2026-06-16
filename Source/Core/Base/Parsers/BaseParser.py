@@ -1,17 +1,22 @@
 from Source.Core.Base.Formats.BaseFormat import BaseChapter, BaseBranch, BaseTitle
-from Source.Core.Base.Parsers.Components.ImagesDownloader import ImagesDownloader
-from Source.Core.Base.EntryPoint import BaseEntryPoint
+from Source.Core import Exceptions
 
-from dublib.WebRequestor import WebRequestor
-	
-from typing import TYPE_CHECKING
+from typing import Any, cast, TYPE_CHECKING
+from abc import ABC, abstractmethod
+import functools
 
 if TYPE_CHECKING:
+	from Source.Core.Base.Parsers.Components.ImagesDownloader import ImagesDownloader
 	from Source.Core.Base.Parsers.Components import ParserManifest, ParserSettings
-	from Source.Core.Base.Formats.Components import WordsDictionary
 	from Source.Core.Base.SourceOperator import BaseSourceOperator
 
-class BaseParser:
+	from dublib.WebRequestor import WebRequestor
+
+#==========================================================================================#
+# >>>>> ОСНОВНОЙ КЛАСС <<<<< #
+#==========================================================================================#
+
+class BaseParser(ABC):
 	"""Базовый парсер."""
 
 	#==========================================================================================#
@@ -19,29 +24,29 @@ class BaseParser:
 	#==========================================================================================#
 
 	@property
-	def images_downloader(self) -> ImagesDownloader:
+	def images_downloader(self) -> "ImagesDownloader":
 		"""Оператор скачивания изображений."""
 
-		return self._ImagesDownloader
+		return self._SourceOperator.images_downloader
 
 	@property
 	def manifest(self) -> "ParserManifest":
 		"""Манифест парсера."""
 
-		return self._Manifest
+		return self._SourceOperator.manifest
 
 	@property
-	def requestor(self) -> WebRequestor:
+	def requestor(self) -> "WebRequestor":
 		"""Менеджер запросов."""
 
-		return self._Requestor
+		return self._SourceOperator.requestor
 
 	@property
 	def settings(self) -> "ParserSettings":
 		"""Настройки парсера."""
 
-		return self._Settings
-
+		return self._SourceOperator.settings
+	
 	@property
 	def source_operator(self) -> "BaseSourceOperator":
 		"""Оператор источника."""
@@ -49,57 +54,43 @@ class BaseParser:
 		return self._SourceOperator
 
 	@property
-	def title(self) -> BaseTitle:
-		"""Данные тайтла."""
+	def title(self) -> BaseTitle | None:
+		"""Тайтл."""
 
 		return self._Title
-	
-	@property
-	def words_dictionary(self) -> "WordsDictionary | None":
-		"""Словарь ключевых слов."""
 
-		return self._Title.words_dictionary
+	#==========================================================================================#
+	# >>>>> ДЕКОРАТОРЫ <<<<< #
+	#==========================================================================================#
+
+	@staticmethod
+	def require_title(function):
+		"""
+		Декоратор. Проверяет, открыт ли тайтл.
+
+		:param function: Метод объекта.
+		:type function: Callable
+		:return: Обёрнутая функция.
+		:rtype: Callable
+		:raises TitleNotSetted: Не задан тайтл.
+		"""
+
+		@functools.wraps(function)
+		def Wrapper(self: "BaseParser", *args, **kwargs):
+			if not self._Title:
+				raise Exceptions.Parsers.TitleNotSetted()
+			return function(self, *args, **kwargs)
+		
+		return Wrapper
 
 	#==========================================================================================#
 	# >>>>> ПЕРЕОПРЕДЕЛЯЕМЫЕ МЕТОДЫ <<<<< #
 	#==========================================================================================#
 
-	def _PostInitMethod(self):
-		"""Метод, выполняющийся после инициализации объекта."""
-
-		pass
-
-	#==========================================================================================#
-	# >>>>> ПУБЛИЧНЫЕ МЕТОДЫ <<<<< #
-	#==========================================================================================#
-
-	def __init__(self, entry_point: "BaseEntryPoint"):
+	@abstractmethod
+	def _Amend(self, branch: BaseBranch, chapter: BaseChapter):
 		"""
-		Базовый парсер.
-
-		:param entry_point: Точка входа в парсер.
-		:type entry_point: BaseEntryPoint
-		:param title: Данные тайтла.
-		:type title: BaseTitle | None
-		"""
-
-		self._SystemObjects = entry_point.system_objects
-		self._Title = title
-
-		self._Temper = self._SystemObjects.temper
-		self._Portals = self._SystemObjects.logger.portals
-		self._SourceOperator = entry_point.source_operator
-		self._Settings = entry_point.settings
-		self._Manifest = entry_point.manifest
-
-		self._Requestor = entry_point.source_operator.requestor
-		self._ImagesDownloader = entry_point.source_operator.images_downloader
-
-		self._PostInitMethod()
-
-	def amend(self, branch: BaseBranch, chapter: BaseChapter):
-		"""
-		Дополняет главу дайными о слайдах.
+		Дополняет главу дайными о контенте.
 
 		:param branch: Данные ветви.
 		:type branch: BaseBranch
@@ -109,22 +100,75 @@ class BaseParser:
 
 		pass
 
-	def parse(self):
+	@abstractmethod
+	def _Parse(self):
 		"""Получает основные данные тайтла."""
 
 		pass
 
-	def postprocessor(self):
-		"""Вносит изменения в тайтл непосредственно перед сохранением."""
+	def _PostInitMethod(self):
+		"""Метод, выполняющийся после инициализации объекта."""
 
 		pass
 
-	def set_title(self, title: BaseTitle):
-		"""
-		Задаёт данные тайтла.
+	def _PreSaver(self):
+		"""Запускается непосредственно перед сохранением тайтла."""
 
-		:param title: Данные тайтла.
-		:type title: BaseTitle
+		pass
+
+	#==========================================================================================#
+	# >>>>> ПУБЛИЧНЫЕ МЕТОДЫ <<<<< #
+	#==========================================================================================#
+
+	def __init__(self, source_operator: "BaseSourceOperator"):
+		"""
+		Базовый парсер.
+
+		:param source_operator: Оператор источника.
+		:type source_operator: source_operator
 		"""
 
-		self._Title = title
+		self._SourceOperator = source_operator
+
+		self._Title: BaseTitle | None = None
+
+		self._PostInitMethod()
+
+	@abstractmethod
+	def amend(self, branch: Any, chapter: Any):
+		"""
+		Дополняет главу дайными о контенте.
+
+		:param branch: Данные ветви.
+		:type branch: Any
+		:param chapter: Данные главы.
+		:type chapter: Any
+		"""
+
+		pass
+
+	@require_title
+	def parse(self):
+		"""Получает основные данные тайтла."""
+
+		self._Parse()
+
+	@require_title
+	def save(self):
+		"""Сохраняет тайтл и выгружает его из парсера."""
+
+		self._Title = cast(BaseTitle, self._Title)
+
+		self._PreSaver()
+		self._Title.save()
+		self._Title = None
+
+	def load_title(self, slug: str):
+		"""
+		Инициализирует структуру тайтла.
+
+		:param slug: Алиас тайтла.
+		:type slug: str
+		"""
+
+		self._Title = None

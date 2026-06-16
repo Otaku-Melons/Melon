@@ -1,12 +1,54 @@
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
-	from Source.Core.Base.Formats.BaseFormat import BaseChapter, BaseTitle
+	from Source.Core.Base.Formats.BaseFormat import BaseTitle
 
 #==========================================================================================#
 # >>>>> ИСКЛЮЧЕНИЯ ПАРСЕРОВ <<<<< #
 #==========================================================================================#
 	
+class ChapterNotFound(Exception):
+	"""Исключение: глава не найдена."""
+
+	def __init__(self, id: int | None = None, slug: str | None = None):
+		"""
+		Исключение: глава не найдена.
+
+		:param id: ID главы.
+		:type id: int | None
+		:param slug: Алиас главы.
+		:type slug: str | None
+		"""
+
+		ChapterIdentificator = ""
+
+		if id:
+			ChapterIdentificator = f" {id}"
+		elif slug:
+			ChapterIdentificator = f" \"{slug}\""
+
+		super().__init__(f"Chapter{ChapterIdentificator} not found.") 
+
+class TitleNotSetted(Exception):
+	"""Исключение: не задан тайтл."""
+
+	def __init__(self):
+		"""Исключение: не задан тайтл."""
+
+		super().__init__("Open title before using methods, that it requires.") 
+
+
+
+
+
+
+
+
+
+
+
+		
+
 class AuthorizationRequired(Exception):
 	"""Исключение: требуется авторизация."""
 
@@ -47,22 +89,7 @@ class BadSettings(Exception):
 
 		super().__init__(f"Error during parsing \"{parser_name}\" settings.") 
 
-class ChapterNotFound(Exception):
-	"""Исключение: глава не найдена."""
 
-	def __init__(self, chapter: "BaseChapter"):
-		"""
-		Исключение: глава не найдена.
-
-		:param chapter: Данные главы.
-		:type chapter: BaseChaptert
-		"""
-
-		ChapterIdentificator = ""
-		if chapter.id: ChapterIdentificator = f" {chapter.id}"
-		elif chapter.slug: ChapterIdentificator = f" \"{chapter.slug}\""
-
-		super().__init__(f"Chapter{ChapterIdentificator} not found.") 
 	
 class MergingError(Exception):
 	"""Исключение: ошибка слияния контента."""

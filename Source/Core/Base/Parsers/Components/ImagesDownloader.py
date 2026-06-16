@@ -4,7 +4,6 @@ from pathlib import Path
 from os import PathLike
 from io import BytesIO
 import shutil
-import os
 
 from PIL import Image
 
@@ -166,16 +165,19 @@ class ImagesDownloader:
 		:rtype: ImageResolution | None
 		"""
 
-		if not self.__ParserSettings.common.sizing_images: return
-		if not data: return
+		if not self.__ParserSettings.common.sizing_images:
+			return None
+		
+		if not data:
+			return None
 
 		Resolution = None
 
 		try:
 			Buffer = Image.open(BytesIO(data))
 			Resolution = ImageResolution(Buffer.size[0], Buffer.size[1])
-
-		except Exception: return
+		except Exception:
+			return None
 
 		return Resolution
 	
