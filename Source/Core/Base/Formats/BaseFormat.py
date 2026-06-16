@@ -20,7 +20,6 @@ import os
 
 if TYPE_CHECKING:
 	from Source.Core.Base.Parsers.BaseParser import BaseParser
-	from Source.Core.SystemObjects import SystemObjects
 
 #==========================================================================================#
 # >>>>> ВНУТРЕННИЕ СТРУКТУРЫ ДАННЫХ <<<<< #
@@ -131,7 +130,7 @@ class Person:
 			name – имя персонажа.
 		"""
 
-		self.__Data = {
+		self.__Data: dict = {
 			"name": name,
 			"another_names": [],
 			"images": [],
@@ -631,6 +630,15 @@ class BaseTitle(ABC):
 
 		return sum(Branch.empty_chapters_count for Branch in self._Branches)
 
+	@property
+	def used_filename(self) -> str:
+		"""Используемое имя файла."""
+
+		if self._Parser.settings.common.use_id_as_filename and self.id:
+			return str(self.id)
+
+		return self.slug
+
 	#==========================================================================================#
 	# >>>>> СВОЙСТВА ТАЙТЛА <<<<< #
 	#==========================================================================================#
@@ -648,7 +656,7 @@ class BaseTitle(ABC):
 		return self._Data["id"]
 
 	@property
-	def slug(self) -> str | None:
+	def slug(self) -> str:
 		"""Алиас."""
 
 		return self._Data["slug"]
@@ -791,7 +799,10 @@ class BaseTitle(ABC):
 				if Data.get(type.value) == identificator:
 					return Data
 
-			except (json.JSONDecodeError, Exceptions.Parsers.UnsupportedFormat): pass
+			except (json.JSONDecodeError, Exceptions.Parsers.UnsupportedFormat):
+				pass
+
+		return None
 
 	#==========================================================================================#
 	# >>>>> НАСЛЕДУЕМЫЕ МЕТОДЫ ПРЕОБРАЗОВАНИЯ СЛОВАРНОЙ СТРУКТУРЫ <<<<< #
@@ -944,6 +955,7 @@ class BaseTitle(ABC):
 		
 		self._DataPath: Path = self._Parser.settings.directories.titles / f"{slug}.json"
 		self._Data: dict[str, Any] = self._GenerateTitleData()
+		self._Data["fromat"] = "melon" + type(self).__name__.lower()
 		self._Data["slug"] = slug
 
 		self._Branches: list[BaseBranch] = list()

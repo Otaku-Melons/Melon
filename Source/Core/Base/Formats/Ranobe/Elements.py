@@ -3,7 +3,7 @@ from Source.Core import Exceptions
 from dublib.Methods.Data import RemoveRecurringSubstrings
 from dublib.Polyglot import HTML
 
-from typing import Literal, TYPE_CHECKING
+from typing import cast, Literal, TYPE_CHECKING
 from pathlib import Path
 import base64
 import uuid
@@ -16,9 +16,8 @@ if TYPE_CHECKING:
 	from . import Chapter
 
 	from Source.Core.Base.Parsers.Components.ImagesDownloader import ImageResolution
-	from Source.Core.Base.Parsers.RanobeParser import RanobeParser
-
-	from Source.Core.SystemObjects import SystemObjects
+	from Source.Core.Base.Parsers.BaseRanobeParser import BaseRanobeParser
+	from Source.Core.Base.Formats.BaseFormat import BaseTitle
 
 class Footnote:
 	"""
@@ -47,17 +46,17 @@ class Footnote:
 	# >>>>> ПУБЛИЧНЫЕ МЕТОДЫ <<<<< #
 	#==========================================================================================#
 
-	def __init__(self, system_objects: "SystemObjects"):
+	def __init__(self, parser: "BaseRanobeParser"):
 		"""
 		Заметка.
 
-		:param system_objects: Коллекция системных объектов.
-		:type system_objects: SystemObjects
+		:param parser: Парсер.
+		:type parser: BaseRanobeParser
 		"""
 
-		self.__SystemObjects = system_objects
+		self.__Parser = parser
 
-		self.__Logger = self.__SystemObjects.logger
+		self.__Portals = self.__Parser.portals
 		
 		self.__UUID = str(uuid.uuid4())
 		self.__Elements: list[Paragraph | Image] = list()
@@ -75,15 +74,17 @@ class Footnote:
 		:raise RecursionError: Выбрасывается при передаче абзаца с заметкой.
 		"""
 
-		if type(element) == Paragraph:
-			if element.footnotes: raise RecursionError("Paragraph can't contain footnotes.")
+		if type(element) is Paragraph:
+			if element.footnotes:
+				raise RecursionError("Paragraph can't contain footnotes.")
 			self.__Elements.append(element)
 			return
 		
-		if type(element) == Image:
+		if type(element) is Image:
 			self.__Elements.append(element)
 			self.__ImagesCount += 1
-			if self.__ImagesCount > 1: self.__Logger.warning("Footnote should contain only one image.")
+			if self.__ImagesCount > 1:
+				self.__Portals.logger.warning("Footnote should contain only one image.")
 
 	def set_placeholder(self, placeholder: str):
 		"""
@@ -150,9 +151,12 @@ class Footnote:
 		:raise ValueError: Выбрасывается, если заметка пустая.
 		"""
 
-		if not self.__Elements: raise ValueError("Footnote must contain elements.")
+		if not self.__Elements:
+			raise ValueError("Footnote must contain elements.")
+		
+		ElementsHTML: tuple[str | None, ...] = tuple(Element.to_html() for Element in self.__Elements)
 
-		return "".join(Element.to_html() for Element in self.__Elements)
+		return "".join(Element for Element in ElementsHTML if Element)
 
 class Header:
 	"""Заголовок."""
@@ -162,7 +166,7 @@ class Header:
 	#==========================================================================================#
 
 	@property
-	def footnotes(self) -> tuple[Footnote]:
+	def footnotes(self) -> tuple[Footnote, ...]:
 		"""Набор заметок."""
 
 		return tuple(self._Footnotes)
@@ -181,17 +185,19 @@ class Header:
 		:rtype: str
 		"""
 
-		if not self._Text: raise Exceptions.FootnoteCompositionError("Text must be setted before footnotes compositing.")
+		if not self._Text:
+			raise Exceptions.Parsers.FootnoteCompositionError("Text must be setted before footnotes compositing.")
 		Text = self._Text
 
 		FootnoteIndex = 0
-		if offset: FootnoteIndex += offset
+		if offset:
+			FootnoteIndex += offset
 
 		for CurrentNote in self._Footnotes:
 			FootnoteID = "{" + CurrentNote.uuid + "}"
-			if FootnoteID not in self._Text: raise Exceptions.FootnoteCompositionError("Footnote UUID not found in text.")
+			if FootnoteID not in self._Text: raise Exceptions.Parsers.FootnoteCompositionError("Footnote UUID not found in text.")
 			Text = Text.replace(FootnoteID, f"<a href=\"#{FootnoteIndex}\">{CurrentNote.placeholder}</a>")
-			self._SystemObjects.logger.info(f"Footnote with index {FootnoteIndex} added.")
+			self.__Parser.portals.logger.info(f"Footnote with index {FootnoteIndex} added.")
 			FootnoteIndex += 1
 
 		return Text
@@ -228,18 +234,18 @@ class Header:
 	# >>>>> ПУБЛИЧНЫЕ МЕТОДЫ <<<<< #
 	#==========================================================================================#
 
-	def __init__(self, system_objects: "SystemObjects"):
+	def __init__(self, parser: "BaseRanobeParser"):
 		"""
 		Заголовок.
 
-		:param system_objects: Коллекция системных объектов.
-		:type system_objects: SystemObjects
+		:param parser: Парсер.
+		:type parser: BaseRanobeParser
 		"""
 
-		self._SystemObjects = system_objects
+		self.__Parser = parser
 
-		self._Text = None
-		self._Align = None
+		self._Text: str | None = None
+		self._Align: Literal["right", "center"] | None = None
 		self._Footnotes: list[Footnote] = list()
 		self._WrapperTag = "h3"
 
@@ -253,7 +259,7 @@ class Header:
 
 		self._Footnotes.append(footnote)
 
-	def parse_align(self, data: str | Tag) -> Literal["right", "centet"] | None:
+	def parse_align(self, data: str | Tag) -> Literal["right", "center"] | None:
 		"""
 		Пытается получить тип выравнивания из переданного тега HTML на основании атрибутов _align_ и _style_. Если передать строку, будет произведён автоматический парсинг.
 
@@ -262,32 +268,45 @@ class Header:
 		:param data: HTML для парсинга.
 		:type data: str | Tag
 		:return: Тип выравнивания или `None`, если таковой не обнаружен или не поддерживается.
-		:rtype: Literal["right", "centet"] | None
+		:rtype: Literal["right", "center"] | None
 		"""
 
-		Tag = BeautifulSoup(data, "html.parse").find("p") if type(data) == str else data
+		TagValue: Tag | str = data
 
-		if Tag.name != "p": return
-		Aligns = ("center", "right")
+		if type(TagValue) is str:
+			Buffer = BeautifulSoup(TagValue, "html.parse").find("p")
+			if Buffer:
+				TagValue = Buffer
+			else:
+				raise ValueError("Tag <p> not found.")
+		else:
+			TagValue = cast(Tag, data)
+
+		if TagValue.name != "p":
+			return None
+		Aligns = ("right", "center")
 		Align = None
 
-		if "align" in Tag.attrs:
-			AlignData = Tag.attrs["align"].strip()
-			Tag.attrs = {"align": AlignData}
-			if AlignData in Aligns: Align = AlignData
+		if "align" in TagValue.attrs:
+			AlignData = cast(str, TagValue.attrs["align"]).strip()
+			TagValue.attrs = {"align": AlignData}
+			if AlignData in Aligns:
+				Align = AlignData
 
-		elif "style" in Tag.attrs:
-			Styles = Tag.attrs["style"].split(";")
+		elif "style" in TagValue.attrs:
+			Styles = cast(str, TagValue.attrs["style"]).split(";")
 
 			for Style in Styles:
 				Style = Style.strip()
 				if not Style: continue
 				Name, Value = Style.split(":")
 				Name, Value = Name.strip(), Value.strip()
-				Tag.attrs = {"align": Value}
+				TagValue.attrs = {"align": Value}
 				if Name == "text-align" and Value in Aligns: Align = Value
 
-		if Align: self.set_align(Align)
+		if Align is not None:
+			Align = cast(Literal["center", "right"], Align)
+			self.set_align(Align)
 
 		return Align
 
@@ -300,7 +319,8 @@ class Header:
 		:raises ValueError: Выбрасывается при установке неподдерживаемого выравнивания.
 		"""
 
-		if align not in ("center", "right", None): raise ValueError("Align isn't supported.")
+		if align not in ("center", "right", None):
+			raise ValueError("Align isn't supported.")
 		self._Align = align
 
 	def set_text(self, text: str):
@@ -336,19 +356,9 @@ class Header:
 		return f"<{self._WrapperTag}{Align}>{Text}</{self._WrapperTag}>"
 
 class Image:
-
-
-
-
-
-
-
-
-
-	
 	"""Иллюстрация."""
 
-	def __init__(self, system_objects: "SystemObjects", parser: "RanobeParser", chapter: "Chapter"):
+	def __init__(self, parser: "BaseRanobeParser", chapter: "Chapter"):
 		"""
 		Иллюстрация.
 
@@ -360,19 +370,18 @@ class Image:
 		:type chapter: Chapter
 		"""
 
-		self.__SystemObjects = system_objects
 		self.__Parser = parser
 		self.__ImagesDownloader = self.__Parser.images_downloader
-		self.__Title = self.__Parser.title
+		self.__Title = cast("BaseTitle", self.__Parser.title)
 		self.__Chapter = chapter
 
-		self.__Logger = self.__SystemObjects.logger
+		self.__Portals = self.__Parser.portals
 
-		self.__Directory = f"{self.__Title.parser.settings.common.images_directory}/{self.__Title.used_filename}/illustrations/{chapter.id}"
-		self.__RealPath: str = None
-		self.__MountedPath: str = None
-		self.__Filename: str = None
-		self.__IsExists: bool = None
+		self.__Directory: Path =  self.__Parser.settings.directories.images / f"{self.__Title.used_filename}/illustrations/{chapter.id}"
+		self.__RealPath: str | None = None
+		self.__MountedPath: str | None = None
+		self.__Filename: str | None = None
+		self.__IsExists: bool | None = None
 		self.__Sizes: "ImageResolution | None" = None
 
 		os.makedirs(self.__Directory, exist_ok = True)
@@ -397,14 +406,17 @@ class Image:
 
 		if self.__IsExists:
 			print("Already exists.")
-			self.__Logger.info(f"Illustration \"{self.__Filename}\" already exists.")
+			self.__Portals.logger.info(f"Illustration \"{self.__Filename}\" already exists.")
 			return
 
 		ImageBytes = base64.b64decode(Data)
 		self.__Sizes = self.__ImagesDownloader.get_image_resolution(ImageBytes)
-		with open(self.__RealPath, "wb") as FileWriter: FileWriter.write(ImageBytes)
+
+		with open(cast(str, self.__RealPath), "wb") as FileWriter:
+			FileWriter.write(ImageBytes)
+
 		print("Done.")
-		self.__Logger.info(f"Image \"{self.__Filename}\" decoded from Base64.")
+		self.__Portals.logger.info(f"Image \"{self.__Filename}\" decoded from Base64.")
 
 	def parse_image(self, data: str | Tag):
 		"""
@@ -414,15 +426,29 @@ class Image:
 		:type data: str | Tag
 		"""
 
-		data = BeautifulSoup(data, "html.parser").find("img") if type(data) == str else data
-		Source = data.get("src")
+		TagValue: Tag | str = data
+
+		if type(TagValue) is str:
+			Buffer = BeautifulSoup(TagValue, "html.parse").find("img")
+			if Buffer:
+				TagValue = Buffer
+			else:
+				raise ValueError("Tag <img> not found.")
+		else:
+			TagValue = cast(Tag, data)
+
+		Source = TagValue.get("src")
 
 		if not Source: 
-			self.__Logger.warning("Image hasn't source. Skipped.")
+			self.__Portals.logger.warning("Image hasn't source. Skipped.")
 			return
+		else:
+			Source = cast(str, Source)
 
-		if Source.startswith("data:"): self.decode_from_base64(Source)
-		else: self.set_link(Source)	
+		if Source.startswith("data:"):
+			self.decode_from_base64(Source)
+		else:
+			self.set_link(Source)	
 
 	def rename(self, filename: str):
 		"""
@@ -433,7 +459,8 @@ class Image:
 		:raise TypeError: Выбрасывается при передаче неверного типа данных.
 		"""
 
-		if type(filename) != str: raise TypeError("Filename must be a string.")
+		if type(filename) is not str:
+			raise TypeError("Filename must be a string.")
 
 		self.__Filename = filename
 		self.__RealPath = f"{self.__Directory}/{filename}"
@@ -449,13 +476,10 @@ class Image:
 		:raises ValueError: Выбрасывается при некорректном URL.
 		"""
 
-		if not validators.url(link): raise ValueError("Invalid URL.")
-		LinkPath = Path(link)
-		self.rename(LinkPath.name)
-		print(f"Downloading image: \"{self.__Filename}\"… ", end = "")
-		Result = self.__ImagesDownloader.image(link, self.__Directory)
-		self.__Sizes = Result.resolution
-		Result.print_messages()
+		if not validators.url(link):
+			raise ValueError("Invalid URL.")
+		
+		self.rename(Path(link).name)
 
 	def to_html(self) -> str | None:
 		"""
@@ -465,9 +489,11 @@ class Image:
 		:rtype: str | None
 		"""
 
-		if not self.__MountedPath: return
+		if not self.__MountedPath:
+			return None
 		Sizes = ""
-		if self.__Sizes: Sizes = f" data-width=\"{self.__Sizes.width}\" data-height=\"{self.__Sizes.height}\""
+		if self.__Sizes:
+			Sizes = f" data-width=\"{self.__Sizes.width}\" data-height=\"{self.__Sizes.height}\""
 
 		return f"<p><img src=\"{self.__MountedPath}\"{Sizes}></p>"
 
@@ -490,13 +516,19 @@ class Paragraph(Header):
 		:raise UnresolvedTag: Выбрасывается при наличии неразрешённого тега в тексте.
 		"""
 
-		if not text: raise ValueError("Text can't be empty.")
-		if text.startswith("<p"): raise ValueError("Text must be unwrapped from <p>.")
+		if not text:
+			raise ValueError("Text can't be empty.")
+		if text.startswith("<p"):
+			raise ValueError("Text must be unwrapped from <p>.")
 
 		Tag = BeautifulSoup(text, "html.parser")
 
-		if Tag.find("img"): raise ValueError("Images must be contained in separated element.")
+		if Tag.find("img"):
+			raise ValueError("Images must be contained in separated element.")
+		
 		self.__ValidateHTML(Tag)
+
+		return True
 
 	def __ReplaceLongTags(self, text: str) -> str:
 		"""
@@ -529,21 +561,21 @@ class Paragraph(Header):
 		:raise UnresolvedTag: Выбрасывается при наличии неразрешённого тега в тексте.
 		"""
 		
-		for Tag in paragraph.find_all():
+		for CurrentTag in paragraph.find_all():
 
-			if Tag.name not in self.__AllowedTags.keys():
-				self.__Logger.error(f"Unresolved tag \"{Tag.name}\".")
-				if exceptions: raise Exceptions.UnresolvedTag(Tag)
+			if CurrentTag.name not in self.__AllowedTags.keys():
+				self._Portals.logger.error(f"Unresolved tag \"{CurrentTag.name}\".")
+				if exceptions: raise Exceptions.Parsers.UnresolvedTag(str(CurrentTag))
 
 			else:
-				Attributes = Tag.attrs.copy()
+				Attributes = CurrentTag.attrs.copy()
 
-				for Attribute in Tag.attrs:
-					if Attribute not in self.__AllowedTags[Tag.name]:
+				for Attribute in CurrentTag.attrs:
+					if Attribute not in self.__AllowedTags[CurrentTag.name]:
 						del Attributes[Attribute]
-						self.__Logger.warning(f"Unresolved attribute \"{Attribute}\" in \"{Tag.name}\" tag. Removed.")
+						self._Portals.logger.warning(f"Unresolved attribute \"{Attribute}\" in \"{CurrentTag.name}\" tag. Removed.")
 
-				Tag.attrs = Attributes
+				CurrentTag.attrs = Attributes
 
 		return paragraph
 
@@ -551,23 +583,24 @@ class Paragraph(Header):
 	# >>>>> ПУБЛИЧНЫЕ МЕТОДЫ <<<<< #
 	#==========================================================================================#
 
-	def __init__(self, system_objects: "SystemObjects"):
+	def __init__(self, parser: "BaseRanobeParser"):
 		"""
 		Абзац.
 
-		:param system_objects: Коллекция системных объектов.
-		:type system_objects: SystemObjects
+		:param parser: Парсер.
+		:type parser: BaseRanobeParser
 		"""
 
-		self._SystemObjects = system_objects
+		self._Parser = parser
 
-		self._Text = None
-		self._Align = None
+		self._Portals = self._Parser.portals
+
+		self._Text: str | None = None
+		self._Align: Literal["right", "center"] | None = None
 		self._Footnotes: list[Footnote] = list()
 		self._WrapperTag = "p"
 
-		self.__ParserSettings = self._SystemObjects.driver.current_parser_settings
-		self.__Logger = self._SystemObjects.logger
+		self.__ParserSettings = self._Parser.settings
 
 		self.__AllowedTags = {
 			"a": ("href"),
@@ -595,7 +628,10 @@ class Paragraph(Header):
 		text = text.strip()
 		text = self.__ReplaceLongTags(text)
 		self.__CheckText(text)
-		if self.__ParserSettings.common.pretty: text = self._PrettyText(text)
+
+		if self.__ParserSettings.common.pretty:
+			text = self._PrettyText(text)
+
 		self._Text = text
 	
 class Blockquote:
@@ -606,7 +642,7 @@ class Blockquote:
 	#==========================================================================================#
 
 	@property
-	def footnotes(self) -> tuple[Footnote]:
+	def footnotes(self) -> tuple[Footnote, ...]:
 		"""Набор заметок."""
 
 		return tuple(self.__Footnotes)
@@ -633,7 +669,7 @@ class Blockquote:
 
 		if type(element) not in (Paragraph, Image): raise TypeError("Unsupported element.")
 
-		if type(element) == Paragraph:
+		if type(element) is Paragraph:
 			for Note in element.footnotes: self.__Footnotes.append(Note)
 
 		self.__Elements.append(element)
@@ -660,19 +696,27 @@ class Blockquote:
 		:rtype: str
 		"""
 
+		if not footnotes_offset:
+			footnotes_offset = 0
+
 		Content = ""
 		for Element in self.__Elements:
 
-			if type(Element) == Paragraph:
-				Content += Element.to_html(footnotes_offset)
-				for _ in Element.footnotes: footnotes_offset += 1
+			if type(Element) is Paragraph:
+				Content += Element.to_html(footnotes_offset) or ""
+				for _ in Element.footnotes:
+					footnotes_offset += 1
 
-			else: Content += Element.to_html()
+			else:
+				Content += Element.to_html() or ""
 
 		ExtraData = list()
 		for Key, Value in self.__ExtraData.items():
 			ExtraData.append(f"data-{Key}=\"{Value}\"")
-		ExtraData = " ".join(ExtraData)
-		if ExtraData: ExtraData = f" {ExtraData}"
 
-		return f"<p><blockquote{ExtraData}>{Content}</blockquote></p>"
+		ExtraDataString = " ".join(ExtraData)
+
+		if ExtraDataString:
+			ExtraDataString = f" {ExtraDataString}"
+
+		return f"<p><blockquote{ExtraDataString}>{Content}</blockquote></p>"

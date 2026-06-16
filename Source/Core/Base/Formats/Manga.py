@@ -138,7 +138,6 @@ class Chapter(BaseChapter):
 		"""
 
 		self._Data = self._Data | data
-		self._Data["format"] = "melon-manga"
 		self.__Slides.clear()
 		
 		for SlideData in self._Data["slides"]:
@@ -203,7 +202,7 @@ class Manga(BaseTitle):
 
 		TypeValue = self._Data.get("type")
 		if TypeValue:
-			return 
+			return Types(TypeValue)
 		
 		return None
 
@@ -220,7 +219,6 @@ class Manga(BaseTitle):
 		"""
 
 		TitleData = super()._GenerateTitleData()
-		TitleData["format"] = "melon-manga"
 
 		return {
 			"type": None

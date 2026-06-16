@@ -30,6 +30,19 @@ class ChapterNotFound(Exception):
 
 		super().__init__(f"Chapter{ChapterIdentificator} not found.") 
 
+class ParsingError(Exception):
+	"""Исключение: ошибка парсинга."""
+
+	def __init__(self, description: str | None = None):
+		"""
+		Исключение: ошибка парсинга.
+
+		:param description: Описание ошибки.
+		:type description: str | None
+		"""
+
+		super().__init__(description or "Error occurs during parsing.") 
+
 class TitleNotSetted(Exception):
 	"""Исключение: не задан тайтл."""
 
@@ -51,97 +64,6 @@ class UnsupportedContent(Exception):
 
 		super().__init__(content_type.value) 
 
-
-
-
-
-
-
-
-
-		
-
-class AuthorizationRequired(Exception):
-	"""Исключение: требуется авторизация."""
-
-	def __init__(self, message: str):
-		"""
-		Исключение: требуется авторизация.
-
-		:param message: Описание требования авторизации.
-		:type message: str
-		"""
-
-		super().__init__(message) 
-
-class BadEntryPoint(Exception):
-	"""Исключение: ошибка точки входа."""
-
-	def __init__(self, message: str | None):
-		"""
-		Исключение: ошибка точки входа.
-
-		:param message: Текст альтернативного сообщения об ошибке.
-		:type message: str | None
-		"""
-
-		if message: super().__init__(message) 
-		else: super().__init__()
-
-class BadSettings(Exception):
-	"""Исключение: неверно определены настройки парсера."""
-
-	def __init__(self, parser_name: str):
-		"""
-		Исключение: неверно определены настройки парсера.
-
-		:param parser_name: Имя парсера.
-		:type parser_name: str
-		"""
-
-		super().__init__(f"Error during parsing \"{parser_name}\" settings.") 
-
-
-	
-class MergingError(Exception):
-	"""Исключение: ошибка слияния контента."""
-
-	def __init__(self, message: str | None = None):
-		"""
-		Исключение: ошибка слияния контента.
-
-		:param message: Текст альтернативного сообщения об ошибке.
-		:type message: str | None
-		"""
-
-		super().__init__(message or "Every chapter must have ID. Merging skipped.")
-
-class ParsingError(Exception):
-	"""Исключение: ошибка парсинга."""
-
-	def __init__(self, description: str | None = None):
-		"""
-		Исключение: ошибка парсинга.
-
-		:param description: Описание ошибки.
-		:type description: str | None
-		"""
-
-		super().__init__(description or "Unable get data.") 
-
-class TitleNotFound(Exception):
-	"""Исключение: тайтл не найден в источнике."""
-
-	def __init__(self, title: "BaseTitle"):
-		"""
-		Исключение: тайтл не найден в источнике.
-
-		:param title: Данные тайтла.
-		:type title: BaseTitle
-		"""
-
-		super().__init__(f"Title \"{title.slug}\" not found.") 
-	
 class UnsupportedFormat(Exception):
 	"""Исключение: неподдерживаемый формат JSON."""
 
@@ -157,9 +79,9 @@ class UnsupportedFormat(Exception):
 		super().__init__(f"Unsupported format{format}.") 
 
 #==========================================================================================#
-# >>>>> ИСКЛЮЧЕНИЯ ФОРМАТИРОВЩИКОВ КОНТЕНТА <<<<< #
+# >>>>> ИСКЛЮЧЕНИЯ ПАРСЕРОВ РАНОБЭ <<<<< #
 #==========================================================================================#
-	
+
 class FootnoteCompositionError(Exception):
 	"""Исключение: ошибка композиции заметки."""
 
@@ -185,3 +107,66 @@ class UnresolvedTag(Exception):
 		"""
 
 		super().__init__(f"Unresolved tag \"{tag}\".") 
+
+
+
+
+
+
+
+
+
+
+		
+
+class AuthorizationRequired(Exception):
+	"""Исключение: требуется авторизация."""
+
+	def __init__(self, message: str):
+		"""
+		Исключение: требуется авторизация.
+
+		:param message: Описание требования авторизации.
+		:type message: str
+		"""
+
+		super().__init__(message) 
+
+
+class BadSettings(Exception):
+	"""Исключение: неверно определены настройки парсера."""
+
+	def __init__(self, parser_name: str):
+		"""
+		Исключение: неверно определены настройки парсера.
+
+		:param parser_name: Имя парсера.
+		:type parser_name: str
+		"""
+
+		super().__init__(f"Error during parsing \"{parser_name}\" settings.") 
+
+
+	
+
+
+
+class TitleNotFound(Exception):
+	"""Исключение: тайтл не найден в источнике."""
+
+	def __init__(self, title: "BaseTitle"):
+		"""
+		Исключение: тайтл не найден в источнике.
+
+		:param title: Данные тайтла.
+		:type title: BaseTitle
+		"""
+
+		super().__init__(f"Title \"{title.slug}\" not found.") 
+	
+
+
+#==========================================================================================#
+# >>>>> ИСКЛЮЧЕНИЯ ФОРМАТИРОВЩИКОВ КОНТЕНТА <<<<< #
+#==========================================================================================#
+	
