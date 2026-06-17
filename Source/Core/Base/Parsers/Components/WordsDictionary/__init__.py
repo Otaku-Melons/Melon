@@ -36,7 +36,7 @@ def CheckLanguageCode(language_code: str, exception: bool = True) -> bool:
 #==========================================================================================#
 
 class WordsDictionary:
-	"""Словарь ключевых слов."""
+	"""Словарь ключевых локализованных определений."""
 
 	#==========================================================================================#
 	# >>>>> ЧАСТИ НУМЕРАЦИИ ГЛАВ <<<<< #
@@ -112,7 +112,7 @@ class WordsDictionary:
 
 	@property
 	def keywords(self) -> tuple[str, ...]:
-		"""Последовательность ключевых слов. Не содержит `None`."""
+		"""Последовательность ключевых слов."""
 
 		return tuple(Value for Value in self._Data.values() if Value)
 
@@ -150,7 +150,7 @@ class WordsDictionary:
 
 	def __init__(self, language_code: str | None):
 		"""
-		Словарь ключевых слов.
+		Словарь ключевых локализованных определений.
 
 		:param language_code: Код языка словаря по стандарту ISO 639-3.
 		:type language_code: str | None
@@ -177,7 +177,8 @@ class WordsDictionary:
 		:raise KeyError: Выбрасывается при попытке определить нестандартное значение.
 		"""
 
-		if key not in self._Data: raise KeyError(f"Key \"{key}\" is non-standard. Should use additional data.")
+		if key not in self._Data:
+			raise KeyError(f"Key \"{key}\" is non-standard. Should use additional data.")
 		self._Data[key] = value
 
 	def set_language_code(self, language_code: str):

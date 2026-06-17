@@ -1,10 +1,8 @@
-from Source.Core.Base.Formats.Components.WordsDictionary import CheckLanguageCode
-from abc import ABC, abstractmethod
-
 from .Components.Functions import SafelyReadTitleJSON
 from .Components.Structs import ChapterSearchResult
 from .Components.Enums import By, Statuses
 
+from Source.Core.Base.Parsers.Components.WordsDictionary import CheckLanguageCode
 from Source.Core.Base.Parsers.Components.ImagesDownloader import ImageResolution
 from Source.Core import Exceptions
 
@@ -12,6 +10,7 @@ from dublib.Methods.Data import RemoveRecurringSubstrings, Zerotify
 from dublib.Methods.Filesystem import ReadJSON, WriteJSON
 
 from typing import Any, cast, Sequence, TYPE_CHECKING
+from abc import ABC, abstractmethod
 from pathlib import Path
 from os import PathLike
 import hashlib
@@ -1202,17 +1201,23 @@ class BaseTitle(ABC):
 
 		self._Data["id"] = id
 
-	def set_content_language(self, language_code: str | None):
+	def set_content_language(self, language_code: str | None, load_preset: bool = True):
 		"""
 		Задаёт язык контента по стандарту ISO 639-3.
 
 		:param original_language: Код языка.
 		:type original_language: str | None
+		:param load_preset: Указывает, стоит ли попытаться загрузить готовый словарь ключевых локальных определений.
+		:type load_preset: bool
 		:raise ValueError: Выбрасывается при несоответствии кода языка стандарту.
 		"""
 
 		if language_code:
 			CheckLanguageCode(language_code)
+
+			if load_preset:
+				self._Parser.load_words_dictionary_preset(language_code)
+
 		self._Data["content_language"] = language_code
 
 	def set_localized_name(self, localized_name: str | None):

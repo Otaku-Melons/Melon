@@ -1,3 +1,5 @@
+from .Components.WordsDictionary import Presets, WordsDictionary
+
 from Source.Core.Base.Formats.BaseFormat import BaseBranch, BaseTitle
 from Source.Core import Exceptions
 
@@ -74,6 +76,12 @@ class BaseParser(ABC):
 
 		return self._Title
 
+	@property
+	def words_dictionary(self) -> WordsDictionary:
+		"""Словарь ключевых локализованных определений."""
+
+		return self._WordsDictionary
+
 	#==========================================================================================#
 	# >>>>> ДЕКОРАТОРЫ <<<<< #
 	#==========================================================================================#
@@ -145,6 +153,7 @@ class BaseParser(ABC):
 
 		self._SourceOperator = source_operator
 
+		self._WordsDictionary: WordsDictionary = WordsDictionary(None)
 		self._Title: BaseTitle | None = None
 
 		self._PostInitMethod()
@@ -154,6 +163,23 @@ class BaseParser(ABC):
 		"""Дополняет главы дайными о контенте."""
 
 		pass
+
+	def load_words_dictionary_preset(self, language_code: str) -> WordsDictionary | None:
+		"""
+		Загружает готовый словарь локализованных определений. Словарь будет установлен в качестве рабочего для парсера.
+
+		:param language_code: Код языка по стандарту ISO 639-3.
+		:type language_code: str
+		:return: Пресет словаря для определённого языка или `None` при его отсутствии.
+		:rtype: WordsDictionary | None
+		"""
+
+		Preset = Presets.GetDictionaryPreset(language_code)
+
+		if Preset:
+			self._WordsDictionary = Preset
+
+		return Preset
 
 	@abstractmethod
 	def load_title(self, slug: str, empty: bool = False):

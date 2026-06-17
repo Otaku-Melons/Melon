@@ -1,7 +1,7 @@
 from .Elements import Blockquote, Header, Image, Paragraph
 from .Enums import ChaptersTypes
 
-from ..Components.WordsDictionary import CheckLanguageCode
+from ...Parsers.Components.WordsDictionary import CheckLanguageCode
 
 from Source.Core.Base.Formats.BaseFormat import BaseChapter, BaseBranch, BaseTitle
 

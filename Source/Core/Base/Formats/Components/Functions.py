@@ -2,7 +2,6 @@ from Source.Core.Exceptions.Parsers import UnsupportedFormat
 
 from dublib.Methods.Filesystem import ListDir, ReadJSON
 
-from pathlib import Path
 from os import PathLike
 
 def SafelyReadTitleJSON(path: str | PathLike[str]) -> dict:

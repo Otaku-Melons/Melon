@@ -27,7 +27,6 @@ files = [
 exclude = [
 	"Source/CLI/Legacy",
 	"Source/Core/Base/Builders",
-	"Source/Core/Base/Parsers/Components/ChapterHeaderParser",
 	"Source/Utils/Development.py",
 	"__pycache__"
 ]
@@ -40,7 +39,6 @@ include = [
 exclude = [
 	"Source/CLI/Legacy",
 	"Source/Core/Base/Builders",
-	"Source/Core/Base/Parsers/Components/ChapterHeaderParser",
 	"Source/Utils/Development.py",
 	"__pycache__"
 ]
