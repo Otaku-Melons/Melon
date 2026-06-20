@@ -30,6 +30,87 @@ class LoggerRules(enum.Enum):
 	Remove = 3
 
 #==========================================================================================#
+# >>>>> СООБЩЕНИЯ ЭТАПОВ ВЫПОЛНЕНИЯ <<<<< #
+#==========================================================================================#
+
+class Stages:
+	"""Сообщения этапов выполнения."""
+
+	def __init__(self, logger: "Logger"):
+		"""
+		Сообщения этапов выполнения.
+
+		:param logger: Оператор вывода и логов.
+		:type logger: Logger
+		"""
+
+		self.__Logger = logger
+
+	def amending_end(self, amended_chapter_count: int):
+		"""
+		Шаблон сообщения: дополнение глав завершено.
+
+		:param amended_chapter_count: Количество дополненных глав.
+		:type amended_chapter_count: int
+		"""
+
+		Text = f"Amended chapters count: {amended_chapter_count}."
+		self.__Logger.info(Text)
+	
+	def chapter_amended(self, chapter: "BaseChapter"):
+		"""
+		Шаблон сообщения: глава дополнена.
+
+		:param chapter: Данные главы.
+		:type chapter: BaseChapter
+		"""
+
+		ChapterNote = "Paid chapter" if chapter.is_paid else "Chapter"
+		Text = f"{ChapterNote} {chapter.id} amended."
+		self.__Logger.info(Text)
+
+	def chapter_repaired(self, chapter: "BaseChapter"):
+		"""
+		Шаблон сообщения: глава восстановлена.
+
+		:param chapter: Данные главы.
+		:type chapter: BaseChapter
+		"""
+
+		ChapterNote = "Paid chapter" if chapter.is_paid else "Chapter"
+		Text = f"{ChapterNote} {chapter.id} repaired."
+		self.__Logger.info(Text)
+
+	def parsing_start(self, title: "BaseTitle", index: int, titles_count: int):
+		"""
+		Шаблон сообщения: парсинг начат.
+
+		:param title: Данные тайтла.
+		:type title: BaseTitle
+		:param index: Индекс текущей операции парсинга.
+		:type index: int
+		:param titles_count: Количество тайтлов.
+		:type titles_count: int
+		"""
+
+		NoteID = f" (ID: {title.id})" if title.id else ""
+
+		if titles_count > 1:
+			Templates.PrintParsingProgress(index, titles_count)
+
+		self.__Logger.info(f"Parsing <b>{title.slug}</b>{NoteID}…")
+
+	def titles_collected(self, count: int):
+		"""
+		Шаблон сообщения: коллекция собрана.
+
+		:param count: Количество добавленных в коллекцию тайтлов.
+		:type count: int
+		"""
+
+		self.__Logger.info(f"Titles collected: {count}.")
+
+#==========================================================================================#
 # >>>>> ПОРТАЛЫ ВЫВОДА ПАРСЕРА <<<<< #
 #==========================================================================================#
 
@@ -172,29 +253,6 @@ class Portals:
 	# >>>>> ШАБЛОНЫ СООБЩЕНИЙ <<<<< #
 	#==========================================================================================#
 
-	def amending_end(self, amended_chapter_count: int):
-		"""
-		Шаблон сообщения: дополнение глав завершено.
-
-		:param amended_chapter_count: Количество дополненных глав.
-		:type amended_chapter_count: int
-		"""
-
-		Text = f"Amended chapters count: {amended_chapter_count}."
-		self.__Logger.info(Text)
-
-	def chapter_amended(self, chapter: "BaseChapter"):
-		"""
-		Шаблон сообщения: глава дополнена.
-
-		:param chapter: Данные главы.
-		:type chapter: BaseChapter
-		"""
-
-		ChapterNote = "Paid chapter" if chapter.is_paid else "Chapter"
-		Text = f"{ChapterNote} {chapter.id} amended."
-		self.__Logger.info(Text)
-
 	def chapter_skipped(self, chapter: "BaseChapter", comment: str | None = None):
 		"""
 		Портал сообщения: дополнение главы пропущено.
@@ -233,18 +291,6 @@ class Portals:
 
 		self.__Logger.info("Stubs detected. Covers downloading skipped.")
 
-	def chapter_repaired(self, chapter: "BaseChapter"):
-		"""
-		Шаблон сообщения: глава восстановлена.
-
-		:param chapter: Данные главы.
-		:type chapter: BaseChapter
-		"""
-
-		ChapterNote = "Paid chapter" if chapter.is_paid else "Chapter"
-		Text = f"{ChapterNote} {chapter.id} repaired."
-		self.__Logger.info(Text)
-
 	def header(self, header: str, stdout: bool = True, log: bool = True):
 		"""
 		Шаблон сообщения: заголовок.
@@ -261,48 +307,6 @@ class Portals:
 		header = f"===== {header} ====="
 		self.__Logger.info(header, stdout, log)
 
-	def merging_end(self, merged_chapter_count: int):
-		"""
-		Шаблон сообщения: объединение данных завершено.
-
-		:param merged_chapter_count: Количество полученных при слиянии глав.
-		:type merged_chapter_count: int
-		"""
-
-		if self.__Logger.system_objects.FORCE_MODE:
-			self.__Logger.info("Merging skipped by force mode.")
-		else:
-			self.__Logger.info(f"Merged chapters count: {merged_chapter_count}.")
-
-	def parsing_start(self, title: "BaseTitle", index: int, titles_count: int):
-		"""
-		Шаблон сообщения: парсинг начат.
-
-		:param title: Данные тайтла.
-		:type title: BaseTitle
-		:param index: Индекс текущей операции парсинга.
-		:type index: int
-		:param titles_count: Количество тайтлов.
-		:type titles_count: int
-		"""
-
-		NoteID = f" (ID: {title.id})" if title.id else ""
-
-		if titles_count > 1:
-			Templates.PrintParsingProgress(index, titles_count)
-
-		self.__Logger.info(f"Parsing <b>{title.slug}</b>{NoteID}…")
-
-	def titles_collected(self, count: int):
-		"""
-		Шаблон сообщения: коллекция собрана.
-
-		:param count: Количество добавленных в коллекцию тайтлов.
-		:type count: int
-		"""
-
-		self.__Logger.info(f"Titles collected: {count}.")
-
 #==========================================================================================#
 # >>>>> ОСНОВНОЙ КЛАСС <<<<< #
 #==========================================================================================#
@@ -313,6 +317,12 @@ class Logger:
 	#==========================================================================================#
 	# >>>>> СВОЙСТВА <<<<< #
 	#==========================================================================================#
+
+	@property
+	def stages(self) -> Stages:
+		"""Сообщения этапов выполнения."""
+
+		return self.__Stages
 
 	@property
 	def system_objects(self) -> "SystemObjects":
@@ -349,6 +359,8 @@ class Logger:
 		"""
 		
 		self.__SystemObjects = system_objects
+
+		self.__Stages = Stages(self)
 
 		self.__LoggerRule = LoggerRules.SaveIfHasErrors
 		self.__IsLogHasError = False

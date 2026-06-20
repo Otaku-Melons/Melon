@@ -42,8 +42,8 @@ class BaseParser(ABC):
 		return self._SourceOperator.manifest
 
 	@property
-	def parser_temp_directory(self) -> "Path":
-		"""Менеджер запросов."""
+	def temp_directory(self) -> "Path":
+		"""Путь ко временному каталогу парсера."""
 
 		return self._SourceOperator.system_objects.temper.get_parser_temp_directory(self.manifest.parser_name)
 
@@ -173,7 +173,7 @@ class BaseParser(ABC):
 		return Preset
 
 	@abstractmethod
-	def load_title(self, slug: str, empty: bool = False):
+	def load_title(self, slug: str, empty: bool = False) -> BaseTitle:
 		"""
 		Загружает и устанавливает тайтл в парсер.
 
@@ -181,6 +181,8 @@ class BaseParser(ABC):
 		:type slug: str
 		:param empty: Указывает, что нужно инициалазировать пустой тайтл, минуя операцию чтения локальных данных.
 		:type empty: bool
+		:return: Тайтл.
+		:rtype: BaseTitle
 		"""
 		
 		pass

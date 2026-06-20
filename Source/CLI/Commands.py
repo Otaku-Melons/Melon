@@ -8,7 +8,9 @@ from Source import Utils
 from dublib.Methods.Filesystem import WriteJSON
 
 from typing import cast, TYPE_CHECKING
+from json import JSONDecodeError
 from pathlib import Path
+import traceback
 
 import orjson
 
@@ -330,7 +332,7 @@ def com_parse(system_objects: "SystemObjects", command: "ParsedCommandData"):
 		Collector = Utils.Collector(EntryPoint)
 		SlugsCount = Collector.scan_local()
 		Slugs = list(Collector.slugs)
-		system_objects.logger.info(f"Local titles to parseing: {SlugsCount}.")
+		system_objects.logger.info(f"Local titles to parsing: {SlugsCount}.")
 
 	elif ParseByID:
 		SlugByID = SourceOperator.shared_data.journal.get_slug_by_id(ParseByID)
@@ -370,23 +372,57 @@ def com_parse(system_objects: "SystemObjects", command: "ParsedCommandData"):
 	Parser: BaseParser = SourceOperator.launch_parser()
 
 	for Index in range(len(Slugs)):
-		Templates.PrintParsingProgress(Index, TotalCount)
 		Slug = Slugs[Index]
+		SourceOperator.shared_data.set_last_parsed_slug(Slug)
+		
 		ContentType = SourceOperator.get_content_type_by_slug(Slug)
-
 		if ContentType is not CurrentContentType:
 			CurrentContentType = ContentType
 			Parser = SourceOperator.launch_parser(ContentType)
 
-		Parser.load_title(Slug, empty = ForceMode)
-		Parser.parse()
+		try:
+			Title = Parser.load_title(Slug, empty = ForceMode)
+		except (JSONDecodeError, Exceptions.Parsers.UnsupportedFormat):
+			system_objects.logger.error("Unsupported JSON format or decoding error.")
+			ErrorsCount += 1
+			continue
 
-		if IsAmendingEnabled:
-			Parser.amend()
-		else:
-			system_objects.logger.info("Amending skipped.")
+		system_objects.logger.stages.parsing_start(Title, Index, TotalCount)
+
+		ChaptersLoaded = Title.chapters_count
+		if ChaptersLoaded:
+			BranchesCount = len(Title.branches)
+			system_objects.logger.info(f"Loaded {ChaptersLoaded} chapters on {BranchesCount} branches.")
+		
+		try:
+			Parser.parse()
+
+			if IsAmendingEnabled:
+				if Title.empty_chapters_count: Parser.amend()
+				else: system_objects.logger.info("No empty chapters. Amending skipped.")
+			else:
+				system_objects.logger.info("Amending skipped by flag.")
+
+		except Exceptions.Parsers.AuthorizationRequired:
+			break
+
+		except Exceptions.Parsers.ParsingError:
+			ErrorsCount += 1
+			continue
+
+		except Exceptions.Parsers.TitleNotFound:
+			NotFoundCount += 1
+			continue
+
+		except Exception:
+			Traceback = traceback.format_exc().rstrip()
+			system_objects.logger.error("Current title skipped due to exception.")
+			system_objects.logger.emit_in_stdout(Traceback, parse_html = False)
+			system_objects.logger.emit_in_log(f"Raised exception: \n{Traceback}")
+			ErrorsCount += 1
 
 		Parser.save(IsSortingEnabled)
+		ParsedCount += 1
 
 	Templates.PrintParsingSummary(ParsedCount, NotFoundCount, ErrorsCount)
 	system_objects.logger.info(f"Done in {Timer.ends()}.")

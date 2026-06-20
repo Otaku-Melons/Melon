@@ -127,7 +127,7 @@ class Chapter(BaseChapter):
 		:rtype: bool
 		"""
 
-		return bool(self.slides)
+		return not bool(self.slides)
 
 	def _FromDict(self, data: dict):
 		"""
@@ -237,7 +237,7 @@ class Manga(BaseTitle):
 				ChapterBuffer.from_dict(CurrentChapter)
 				BranchBuffer.add_chapter(ChapterBuffer)
 
-			self._Branches.append(BranchBuffer)
+			self._Branches[BranchBuffer.id] = BranchBuffer
 
 	#==========================================================================================#
 	# >>>>> ПУБЛИЧНЫЕ МЕТОДЫ УСТАНОВКИ СВОЙСТВ <<<<< #

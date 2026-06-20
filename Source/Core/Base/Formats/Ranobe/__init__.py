@@ -54,7 +54,7 @@ class Chapter(BaseChapter):
 		:rtype: bool
 		"""
 
-		return bool(self._Data["paragraphs"])
+		return not bool(self._Data["paragraphs"])
 
 	def _FromDict(self, data: dict):
 		"""
@@ -165,7 +165,7 @@ class Ranobe(BaseTitle):
 				ChapterBuffer.from_dict(CurrentChapter)
 				BranchBuffer.add_chapter(ChapterBuffer)
 
-			self._Branches.append(BranchBuffer)
+			self._Branches[BranchBuffer.id] = BranchBuffer
 
 	#==========================================================================================#
 	# >>>>> МЕТОДЫ УСТАНОВКИ СВОЙСТВ <<<<< #

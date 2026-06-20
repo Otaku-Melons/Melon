@@ -481,25 +481,41 @@ class BaseBranch(ABC):
 	def chapters(self) -> tuple[BaseChapter, ...]:
 		"""Последовательность глав."""
 
-		return tuple(self._Chapters)
+		return tuple(self._Chapters.values())
 
 	@property
 	def chapters_count(self) -> int:
 		"""Количество глав."""
 
-		return len(self._Chapters)
+		return len(self._Chapters.values())
 
 	@property
 	def empty_chapters_count(self) -> int:
 		"""Количество глав без контента."""
 
-		return sum(1 for CurrentChapter in self._Chapters if CurrentChapter.is_empty)
+		return sum(1 for CurrentChapter in self._Chapters.values() if CurrentChapter.is_empty)
 
 	@property
 	def id(self) -> int:
 		"""Уникальный идентификатор ветви."""
 
 		return self._ID
+
+	#==========================================================================================#
+	# >>>>> НАСЛЕДУЕМЫЕ МЕТОДЫ <<<<< #
+	#==========================================================================================#
+
+	def _FromSequence(self, chapters: Sequence[BaseChapter]) -> dict[int, BaseChapter]:
+		"""
+		Преобразует последовательность глав в словарь.
+
+		:param chapters: Последовательность глав.
+		:type chapters: Sequence[BaseChapter]
+		:return: Словарь глав.
+		:rtype: dict[int, BaseChapter]
+		"""
+
+		return {CurrentChapter.id: CurrentChapter for CurrentChapter in chapters}
 
 	#==========================================================================================#
 	# >>>>> ПУБЛИЧНЫЕ МЕТОДЫ <<<<< #
@@ -514,7 +530,7 @@ class BaseBranch(ABC):
 		"""
 
 		self._ID = branch_id
-		self._Chapters: list[BaseChapter] = list()
+		self._Chapters: dict[int, BaseChapter] = dict()
 
 	def add_chapter(self, chapter: BaseChapter):
 		"""
@@ -525,9 +541,13 @@ class BaseBranch(ABC):
 		:raises ParsingError: Выбрасывается при отсутствии у добавляемой главы ID.
 		"""
 
-		if chapter.id is None: raise Exceptions.Parsers.ParsingError("Chapter must have unique ID.")
-		if chapter.id in tuple(Value.id for Value in self._Chapters): return
-		self._Chapters.append(chapter)
+		if chapter.id is None:
+			raise Exceptions.Parsers.ParsingError("Chapter must have unique ID.")
+		
+		if chapter.id in tuple(Value.id for Value in self._Chapters.values()):
+			return
+		
+		self._Chapters[chapter.id] = chapter
 
 	def get_chapter_by_id(self, id: int) -> BaseChapter:
 		"""
@@ -535,21 +555,24 @@ class BaseBranch(ABC):
 
 		:param id: ID главы.
 		:type id: int
-		:raises KeyError: Выбрасывается при отсутствии главы в ветви.
 		:return: Глава.
 		:rtype: BaseChapter
+		:raises KeyError: Глава не найдена.
 		"""
 
-		SearchResult: BaseChapter | None = None
+		return self._Chapters[id]
+	
+	def has_chapter(self, id: int) -> bool:
+		"""
+		Проверяет, содержится ли глава с таким ID в ветви.
 
-		for CurrentChapter in self._Chapters:
-			if CurrentChapter.id == id:
-				SearchResult = CurrentChapter
-				break
+		:param id: ID главы.
+		:type id: int
+		:return: Возвращает `True`, если глава с таким ID присутствует.
+		:rtype: bool
+		"""
 
-		if not SearchResult: raise KeyError(id)
-
-		return SearchResult
+		return id in self._Chapters
 	
 	def remove_chapter(self, id: int):
 		"""
@@ -557,11 +580,10 @@ class BaseBranch(ABC):
 
 		:param id: ID главы.
 		:type id: int
-		:raises KeyError: ВЫбрасывается при отсутствии главы в ветви.
+		:raises KeyError: Глава не найдена.
 		"""
 		
-		TargetChapter = self.get_chapter_by_id(id)
-		self._Chapters.remove(TargetChapter)
+		del self._Chapters[id]
 
 	def replace_chapter_by_id(self, chapter: BaseChapter, id: int):
 		"""
@@ -571,23 +593,16 @@ class BaseBranch(ABC):
 		:type chapter: BaseChapter
 		:param id: ID заменяемой главы.
 		:type id: int
-		:raises KeyError: Выбрасывается при отсутствии заменяемой главы в ветви.
+		:raises KeyError: Глава не найдена.
 		"""
 
-		IsSuccess = False
-
-		for Index in range(len(self._Chapters)):
-
-			if self._Chapters[Index].id == id:
-				self._Chapters[Index] = chapter
-				IsSuccess = True
-
-		if not IsSuccess: raise KeyError(id)
+		self.get_chapter_by_id(id)
+		self._Chapters[id] = chapter
 	
 	def reverse(self):
 		"""Инвертирует порядок глав в ветви."""
 
-		self._Chapters = list(reversed(self._Chapters))
+		self._Chapters = self._FromSequence(tuple(reversed(self._Chapters.values())))
 
 	def sort(self):
 		"""
@@ -596,8 +611,8 @@ class BaseBranch(ABC):
 		Переопределите данный метод для использования иных алгоритмов сортировки.
 		"""
 
-		self._Chapters = list(sorted(
-			self._Chapters,
+		self._Chapters = self._FromSequence(sorted(
+			self._Chapters.values(),
 			key = lambda Value: (
 				list(map(int, Value.volume.split(".") if Value.volume else "")),
 				list(map(int, Value.number.split(".") if Value.number else ""))
@@ -608,7 +623,8 @@ class BaseBranch(ABC):
 		"""Возвращает список словарей данных глав, принадлежащих текущей ветви."""
 
 		BranchList = list()
-		for CurrentChapter in self._Chapters: BranchList.append(CurrentChapter.to_dict())
+		for CurrentChapter in self._Chapters.values():
+			BranchList.append(CurrentChapter.to_dict())
 
 		return BranchList
 	
@@ -624,10 +640,16 @@ class BaseTitle(ABC):
 	#==========================================================================================#
 
 	@property
+	def chapters_count(self) -> int:
+		"""Количество глав во всех ветвях."""
+
+		return sum(Branch.chapters_count for Branch in self._Branches.values())
+
+	@property
 	def empty_chapters_count(self) -> int:
 		"""Количество глав без контента во всех ветвях."""
 
-		return sum(Branch.empty_chapters_count for Branch in self._Branches)
+		return sum(Branch.empty_chapters_count for Branch in self._Branches.values())
 
 	@property
 	def used_filename(self) -> str:
@@ -754,12 +776,32 @@ class BaseTitle(ABC):
 	def branches(self) -> tuple[BaseBranch, ...]:
 		"""Последовательность ветвей тайтла."""
 
-		return tuple(self._Branches)
+		return tuple(self._Branches.values())
 	
 	#==========================================================================================#
 	# >>>>> НАСЛЕДУЕМЫЕ МЕТОДЫ <<<<< #
 	#==========================================================================================#
 	
+	def _MergeBranch(self, branch: BaseBranch) -> int:
+		"""
+		Выполняет слияние объектов вевтей с одинаковым ID.
+
+		:param branch: Ветвь.
+		:type branch: BaseBranch
+		:return: Количество добавленных глав.
+		:rtype: int
+		"""
+
+		CurrentBranch = self._Branches[branch.id]
+		AddedCount = 0
+
+		for NewChapter in branch.chapters:
+			if not CurrentBranch.has_chapter(NewChapter.id):
+				CurrentBranch.add_chapter(NewChapter)
+				AddedCount += 1
+
+		return AddedCount
+
 	def _IsLocalFileEqual(self) -> bool:
 		"""
 		Проверяет, идентичны ли данные тайтла локальным данным.
@@ -851,7 +893,10 @@ class BaseTitle(ABC):
 		"""Обновляет информацию о ветвях во внутреннем словарном хранилище тайтла."""
 
 		Branches = list()
-		for CurrentBranch in self._Branches: Branches.append({"id": CurrentBranch.id, "chapters_count": CurrentBranch.chapters_count})
+
+		for CurrentBranch in self._Branches.values():
+			Branches.append({"id": CurrentBranch.id, "chapters_count": CurrentBranch.chapters_count})
+
 		self._Data["branches"] = sorted(Branches, key = lambda Value: Value["chapters_count"], reverse = True)
 
 	def _UpdateContent(self, brach_id: int | None = None, sorting: bool = True):
@@ -864,7 +909,7 @@ class BaseTitle(ABC):
 		:type sorting: bool
 		"""
 
-		for CurrentBranch in self._Branches:
+		for CurrentBranch in self._Branches.values():
 			if brach_id and brach_id == CurrentBranch.id or not brach_id:
 				if sorting: CurrentBranch.sort()
 				self._Data["content"][str(CurrentBranch.id)] = CurrentBranch.to_list()
@@ -897,7 +942,7 @@ class BaseTitle(ABC):
 		"""
 
 		return {
-			"format": None,
+			"format": "melon-" + type(self).__name__.lower(),
 			"site": self._Parser.manifest.site,
 			"id": None,
 			"slug": None,
@@ -957,7 +1002,7 @@ class BaseTitle(ABC):
 		self._Data["fromat"] = "melon" + type(self).__name__.lower()
 		self._Data["slug"] = slug
 
-		self._Branches: list[BaseBranch] = list()
+		self._Branches: dict[int, BaseBranch] = dict()
 		self._Persons: list[Person] = list()
 		self._Covers: list[Cover] = list()
 
@@ -976,7 +1021,7 @@ class BaseTitle(ABC):
 		BranchResult = None
 		ChapterResult = None
 
-		for CurrentBranch in self._Branches:
+		for CurrentBranch in self._Branches.values():
 			for CurrentChapter in CurrentBranch.chapters:
 				if CurrentChapter.id == chapter_id:
 					BranchResult = CurrentBranch
@@ -988,7 +1033,7 @@ class BaseTitle(ABC):
 
 		return None
 
-	def load_data(self, identificator: int | str, selector_type: By = By.Slug) -> bool:
+	def load_data(self, identificator: int | str, selector_type: By = By.Slug, only_content: bool = True) -> bool:
 		"""
 		Открывает локальный JSON файл и интерпретирует его данные.
 
@@ -996,6 +1041,8 @@ class BaseTitle(ABC):
 		:type identificator: int | str
 		:param selector_type: Режим поиска файла. По умолчанию `By.Slug` – идентификатор соответствует алиасу тайтла.
 		:type selector_type: By
+		:param only_content: Указывает, нужно ли получить из файла данные кроме контента.
+		:type only_content: bool
 		:raises JSONDecodeError: Ошибка десериализации JSON.
 		:raises UnsupportedFormat: Неподдерживаемый формат JSON.
 		"""
@@ -1042,7 +1089,10 @@ class BaseTitle(ABC):
 					DataBuffer = self._SearchFileInDirectory(TitlesDirectory, str(identificator), By.ID) or dict()
 
 		if DataBuffer:
-			self._Data = self._Data | DataBuffer
+			if only_content:
+				self._Data["content"] = DataBuffer["content"]
+			else:
+				self._Data = self._Data | DataBuffer
 
 		self._ParseCovers()
 		self._ParsePersons()
@@ -1068,7 +1118,9 @@ class BaseTitle(ABC):
 		IsLocalFileEqual = self._IsLocalFileEqual()
 
 		if not IsLocalFileEqual:
-			WriteJSON(self._DataPath, self._Data)
+			FilePath = self._DataPath
+			if self._Parser.settings.common.use_id_as_filename and self.id: FilePath = FilePath.with_stem(str(self.id))
+			WriteJSON(FilePath, self._Data)
 
 		if all((self.id, self.slug)):
 			self._Parser.source_operator.shared_data.journal.update(cast(int, self.id), cast(str, self.slug))
@@ -1088,7 +1140,7 @@ class BaseTitle(ABC):
 		"""
 		
 		another_name = another_name.strip()
-		if another_name != self._Data["localized_name"] and another_name != self._Data["eng_name"] and another_name:
+		if another_name != self._Data["localized_name"] and another_name != self._Data["eng_name"] and another_name and another_name not in self._Data["another_names"]:
 			self._Data["another_names"].append(another_name)
 
 	def add_cover(self, cover: Cover):
@@ -1102,6 +1154,10 @@ class BaseTitle(ABC):
 
 		if not cover.link:
 			raise ValueError("Cover must have a link.")
+		
+		for CurrentCover in self._Covers:
+			if CurrentCover.link == cover.link:
+				return
 		
 		self._Covers.append(cover)
 
@@ -1141,17 +1197,17 @@ class BaseTitle(ABC):
 		if tag not in self._Data["tags"]:
 			self._Data["tags"].append(tag)
 
-	def add_franshise(self, franshise: str):
+	def add_franchise(self, franchise: str):
 		"""
 		Добавляет франшизу.
 
-		:param franshise: Франшиза.
-		:type franshise: str
+		:param franchise: Франшиза.
+		:type franchise: str
 		"""
 
-		franshise = franshise.strip()
-		if franshise and franshise not in self._Data["franshises"]:
-			self._Data["franshises"].append(franshise)
+		franchise = franchise.strip()
+		if franchise and franchise not in self._Data["franchises"]:
+			self._Data["franchises"].append(franchise)
 
 	def add_person(self, person: Person):
 		"""
@@ -1161,25 +1217,35 @@ class BaseTitle(ABC):
 		:type person: Person
 		"""
 		
-		if person not in self._Persons:
-			self._Persons.append(person)
+		for CurrentPerson in self._Persons:
+			if CurrentPerson.name == person.name:
+				return
+			
+		self._Persons.append(person)
 
-	def add_branch(self, branch: BaseBranch):
+	def add_branch(self, branch: BaseBranch) -> int:
 		"""
 		Добавляет ветвь.
 
-		:param branch: Ветвь контента.
+		:param branch: Ветвь контента. Если ветвь с таким ID уже существует, будут добавлены только отсутствующие главы.
 		:type branch: BaseBranch
+		:return: Количество добавленных глав.
+		:rtype: int
 		:raises ParsingError: Ветвь не имеет ID или ветвь с таким ID уже добавлена в тайтл.
 		"""
 
+		AddedCount = branch.chapters_count
+
 		if not branch.id:
 			Exceptions.Parsers.ParsingError("Branch must have ID.")
-		if branch.id in tuple(Element.id for Element in self._Branches):
-			raise Exceptions.Parsers.ParsingError("Branch with same ID already in title.")
-		
-		self._Branches.append(branch)
-		self._Branches = list(sorted(self._Branches, key = lambda Value: Value.chapters_count, reverse = True))
+
+		if branch.id in self._Branches.keys():
+			AddedCount = self._MergeBranch(branch)
+		else:
+			self._Branches[branch.id] = branch
+			self._Branches = {CurrentBranch.id: CurrentBranch for CurrentBranch in sorted(self._Branches.values(), key = lambda Value: Value.chapters_count, reverse = True)}
+
+		return AddedCount
 
 	def set_site(self, site: str | None):
 		"""
@@ -1335,7 +1401,7 @@ class BaseTitle(ABC):
 		"""
 
 		for Franchise in franchises:
-			self.add_franshise(Franchise)
+			self.add_franchise(Franchise)
 
 	def set_persons(self, persons: Sequence[Person]):
 		"""

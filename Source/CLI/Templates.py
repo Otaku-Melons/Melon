@@ -120,12 +120,12 @@ def PrintParsingProgress(index: int, count: int):
 	:type count: int
 	"""
 
-	Number = index + 1
+	Number = index
 	Progress = round(Number / count * 100, 2)
 	NumberString = FastStyler(str(Number)).colorize.magenta
 	ProgressString = StringifyFloat(Progress)
 	ProgressString = FastStyler(ProgressString + "%").colorize.cyan
-	print(f"[{NumberString} / {count} | {Progress}] ", end = "")
+	print(f"[{NumberString} / {count} | {ProgressString}] ", end = "", flush = True)
 
 def PrintParsingSummary(parsed: int, not_found: int, errors: int):
 	"""

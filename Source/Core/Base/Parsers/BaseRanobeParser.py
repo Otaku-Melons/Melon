@@ -29,10 +29,11 @@ class BaseRanobeParser(BaseParser):
 					self._Amend(CurrentBranch, CurrentChapter)
 
 					if CurrentChapter.paragraphs:
+						self.portals.logger.stages.chapter_amended(CurrentChapter)
 						AmendedChaptersCount += 1
 						sleep(self.settings.common.delay)
 
-	def load_title(self, slug: str, empty: bool = False):
+	def load_title(self, slug: str, empty: bool = False) -> Ranobe:
 		"""
 		Загружает и устанавливает тайтл в парсер.
 
@@ -40,11 +41,15 @@ class BaseRanobeParser(BaseParser):
 		:type slug: str
 		:param empty: Указывает, что нужно инициалазировать пустой тайтл, минуя операцию чтения локальных данных.
 		:type empty: bool
+		:return: Тайтл.
+		:rtype: Ranobe
 		"""
 
 		self._Title = Ranobe(self, slug)
 		if not empty:
 			self._Title.load_data(slug)
+
+		return self._Title
 
 	@run_before_method("_RequireTitle")
 	def repair(self, chapter_id: int) -> bool:

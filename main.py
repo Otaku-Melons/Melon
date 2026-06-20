@@ -1,7 +1,6 @@
 from Source.Core.SystemObjects import SystemObjects
 from Source.CLI.Descriptions import COMMANDS
 from Source.CLI import Commands as Commands
-from Source.CLI import Templates
 
 from dublib.Methods.System import CheckPythonMinimalVersion
 from dublib.CLI.Terminalyzer import Terminalyzer
@@ -25,22 +24,12 @@ Objects.logger.info("Command: \"" + " ".join(sys.argv[1:len(sys.argv)]) + "\".",
 Analyzer = Terminalyzer()
 Analyzer.helper.enable()
 CommandData = Analyzer.check_commands(COMMANDS)
-HIDE_HEADERS = False
 
 if CommandData is None:
 	Objects.logger.critical("Unknown command!")
 	Objects.logger.set_rule(3)
 	Objects.logger.close()
 	exit()
-
-elif CommandData.name in ("help", "list", "classify"): HIDE_HEADERS = True
-
-if not HIDE_HEADERS:
-	if CommandData.check_flag("-f"): Objects.FORCE_MODE.enable()
-	if Objects.MELON_VERSION: print(f"Melon: {Objects.MELON_VERSION}")
-	Templates.PrintOptionStatus("Force mode", Objects.FORCE_MODE.status)
-	Templates.PrintOptionStatus("Caching", Objects.CACHING.status)
-	Templates.PrintHeader(CommandData.name)
 
 try:
 	CommandName = CommandData.name.replace("-", "_")
@@ -52,6 +41,5 @@ except KeyboardInterrupt:
 # >>>>> ЗАВЕРШЕНИЕ РАБОТЫ <<<<< #
 #==========================================================================================#
 
-if not HIDE_HEADERS: Templates.PrintHeader("END")
 Objects.logger.close()
 exit(Objects.EXIT_CODE)

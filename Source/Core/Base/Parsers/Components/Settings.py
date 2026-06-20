@@ -290,7 +290,7 @@ class Common:
 		"""
 		Базовые настройки.
 
-		:param settings: Словарь настроек.
+		:param settings: Словарь базовых настроек.
 		:type settings: dict
 		"""
 
@@ -466,7 +466,7 @@ class ParserSettings:
 		self.__IsLoadedFromRepository = False
 
 		self.__Directories = Directories(self.__ParserName, self.__Settings)
-		self.__Common: Common = Common(self.__Settings)
+		self.__Common: Common = Common(self.__Settings.get("common") or dict())
 		self.__Filters = Filters(self.__Settings)
 		self.__Proxies: tuple[Proxy, ...] = self.__ParseProxies()
 		self.__Custom: Custom = Custom(self.__Settings)
