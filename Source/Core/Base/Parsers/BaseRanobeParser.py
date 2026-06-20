@@ -3,13 +3,15 @@ from .BaseParser import BaseParser
 from Source.Core.Base.Formats.Ranobe import Chapter, Ranobe
 from Source.Core import Exceptions
 
+from dublib.Methods.Decorators import run_before_method
+
 from typing import cast
 from time import sleep
 
 class BaseRanobeParser(BaseParser):
 	"""Базовый парсер ранобэ."""
 	
-	@BaseParser.require_title
+	@run_before_method("_RequireTitle")
 	def amend(self):
 		"""Дополняет главы дайными о контенте."""
 
@@ -44,7 +46,7 @@ class BaseRanobeParser(BaseParser):
 		if not empty:
 			self._Title.load_data(slug)
 
-	@BaseParser.require_title
+	@run_before_method("_RequireTitle")
 	def repair(self, chapter_id: int) -> bool:
 		"""
 		Восстанавливает содержимое главы, заново получая его из источника.

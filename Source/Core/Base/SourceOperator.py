@@ -121,7 +121,7 @@ class BaseSourceOperator:
 		:rtype: str | None
 		"""
 
-		return None
+		return string
 
 	def _PostInitMethod(self):
 		"""Метод, выполняющийся после инициализации объекта."""

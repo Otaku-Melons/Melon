@@ -3,13 +3,15 @@ from .BaseParser import BaseParser
 from Source.Core.Base.Formats.Manga import Chapter, Manga
 from Source.Core import Exceptions
 
+from dublib.Methods.Decorators import run_before_method
+
 from typing import cast
 from time import sleep
 
 class BaseMangaParser(BaseParser):
 	"""Базовый парсер манги."""
 	
-	@BaseParser.require_title
+	@run_before_method("_RequireTitle")
 	def amend(self):
 		"""Дополняет главы дайными о контенте."""
 
@@ -44,7 +46,7 @@ class BaseMangaParser(BaseParser):
 		if not empty:
 			self._Title.load_data(slug)
 
-	@BaseParser.require_title
+	@run_before_method("_RequireTitle")
 	def repair(self, chapter_id: int) -> bool:
 		"""
 		Восстанавливает содержимое главы, заново получая его из источника.

@@ -378,9 +378,7 @@ def com_parse(system_objects: "SystemObjects", command: "ParsedCommandData"):
 			CurrentContentType = ContentType
 			Parser = SourceOperator.launch_parser(ContentType)
 
-		if not ForceMode:
-			Parser.load_title(Slug)
-
+		Parser.load_title(Slug, empty = ForceMode)
 		Parser.parse()
 
 		if IsAmendingEnabled:

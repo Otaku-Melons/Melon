@@ -1,10 +1,8 @@
-from typing import TYPE_CHECKING
+from .. import CheckLanguageCode, WordsDictionary
+
 import importlib
 
-if TYPE_CHECKING:
-	from .. import CheckLanguageCode, WordsDictionary
-
-def GetDictionaryPreset(language_code: str) -> "WordsDictionary | None":
+def GetDictionaryPreset(language_code: str) -> WordsDictionary | None:
 	"""
 	Возвращает готовый словарь ключевых локальных определений.
 

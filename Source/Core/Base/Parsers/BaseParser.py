@@ -3,9 +3,10 @@ from .Components.WordsDictionary import Presets, WordsDictionary
 from Source.Core.Base.Formats.BaseFormat import BaseBranch, BaseTitle
 from Source.Core import Exceptions
 
+from dublib.Methods.Decorators import run_before_method
+
 from typing import Any, cast, TYPE_CHECKING
 from abc import ABC, abstractmethod
-import functools
 
 if TYPE_CHECKING:
 	from Source.Core.Base.Parsers.Components.ImagesDownloader import ImagesDownloader
@@ -83,28 +84,18 @@ class BaseParser(ABC):
 		return self._WordsDictionary
 
 	#==========================================================================================#
-	# >>>>> ДЕКОРАТОРЫ <<<<< #
+	# >>>>> НАСЛЕДУЕМЫЕ МЕТОДЫ <<<<< #
 	#==========================================================================================#
 
-	@staticmethod
-	def require_title(function):
+	def _RequireTitle(self):
 		"""
-		Декоратор. Проверяет, открыт ли тайтл.
+		Проверяет, задан ли тайтл.
 
-		:param function: Метод объекта.
-		:type function: Callable
-		:return: Обёрнутая функция.
-		:rtype: Callable
-		:raises TitleNotSetted: Не задан тайтл.
+		:raises Exceptions.Parsers.TitleNotSetted: Не задан тайтл.
 		"""
 
-		@functools.wraps(function)
-		def Wrapper(self: "BaseParser", *args, **kwargs):
-			if not self._Title:
-				raise Exceptions.Parsers.TitleNotSetted()
-			return function(self, *args, **kwargs)
-		
-		return Wrapper
+		if not self._Title:
+			raise Exceptions.Parsers.TitleNotSetted()
 
 	#==========================================================================================#
 	# >>>>> ПЕРЕОПРЕДЕЛЯЕМЫЕ МЕТОДЫ <<<<< #
@@ -194,7 +185,7 @@ class BaseParser(ABC):
 		
 		pass
 
-	@require_title
+	@run_before_method("_RequireTitle")
 	def parse(self):
 		"""Получает основные данные тайтла."""
 
@@ -214,7 +205,7 @@ class BaseParser(ABC):
 
 		pass
 
-	@require_title
+	@run_before_method("_RequireTitle")
 	def save(self, sorting: bool = False):
 		"""
 		Сохраняет тайтл и выгружает его из парсера.
