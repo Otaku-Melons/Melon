@@ -173,14 +173,12 @@ class BaseParser(ABC):
 		return Preset
 
 	@abstractmethod
-	def load_title(self, slug: str, empty: bool = False) -> BaseTitle:
+	def init_title(self, slug: str) -> BaseTitle:
 		"""
-		Загружает и устанавливает тайтл в парсер.
+		Устанавливает пустой тайтл для парсера.
 
 		:param slug: Алиас тайтла.
 		:type slug: str
-		:param empty: Указывает, что нужно инициалазировать пустой тайтл, минуя операцию чтения локальных данных.
-		:type empty: bool
 		:return: Тайтл.
 		:rtype: BaseTitle
 		"""
@@ -208,16 +206,20 @@ class BaseParser(ABC):
 		pass
 
 	@run_before_method("_RequireTitle")
-	def save(self, sorting: bool = False):
+	def save(self, sorting: bool = False) -> bool:
 		"""
 		Сохраняет тайтл и выгружает его из парсера.
 
 		:param sorting: Указывает, нужно ли провести сортировку глав на основе их нумерации.
 		:type sorting: bool
+		:return: Возвращает `True`, если файл сохранён, и `False`, если изменений из-за отсутствия изменений запись не выполнялась.
+		:rtype: bool
 		"""
 
 		self._Title = cast(BaseTitle, self._Title)
 
 		self._PreSaver()
-		self._Title.save(sorting)
+		IsSaved = self._Title.save(sorting)
 		self._Title = None
+
+		return IsSaved

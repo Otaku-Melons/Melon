@@ -380,13 +380,7 @@ def com_parse(system_objects: "SystemObjects", command: "ParsedCommandData"):
 			CurrentContentType = ContentType
 			Parser = SourceOperator.launch_parser(ContentType)
 
-		try:
-			Title = Parser.load_title(Slug, empty = ForceMode)
-		except (JSONDecodeError, Exceptions.Parsers.UnsupportedFormat):
-			system_objects.logger.error("Unsupported JSON format or decoding error.")
-			ErrorsCount += 1
-			continue
-
+		Title = Parser.init_title(Slug)
 		system_objects.logger.stages.parsing_start(Title, Index, TotalCount)
 
 		ChaptersLoaded = Title.chapters_count
@@ -396,6 +390,10 @@ def com_parse(system_objects: "SystemObjects", command: "ParsedCommandData"):
 		
 		try:
 			Parser.parse()
+
+			if not ForceMode:
+				MergedChaptersCount = Title.merge()
+				if MergedChaptersCount: system_objects.logger.info(f"Merged {MergedChaptersCount} chapters.")
 
 			if IsAmendingEnabled:
 				if Title.empty_chapters_count: Parser.amend()
@@ -414,6 +412,11 @@ def com_parse(system_objects: "SystemObjects", command: "ParsedCommandData"):
 			NotFoundCount += 1
 			continue
 
+		except (JSONDecodeError, Exceptions.Parsers.UnsupportedFormat):
+			system_objects.logger.error("Unsupported JSON format or decoding error.")
+			ErrorsCount += 1
+			continue
+
 		except Exception:
 			Traceback = traceback.format_exc().rstrip()
 			system_objects.logger.error("Current title skipped due to exception.")
@@ -421,7 +424,8 @@ def com_parse(system_objects: "SystemObjects", command: "ParsedCommandData"):
 			system_objects.logger.emit_in_log(f"Raised exception: \n{Traceback}")
 			ErrorsCount += 1
 
-		Parser.save(IsSortingEnabled)
+		if Parser.save(IsSortingEnabled): system_objects.logger.info("Saved.")
+		else: system_objects.logger.info("No changes. Saving skipped.")
 		ParsedCount += 1
 
 	Templates.PrintParsingSummary(ParsedCount, NotFoundCount, ErrorsCount)

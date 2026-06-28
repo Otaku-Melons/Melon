@@ -652,6 +652,12 @@ class BaseTitle(ABC):
 		return sum(Branch.empty_chapters_count for Branch in self._Branches.values())
 
 	@property
+	def path(self) -> Path:
+		"""Путь к файлу."""
+
+		return self._Parser.settings.directories.titles / f"{self.used_filename}.json"
+
+	@property
 	def used_filename(self) -> str:
 		"""Используемое имя файла."""
 
@@ -782,6 +788,64 @@ class BaseTitle(ABC):
 	# >>>>> НАСЛЕДУЕМЫЕ МЕТОДЫ <<<<< #
 	#==========================================================================================#
 	
+	def _LoadData(self, identificator: int | str, selector_type: By = By.Slug) -> dict | None:
+		"""
+		Открывает локальный JSON файл и считывает его данные.
+
+		:param identificator: Идентификатор тайтла: ID или алиас.
+		:type identificator: int | str
+		:param selector_type: Режим поиска файла. По умолчанию `By.Slug` – идентификатор соответствует алиасу тайтла.
+		:type selector_type: By
+		:return: Словарь данных тайтла или `None` при отсутствии файла.
+		:rtype: dict | None
+		:raises JSONDecodeError: Ошибка десериализации JSON.
+		:raises UnsupportedFormat: Неподдерживаемый формат JSON.
+		"""
+
+		DataBuffer: dict = dict()
+		TitlesDirectory = self._Parser.settings.directories.titles
+		Journal = self._Parser.source_operator.shared_data.journal
+		FilePath: Path | None = TitlesDirectory / f"{identificator}.json"
+
+		match selector_type:
+
+			case By.Filename:
+				FilePath = TitlesDirectory / f"{identificator}.json"
+				if FilePath.exists():
+					DataBuffer = SafelyReadTitleJSON(FilePath)
+
+			case By.Slug:
+				if self._Parser.settings.common.use_id_as_filename:
+					ID = Journal.get_id_by_slug(str(identificator))
+					if ID:
+						FilePath = TitlesDirectory / f"{ID}.json"
+						if FilePath.exists():
+							DataBuffer = SafelyReadTitleJSON(FilePath)
+				else:
+					FilePath = TitlesDirectory / f"{identificator}.json"
+					if FilePath.exists():
+						DataBuffer = SafelyReadTitleJSON(FilePath)
+				
+				if not DataBuffer:
+					DataBuffer = self._SearchFileInDirectory(TitlesDirectory, str(identificator), By.Slug) or dict()
+
+			case By.ID:
+				if not self._Parser.settings.common.use_id_as_filename:
+					Slug = Journal.get_slug_by_id(int(identificator))
+					if Slug:
+						FilePath = TitlesDirectory / f"{Slug}.json"
+						if FilePath.exists():
+							DataBuffer = SafelyReadTitleJSON(FilePath)
+				else:
+					FilePath = TitlesDirectory / f"{identificator}.json"
+					if FilePath.exists():
+						DataBuffer = SafelyReadTitleJSON(FilePath)
+					
+				if not DataBuffer:
+					DataBuffer = self._SearchFileInDirectory(TitlesDirectory, str(identificator), By.ID) or dict()
+
+		return Zerotify(DataBuffer)
+
 	def _MergeBranch(self, branch: BaseBranch) -> int:
 		"""
 		Выполняет слияние объектов вевтей с одинаковым ID.
@@ -810,9 +874,10 @@ class BaseTitle(ABC):
 		:rtype: bool
 		"""
 
-		if not self._DataPath or not self._DataPath.exists(): return False
+		if not self.path.exists():
+			return False
 
-		LocalHasher = hashlib.sha256(str(ReadJSON(self._DataPath)).encode())
+		LocalHasher = hashlib.sha256(str(ReadJSON(self.path)).encode())
 		MemoryHasher = hashlib.sha256(str(self._Data).encode())
 
 		return LocalHasher.hexdigest() == MemoryHasher.hexdigest()
@@ -971,6 +1036,19 @@ class BaseTitle(ABC):
 		}
 
 	@abstractmethod
+	def _Merge(self, chapter: Any, data: dict[str, Any]):
+		"""
+		Задаёт новое содержимое для главы, используя словарь её данных.
+
+		:param chapter: Глава.
+		:type chapter: Any
+		:param data: Словарь данных главы.
+		:type data: dict[str, Any]
+		"""
+
+		pass
+
+	@abstractmethod
 	def _ParseBranchesToObjects(self):
 		"""Преобразует данные ветвей в объекты."""
 
@@ -997,9 +1075,8 @@ class BaseTitle(ABC):
 
 		self._SystemObjects = parser.source_operator.system_objects
 		
-		self._DataPath: Path = self._Parser.settings.directories.titles / f"{slug}.json"
 		self._Data: dict[str, Any] = self._GenerateTitleData()
-		self._Data["fromat"] = "melon" + type(self).__name__.lower()
+		self._Data["fromat"] = "melon-" + type(self).__name__.lower()
 		self._Data["slug"] = slug
 
 		self._Branches: dict[int, BaseBranch] = dict()
@@ -1007,6 +1084,20 @@ class BaseTitle(ABC):
 		self._Covers: list[Cover] = list()
 
 		self._PostInitMethod()
+
+	def find_cover_by_link(self, link: str) -> Cover | None:
+		"""
+		Производит поиск обложки по ссылке.
+
+		:param link: Ссылка на обложку.
+		:type link: str
+		:return: Обложка или `None` при отсутствии оной.
+		:rtype: Cover | None
+		"""
+
+		for CurrentCover in self._Covers:
+			if CurrentCover.link == link:
+				return CurrentCover
 
 	def find_chapter_by_id(self, chapter_id: int) -> ChapterSearchResult | None:
 		"""
@@ -1033,7 +1124,7 @@ class BaseTitle(ABC):
 
 		return None
 
-	def load_data(self, identificator: int | str, selector_type: By = By.Slug, only_content: bool = True) -> bool:
+	def load(self, identificator: int | str, selector_type: By = By.Slug) -> bool:
 		"""
 		Открывает локальный JSON файл и интерпретирует его данные.
 
@@ -1041,64 +1132,65 @@ class BaseTitle(ABC):
 		:type identificator: int | str
 		:param selector_type: Режим поиска файла. По умолчанию `By.Slug` – идентификатор соответствует алиасу тайтла.
 		:type selector_type: By
-		:param only_content: Указывает, нужно ли получить из файла данные кроме контента.
-		:type only_content: bool
-		:raises JSONDecodeError: Ошибка десериализации JSON.
-		:raises UnsupportedFormat: Неподдерживаемый формат JSON.
+		:return: Возвращает `True`, если удалось найти и открыть файл.
+		:rtype: bool
 		"""
 
-		DataBuffer: dict = dict()
-		TitlesDirectory = self._Parser.settings.directories.titles
-		Journal = self._Parser.source_operator.shared_data.journal
-		FilePath: Path | None = TitlesDirectory / f"{identificator}.json"
-
-		match selector_type:
-
-			case By.Filename:
-				FilePath = TitlesDirectory / f"{identificator}.json"
-				DataBuffer = SafelyReadTitleJSON(FilePath)
-
-			case By.Slug:
-				if self._Parser.settings.common.use_id_as_filename:
-					ID = Journal.get_id_by_slug(str(identificator))
-					if ID:
-						FilePath = TitlesDirectory / f"{ID}.json"
-						if FilePath.exists():
-							DataBuffer = SafelyReadTitleJSON(FilePath)
-				else:
-					FilePath = TitlesDirectory / f"{identificator}.json"
-					if FilePath.exists():
-						DataBuffer = SafelyReadTitleJSON(FilePath)
-				
-				if not DataBuffer:
-					DataBuffer = self._SearchFileInDirectory(TitlesDirectory, str(identificator), By.Slug) or dict()
-
-			case By.ID:
-				if not self._Parser.settings.common.use_id_as_filename:
-					Slug = Journal.get_slug_by_id(int(identificator))
-					if Slug:
-						FilePath = TitlesDirectory / f"{Slug}.json"
-						if FilePath.exists():
-							DataBuffer = SafelyReadTitleJSON(FilePath)
-				else:
-					FilePath = TitlesDirectory / f"{identificator}.json"
-					if FilePath.exists():
-						DataBuffer = SafelyReadTitleJSON(FilePath)
-					
-				if not DataBuffer:
-					DataBuffer = self._SearchFileInDirectory(TitlesDirectory, str(identificator), By.ID) or dict()
-
+		DataBuffer = self._LoadData(identificator, selector_type)
+		
 		if DataBuffer:
-			if only_content:
-				self._Data["content"] = DataBuffer["content"]
-			else:
-				self._Data = self._Data | DataBuffer
-
-		self._ParseCovers()
-		self._ParsePersons()
-		self._ParseBranchesToObjects()
+			self._Data = self._Data | DataBuffer
+			self._ParseCovers()
+			self._ParsePersons()
+			self._ParseBranchesToObjects()
 
 		return bool(DataBuffer)
+
+	def merge(self) -> int:
+		"""
+		Считывает данные о контенте тайтла.
+
+		:return: Количество глав, для которых считан контент.
+		:rtype: int
+		"""
+
+		DataBuffer: dict | None = self._LoadData(self.slug)
+
+		if not DataBuffer:
+			return 0
+		
+		#---> Слияние размеров обложек.
+		#==========================================================================================#
+		CoversData: list[dict] = DataBuffer["covers"]
+
+		for CoverData in CoversData:
+			Link: str = CoverData["link"]
+			Width: int | None = CoverData.get("width")
+			Height: int | None = CoverData.get("height")
+
+			if not all((Width, Height)):
+				continue
+
+			TargetCover = self.find_cover_by_link(Link)
+			if TargetCover:
+				TargetCover.set_resolution(ImageResolution(cast(int, Width), cast(int, Height)))
+
+		#---> Слияние контента глав.
+		#==========================================================================================#
+		ContentData: dict[str, dict] = DataBuffer["content"]
+		MergedChaptersCount: int = 0
+
+		for BranchKey in ContentData.keys():
+			for ChapterData in ContentData[BranchKey]:
+				ChapterID = int(ChapterData["id"])
+				
+				SearchResult = self.find_chapter_by_id(ChapterID)
+
+				if SearchResult and SearchResult.chapter.is_empty:
+					self._Merge(SearchResult.chapter, ChapterData)
+					MergedChaptersCount += 1
+
+		return MergedChaptersCount
 
 	def save(self, sorting: bool = False) -> bool:
 		"""
@@ -1118,14 +1210,12 @@ class BaseTitle(ABC):
 		IsLocalFileEqual = self._IsLocalFileEqual()
 
 		if not IsLocalFileEqual:
-			FilePath = self._DataPath
-			if self._Parser.settings.common.use_id_as_filename and self.id: FilePath = FilePath.with_stem(str(self.id))
-			WriteJSON(FilePath, self._Data)
+			WriteJSON(self.path, self._Data)
 
 		if all((self.id, self.slug)):
 			self._Parser.source_operator.shared_data.journal.update(cast(int, self.id), cast(str, self.slug))
 
-		return IsLocalFileEqual
+		return not IsLocalFileEqual
 
 	#==========================================================================================#
 	# >>>>> ПУБЛИЧНЫЕ МЕТОДЫ УСТАНОВКИ СВОЙСТВ <<<<< #

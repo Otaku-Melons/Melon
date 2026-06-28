@@ -33,21 +33,17 @@ class BaseMangaParser(BaseParser):
 						AmendedChaptersCount += 1
 						sleep(self.settings.common.delay)
 
-	def load_title(self, slug: str, empty: bool = False) -> Manga:
+	def init_title(self, slug: str) -> Manga:
 		"""
-		Загружает и устанавливает тайтл в парсер.
+		Устанавливает пустой тайтл для парсера.
 
 		:param slug: Алиас тайтла.
 		:type slug: str
-		:param empty: Указывает, что нужно инициалазировать пустой тайтл, минуя операцию чтения локальных данных.
-		:type empty: bool
 		:return: Тайтл.
 		:rtype: Manga
 		"""
 
 		self._Title = Manga(self, slug)
-		if not empty:
-			self._Title.load_data(slug)
 
 		return self._Title
 

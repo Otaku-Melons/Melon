@@ -224,6 +224,21 @@ class Manga(BaseTitle):
 			"type": None
 		} | TitleData
 
+	def _Merge(self, chapter: Chapter, data: dict[str, Any]):
+		"""
+		Задаёт новое содержимое для главы, используя словарь её данных.
+
+		:param chapter: Глава.
+		:type chapter: Chapter
+		:param data: Словарь данных главы.
+		:type data: dict[str, Any]
+		"""
+
+		SlidesData: list[dict] = data["slides"]
+		
+		for SlideData in SlidesData:
+			chapter.add_slide(SlideData["link"], SlideData.get("width"), SlideData.get("height"))
+			
 	def _ParseBranchesToObjects(self):
 		"""Преобразует данные ветвей в объекты."""
 

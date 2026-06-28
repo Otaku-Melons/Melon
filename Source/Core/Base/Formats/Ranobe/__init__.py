@@ -152,6 +152,23 @@ class Ranobe(BaseTitle):
 			"original_language": None
 		} | TitleData
 
+	def _Merge(self, chapter: Chapter, data: dict[str, Any]):
+		"""
+		Задаёт новое содержимое для главы, используя словарь её данных.
+
+		:param chapter: Глава.
+		:type chapter: Chapter
+		:param data: Словарь данных главы.
+		:type data: dict[str, Any]
+		"""
+
+		ContentData: dict = {
+			"paragraphs": data["paragraphs"],
+			"footnotes": data["footnotes"]
+		}
+
+		chapter.from_dict(ContentData)
+
 	def _ParseBranchesToObjects(self):
 		"""Преобразует данные ветвей в объекты."""
 
