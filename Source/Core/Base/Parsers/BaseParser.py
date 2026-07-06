@@ -5,11 +5,11 @@ from Source.Core import Exceptions
 
 from dublib.Methods.Decorators import run_before_method
 
-from typing import Any, cast, TYPE_CHECKING
+from typing import Any, Callable, cast, TYPE_CHECKING
 from abc import ABC, abstractmethod
 
 if TYPE_CHECKING:
-	from Source.Core.Base.Parsers.Components.ImagesDownloader import ImagesDownloader
+	from Source.Core.Base.Parsers.Components.ImagesDownloader import ImagesDownloader, ImageDownloadingResult
 	from Source.Core.Base.Parsers.Components import ParserManifest, ParserSettings
 	from Source.Core.Base.SourceOperator import BaseSourceOperator
 	from Source.Core.SystemObjects.Logger import Portals
@@ -154,6 +154,45 @@ class BaseParser(ABC):
 		"""Дополняет главы дайными о контенте."""
 
 		pass
+
+	@run_before_method("_RequireTitle")
+	def download_covers(self, force_mode: bool, callback_start: Callable | None = None, callback_end: Callable | None = None) -> "tuple[ImageDownloadingResult, ...]":
+		"""
+		Скачивает обложки и портреты персонажей.
+
+		:param force_mode: Переключает режим перезаписи существующих изображений.
+		:type force_mode: bool
+		:param callback_start: Функция, в которую будут передаваться обложки перед началом их скачивания.
+		:type callback_start: Callable | None
+		:param callback_end: Функция, в которую будут передаваться результаты скачивания обложки.
+		:type callback_end: Callable | None
+		:return: Последовательность результатов скачивания.
+		:rtype: tuple[ImageDownloadingResult, ...]
+		"""
+
+		self._Title = cast(BaseTitle, self._Title)
+
+		Covers = self._Title.covers
+		Results = list()
+
+		if Covers:
+			CoversDirectory = self.settings.directories.images / self._Title.used_filename / "covers"
+			CoversDirectory.mkdir(parents = True, exist_ok = True)
+
+			for Cover in Covers:
+				if callback_start:
+					callback_start(Cover)
+				
+				Result = self._SourceOperator.images_downloader.download_image(Cover.link, CoversDirectory, force_mode = force_mode)
+				Results.append(Result)
+				
+				if Result.resolution:
+					Cover.set_resolution(Result.resolution)
+
+				if callback_end:
+					callback_end(Result)
+
+		return tuple(Results)
 
 	def load_words_dictionary_preset(self, language_code: str) -> WordsDictionary | None:
 		"""

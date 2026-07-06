@@ -2,8 +2,8 @@ from .Components.Functions import SafelyReadTitleJSON
 from .Components.Structs import ChapterSearchResult
 from .Components.Enums import By, Statuses
 
+from Source.Core.Base.Parsers.Components.ImagesDownloader import ImageData, ImageResolution
 from Source.Core.Base.Parsers.Components.WordsDictionary import CheckLanguageCode
-from Source.Core.Base.Parsers.Components.ImagesDownloader import ImageResolution
 from Source.Core import Exceptions
 
 from dublib.Methods.Data import RemoveRecurringSubstrings, Zerotify
@@ -23,70 +23,6 @@ if TYPE_CHECKING:
 #==========================================================================================#
 # >>>>> ВНУТРЕННИЕ СТРУКТУРЫ ДАННЫХ <<<<< #
 #==========================================================================================#
-
-class Cover:
-	"""Обложка."""
-
-	#==========================================================================================#
-	# >>>>> СВОЙСТВА <<<<< #
-	#==========================================================================================#
-
-	@property
-	def link(self) -> str:
-		"""Ссылка на изображение."""
-
-		return self.__Link
-	
-	@property
-	def resolution(self) -> ImageResolution | None:
-		"""Разрешение изображения."""
-
-		return self.__Resolution
-
-	#==========================================================================================#
-	# >>>>> ПУБЛИЧНЫЕ МЕТОДЫ <<<<< #
-	#==========================================================================================#
-
-	def __init__(self, link: str):
-		"""
-		Обложка.
-
-		:param link: Ссылка на обложку.
-		:type link: str
-		"""
-
-		self.__Link: str = link
-		self.__Resolution: ImageResolution | None = None
-
-	def set_resolution(self, resolution: ImageResolution):
-		"""
-		Задаёт разрешение обложки.
-
-		:param resolution: Разрешение обложки.
-		:type resolution: ImageResolution
-		"""
-
-		self.__Resolution = resolution
-
-	def to_dict(self) -> dict[str, str | int | None]:
-		"""
-		Преобразует контейнер в словарное представление.
-
-		:return: Словарное представление данных обложки.
-		:rtype: dict[str, str | int | None]
-		"""
-
-		Buffer: dict = {
-			"link": self.__Link,
-			"width": None,
-			"height": None
-		}
-
-		if self.__Resolution:
-			Buffer["width"] = self.__Resolution.width
-			Buffer["height"] = self.__Resolution.height
-
-		return Buffer
 
 class Person:
 	"""Данные персонажа."""
@@ -108,7 +44,7 @@ class Person:
 		return self.__Data["another_names"]
 
 	@property
-	def images(self) -> list[dict]:
+	def images(self) -> tuple[ImageData, ...]:
 		"""Список данных портретов."""
 
 		return self.__Data["images"]
@@ -136,6 +72,8 @@ class Person:
 			"description": None
 		}
 
+		self.__Images: list[ImageData] = list()
+
 	def add_another_name(self, another_name: str):
 		"""
 		Добавляет альтернативное имя.
@@ -143,27 +81,18 @@ class Person:
 		"""
 		
 		another_name = another_name.strip()
-		if another_name and another_name != self.name and another_name not in self.another_names: self.__Data["another_names"].append(another_name)
+		if another_name and another_name != self.name and another_name not in self.another_names:
+			self.__Data["another_names"].append(another_name)
 
-	def add_image(self, link: str, width: int | None = None, height: int | None = None):
+	def add_image(self, image: ImageData):
 		"""
 		Добавляет иллюстрацию персонажа.
 
-		:param link: Ссылка на изображение.
-		:type link: str
-		:param width: Ширина изображения.
-		:type width: int
-		:param height: Высота изображения.
-		:type height: int
+		:param image: Данные изображения.
+		:type image: ImageData
 		"""
 
-		CoverInfo: dict[str, int | str | None] = {
-			"link": link,
-			"width": width,
-			"height": height
-		}
-
-		self.__Data["images"].append(CoverInfo)
+		self.__Images.append(image)
 
 	def set_description(self, description: str | None):
 		"""
@@ -179,20 +108,19 @@ class Person:
 		"""
 		Возвращает словарное представление данных персонажа.
 
-		:param sizing_images: Указывает, нужно ли указать размеры изображений персонажа.
+		:param sizing_images: Указывает, нужно ли сохранять ключи разрешения изображений персонажа.
 		:type sizing_images: bool
 		:return: Словарное представление данных персонажа.
 		:rtype: dict
 		"""
 
-		Data = self.__Data.copy()
+		Buffer = self.__Data.copy()
+		
+		for Index in range(len(self.__Images)):
+			Image = self.__Images[Index]
+			Buffer["images"].append(Image.to_dict(sizing = sizing_images))
 
-		if not sizing_images:
-			for Index in range(len(Data["images"])):
-				del Data["images"][Index]["width"]
-				del Data["images"][Index]["height"]
-
-		return Data
+		return Buffer
 
 class BaseChapter(ABC):
 	"""Базовая глава."""
@@ -327,7 +255,7 @@ class BaseChapter(ABC):
 		:type chapter_id: int
 		"""
 
-		self.__Parser = parser
+		self._Parser = parser
 
 		self._Data: dict[str, Any] = {
 			"id": chapter_id,
@@ -411,7 +339,7 @@ class BaseChapter(ABC):
 		name = Zerotify(name)
 		if name: name = name.strip()
 		
-		if name and self.__Parser.settings.common.pretty:
+		if name and self._Parser.settings.common.pretty:
 			if name.endswith("..."): name = name.rstrip(".") + "…"
 			else: name = name.rstrip(".–")
 		
@@ -713,8 +641,8 @@ class BaseTitle(ABC):
 		return tuple(self._Data["another_names"])
 	
 	@property
-	def covers(self) -> tuple[Cover, ...]:
-		"""Последовательность описаний обложки."""
+	def covers(self) -> tuple[ImageData, ...]:
+		"""Последовательность данных обложек."""
 
 		return tuple(self._Covers)
 
@@ -921,12 +849,8 @@ class BaseTitle(ABC):
 
 		for CoverData in self._Data["covers"]:
 			CoverData = cast(dict, CoverData)
-			Buffer = Cover(CoverData["link"])
-			Width, Height = CoverData.get("width"), CoverData.get("height")
-
-			if all((Width, Height)):
-				Buffer.set_resolution(ImageResolution(cast(int, Width), cast(int, Height)))
-
+			Buffer = ImageData(CoverData["link"])
+			Buffer.create_resolution(CoverData.get("width"), CoverData.get("height"))
 			self._Covers.append(Buffer)
 
 	def _ParsePersons(self):
@@ -945,9 +869,11 @@ class BaseTitle(ABC):
 			for AnotherName in AnotherNames:
 				Buffer.add_another_name(AnotherName)
 
-			for ImageData in Images:
-				ImageData = cast(dict, ImageData)
-				Buffer.add_image(ImageData["link"], ImageData.get("width"), ImageData.get("height"))
+			for CurrentImageData in Images:
+				CurrentImageData = cast(dict, CurrentImageData)
+				Image = ImageData(CoverData["link"])
+				Image.create_resolution(CoverData.get("width"), CoverData.get("height"))
+				Buffer.add_image(Image)
 
 			if Description:
 				Buffer.set_description(Description)
@@ -1081,18 +1007,18 @@ class BaseTitle(ABC):
 
 		self._Branches: dict[int, BaseBranch] = dict()
 		self._Persons: list[Person] = list()
-		self._Covers: list[Cover] = list()
+		self._Covers: list[ImageData] = list()
 
 		self._PostInitMethod()
 
-	def find_cover_by_link(self, link: str) -> Cover | None:
+	def find_cover_by_link(self, link: str) -> ImageData | None:
 		"""
 		Производит поиск обложки по ссылке.
 
 		:param link: Ссылка на обложку.
 		:type link: str
 		:return: Обложка или `None` при отсутствии оной.
-		:rtype: Cover | None
+		:rtype: ImageData | None
 		"""
 
 		for CurrentCover in self._Covers:
@@ -1233,12 +1159,12 @@ class BaseTitle(ABC):
 		if another_name != self._Data["localized_name"] and another_name != self._Data["eng_name"] and another_name and another_name not in self._Data["another_names"]:
 			self._Data["another_names"].append(another_name)
 
-	def add_cover(self, cover: Cover):
+	def add_cover(self, cover: ImageData):
 		"""
 		Добавляет обложку.
 
 		:param cover: Обложка.
-		:type cover: Cover
+		:type cover: ImageData
 		:raises ValueError: Отсутствует ссылка на обложку.
 		"""
 
@@ -1407,7 +1333,7 @@ class BaseTitle(ABC):
 		for Name in another_names:
 			self.add_another_name(Name)
 
-	def set_covers(self, covers: Sequence[Cover]):
+	def set_covers(self, covers: Sequence[ImageData]):
 		"""
 		Задаёт последовательность обложек.
 

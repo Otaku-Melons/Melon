@@ -1,5 +1,5 @@
 from Source.Core.Base.Formats.BaseFormat import BaseChapter, BaseBranch, BaseTitle
-from Source.Core.Base.Parsers.Components.ImagesDownloader import ImageResolution
+from Source.Core.Base.Parsers.Components.ImagesDownloader import ImageData
 
 from typing import Any, cast
 
@@ -24,79 +24,6 @@ class Types(Enum):
 # >>>>> ВНУТРЕННИЕ СТРУКТУРЫ ДАННЫХ <<<<< #
 #==========================================================================================#
 
-class Slide:
-	"""Слайд."""
-
-	#==========================================================================================#
-	# >>>>> СВОЙСТВА <<<<< #
-	#==========================================================================================#
-
-	@property
-	def link(self) -> str:
-		"""Ссылка на изображение."""
-
-		return self.__Link
-	
-	@property
-	def index(self) -> int:
-		"""Индекс изображения."""
-
-		return self.__Index
-
-	@property
-	def resolution(self) -> "ImageResolution | None":
-		"""Разрешение изображения."""
-
-		return self.__Resolution
-
-	#==========================================================================================#
-	# >>>>> ПУБЛИЧНЫЕ МЕТОДЫ <<<<< #
-	#==========================================================================================#
-
-	def __init__(self, link: str, index: int):
-		"""
-		Слайд.
-
-		:param link: Ссылка на изображение.
-		:type link: str
-		:param index: Индекс слайда.
-		:type index: int
-		"""
-
-		self.__Link: str = link
-		self.__Index: int = index
-
-		self.__Resolution: "ImageResolution | None" = None
-
-	def set_resolution(self, width: int, height: int):
-		"""
-		Указывает разрешение изображения.
-
-		:param width: Ширина изображения.
-		:type width: int
-		:param height: Высота изображения.
-		:type height: int
-		"""
-
-		self.__Resolution = ImageResolution(width, height)
-
-	def to_dict(self) -> dict:
-		"""
-		Возвращает словарное представление объекта.
-
-		:return: Словарное представление объекта.
-		:rtype: dict
-		"""
-
-		Buffer = {
-			"index": self.__Index,
-			"link": self.__Link,
-			"width": self.__Resolution.width if self.__Resolution else None,
-			"height": self.__Resolution.height if self.__Resolution else None
-		}
-
-		return Buffer
-
 class Chapter(BaseChapter):
 	"""Глава манги."""
 
@@ -105,11 +32,32 @@ class Chapter(BaseChapter):
 	#==========================================================================================#
 
 	@property
-	def slides(self) -> tuple[Slide, ...]:
-		"""Последовательность слайдов."""
+	def images(self) -> "tuple[ImageData, ...]":
+		"""Последовательность изображений."""
 
-		return tuple(self.__Slides)
+		return tuple(self.__Slides.values())
 	
+	#==========================================================================================#
+	# >>>>> ПРИВАТНЫЕ МЕТОДЫ <<<<< #
+	#==========================================================================================#
+
+	def __GetNewSlideIndex(self, start_index: int = 1) -> int:
+		"""
+		Генерирует индекс нового слайда.
+
+		:param start_index: Индекс, с которого начинается нумерация слайдов.
+		:type start_index: int
+		:return: Индекс слайда.
+		:rtype: int
+		"""
+
+		Indexes: tuple[int, ...] = tuple(self.__Slides.keys())
+
+		if not Indexes:
+			return 1
+		else:
+			return max(Indexes) + 1
+
 	#==========================================================================================#
 	# >>>>> ПЕРЕОПРЕДЕЛЯЕМЫЕ МЕТОДЫ <<<<< #
 	#==========================================================================================#
@@ -127,7 +75,7 @@ class Chapter(BaseChapter):
 		:rtype: bool
 		"""
 
-		return not bool(self.slides)
+		return not bool(self.images)
 
 	def _FromDict(self, data: dict):
 		"""
@@ -142,48 +90,47 @@ class Chapter(BaseChapter):
 		
 		for SlideData in self._Data["slides"]:
 			SlideData = cast(dict, SlideData)
+			SlideIndex: int = SlideData["index"]
+			SlideImage = ImageData(SlideData["link"])
 
-			SlideBuffer = Slide(SlideData["link"], SlideData["index"])
 			Width, Height = SlideData.get("width"), SlideData.get("height")
 
 			if all((Width, Height)):
-				SlideBuffer.set_resolution(cast(int, Width), cast(int, Height))
+				SlideImage.create_resolution(Width, Height)
 
-			self.__Slides.append(SlideBuffer)
+			self.__Slides[SlideIndex] = SlideImage
 
 	def _PostInitMethod(self):
 		"""Метод, выполняющийся после инициализации объекта."""
 
 		self._Data["slides"] = list()
-		self.__Slides: list[Slide] = list()
+		self.__Slides: "dict[int, ImageData]" = dict()
 
 	def _PreFormatter(self):
 		"""Метод, запускающийся перед генерацией словарного представления объекта."""
 
-		self._Data["slides"] = [CurrentSlide.to_dict() for CurrentSlide in self.__Slides]
+		SlidesData: list[dict] = list()
+		
+		for Index, Image in self.__Slides.items():
+			Buffer: dict = {"index": Index} | Image.to_dict(sizing = self._Parser.settings.common.sizing_images)
+			SlidesData.append(Buffer)
+
+		self._Data["slides"] = tuple(SlidesData)
 
 	#==========================================================================================#
 	# >>>>> ПУБЛИЧНЫЕ МЕТОДЫ <<<<< #
 	#==========================================================================================#
 
-	def add_slide(self, link: str, width: int | None = None, height: int | None = None):
+	def add_slide(self, image: "ImageData"):
 		"""
-		Создаёт и добавляет слайд.
+		Добавляет слайд.
 
-		:param link: Ссылка на изображение.
-		:type link: str
-		:param width: Ширина изображения.
-		:type width: int
-		:param height: Высота изображения.
-		:type height: int
+		:param image: Данные изображения.
+		:type image: ImageData
 		"""
 
-		CurrentSlide = Slide(link, len(self.__Slides) + 1)
-
-		if all((width, height)):
-			CurrentSlide.set_resolution(cast(int, width), cast(int, width))
-
-		self.__Slides.append(CurrentSlide)
+		Index = self.__GetNewSlideIndex()
+		self.__Slides[Index] = image
 		
 #==========================================================================================#
 # >>>>> ОСНОВНОЙ КЛАСС <<<<< #
@@ -237,7 +184,13 @@ class Manga(BaseTitle):
 		SlidesData: list[dict] = data["slides"]
 		
 		for SlideData in SlidesData:
-			chapter.add_slide(SlideData["link"], SlideData.get("width"), SlideData.get("height"))
+			Slide = ImageData(SlideData["link"])
+			Width, Height = SlideData.get("width"), SlideData.get("height")
+
+			if all((Width, Height)):
+				Slide.create_resolution(Width, Height)
+
+			chapter.add_slide(Slide)
 			
 	def _ParseBranchesToObjects(self):
 		"""Преобразует данные ветвей в объекты."""
