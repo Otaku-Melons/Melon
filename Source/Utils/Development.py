@@ -33,17 +33,17 @@ class DevelopmeptAssistant:
 		"""
 
 		if name.count("-") != 1:
-			self.__Logger.error("Extension name must have a format \"{PARSER}-{EXTENSION}\".")
+			self.__Printer.error("Extension name must have a format \"{PARSER}-{EXTENSION}\".")
 			return False
 		
 		Parser, _ = name.split("-")
 
 		if not os.path.exists(f"Parsers/{Parser}"):
-			self.__Logger.error(f"Parser \"{Parser}\" not found.")
+			self.__Printer.error(f"Parser \"{Parser}\" not found.")
 			return False
 		
 		if os.path.exists(f"Parsers/{Parser}/extensions/{name}"):
-			self.__Logger.error(f"Extension \"{name}\" already exists.")
+			self.__Printer.error(f"Extension \"{name}\" already exists.")
 			return False
 		
 		return True
@@ -68,7 +68,7 @@ class DevelopmeptAssistant:
 		ManifestDict["melon_required_version"] = f">={self.__SystemObjects.MELON_VERSION}" if self.__SystemObjects.MELON_VERSION else None
 		WriteJSON(f"{path}/manifest.json", ManifestDict)
 
-		self.__Logger.info("Manifest created.")
+		self.__Printer.emit("Manifest created.")
 
 	def __InitParserSettings(self, path: str | PathLike[str]):
 		"""
@@ -79,7 +79,7 @@ class DevelopmeptAssistant:
 		"""
 		
 		WriteJSON(f"{path}/manifest.json", Settings.copy())
-		self.__Logger.info("Settings file created.")
+		self.__Printer.emit("Settings file created.")
 
 	#==========================================================================================#
 	# >>>>> ПРИВАТНЫЕ МЕТОДЫ <<<<< #
@@ -101,10 +101,10 @@ class DevelopmeptAssistant:
 
 			if self.__SystemObjects.FORCE_MODE:
 				shutil.rmtree(path)
-				self.__Logger.warning("Directory isn't empty. Force cleared.")
+				self.__Printer.warning("Directory isn't empty. Force cleared.")
 			
 			else:
-				self.__Logger.error("Parser with this name already exists.")
+				self.__Printer.error("Parser with this name already exists.")
 				return
 			
 		elif FilesCount is None: os.makedirs(path, exist_ok = True)
@@ -119,10 +119,10 @@ class DevelopmeptAssistant:
 
 		try:
 			Repo.init(path)
-			self.__Logger.info("Git repository initialized.")
+			self.__Printer.emit("Git repository initialized.")
 
 		except Exception as ExceptionData:
-			self.__Logger.error(f"Unable to initialize Git repository due to error: \"{ExceptionData}\".")
+			self.__Printer.error(f"Unable to initialize Git repository due to error: \"{ExceptionData}\".")
 
 	def __InsertModuleName(self, path: str | PathLike[str], files: str | tuple[str], module: str):
 		"""
@@ -158,7 +158,7 @@ class DevelopmeptAssistant:
 			Filename = files[File] if files[File] else Path(File).name
 			TargetPath = f"{path}/{Filename}"
 			shutil.copy(OriginalPath, TargetPath)
-			self.__Logger.info(f"File <i>{Filename}</i> installed.")
+			self.__Printer.emit(f"File <i>{Filename}</i> installed.")
 
 	#==========================================================================================#
 	# >>>>> ПУБЛИЧНЫЕ МЕТОДЫ <<<<< #
@@ -174,7 +174,7 @@ class DevelopmeptAssistant:
 
 		self.__SystemObjects = system_objects
 
-		self.__Logger = self.__SystemObjects.logger
+		self.__Printer = self.__SystemObjects.printer
 
 	def init_extension(self, name: str):
 		"""
@@ -190,7 +190,7 @@ class DevelopmeptAssistant:
 
 		Path = f"Parsers/{Parser}/extensions/{name}"
 		BoldName = FastStyler(name).decorate.bold
-		self.__Logger.info(f"Initializing extension {BoldName}…")
+		self.__Printer.emit(f"Initializing extension {BoldName}…")
 		os.makedirs(Path)
 		
 		try:
@@ -208,7 +208,7 @@ class DevelopmeptAssistant:
 
 		except Exception as ExceptionData: 
 			shutil.rmtree(Path)
-			self.__Logger.error(str(ExceptionData))
+			self.__Printer.error(str(ExceptionData))
 
 		else: print(f"Done in {TimerObject.ends()}.")
 
@@ -226,7 +226,7 @@ class DevelopmeptAssistant:
 
 		TimerObject = Timer(start = True)
 		ParserHomeDirectoryPath = f"Parsers/{name}"
-		self.__Logger.info(f"Initializing parser <b>{name}</b>…")
+		self.__Printer.emit(f"Initializing parser <b>{name}</b>…")
 
 		Files: dict = {
 			".gitignore": None,
@@ -245,7 +245,7 @@ class DevelopmeptAssistant:
 
 		except Exception as ExceptionData: 
 			shutil.rmtree(ParserHomeDirectoryPath)
-			self.__Logger.error(str(ExceptionData))
+			self.__Printer.error(str(ExceptionData))
 
 		else: print(f"Done in {TimerObject.ends()}.")
 

@@ -1,5 +1,5 @@
 from Source.Core.SystemObjects.Driver import Driver
-from Source.Core.SystemObjects.Logger import Logger
+from Source.Core.SystemObjects.Printer import Printer
 from Source.Core.SystemObjects.Temper import Temper
 
 from dulwich import porcelain
@@ -116,10 +116,10 @@ class SystemObjects:
 		return self.__Driver
 
 	@property
-	def logger(self) -> Logger:
-		"""Менеджер портов CLI и логов."""
+	def printer(self) -> Printer:
+		"""Оператор вывода."""
 
-		return self.__Logger
+		return self.__Printer
 	
 	@property
 	def temper(self) -> Temper:
@@ -135,7 +135,7 @@ class SystemObjects:
 		"""Коллекция системных объектов."""
 
 		self.__Driver = Driver(self)
-		self.__Logger = Logger(self)
+		self.__Printer = Printer(self)
 		self.__Temper = Temper()
 
 		self.__ForceMode = GlobalFlag(False)

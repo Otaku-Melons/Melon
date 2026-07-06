@@ -84,7 +84,7 @@ class Footnote:
 			self.__Elements.append(element)
 			self.__ImagesCount += 1
 			if self.__ImagesCount > 1:
-				self.__Portals.logger.warning("Footnote should contain only one image.")
+				self.__Portals.printer.warning("Footnote should contain only one image.")
 
 	def set_placeholder(self, placeholder: str):
 		"""
@@ -197,7 +197,7 @@ class Header:
 			FootnoteID = "{" + CurrentNote.uuid + "}"
 			if FootnoteID not in self._Text: raise Exceptions.Parsers.FootnoteCompositionError("Footnote UUID not found in text.")
 			Text = Text.replace(FootnoteID, f"<a href=\"#{FootnoteIndex}\">{CurrentNote.placeholder}</a>")
-			self.__Parser.portals.logger.info(f"Footnote with index {FootnoteIndex} added.")
+			self.__Parser.portals.printer.emit(f"Footnote with index {FootnoteIndex} added.")
 			FootnoteIndex += 1
 
 		return Text
@@ -406,7 +406,7 @@ class Image:
 
 		if self.__IsExists:
 			print("Already exists.")
-			self.__Portals.logger.info(f"Illustration \"{self.__Filename}\" already exists.")
+			self.__Portals.printer.emit(f"Illustration \"{self.__Filename}\" already exists.")
 			return
 
 		ImageBytes = base64.b64decode(Data)
@@ -416,7 +416,7 @@ class Image:
 			FileWriter.write(ImageBytes)
 
 		print("Done.")
-		self.__Portals.logger.info(f"Image \"{self.__Filename}\" decoded from Base64.")
+		self.__Portals.printer.emit(f"Image \"{self.__Filename}\" decoded from Base64.")
 
 	def parse_image(self, data: str | Tag):
 		"""
@@ -440,7 +440,7 @@ class Image:
 		Source = TagValue.get("src")
 
 		if not Source: 
-			self.__Portals.logger.warning("Image hasn't source. Skipped.")
+			self.__Portals.printer.warning("Image hasn't source. Skipped.")
 			return
 		else:
 			Source = cast(str, Source)
@@ -564,7 +564,7 @@ class Paragraph(Header):
 		for CurrentTag in paragraph.find_all():
 
 			if CurrentTag.name not in self.__AllowedTags.keys():
-				self._Portals.logger.error(f"Unresolved tag \"{CurrentTag.name}\".")
+				self._Portals.printer.error(f"Unresolved tag \"{CurrentTag.name}\".")
 				if exceptions: raise Exceptions.Parsers.UnresolvedTag(str(CurrentTag))
 
 			else:
@@ -573,7 +573,7 @@ class Paragraph(Header):
 				for Attribute in CurrentTag.attrs:
 					if Attribute not in self.__AllowedTags[CurrentTag.name]:
 						del Attributes[Attribute]
-						self._Portals.logger.warning(f"Unresolved attribute \"{Attribute}\" in \"{CurrentTag.name}\" tag. Removed.")
+						self._Portals.printer.warning(f"Unresolved attribute \"{Attribute}\" in \"{CurrentTag.name}\" tag. Removed.")
 
 				CurrentTag.attrs = Attributes
 

@@ -9,8 +9,8 @@ import enum
 import os
 
 if TYPE_CHECKING:
-	from Source.Core.Base.Parsers.MangaParser import MangaParser
-	from Source.Core.Base.Formats.Manga import Branch, Chapter, Manga
+	from Source.Core.Base.Parsers.BaseMangaParser import BaseMangaParser
+	from Source.Core.Base.Formats.Manga import BaseBranch, Chapter, Manga
 
 #==========================================================================================#
 # >>>>> ВСПОМОГАТЕЛЬНЫЕ СТРУКТУРЫ ДАННЫХ <<<<< #
@@ -49,7 +49,7 @@ class MangaBuilder(BaseBuilder):
 		ChapterName = self._GenerateChapterNameByTemplate(chapter)
 		Volume = ""
 		if self.__SortingByVolumes and chapter.volume: Volume = self._GenerateVolumeNameByTemplate(chapter)
-		OutputPath = f"{self._ParserSettings.common.archives_directory}/{title.used_filename}/{Volume}/{ChapterName}"
+		OutputPath = f"{self._ParserSettings.directories.content}/{title.used_filename}/{Volume}/{ChapterName}"
 		OutputPath = Path(OutputPath).as_posix()
 
 		if not os.path.exists(OutputPath): os.makedirs(OutputPath)
@@ -64,7 +64,7 @@ class MangaBuilder(BaseBuilder):
 		ChapterName = self._GenerateChapterNameByTemplate(chapter)
 		Volume = ""
 		if self.__SortingByVolumes and chapter.volume: Volume = self._GenerateVolumeNameByTemplate(chapter)
-		OutputPath = f"{self._ParserSettings.common.archives_directory}/{title.used_filename}/{Volume}/{ChapterName}"
+		OutputPath = f"{self._ParserSettings.directories.content}/{title.used_filename}/{Volume}/{ChapterName}"
 		OutputPath = Path(OutputPath).as_posix()
 
 		shutil.make_archive(OutputPath, "zip", directory)
@@ -98,11 +98,11 @@ class MangaBuilder(BaseBuilder):
 			build_system – система сборки главы.
 		"""
 
-		self._SystemObjects.logger.info(f"Building chapter {chapter_id}…")
+		self._SystemObjects.printer.emit(f"Building chapter {chapter_id}…")
 
 		if not self._BuildSystem: self._BuildSystem = MangaBuildSystems.Simple
 
-		TargetChapter: "Chapter" = self._FindChapter(title.branches, chapter_id)
+		TargetChapter: "Chapter | None" = self._FindChapter(title.branches, chapter_id)
 		SlidesCount = len(TargetChapter.slides)
 		WorkDirectory = f"{self._Temper.builder_temp}/{title.used_filename}"
 
@@ -112,16 +112,16 @@ class MangaBuilder(BaseBuilder):
 			Index: int = Slide["index"]
 			
 			if not os.path.exists(WorkDirectory): os.mkdir(WorkDirectory)
-			Parser: "MangaParser" = title.parser
+			Parser: "BaseMangaParser" = title.parser
 			print(f"[{Index} / {SlidesCount}] Downloading \"{Filename}\"… ", flush = True, end = "")
 			DownloadingStatus = Parser.source_operator.image(Link)
 			DownloadingStatus.print_messages()
 
 			if not DownloadingStatus.has_errors:
 				print("Done.")
-				self._SystemObjects.logger.info(f"Slide \"{Filename}\" downloaded.", stdout = False)
+				self._SystemObjects.printer.emit(f"Slide \"{Filename}\" downloaded.", stdout = False)
 
-			else: self._Logger.error(f"Unable download slide \"{Filename}\". Response code: {DownloadingStatus.code}.")
+			else: self._Printer.error(f"Unable download slide \"{Filename}\". Response code: {DownloadingStatus.code}.")
 
 			MovingStatus = self._Parser.images_downloader.move_from_temp(WorkDirectory, Filename, f"{Index}", is_full_filename = False)
 			MovingStatus.print_messages()
@@ -135,8 +135,8 @@ class MangaBuilder(BaseBuilder):
 			branch_id – ID выбранной ветви (по умолчанию самая длинная).
 		"""
 
-		TargetBranch: "Branch" = self._SelectBranch(title.branches, branch_id)
-		self._SystemObjects.logger.info(f"Building branch {TargetBranch.id}…")
+		TargetBranch: "BaseBranch" = self._SelectBranch(title.branches, branch_id)
+		self._SystemObjects.printer.emit(f"Building branch {TargetBranch.id}…")
 		for CurrentChapter in TargetBranch.chapters: self.build_chapter(title, CurrentChapter.id)
 
 	def select_build_system(self, build_system: str | None):

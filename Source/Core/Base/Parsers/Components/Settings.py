@@ -456,8 +456,8 @@ class ParserSettings:
 
 		:param parser_name: Имя парсера.
 		:type parser_name: str
-		:param logger: Оператор логгирования.
-		:type logger: Logger
+		:param printer: Оператор логгирования.
+		:type printer: Printer
 		"""
 
 		self.__ParserName: str = parser_name

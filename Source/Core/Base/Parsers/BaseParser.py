@@ -5,7 +5,6 @@ from Source.Core.Base.Formats.BaseFormat import BaseBranch, BaseTitle
 from Source.Core import Exceptions
 
 from dublib.Methods.Decorators import run_before_method
-from dublib.CLI.Templates.Bus import MessagesTypes
 
 from typing import Any, cast, Sequence, TYPE_CHECKING
 from abc import ABC, abstractmethod
@@ -15,7 +14,7 @@ from enum import Enum
 if TYPE_CHECKING:
 	from Source.Core.Base.Parsers.Components import ParserManifest, ParserSettings
 	from Source.Core.Base.SourceOperator import BaseSourceOperator
-	from Source.Core.SystemObjects.Logger import Portals
+	from Source.Core.SystemObjects.Printer import Portals
 
 	from dublib.WebRequestor import WebRequestor
 
@@ -108,7 +107,7 @@ class BaseParser(ABC):
 
 		for CurrentImageData in images_data:
 			Type = image_type.name.lower()
-			self.portals.logger.emit_in_stdout(f"Downloading {Type} \"{CurrentImageData.filename}\"… ", end_line = False)
+			self.portals.printer.emit(f"Downloading {Type} \"{CurrentImageData.filename}\"… ", end_line = False)
 			
 			Result = self._SourceOperator.images_downloader.download_image(CurrentImageData.link, ImageDirecory, force_mode = force_mode)
 			Results.append(Result)
@@ -116,31 +115,19 @@ class BaseParser(ABC):
 			if Result.resolution:
 				CurrentImageData.set_resolution(Result.resolution)
 			
-			# To-Do: рефакторинг вывода?
 			if Result.is_downloaded:
-				if Result.is_already_exists:
-					self.portals.logger.emit_in_stdout("Overwritten.")
-					self.portals.logger.emit_in_log(f"{Type.title()} image \"{CurrentImageData.filename}\" overwritten.")
-				else:
-					self.portals.logger.emit_in_stdout("Done.")
-					self.portals.logger.emit_in_log(f"{Type.title()} image \"{CurrentImageData.filename}\" downloaded.")
+				if Result.is_already_exists: self.portals.printer.emit("Overwritten.")
+				else: self.portals.printer.emit("Done.")
 
 			elif Result.is_already_exists:
-				self.portals.logger.emit_in_stdout("Already exists.")
-				self.portals.logger.emit_in_log(f"{Type.title()} image \"{CurrentImageData.filename}\" already exists.")
+				self.portals.printer.emit("Already exists.")
 
 			elif Result.is_replaced_by_stub:
-				self.portals.logger.emit_in_stdout("Replaced by stub.")
-				self.portals.logger.emit_in_log(f"{Type.title()} image \"{CurrentImageData.filename}\" replaced by stub.")
+				self.portals.printer.emit("Replaced by stub.")
 
 			else:
-				if Result.error_message:
-					self.portals.logger.emit_in_stdout(Result.error_message, MessagesTypes.Error)
-					self.portals.logger.emit_in_log(f"{Type.title()} image \"{CurrentImageData.filename}\" downloading error: {Result.error_message}.", MessagesTypes.Error)
-				else:
-					self.portals.logger.emit_in_stdout("Unknown error.", MessagesTypes.Error)
-					self.portals.logger.emit_in_log(f"{Type.title()} image \"{CurrentImageData.filename}\" downloading unknown error.", MessagesTypes.Error)
-				
+				if Result.error_message: self.portals.printer.error(Result.error_message)
+				else: self.portals.printer.error("Unknown error.")
 
 		return Results
 

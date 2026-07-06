@@ -1,5 +1,4 @@
 from . import Functions
-from . import Templates
 
 from Source.Core.Base.Parsers.Components.Manifest import ContentTypes
 from Source.Core.Base.Formats.Components.Enums import By
@@ -40,14 +39,14 @@ def com_cacher(system_objects: "SystemObjects", command: "ParsedCommandData"):
 	TimerObject = Utils.Timer(start = True)
 
 	for CurrentParser in Parsers:
-		system_objects.logger.info(f"Caching titles for <b>{CurrentParser}</b>…")
+		system_objects.printer.emit(f"Caching titles for <b>{CurrentParser}</b>…")
 		EntryPoint = system_objects.driver.get_entry_point(CurrentParser)
 		Cacher = Utils.Cacher(EntryPoint)
 
 		Result = Cacher.cache_parser_output()
-		Templates.PrintCachingSummary(Result)
+		system_objects.printer.templates.caching_summary(Result)
 	
-	system_objects.logger.info(f"Done in {TimerObject.ends()}.")
+	system_objects.printer.emit(f"Done in {TimerObject.ends()}.")
 
 def com_classify(system_objects: "SystemObjects", command: "ParsedCommandData"):
 	"""
@@ -71,7 +70,7 @@ def com_classify(system_objects: "SystemObjects", command: "ParsedCommandData"):
 	ScriptPath: Path = Path("Configs/classificator.ini")
 
 	if not ScriptPath.exists():
-		system_objects.logger.critical(f"Script file \"{ScriptPath}\" doesn't exists.")
+		system_objects.printer.critical(f"Script file \"{ScriptPath}\" doesn't exists.")
 		return None
 	
 	ClassificatorObject = Utils.Classificator(ScriptPath)
@@ -79,29 +78,28 @@ def com_classify(system_objects: "SystemObjects", command: "ParsedCommandData"):
 	ScriptValidationErrors = ClassificatorObject.validate_script(ExecutableLines)
 
 	for ErrorData in ScriptValidationErrors:
-		system_objects.logger.error(f"[{ErrorData.line.file.name}:{ErrorData.line.number}] {ErrorData.message}")
+		system_objects.printer.error(f"[{ErrorData.line.file.name}:{ErrorData.line.number}] {ErrorData.message}")
 
 	if ScriptValidationErrors:
-		system_objects.logger.critical("Script failure due to validation errors.")
+		system_objects.printer.critical("Script failure due to validation errors.")
 		return None
 
 	try:
 		Procedures = ClassificatorObject.parse_procedures(ExecutableLines)
 	except Exceptions.Utils.Classificator.ScriptRuntimeError as ExecutionData:
-		system_objects.logger.critical(str(ExecutionData))
+		system_objects.printer.critical(str(ExecutionData))
 		return None
 	
 	ClassificationResult = ClassificatorObject.classify(Target, Procedures, ignore_case = IgnoreCase)
 
 	if IsOutputJSON:
-		system_objects.logger.emit_in_stdout(orjson.dumps(ClassificationResult.to_dict()).decode())
-		system_objects.logger.emit_in_log("JSON string dumped in terminal.")
+		system_objects.printer.emit(orjson.dumps(ClassificationResult.to_dict()).decode())
 	else:
-		Templates.PrintClassificationResult(ClassificationResult, Target)
+		system_objects.printer.templates.classification_result(ClassificationResult)
 
 	if FileToWrite:
 		WriteJSON(FileToWrite, ClassificationResult.to_dict())
-		system_objects.logger.info(f"Classification result dumped in file: \"{FileToWrite}\".")
+		system_objects.printer.emit(f"Classification result dumped in file: \"{FileToWrite}\".")
 
 def com_collect(system_objects: "SystemObjects", command: "ParsedCommandData"):
 	"""
@@ -141,17 +139,17 @@ def com_collect(system_objects: "SystemObjects", command: "ParsedCommandData"):
 		CollectedSlugs = EntryPoint.source_operator.collect_slugs(Period, Filters, Pages)
 		AddedSlugs = Collector.add(CollectedSlugs)
 	else:
-		system_objects.logger.critical("Collector method not implemented.")
+		system_objects.printer.critical("Collector method not implemented.")
 		return
 
 	Collector.save(sort = IsSortingEnabled)
 
 	if AddedSlugs:
-		system_objects.logger.info(f"Slugs collected: {AddedSlugs}.")
+		system_objects.printer.emit(f"Slugs collected: {AddedSlugs}.")
 	else:
-		system_objects.logger.info("No new slugs in collection.")
+		system_objects.printer.emit("No new slugs in collection.")
 
-	system_objects.logger.info(f"Done in {Timer.ends()}.")
+	system_objects.printer.emit(f"Done in {Timer.ends()}.")
 
 def com_fid(system_objects: "SystemObjects", command: "ParsedCommandData"):
 	"""
@@ -180,17 +178,17 @@ def com_fid(system_objects: "SystemObjects", command: "ParsedCommandData"):
 
 		if ID:
 			ResultsCount += 1
-			system_objects.logger.info(f"Found ID {ID} for parser \"{CurrentParser}\".")
+			system_objects.printer.emit(f"Found ID {ID} for parser \"{CurrentParser}\".")
 
 			if not SearchAll:
 				break
 
 	if ResultsCount:
-		system_objects.logger.info(f"Total ID found in cache: {ResultsCount}.")
+		system_objects.printer.emit(f"Total ID found in cache: {ResultsCount}.")
 	else:
-		system_objects.logger.info("Tite with same slug not found in cache.")
+		system_objects.printer.emit("Tite with same slug not found in cache.")
 	
-	system_objects.logger.info(f"Done in {Timer.ends()}.")
+	system_objects.printer.emit(f"Done in {Timer.ends()}.")
 
 def com_get(system_objects: "SystemObjects", command: "ParsedCommandData"):
 	"""
@@ -222,16 +220,16 @@ def com_get(system_objects: "SystemObjects", command: "ParsedCommandData"):
 	Result = EntryPoint.source_operator.download_image(Link, Directory, FullName or Name, bool(FullName), ForceMode)
 
 	if Result.error_message:
-		system_objects.logger.error(Result.error_message)
+		system_objects.printer.error(Result.error_message)
 	elif Result.is_already_exists and not Result.is_downloaded:
-		system_objects.logger.info("Image already exists.")
+		system_objects.printer.emit("Image already exists.")
 	elif Result.is_already_exists and Result.is_downloaded:
-		system_objects.logger.info("Image overwritten.")
+		system_objects.printer.emit("Image overwritten.")
 	
 	if Result.path:
-		system_objects.logger.info(f"Image path: \"{Result.path}\".")
+		system_objects.printer.emit(f"Image path: \"{Result.path}\".")
 
-	system_objects.logger.info(f"Done in {Timer.ends()}.")
+	system_objects.printer.emit(f"Done in {Timer.ends()}.")
 
 def com_list(system_objects: "SystemObjects", command: "ParsedCommandData"):
 	"""
@@ -271,7 +269,7 @@ def com_list(system_objects: "SystemObjects", command: "ParsedCommandData"):
 		TableData["SITE"].append(ParserSite)
 		TableData["collect"].append(str(EntryPoint.source_operator.is_collector_implemented))
 
-	Templates.PrintParsersTable(TableData)
+	system_objects.printer.templates.parsers_table(TableData)
 
 def com_parse(system_objects: "SystemObjects", command: "ParsedCommandData"):
 	"""
@@ -318,23 +316,23 @@ def com_parse(system_objects: "SystemObjects", command: "ParsedCommandData"):
 		if LastParsedSlug:
 			Slugs.append(LastParsedSlug)
 		else:
-			system_objects.logger.warning("Last slug undefined. Parse anything firstly.")
+			system_objects.printer.warning("Last slug undefined. Parse anything firstly.")
 
 	elif ParseCollection:
 		Collector = Utils.Collector(EntryPoint)
 		Slugs = list(Collector.load())
-		system_objects.logger.info(f"Titles in collection: {len(Slugs)}.")
+		system_objects.printer.emit(f"Titles in collection: {len(Slugs)}.")
 
 	elif ParseUpdates:
-		system_objects.logger.info("Collecting updates…")
+		system_objects.printer.emit("Collecting updates…")
 		Slugs = list(EntryPoint.source_operator.collect_slugs(period = UpdatesPeriod or 24))
-		system_objects.logger.info(f"Updates collected: {len(Slugs)}.")
+		system_objects.printer.emit(f"Updates collected: {len(Slugs)}.")
 
 	elif ParseLocal:
 		Collector = Utils.Collector(EntryPoint)
 		SlugsCount = Collector.scan_local()
 		Slugs = list(Collector.slugs)
-		system_objects.logger.info(f"Local titles to parsing: {SlugsCount}.")
+		system_objects.printer.emit(f"Local titles to parsing: {SlugsCount}.")
 
 	elif ParseByID:
 		SlugByID = SourceOperator.shared_data.journal.get_slug_by_id(ParseByID)
@@ -342,7 +340,7 @@ def com_parse(system_objects: "SystemObjects", command: "ParsedCommandData"):
 		if SlugByID:
 			Slugs.append(SlugByID)
 		else:
-			system_objects.logger.warning(f"Title with ID {SlugByID} uncached.")
+			system_objects.printer.warning(f"Title with ID {SlugByID} uncached.")
 
 	else:
 		TargetSlug = EntryPoint.source_operator.parse_slug_from_string(Target)
@@ -350,19 +348,19 @@ def com_parse(system_objects: "SystemObjects", command: "ParsedCommandData"):
 		if TargetSlug:
 			Slugs.append(TargetSlug)
 		else:
-			system_objects.logger.warning("Unable to parse title slug from target.")
+			system_objects.printer.warning("Unable to parse title slug from target.")
 
 	if ParseFrom:
 		if ParseFrom in Slugs:
-			system_objects.logger.info(f"Parsing started from title: \"{ParseFrom}\".")
+			system_objects.printer.emit(f"Parsing started from title: \"{ParseFrom}\".")
 			StartIndex = Slugs.index(ParseFrom)
 			Slugs = Slugs[StartIndex:]
 		else:
-			system_objects.logger.warning("Starting slug not found in targets. Ignored.")
+			system_objects.printer.warning("Starting slug not found in targets. Ignored.")
 
 	if not Slugs:
-		system_objects.logger.error("No slugs for parsing.")
-		system_objects.logger.info(f"Done in {Timer.ends()}.")
+		system_objects.printer.error("No slugs for parsing.")
+		system_objects.printer.emit(f"Done in {Timer.ends()}.")
 		return
 
 	ParsedCount: int = 0
@@ -383,25 +381,25 @@ def com_parse(system_objects: "SystemObjects", command: "ParsedCommandData"):
 			Parser = SourceOperator.launch_parser(ContentType)
 
 		Title = Parser.init_empty_title(Slug)
-		system_objects.logger.stages.parsing_start(Title, Index, TotalCount)
+		system_objects.printer.stages.parsing_start(Title, Index, TotalCount)
 
 		ChaptersLoaded = Title.chapters_count
 		if ChaptersLoaded:
 			BranchesCount = len(Title.branches)
-			system_objects.logger.info(f"Loaded {ChaptersLoaded} chapters on {BranchesCount} branches.")
+			system_objects.printer.emit(f"Loaded {ChaptersLoaded} chapters on {BranchesCount} branches.")
 		
 		try:
 			Parser.parse()
 
 			if not ForceMode:
 				MergedChaptersCount = Title.merge()
-				if MergedChaptersCount: system_objects.logger.info(f"Merged {MergedChaptersCount} chapters.")
+				if MergedChaptersCount: system_objects.printer.emit(f"Merged {MergedChaptersCount} chapters.")
 
 			if IsAmendingEnabled:
 				if Title.empty_chapters_count: Parser.amend()
-				else: system_objects.logger.info("No empty chapters. Amending skipped.")
+				else: system_objects.printer.emit("No empty chapters. Amending skipped.")
 			else:
-				system_objects.logger.info("Amending skipped by flag.")
+				system_objects.printer.emit("Amending skipped by flag.")
 
 		except Exceptions.Parsers.AuthorizationRequired:
 			break
@@ -415,27 +413,25 @@ def com_parse(system_objects: "SystemObjects", command: "ParsedCommandData"):
 			continue
 
 		except (JSONDecodeError, Exceptions.Parsers.UnsupportedFormat):
-			system_objects.logger.error("Unsupported JSON format or decoding error.")
+			system_objects.printer.error("Unsupported JSON format or decoding error.")
 			ErrorsCount += 1
 			continue
 
 		except Exception:
 			Traceback = traceback.format_exc().rstrip()
-			system_objects.logger.error("Current title skipped due to exception.")
-			system_objects.logger.emit_in_stdout(Traceback, parse_html = False)
-			system_objects.logger.emit_in_log(f"Raised exception: \n{Traceback}")
+			system_objects.printer.error(f"Current title skipped due to exception: \"{Traceback}\".")
 			ErrorsCount += 1
 			continue
 
 		if DownloadImages: Parser.download_images(ForceMode)
-		else: system_objects.logger.info("Images downloading skipped by flag.")
+		else: system_objects.printer.emit("Images downloading skipped by flag.")
 
-		if Parser.save(IsSortingEnabled): system_objects.logger.info("Saved.")
-		else: system_objects.logger.info("No changes. Saving skipped.")
+		if Parser.save(IsSortingEnabled): system_objects.printer.emit("Saved.")
+		else: system_objects.printer.emit("No changes. Saving skipped.")
 		ParsedCount += 1
 
-	Templates.PrintParsingSummary(ParsedCount, NotFoundCount, ErrorsCount)
-	system_objects.logger.info(f"Done in {Timer.ends()}.")
+	system_objects.printer.templates.parsing_summary(ParsedCount, NotFoundCount, ErrorsCount)
+	system_objects.printer.emit(f"Done in {Timer.ends()}.")
 
 def com_repair(system_objects: "SystemObjects", command: "ParsedCommandData"):
 	"""
@@ -456,7 +452,7 @@ def com_repair(system_objects: "SystemObjects", command: "ParsedCommandData"):
 	IsTargetChapter: bool = command.check_key("--chapter")
 
 	if not IsTargetChapter:
-		system_objects.logger.error("For now only chapters supported as target to repairing.")
+		system_objects.printer.error("For now only chapters supported as target to repairing.")
 		exit(1)
 
 	if not Filename.endswith(".json"):
@@ -477,20 +473,17 @@ def com_repair(system_objects: "SystemObjects", command: "ParsedCommandData"):
 	Title = Parser.init_empty_title(TypingResult.slug)
 
 	if Title.load(Filename, By.Filename):
-		system_objects.logger.info(f"Loaded file: <b>{Filename}</b>.")
+		system_objects.printer.emit(f"Loaded file: <i>{Filename}</i>.")
 	else:
-		system_objects.logger.error(f"Unable load file: <b>{Filename}</b>.")
+		system_objects.printer.error(f"Unable load file: <b>{Filename}</b>.")
 		exit(1)
 
-	system_objects.logger.emit_in_stdout(f"Repairing chapter <b>{TargetID}</b>… ", end_line = False)
+	system_objects.printer.emit(f"Repairing chapter <b>{TargetID}</b>… ", end_line = False)
 
-	if Parser.repair(TargetID):
-		system_objects.logger.emit_in_stdout("Done.")
-		system_objects.logger.emit_in_log(f"Chapter {TargetID} repaired.")
-	else:
-		system_objects.logger.warning(f"Chapter {TargetID} is empty. Repairing failure?")
+	if Parser.repair(TargetID): system_objects.printer.emit("Done.")
+	else: system_objects.printer.warning("Chapter is empty. Repairing failure?")
 
-	if Parser.save(): system_objects.logger.info("Saved.")
-	else: system_objects.logger.info("No changes. Saving skipped.")
+	if Parser.save(): system_objects.printer.emit("Saved.")
+	else: system_objects.printer.emit("No changes. Saving skipped.")
 
-	system_objects.logger.info(f"Done in {Timer.ends()}.")
+	system_objects.printer.emit(f"Done in {Timer.ends()}.")

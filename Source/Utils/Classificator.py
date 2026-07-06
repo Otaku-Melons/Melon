@@ -23,7 +23,7 @@ class ClassificatorsTypes(Enum):
 
 @dataclass(frozen = True)
 class ClassificationResult:
-	"""Результат классификации."""
+	"""Результат обработки классификатора."""
 
 	input: str
 	is_procedure_found: bool

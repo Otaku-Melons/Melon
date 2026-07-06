@@ -105,7 +105,7 @@ class BaseBuilder:
 
 		self._ParserSettings = self._Parser.settings
 		self._Temper = self._SystemObjects.temper
-		self._Logger = self._SystemObjects.logger
+		self._Printer = self._SystemObjects.printer
 
 		self._BuildSystem = None
 

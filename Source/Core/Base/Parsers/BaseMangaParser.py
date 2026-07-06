@@ -29,7 +29,7 @@ class BaseMangaParser(BaseParser):
 					self._Amend(CurrentBranch, CurrentChapter)
 
 					if CurrentChapter.slides:
-						self.portals.logger.stages.chapter_amended(CurrentChapter)
+						self.portals.printer.stages.chapter_amended(CurrentChapter)
 						AmendedChaptersCount += 1
 						sleep(self.settings.common.delay)
 

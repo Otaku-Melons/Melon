@@ -93,7 +93,7 @@ class RanobeBuilder(BaseBuilder):
 		"""
 
 		TargetBranch: "Branch" = self._SelectBranch(title.branches, branch_id)
-		self._SystemObjects.logger.info(f"Building branch {TargetBranch.id}…")
+		self._SystemObjects.printer.emit(f"Building branch {TargetBranch.id}…")
 
 		Book = epub.EpubBook()
 		Book.set_title(title.localized_name)
