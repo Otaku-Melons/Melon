@@ -1,22 +1,33 @@
 from .Components.WordsDictionary import Presets, WordsDictionary
 
+from Source.Core.Base.Parsers.Components.ImagesDownloader import ImageData, ImagesDownloader, ImageDownloadingResult
 from Source.Core.Base.Formats.BaseFormat import BaseBranch, BaseTitle
 from Source.Core import Exceptions
 
 from dublib.Methods.Decorators import run_before_method
+from dublib.CLI.Templates.Bus import MessagesTypes
 
-from typing import Any, Callable, cast, TYPE_CHECKING
+from typing import Any, cast, Sequence, TYPE_CHECKING
 from abc import ABC, abstractmethod
+from pathlib import Path
+from enum import Enum
 
 if TYPE_CHECKING:
-	from Source.Core.Base.Parsers.Components.ImagesDownloader import ImagesDownloader, ImageDownloadingResult
 	from Source.Core.Base.Parsers.Components import ParserManifest, ParserSettings
 	from Source.Core.Base.SourceOperator import BaseSourceOperator
 	from Source.Core.SystemObjects.Logger import Portals
 
 	from dublib.WebRequestor import WebRequestor
 
-	from pathlib import Path
+#==========================================================================================#
+# >>>>> ПЕРЕЧИСЛЕНИЯ <<<<< #
+#==========================================================================================#
+
+class _ImagesTypes(Enum):
+	"""Типы скачиваемых изображений."""
+
+	Cover = "covers"
+	Person = "persons"
 
 #==========================================================================================#
 # >>>>> ОСНОВНОЙ КЛАСС <<<<< #
@@ -42,7 +53,7 @@ class BaseParser(ABC):
 		return self._SourceOperator.manifest
 
 	@property
-	def temp_directory(self) -> "Path":
+	def temp_directory(self) -> Path:
 		"""Путь ко временному каталогу парсера."""
 
 		return self._SourceOperator.system_objects.temper.get_parser_temp_directory(self.manifest.parser_name)
@@ -86,6 +97,52 @@ class BaseParser(ABC):
 	#==========================================================================================#
 	# >>>>> НАСЛЕДУЕМЫЕ МЕТОДЫ <<<<< #
 	#==========================================================================================#
+
+	@run_before_method("_RequireTitle")
+	def __DownloadImages(self, images_data: Sequence[ImageData], image_type: _ImagesTypes, force_mode: bool) -> list[ImageDownloadingResult]:
+
+		self._Title = cast(BaseTitle, self._Title)
+		ImageDirecory: Path = self.settings.directories.images / self._Title.used_filename / image_type.value
+		ImageDirecory.mkdir(parents = True, exist_ok = True)
+		Results: list = list()
+
+		for CurrentImageData in images_data:
+			Type = image_type.name.lower()
+			self.portals.logger.emit_in_stdout(f"Downloading {Type} \"{CurrentImageData.filename}\"… ", end_line = False)
+			
+			Result = self._SourceOperator.images_downloader.download_image(CurrentImageData.link, ImageDirecory, force_mode = force_mode)
+			Results.append(Result)
+			
+			if Result.resolution:
+				CurrentImageData.set_resolution(Result.resolution)
+			
+			# To-Do: рефакторинг вывода?
+			if Result.is_downloaded:
+				if Result.is_already_exists:
+					self.portals.logger.emit_in_stdout("Overwritten.")
+					self.portals.logger.emit_in_log(f"{Type.title()} image \"{CurrentImageData.filename}\" overwritten.")
+				else:
+					self.portals.logger.emit_in_stdout("Done.")
+					self.portals.logger.emit_in_log(f"{Type.title()} image \"{CurrentImageData.filename}\" downloaded.")
+
+			elif Result.is_already_exists:
+				self.portals.logger.emit_in_stdout("Already exists.")
+				self.portals.logger.emit_in_log(f"{Type.title()} image \"{CurrentImageData.filename}\" already exists.")
+
+			elif Result.is_replaced_by_stub:
+				self.portals.logger.emit_in_stdout("Replaced by stub.")
+				self.portals.logger.emit_in_log(f"{Type.title()} image \"{CurrentImageData.filename}\" replaced by stub.")
+
+			else:
+				if Result.error_message:
+					self.portals.logger.emit_in_stdout(Result.error_message, MessagesTypes.Error)
+					self.portals.logger.emit_in_log(f"{Type.title()} image \"{CurrentImageData.filename}\" downloading error: {Result.error_message}.", MessagesTypes.Error)
+				else:
+					self.portals.logger.emit_in_stdout("Unknown error.", MessagesTypes.Error)
+					self.portals.logger.emit_in_log(f"{Type.title()} image \"{CurrentImageData.filename}\" downloading unknown error.", MessagesTypes.Error)
+				
+
+		return Results
 
 	def _RequireTitle(self):
 		"""
@@ -156,41 +213,25 @@ class BaseParser(ABC):
 		pass
 
 	@run_before_method("_RequireTitle")
-	def download_covers(self, force_mode: bool, callback_start: Callable | None = None, callback_end: Callable | None = None) -> "tuple[ImageDownloadingResult, ...]":
+	def download_images(self, force_mode: bool) -> "tuple[ImageDownloadingResult, ...]":
 		"""
 		Скачивает обложки и портреты персонажей.
 
 		:param force_mode: Переключает режим перезаписи существующих изображений.
 		:type force_mode: bool
-		:param callback_start: Функция, в которую будут передаваться обложки перед началом их скачивания.
-		:type callback_start: Callable | None
-		:param callback_end: Функция, в которую будут передаваться результаты скачивания обложки.
-		:type callback_end: Callable | None
 		:return: Последовательность результатов скачивания.
 		:rtype: tuple[ImageDownloadingResult, ...]
 		"""
 
 		self._Title = cast(BaseTitle, self._Title)
+		
+		Results = self.__DownloadImages(self._Title.covers, _ImagesTypes.Cover, force_mode)
 
-		Covers = self._Title.covers
-		Results = list()
+		PersonsImages: list[ImageData] = list()
+		for CurrentPerson in self._Title.perons:
+			PersonsImages += list(CurrentPerson.images)
 
-		if Covers:
-			CoversDirectory = self.settings.directories.images / self._Title.used_filename / "covers"
-			CoversDirectory.mkdir(parents = True, exist_ok = True)
-
-			for Cover in Covers:
-				if callback_start:
-					callback_start(Cover)
-				
-				Result = self._SourceOperator.images_downloader.download_image(Cover.link, CoversDirectory, force_mode = force_mode)
-				Results.append(Result)
-				
-				if Result.resolution:
-					Cover.set_resolution(Result.resolution)
-
-				if callback_end:
-					callback_end(Result)
+		Results += self.__DownloadImages(PersonsImages, _ImagesTypes.Person, force_mode)
 
 		return tuple(Results)
 

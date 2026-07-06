@@ -32,7 +32,7 @@ class Chapter(BaseChapter):
 	#==========================================================================================#
 
 	@property
-	def images(self) -> "tuple[ImageData, ...]":
+	def slides(self) -> "tuple[ImageData, ...]":
 		"""Последовательность изображений."""
 
 		return tuple(self.__Slides.values())
@@ -75,7 +75,7 @@ class Chapter(BaseChapter):
 		:rtype: bool
 		"""
 
-		return not bool(self.images)
+		return not bool(self.slides)
 
 	def _FromDict(self, data: dict):
 		"""

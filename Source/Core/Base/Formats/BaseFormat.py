@@ -2,8 +2,8 @@ from .Components.Functions import SafelyReadTitleJSON
 from .Components.Structs import ChapterSearchResult
 from .Components.Enums import By, Statuses
 
-from Source.Core.Base.Parsers.Components.ImagesDownloader import ImageData, ImageResolution
 from Source.Core.Base.Parsers.Components.WordsDictionary import CheckLanguageCode
+from Source.Core.Base.Parsers.Components.ImagesDownloader import ImageData
 from Source.Core import Exceptions
 
 from dublib.Methods.Data import RemoveRecurringSubstrings, Zerotify
@@ -14,6 +14,7 @@ from abc import ABC, abstractmethod
 from pathlib import Path
 from os import PathLike
 import hashlib
+import orjson
 import json
 import os
 
@@ -44,10 +45,10 @@ class Person:
 		return self.__Data["another_names"]
 
 	@property
-	def images(self) -> tuple[ImageData, ...]:
+	def images(self) -> list[ImageData]:
 		"""Список данных портретов."""
 
-		return self.__Data["images"]
+		return self.__Images.copy()
 
 	@property
 	def description(self) -> str | None:
@@ -93,6 +94,20 @@ class Person:
 		"""
 
 		self.__Images.append(image)
+
+	def find_image_by_link(self, link: str) -> ImageData | None:
+		"""
+		Производит поиск изображения по ссылке.
+
+		:param link: Ссылка на изображение.
+		:type link: str
+		:return: Изображение или `None` при отсутствии оного.
+		:rtype: ImageData | None
+		"""
+
+		for CurrentImage in self.__Images:
+			if CurrentImage.link == link:
+				return CurrentImage
 
 	def set_description(self, description: str | None):
 		"""
@@ -805,9 +820,9 @@ class BaseTitle(ABC):
 		if not self.path.exists():
 			return False
 
-		LocalHasher = hashlib.sha256(str(ReadJSON(self.path)).encode())
-		MemoryHasher = hashlib.sha256(str(self._Data).encode())
-
+		LocalHasher = hashlib.sha256(orjson.dumps(ReadJSON(self.path)))
+		MemoryHasher = hashlib.sha256(orjson.dumps(self._Data))
+		
 		return LocalHasher.hexdigest() == MemoryHasher.hexdigest()
 
 	def _SearchFileInDirectory(self, directory: str | PathLike[str], identificator: str, type: By) -> dict | None:
@@ -1002,7 +1017,7 @@ class BaseTitle(ABC):
 		self._SystemObjects = parser.source_operator.system_objects
 		
 		self._Data: dict[str, Any] = self._GenerateTitleData()
-		self._Data["fromat"] = "melon-" + type(self).__name__.lower()
+		self._Data["format"] = "melon-" + type(self).__name__.lower()
 		self._Data["slug"] = slug
 
 		self._Branches: dict[int, BaseBranch] = dict()
@@ -1010,45 +1025,6 @@ class BaseTitle(ABC):
 		self._Covers: list[ImageData] = list()
 
 		self._PostInitMethod()
-
-	def find_cover_by_link(self, link: str) -> ImageData | None:
-		"""
-		Производит поиск обложки по ссылке.
-
-		:param link: Ссылка на обложку.
-		:type link: str
-		:return: Обложка или `None` при отсутствии оной.
-		:rtype: ImageData | None
-		"""
-
-		for CurrentCover in self._Covers:
-			if CurrentCover.link == link:
-				return CurrentCover
-
-	def find_chapter_by_id(self, chapter_id: int) -> ChapterSearchResult | None:
-		"""
-		Ищет главу по её ID.
-
-		:param chapter_id: ID главы.
-		:type chapter_id: int
-		:return: Результат поиска.
-		:rtype: ChapterSearchResult | None
-		"""
-
-		BranchResult = None
-		ChapterResult = None
-
-		for CurrentBranch in self._Branches.values():
-			for CurrentChapter in CurrentBranch.chapters:
-				if CurrentChapter.id == chapter_id:
-					BranchResult = CurrentBranch
-					ChapterResult = CurrentChapter
-					break
-
-		if all((BranchResult, ChapterResult)):
-			return ChapterSearchResult(cast(BaseBranch, BranchResult), ChapterResult) if ChapterResult else None
-
-		return None
 
 	def load(self, identificator: int | str, selector_type: By = By.Slug) -> bool:
 		"""
@@ -1091,16 +1067,24 @@ class BaseTitle(ABC):
 
 		for CoverData in CoversData:
 			Link: str = CoverData["link"]
-			Width: int | None = CoverData.get("width")
-			Height: int | None = CoverData.get("height")
-
-			if not all((Width, Height)):
-				continue
-
 			TargetCover = self.find_cover_by_link(Link)
 			if TargetCover:
-				TargetCover.set_resolution(ImageResolution(cast(int, Width), cast(int, Height)))
+				TargetCover.create_resolution(CoverData.get("width"), CoverData.get("height"))
 
+		#---> Слияние размеров портретов персонажей.
+		#==========================================================================================#
+		PersonsData: list[dict] = DataBuffer["persons"]
+
+		for PersonData in PersonsData:
+			PersonObject = self.find_person_by_name(PersonData["name"])
+			if not PersonObject: continue
+
+			for CurrentImage in cast(list[dict], PersonData["images"]):
+				Link: str = CurrentImage["link"]
+				TargetImage = PersonObject.find_image_by_link(Link)
+				if TargetImage:
+					TargetImage.create_resolution(CurrentImage.get("width"), CurrentImage.get("height"))
+			
 		#---> Слияние контента глав.
 		#==========================================================================================#
 		ContentData: dict[str, dict] = DataBuffer["content"]
@@ -1142,6 +1126,63 @@ class BaseTitle(ABC):
 			self._Parser.source_operator.shared_data.journal.update(cast(int, self.id), cast(str, self.slug))
 
 		return not IsLocalFileEqual
+
+	#==========================================================================================#
+	# >>>>> ПУБЛИЧНЫЕ МЕТОДЫ ПОИСКА ОБЪЕКТОВ <<<<< #
+	#==========================================================================================#
+
+	def find_cover_by_link(self, link: str) -> ImageData | None:
+		"""
+		Производит поиск обложки по ссылке.
+
+		:param link: Ссылка на обложку.
+		:type link: str
+		:return: Обложка или `None` при отсутствии оной.
+		:rtype: ImageData | None
+		"""
+
+		for CurrentCover in self._Covers:
+			if CurrentCover.link == link:
+				return CurrentCover
+
+	def find_chapter_by_id(self, chapter_id: int) -> ChapterSearchResult | None:
+		"""
+		Ищет главу по её ID.
+
+		:param chapter_id: ID главы.
+		:type chapter_id: int
+		:return: Результат поиска.
+		:rtype: ChapterSearchResult | None
+		"""
+
+		BranchResult = None
+		ChapterResult = None
+
+		for CurrentBranch in self._Branches.values():
+			for CurrentChapter in CurrentBranch.chapters:
+				if CurrentChapter.id == chapter_id:
+					BranchResult = CurrentBranch
+					ChapterResult = CurrentChapter
+					break
+
+		if all((BranchResult, ChapterResult)):
+			return ChapterSearchResult(cast(BaseBranch, BranchResult), ChapterResult) if ChapterResult else None
+
+		return None
+
+	def find_person_by_name(self, name: str) -> Person | None:
+		"""
+		Производит поиск персонажа по имени.
+
+		:param name: Имя персонажа.
+		:type name: str
+		:return: Обложка или `None` при отсутствии оной.
+		:rtype: ImageData | None
+		"""
+
+		for CurrentPerson in self._Persons:
+			if CurrentPerson.name == name:
+				return CurrentPerson
 
 	#==========================================================================================#
 	# >>>>> ПУБЛИЧНЫЕ МЕТОДЫ УСТАНОВКИ СВОЙСТВ <<<<< #

@@ -298,6 +298,7 @@ def com_parse(system_objects: "SystemObjects", command: "ParsedCommandData"):
 	UpdatesPeriod: int | None = command.get_key_value("--period", expected_type = int)
 	ParseLocal: bool = command.check_flag("-local")
 	ParseByID: int | None = command.get_key_value("--id", expected_type = int)
+	DownloadImages: bool = not command.check_flag("-no-images")
 
 	if ParserName not in system_objects.driver.parsers_names:
 		raise Exceptions.System.ParserNotFound(ParserName)
@@ -423,6 +424,10 @@ def com_parse(system_objects: "SystemObjects", command: "ParsedCommandData"):
 			system_objects.logger.emit_in_stdout(Traceback, parse_html = False)
 			system_objects.logger.emit_in_log(f"Raised exception: \n{Traceback}")
 			ErrorsCount += 1
+			continue
+
+		if DownloadImages: Parser.download_images(ForceMode)
+		else: system_objects.logger.info("Images downloading skipped by flag.")
 
 		if Parser.save(IsSortingEnabled): system_objects.logger.info("Saved.")
 		else: system_objects.logger.info("No changes. Saving skipped.")
