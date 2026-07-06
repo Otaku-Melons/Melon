@@ -1,7 +1,10 @@
 from .SourceOperator import BaseSourceOperator
 
+from Source.Core.Base.Formats.Components.Functions import SafelyReadTitleJSON
+from Source.Core.Base.Parsers.Components.Manifest import ContentTypes
 from Source.Core.Base.Parsers.Components import ParserSettings
 
+from dataclasses import dataclass
 from typing import TYPE_CHECKING
 import importlib
 
@@ -12,6 +15,17 @@ if TYPE_CHECKING:
 	from Source.Core.SystemObjects.Temper import SharedData
 	from Source.Core.SystemObjects.Logger import Portals
 	from Source.Core.SystemObjects import SystemObjects
+
+#==========================================================================================#
+# >>>>> ВСПОМОГАТЕЛЬНЫЕ СТРУКТУРЫ ДАННЫХ <<<<< #
+#==========================================================================================#
+
+@dataclass
+class FileTypingResult:
+	"""Результат определения типа файла тайтла."""
+
+	slug: str
+	content_type: ContentTypes
 
 #==========================================================================================#
 # >>>>> ОСНОВНОЙ КЛАСС <<<<< #
@@ -116,3 +130,23 @@ class BaseEntryPoint:
 		self._SourceOperator: BaseSourceOperator = Module.SourceOperator(self)
 
 		self._PostInitMethod()
+
+	def get_content_type_by_file(self, filename: str) -> FileTypingResult:
+		"""
+		Определяет тип контента по файлу.
+
+		:param filename: Имя файла с расширением или без него.
+		:type filename: str
+		:return: Результат определения типа файла тайтла.
+		:rtype: FileTypingResult
+		"""
+
+		if not filename.endswith(".json"):
+			filename += ".json"
+
+		FilePath = self.settings.directories.titles / filename
+		TitleData = SafelyReadTitleJSON(FilePath)
+		Type: str = TitleData["format"]
+		TypeName: str = Type.split("-")[1]
+		
+		return FileTypingResult(TitleData["slug"], ContentTypes(TypeName))

@@ -43,11 +43,3 @@ Com.base.add_flag("-git", description = "Initialize new Git repository.")
 COMMANDS.append(Com)
 
 
-Com = Command("repair", "Repair chapter content in locally saved title.")
-ComPos = Com.create_position("FILENAME", "Source file.", important = True)
-ComPos.add_argument(description = "Filename of locally saved title.")
-ComPos = Com.create_position("TARGET", "Target for repairing.", important = True)
-ComPos.add_key("chapter", ValidableTypes.Number, "Chapter ID.")
-ComPos = Com.create_position("PARSER", "Name of parser.", important = True)
-ComPos.add_key("use", ValidableTypes.Alpha, "Parser name.")
-COMMANDS.append(Com)

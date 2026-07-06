@@ -2,6 +2,7 @@ from . import Functions
 from . import Templates
 
 from Source.Core.Base.Parsers.Components.Manifest import ContentTypes
+from Source.Core.Base.Formats.Components.Enums import By
 from Source.Core import Exceptions
 from Source import Utils
 
@@ -282,7 +283,7 @@ def com_parse(system_objects: "SystemObjects", command: "ParsedCommandData"):
 	:type command: ParsedCommandData
 	"""
 
-	#---> Выполнение команды.
+	#---> Парсинг параметров команды.
 	#==========================================================================================#
 	Target: str = command.get_position_value("TARGET", expected_type = str)
 	ParserName: str = cast(str, command.get_key_value("--use", expected_type = str))
@@ -381,7 +382,7 @@ def com_parse(system_objects: "SystemObjects", command: "ParsedCommandData"):
 			CurrentContentType = ContentType
 			Parser = SourceOperator.launch_parser(ContentType)
 
-		Title = Parser.init_title(Slug)
+		Title = Parser.init_empty_title(Slug)
 		system_objects.logger.stages.parsing_start(Title, Index, TotalCount)
 
 		ChaptersLoaded = Title.chapters_count
@@ -434,4 +435,62 @@ def com_parse(system_objects: "SystemObjects", command: "ParsedCommandData"):
 		ParsedCount += 1
 
 	Templates.PrintParsingSummary(ParsedCount, NotFoundCount, ErrorsCount)
+	system_objects.logger.info(f"Done in {Timer.ends()}.")
+
+def com_repair(system_objects: "SystemObjects", command: "ParsedCommandData"):
+	"""
+	Заново получает элемент контента с сервера.
+		
+	:param system_objects: Коллекция системных объектов.
+	:type system_objects: SystemObjects
+	:param command: Данные команды.
+	:type command: ParsedCommandData
+	"""
+
+	#---> Выполнение команды.
+	#==========================================================================================#
+	Filename: str = command.get_position_value("FILE", expected_type = str)
+	ParserName: str = command.get_position_value("PARSER", expected_type = str)
+	TargetID: int = command.get_position_value("TARGET", expected_type = int)
+
+	IsTargetChapter: bool = command.check_key("--chapter")
+
+	if not IsTargetChapter:
+		system_objects.logger.error("For now only chapters supported as target to repairing.")
+		exit(1)
+
+	if not Filename.endswith(".json"):
+		Filename += ".json"
+
+	if ParserName not in system_objects.driver.parsers_names:
+		raise Exceptions.System.ParserNotFound(ParserName)
+	
+	#---> Выполнение команды.
+	#==========================================================================================#
+	Timer = Utils.Timer(start = True)
+	EntryPoint = system_objects.driver.get_entry_point(ParserName)
+	SourceOperator = EntryPoint.source_operator
+	
+
+	TypingResult = EntryPoint.get_content_type_by_file(Filename)
+	Parser: BaseParser = SourceOperator.launch_parser(TypingResult.content_type)
+	Title = Parser.init_empty_title(TypingResult.slug)
+
+	if Title.load(Filename, By.Filename):
+		system_objects.logger.info(f"Loaded file: <b>{Filename}</b>.")
+	else:
+		system_objects.logger.error(f"Unable load file: <b>{Filename}</b>.")
+		exit(1)
+
+	system_objects.logger.emit_in_stdout(f"Repairing chapter <b>{TargetID}</b>… ", end_line = False)
+
+	if Parser.repair(TargetID):
+		system_objects.logger.emit_in_stdout("Done.")
+		system_objects.logger.emit_in_log(f"Chapter {TargetID} repaired.")
+	else:
+		system_objects.logger.warning(f"Chapter {TargetID} is empty. Repairing failure?")
+
+	if Parser.save(): system_objects.logger.info("Saved.")
+	else: system_objects.logger.info("No changes. Saving skipped.")
+
 	system_objects.logger.info(f"Done in {Timer.ends()}.")

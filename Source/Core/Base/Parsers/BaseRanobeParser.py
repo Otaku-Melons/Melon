@@ -33,7 +33,7 @@ class BaseRanobeParser(BaseParser):
 						AmendedChaptersCount += 1
 						sleep(self.settings.common.delay)
 
-	def init_title(self, slug: str) -> Ranobe:
+	def init_empty_title(self, slug: str) -> Ranobe:
 		"""
 		Устанавливает пустой тайтл для парсера.
 

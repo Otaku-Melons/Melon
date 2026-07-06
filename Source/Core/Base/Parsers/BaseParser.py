@@ -253,7 +253,7 @@ class BaseParser(ABC):
 		return Preset
 
 	@abstractmethod
-	def init_title(self, slug: str) -> BaseTitle:
+	def init_empty_title(self, slug: str) -> BaseTitle:
 		"""
 		Устанавливает пустой тайтл для парсера.
 

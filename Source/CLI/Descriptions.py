@@ -68,3 +68,13 @@ Com.base.add_flag("-sort", description = "Enable chapters sorting after parsing.
 Com.base.add_key("--period", type = ValidableTypes.UnsignedInteger, description = "Period in hours for parsing. Use with \"-updates\" flag.")
 Com.base.add_key("--from", description = "Skip titles before this slug.")
 COMMANDS.append(Com)
+
+Com = Command("repair", "Repair chapter chapter in local title.")
+ComPos = Com.create_position("FILE", "Title filename with or without type.", important = True)
+ComPos.set_argument()
+ComPos = Com.create_position("TARGET", "Target to repairing.", important = True)
+ComPos.add_key("--branch", type = ValidableTypes.UnsignedInteger, description = "Branch ID.")
+ComPos.add_key("--chapter", type = ValidableTypes.UnsignedInteger, description = "Chapter ID.")
+ComPos = Com.create_position("PARSER", "Name of parser.", important = True)
+ComPos.add_key("--use")
+COMMANDS.append(Com)

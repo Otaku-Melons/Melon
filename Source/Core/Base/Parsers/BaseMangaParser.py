@@ -33,7 +33,7 @@ class BaseMangaParser(BaseParser):
 						AmendedChaptersCount += 1
 						sleep(self.settings.common.delay)
 
-	def init_title(self, slug: str) -> Manga:
+	def init_empty_title(self, slug: str) -> Manga:
 		"""
 		Устанавливает пустой тайтл для парсера.
 

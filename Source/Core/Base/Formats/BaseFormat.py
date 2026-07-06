@@ -735,7 +735,7 @@ class BaseTitle(ABC):
 		"""
 		Открывает локальный JSON файл и считывает его данные.
 
-		:param identificator: Идентификатор тайтла: ID или алиас.
+		:param identificator: Идентификатор тайтла: имя файла (без расширения), ID или алиас тайтла.
 		:type identificator: int | str
 		:param selector_type: Режим поиска файла. По умолчанию `By.Slug` – идентификатор соответствует алиасу тайтла.
 		:type selector_type: By
@@ -748,12 +748,20 @@ class BaseTitle(ABC):
 		DataBuffer: dict = dict()
 		TitlesDirectory = self._Parser.settings.directories.titles
 		Journal = self._Parser.source_operator.shared_data.journal
-		FilePath: Path | None = TitlesDirectory / f"{identificator}.json"
+		FilePath: Path | None = None
 
 		match selector_type:
 
 			case By.Filename:
-				FilePath = TitlesDirectory / f"{identificator}.json"
+
+				if type(identificator) is int:
+					raise ValueError("Filename must be str.")
+				
+				identificator = cast(str, identificator)
+
+				Filename: str = identificator if identificator.endswith(".json") else f"{identificator}.json"
+				FilePath = TitlesDirectory / Filename
+
 				if FilePath.exists():
 					DataBuffer = SafelyReadTitleJSON(FilePath)
 
@@ -886,8 +894,8 @@ class BaseTitle(ABC):
 
 			for CurrentImageData in Images:
 				CurrentImageData = cast(dict, CurrentImageData)
-				Image = ImageData(CoverData["link"])
-				Image.create_resolution(CoverData.get("width"), CoverData.get("height"))
+				Image = ImageData(CurrentImageData["link"])
+				Image.create_resolution(CurrentImageData.get("width"), CurrentImageData.get("height"))
 				Buffer.add_image(Image)
 
 			if Description:
@@ -923,6 +931,8 @@ class BaseTitle(ABC):
 
 	def _UpdateCovers(self):
 		"""Обновляет данные обложек во внутреннем словарном хранилище данных тайтла."""
+
+		self._Data["covers"] = list()
 
 		for CurrentCover in self._Covers:
 			self._Data["covers"].append(CurrentCover.to_dict())
@@ -1030,7 +1040,7 @@ class BaseTitle(ABC):
 		"""
 		Открывает локальный JSON файл и интерпретирует его данные.
 
-		:param identificator: Идентификатор тайтла: ID или алиас.
+		:param identificator: Идентификатор тайтла: имя файла (без расширения), ID или алиас тайтла.
 		:type identificator: int | str
 		:param selector_type: Режим поиска файла. По умолчанию `By.Slug` – идентификатор соответствует алиасу тайтла.
 		:type selector_type: By
