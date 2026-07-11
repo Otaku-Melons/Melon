@@ -5,7 +5,7 @@ dependencies = [
 	"beautifulsoup4",
 	"EbookLib",
 	"dulwich>=1.2.6",
-	"dublib==0.28.2",
+	"dublib==0.28.4",
 	"pillow",
 ]
 
