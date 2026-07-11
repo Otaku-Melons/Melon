@@ -3,7 +3,7 @@ from dublib.CLI.TextStyler import GetStyledTextFromHTML
 
 COMMANDS: list[Command] = list()
 
-Com = Command("build-manga", "Build manga read-ready manga content.")
+Com = Command("build-manga", "Build read-ready manga content.")
 ComPos = Com.create_position("FILE", "Filename of local JSON.", important = True)
 ComPos.set_argument()
 ComPos = Com.create_position("PARSER", "Name of parser.", important = True)
@@ -18,6 +18,14 @@ ComPos.add_flag("-pdf", description = "Make *.CBZ files.")
 Com.base.add_key("--cnt", description = "Template for chapters naming.")
 Com.base.add_key("--vnt", description = "Template for volumes naming.")
 Com.base.add_flag("-s", description = "Enable chapters sorting by volumes directories.")
+COMMANDS.append(Com)
+
+Com = Command("build-ranobe", "Build read-ready ranobe content.")
+ComPos = Com.create_position("FILE", "Filename of local JSON.", important = True)
+ComPos.set_argument()
+ComPos = Com.create_position("PARSER", "Name of parser.", important = True)
+ComPos.add_key("--use")
+Com.base.add_key("--branch", type = ValidableTypes.UnsignedInteger, description = "Branch ID to building.")
 COMMANDS.append(Com)
 
 Com = Command("cacher", "Run ID-slug caching.")

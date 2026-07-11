@@ -1,7 +1,8 @@
 from . import Functions
 
-from Source.Core.Base.Builders.MangaBuilder import MangaBuilder, MangaOutputFormats
+from Source.Core.Builders.MangaBuilder import MangaBuilder, MangaOutputFormats
 from Source.Core.Base.Parsers.Components.Manifest import ContentTypes
+from Source.Core.Builders.RanobeBuilder import RanobeBuilder
 from Source.Core.Base.Formats.Components.Enums import By
 from Source.Core import Exceptions
 from Source import Utils
@@ -32,10 +33,10 @@ def com_build_manga(system_objects: SystemObjects, command: ParsedCommandData):
 
 	#---> Парсинг параметров команды.
 	#==========================================================================================#
-	Filename: str = command.get_position_value("FILE", expected_type = str)
-	ParserName: str = command.get_position_value("PARSER", expected_type = str)
+	Filename: str = command.get_important_position_value("FILE", expected_type = str)
+	ParserName: str = command.get_important_position_value("PARSER", expected_type = str)
 
-	TargetID: int = command.get_position_value("TARGET", expected_type = int)
+	TargetID: int = command.get_important_position_value("TARGET", expected_type = int)
 	IsTargetChapter: bool = command.check_key("--chapter")
 
 	OutputFormat: str | None = command.get_position_value("FORMAT", expected_type = str)
@@ -82,6 +83,48 @@ def com_build_manga(system_objects: SystemObjects, command: ParsedCommandData):
 
 	system_objects.printer.emit(f"Done in {Timer.ends()}.")
 
+def com_build_ranobe(system_objects: SystemObjects, command: ParsedCommandData):
+	"""
+	Строит читаемый контент ранобэ из описательного файла.
+		
+	:param system_objects: Коллекция системных объектов.
+	:type system_objects: SystemObjects
+	:param command: Данные команды.
+	:type command: ParsedCommandData
+	"""
+
+	#---> Парсинг параметров команды.
+	#==========================================================================================#
+	Filename: str = command.get_important_position_value("FILE", expected_type = str)
+	ParserName: str = command.get_important_position_value("PARSER", expected_type = str)
+	BranchID: int | None = command.get_key_value("--branch", expected_type = int)
+
+	if not Filename.endswith(".json"):
+		Filename += ".json"
+
+	if ParserName not in system_objects.driver.parsers_names:
+		raise Exceptions.System.ParserNotFound(ParserName)
+
+	#---> Выполнение команды.
+	#==========================================================================================#
+	Timer = Utils.Timer(start = True)
+	EntryPoint = system_objects.driver.get_entry_point(ParserName)
+	SourceOperator = EntryPoint.source_operator
+	TypingResult = EntryPoint.get_content_type_by_file(Filename)
+	Parser: BaseParser = SourceOperator.launch_parser(TypingResult.content_type)
+	Title = Parser.init_empty_title(TypingResult.slug)
+
+	if Title.load(Filename, By.Filename):
+		system_objects.printer.emit(f"Loaded file: <i>{Filename}</i>.")
+	else:
+		system_objects.printer.error(f"Unable load file: <b>{Filename}</b>.")
+		exit(1)
+
+	Builder = RanobeBuilder(Parser, Title)
+	Builder.build(BranchID)
+
+	system_objects.printer.emit(f"Done in {Timer.ends()}.")
+
 def com_cacher(system_objects: "SystemObjects", command: "ParsedCommandData"):
 	"""
 	Кэширует пары ID-алиас для ускорения файловых операций.
@@ -123,7 +166,7 @@ def com_classify(system_objects: "SystemObjects", command: "ParsedCommandData"):
 
 	#---> Парсинг параметров команды.
 	#==========================================================================================#
-	Target: str = command.get_position_value("VALUE", expected_type = str)
+	Target: str = command.get_important_position_value("VALUE", expected_type = str)
 	IsOutputJSON: bool = command.check_flag("-j")
 	FileToWrite: Path | None = command.get_key_value("--file", expected_type = Path)
 	IgnoreCase: bool = command.check_flag("-i")
@@ -226,7 +269,7 @@ def com_fid(system_objects: "SystemObjects", command: "ParsedCommandData"):
 
 	#---> Парсинг параметров команды.
 	#==========================================================================================#
-	Slug: str = command.get_position_value("SLUG", expected_type = str)
+	Slug: str = command.get_important_position_value("SLUG", expected_type = str)
 	Parsers: tuple[str, ...] = Functions.GetParsersNamesFromKey(system_objects, command.get_key_value("--use", expected_type = str))
 	SearchAll: bool = command.check_flag("-all")
 
@@ -345,7 +388,7 @@ def com_parse(system_objects: "SystemObjects", command: "ParsedCommandData"):
 
 	#---> Парсинг параметров команды.
 	#==========================================================================================#
-	Target: str = command.get_position_value("TARGET", expected_type = str)
+	Target: str = command.get_important_position_value("TARGET", expected_type = str)
 	ParserName: str = cast(str, command.get_key_value("--use", expected_type = str))
 
 	ForceMode: bool = command.check_flag("-f")
@@ -507,9 +550,9 @@ def com_repair(system_objects: "SystemObjects", command: "ParsedCommandData"):
 
 	#---> Выполнение команды.
 	#==========================================================================================#
-	Filename: str = command.get_position_value("FILE", expected_type = str)
-	ParserName: str = command.get_position_value("PARSER", expected_type = str)
-	TargetID: int = command.get_position_value("TARGET", expected_type = int)
+	Filename: str = command.get_important_position_value("FILE", expected_type = str)
+	ParserName: str = command.get_important_position_value("PARSER", expected_type = str)
+	TargetID: int = command.get_important_position_value("TARGET", expected_type = int)
 
 	IsTargetChapter: bool = command.check_key("--chapter")
 

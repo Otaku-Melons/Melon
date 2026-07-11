@@ -1,4 +1,4 @@
-from Source.Core.Base.Builders.BaseBuilder import BaseBuilder
+from Source.Core.Base.Builder import BaseBuilder
 from Source.Core import Exceptions
 
 from dublib.Methods.Data import StringifyFloat

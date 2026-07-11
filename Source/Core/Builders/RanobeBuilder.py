@@ -1,30 +1,24 @@
-from Source.Core.Base.Builders.BaseBuilder import BaseBuilder
+from Source.Core.Base.Builder import BaseBuilder
+from Source.Core import Exceptions
 
+from typing import cast, TYPE_CHECKING
 from dataclasses import dataclass
-from typing import TYPE_CHECKING
 from pathlib import Path
-import enum
 
 from bs4 import BeautifulSoup
 from ebooklib import epub
 
 if TYPE_CHECKING:
-	from Source.Core.Base.Parsers.RanobeParser import RanobeParser
-	from Source.Core.Base.Formats.Ranobe import Branch, Chapter, Ranobe
+	from Source.Core.Base.Formats.Ranobe import BaseBranch, Chapter
 
 #==========================================================================================#
 # >>>>> ВСПОМОГАТЕЛЬНЫЕ СТРУКТУРЫ ДАННЫХ <<<<< #
 #==========================================================================================#
 
-@dataclass
+@dataclass(frozen = True)
 class ChapterItems:
 	content: epub.EpubHtml
-	images: tuple[epub.EpubImage] = tuple()
-
-class RanobeBuildSystems(enum.Enum):
-	"""Перечисление систем сборки ранобэ."""
-
-	EPUB3 = "epub3"
+	images: tuple[epub.EpubImage, ...] = tuple()
 
 #==========================================================================================#
 # >>>>> ОСНОВНОЙ КЛАСС <<<<< #
@@ -34,16 +28,14 @@ class RanobeBuilder(BaseBuilder):
 	"""Сборщик ранобэ."""
 
 	#==========================================================================================#
-	# >>>>> ПУБЛИЧНЫЕ МЕТОДЫ <<<<< #
+	# >>>>> ПРИВАТНЫЕ МЕТОДЫ <<<<< #
 	#==========================================================================================#
 
-	def build_chapter(self, title: "Ranobe", chapter: "Chapter") -> ChapterItems:
+	def __BuildChapter(self, chapter: "Chapter") -> ChapterItems:
 		"""
-		Строит главу ранобэ.
+		Собирает элементы EPUB3 для главы ранобэ.
 
-		:param title: Данные тайтла.
-		:type title: Ranobe
-		:param chapter: Данные главы.
+		:param chapter: Глава.
 		:type chapter: Chapter
 		:return: Набор элементов EPUB3.
 		:rtype: ChapterItems
@@ -57,17 +49,17 @@ class RanobeBuilder(BaseBuilder):
 
 		ChapterImages = list()
 
-
 		Soup = BeautifulSoup("".join(chapter.paragraphs), "html.parser")
 		
 		for Image in Soup.find_all("img"):
-			PathObject = Path(Image["src"])
+			ImageSource = str(Image["src"])
+			PathObject = Path(ImageSource)
 			EpubPath = f"{chapter.id}/{PathObject.name}"
 
 			Buffer = epub.EpubImage(
 				file_name = EpubPath,
 				media_type = "image/" + PathObject.suffix.lstrip("."),
-				content = open(self._ParserSettings.common.images_directory + "/" + PathObject.as_posix(), "rb").read()
+				content = open(self._ParserSettings.directories.images / PathObject, "rb").read()
 			)
 
 			ChapterImages.append(Buffer)
@@ -77,39 +69,55 @@ class RanobeBuilder(BaseBuilder):
 			title = ChapterTitle,
 			file_name = f"{chapter.id}.xhtml",
 			content = f"<h2>{ChapterNumeration}{chapter.name}</h2>" + str(Soup),
-			lang = title.content_language
+			lang = self._Title.content_language
 		)
 		
 		return ChapterItems(ChapterContent, tuple(ChapterImages))
 
-	def build_branch(self, title: "Ranobe", branch_id: int | None = None):
-		"""
-		Собирает ветвь контента ранобэ.
+	#==========================================================================================#
+	# >>>>> ПУБЛИЧНЫЕ МЕТОДЫ <<<<< #
+	#==========================================================================================#
 
-		:param title: Данные тайтла.
-		:type title: Ranobe
-		:param branch_id: ID ветви. По умолчанию собирается первая ветвь.
+	def build(self, branch_id: int | None = None):
+		"""
+		Собирает ранобэ.
+
+		:param branch_id: ID ветви или `None` для сборки самой длинной.
 		:type branch_id: int | None
 		"""
 
-		TargetBranch: "Branch" = self._SelectBranch(title.branches, branch_id)
-		self._SystemObjects.printer.emit(f"Building branch {TargetBranch.id}…")
+		Branches = self._Title.branches
+		if not Branches:
+			raise Exceptions.Builders.BuildingError("Title hasn't branches.")
+		
+		BranchToBuild = Branches[0]
+
+		if branch_id:
+			SearchResult = self._Title.find_branch_by_id(branch_id)
+
+			if SearchResult:
+				raise Exceptions.Builders.BuildingError(f"Branch {branch_id} not found.")
+			
+			BranchToBuild = cast("BaseBranch", SearchResult)
 
 		Book = epub.EpubBook()
-		Book.set_title(title.localized_name)
-		Book.set_language(title.content_language)
-		for Author in title.authors: Book.add_author(Author)
+		Book.set_title(self._Title.localized_name)
+		Book.set_language(self._Title.content_language)
+		for Author in self._Title.authors: Book.add_author(Author)
+
 		Chapters = list()
 
-		for CurrentChapter in TargetBranch.chapters:
-			ChapterItems = self.build_chapter(title, CurrentChapter)
+		for CurrentChapter in BranchToBuild.chapters:
+			ChapterItems = self.__BuildChapter(cast("Chapter", CurrentChapter))
 			Chapters.append(ChapterItems.content)
 			Book.add_item(ChapterItems.content)
 			for Image in ChapterItems.images: Book.add_item(Image)
 
-		Book.toc = tuple(Chapters)
+		Book.toc = Chapters
 		Book.spine = ["nav"] + Chapters
 		Book.add_item(epub.EpubNav())
 
-		Directory = self._SystemObjects.driver.current_parser_settings.directories.archives
-		epub.write_epub(f"{Directory}/{title.localized_name}.epub", Book)
+		FilePath = self._ParserSettings.directories.content / f"{self._Title.localized_name}.epub"
+		epub.write_epub(FilePath, Book)
+
+		self._Printer.emit(f"For <i>{self._Title.slug}</i> builded {BranchToBuild.chapters_count} chapters.")
