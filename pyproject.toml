@@ -15,6 +15,9 @@ dev = [
 	"ruff"
 ]
 
+[tool.setuptools.packages.find]
+include = ["Source*"]
+
 [tool.mypy]
 ignore_missing_imports = true
 check_untyped_defs = true
