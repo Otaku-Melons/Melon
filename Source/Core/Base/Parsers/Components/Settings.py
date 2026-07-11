@@ -1,36 +1,35 @@
-from Source.Core.SystemObjects.Logger import Logger
-from Source.Core.Exceptions import BadSettings
-
-from dublib.Methods.Filesystem import NormalizePath, ReadJSON
+from dublib.Methods.Filesystem import ReadJSON
 from dublib.WebRequestor import Proxy
 
 from types import MappingProxyType
+from typing import Any, cast, Literal
+from pathlib import Path
 from os import PathLike
-from typing import Any
+from time import sleep
 import hashlib
-import os
 import re
 
 #==========================================================================================#
 # >>>>> СТАНДАРТНЫЕ НАСТРОЙКИ <<<<< #
 #==========================================================================================#
 
-Settings = MappingProxyType({
+_BASE_SETTINGS = MappingProxyType({
+	"directories": {
+		"content": None,
+		"images": None,
+		"titles": None
+	},
 	"common": {
-		"archives_directory": "",
-		"images_directory": "",
-		"titles_directory": "",
-		"bad_image_stub": "",
+		"bad_image_stub": None,
 		"pretty": True,
 		"use_id_as_filename": False,
 		"sizing_images": True,
 		"retries": 1,
-		"delay": 1
+		"delay": 1.0
 	},
 	"filters": {
 		"text_regexs": [],
 		"text_strings": [],
-		"image_md5": [],
 		"image_min_height": None,
 		"image_min_width": None,
 		"image_max_height": None,
@@ -41,7 +40,7 @@ Settings = MappingProxyType({
 })
 
 #==========================================================================================#
-# >>>>> ДОПОЛНИТЕЛЬНЫЕ СТРУКТУРЫ ДАННЫХ <<<<< #
+# >>>>> ВНУТРЕННИЕ СТРУКТУРЫ ДАННЫХ КАТЕГОРИЙ <<<<< #
 #==========================================================================================#
 
 class TextFilters:
@@ -78,8 +77,8 @@ class TextFilters:
 		self.__Regexs = list()
 		self.__Strings = list()
 
-		if "text_regexs" in data.keys() and type(data["text_regexs"]) == list: self.__Regexs = data["text_regexs"]
-		if "text_strings" in data.keys() and type(data["text_strings"]) == list: self.__Strings = data["text_strings"]
+		if "text_regexs" in data.keys() and type(data["text_regexs"]) is list: self.__Regexs = data["text_regexs"]
+		if "text_strings" in data.keys() and type(data["text_strings"]) is list: self.__Strings = data["text_strings"]
 
 	def clear(self, text: str) -> str:
 		"""
@@ -147,11 +146,11 @@ class ImageFilters:
 
 		self.__Data = data
 
-		if "image_md5" not in self.__Data.keys() or type(self.__Data["image_md5"]) != list: self.__Data["image_md5"] = list()
+		if "image_md5" not in self.__Data.keys() or type(self.__Data["image_md5"]) is not list: self.__Data["image_md5"] = list()
 		Keys = ["image_min_height", "image_min_width", "image_max_height", "image_max_width"]
 
 		for Key in Keys:
-			if Key not in self.__Data.keys() or type(self.__Data[Key]) != int: self.__Data[Key] = None
+			if Key not in self.__Data.keys() or type(self.__Data[Key]) is not int: self.__Data[Key] = None
 
 	def check_hash(self, path: PathLike) -> bool:
 		"""
@@ -196,134 +195,6 @@ class ImageFilters:
 # >>>>> КАТЕГОРИИ НАСТРОЕК <<<<< #
 #==========================================================================================#
 
-class Common:
-	"""Базовые настройки."""
-
-	#==========================================================================================#
-	# >>>>> СВОЙСТВА <<<<< #
-	#==========================================================================================#
-
-	@property
-	def archives_directory(self) -> str:
-		"""Директория читаемого контента."""
-
-		return self.__Settings["archives_directory"]
-	
-	@property
-	def bad_image_stub(self) -> str | None:
-		"""Путь к заглушке плохого изображения."""
-
-		return self.__Settings["bad_image_stub"]
-	
-	@property
-	def images_directory(self) -> str:
-		"""Директория изображений."""
-
-		return self.__Settings["images_directory"]
-	
-	@property
-	def titles_directory(self) -> str:
-		"""Директория описательных файлов."""
-
-		return self.__Settings["titles_directory"]
-	
-	@property
-	def use_id_as_filename(self) -> bool:
-		"""Указывает, нужно ли использовать ID в качестве имени описательного файла."""
-
-		return self.__Settings["use_id_as_filename"]
-	
-	@property
-	def sizing_images(self) -> bool:
-		"""Указывает, нужно ли пытаться определить размер изображений."""
-
-		return self.__Settings["sizing_images"]
-	
-	@property
-	def pretty(self) -> bool:
-		"""Состояние: включено ли улучшение качества контента."""
-
-		return self.__Settings["pretty"]
-	
-	@property
-	def retries(self) -> int:
-		"""Количество повторов запроса при неудачном выполнении."""
-
-		return self.__Settings["retries"]
-	
-	@property
-	def delay(self) -> float:
-		"""Интервал ожидания между последовательными запросами."""
-
-		return self.__Settings["delay"]
-
-	#==========================================================================================#
-	# >>>>> МЕТОДЫ <<<<< #
-	#==========================================================================================#
-
-	def __PutDefaultDirectories(self, parser_name: str):
-		"""
-		Подстанавливает стандартные директории на пустые места.
-		:param parser_name: Название парсера.
-		:type parser_name: str
-		:raises FileNotFoundError: Выбрасывается при указании несуществующей директории.
-		"""
-
-		Directories = ["archives", "images", "titles"]
-
-		for Directory in Directories:
-			Key = f"{Directory}_directory"
-
-			if not self.__Settings[Key]:
-				self.__Settings[Key] = f"Output/{parser_name}/{Directory}"
-				if not os.path.exists(self.__Settings[Key]): os.makedirs(self.__Settings[Key])
-
-			else:
-				self.__Settings[Key] = NormalizePath(self.__Settings[Key])
-				if not os.path.exists(self.__Settings[Key]): raise FileNotFoundError(self.__Settings[Key])
-
-	def __init__(self, parser_name: str, settings: dict, logger: Logger):
-		"""
-		Базовые настройки.
-
-		:param parser_name: Имя парсера.
-		:type parser_name: str
-		:param settings: Словарь настроек.
-		:type settings: dict
-		:param logger: Оператор логгирования.
-		:type logger: Logger
-		:raises BadSettings: Выбрасывается при обнаружении несоответствия формата файла насроек.
-		"""
-
-		self.__Settings = {
-			"archives_directory": "",
-			"images_directory": "",
-			"titles_directory": "",
-			"bad_image_stub": None,
-			"pretty": True,
-			"use_id_as_filename": False,
-			"sizing_images": True,
-			"retries": 0,
-			"delay": 1.0
-		}
-
-		if "common" in settings.keys():
-			if "delay" in settings["common"].keys(): settings["common"]["delay"] = float(settings["common"]["delay"])
-			
-			for Key in self.__Settings.keys():
-				if Key in settings["common"].keys(): self.__Settings[Key] = settings["common"][Key]
-
-			if self.__Settings["bad_image_stub"]:
-				BadImageStub = NormalizePath(self.__Settings["bad_image_stub"])
-				if not os.path.exists(BadImageStub): self.__Settings["bad_image_stub"] = None
-				else: self.__Settings["bad_image_stub"] = BadImageStub
-
-			elif not self.__Settings["bad_image_stub"]: self.__Settings["bad_image_stub"] = None
-
-			self.__PutDefaultDirectories(parser_name)
-
-		else: raise BadSettings(parser_name)
-
 class Directories:
 	"""Директории."""
 
@@ -332,81 +203,119 @@ class Directories:
 	#==========================================================================================#
 
 	@property
-	def archives(self) -> str:
-		"""Директория читаемого контента."""
+	def content(self) -> Path:
+		"""Путь к директории контента."""
 
-		return self.__Common.archives_directory
+		return self.__GetDirectory("content")
 	
 	@property
-	def images(self) -> str | None:
-		"""Директория изображений."""
+	def images(self) -> Path:
+		"""Путь к директории изображений."""
 
-		return self.__Common.images_directory
+		return self.__GetDirectory("images")
 	
 	@property
-	def titles(self) -> str:
-		"""Директория описательных файлов."""
+	def titles(self) -> Path:
+		"""Путь к директории файлов тайтлов."""
 
-		return self.__Common.titles_directory
-
+		return self.__GetDirectory("titles")
+	
 	#==========================================================================================#
-	# >>>>> ПРИВАТНЫЕ МЕТОДЫ <<<<< #
+	# >>>>> МЕТОДЫ <<<<< #
 	#==========================================================================================#
 
-	def __GenerateDirectoryPath(self, used_name: str, subdir: str) -> PathLike:
+	def __GetDirectory(self, dir_type: Literal["content", "images", "titles"]) -> Path:
 		"""
-		Возвращает путь к подкаталогу изображений. Если такового нет, то создаёт его.
+		Возвращает путь к каталогу. Автоматически создаёт его при отсутствии.
 
-		:param used_name: Используемое имя тайтла.
-		:type used_name: str
-		:param subdir: Название подкаталога внутри директории изображений.
-		:type subdir: str
-		:return: Путь к подкаталогу изображений.
-		:rtype: PathLike
+		:param dir_type: Тип каталога.
+		:type dir_type: Literal["content", "images", "titles"]
+		:return: Путь к каталогу.
+		:rtype: Path
 		"""
 
-		Directory = self.__Common.images_directory + f"/{used_name}/{subdir}"
-		if not os.path.exists(Directory): os.makedirs(Directory)
+		Directory: str | None = self.__DirectoriesDict.get(dir_type)
+		DirectoryPath: Path = Path(Directory) if Directory else Path(f"Output/{self.__ParserName}/{dir_type}")
+		DirectoryPath.mkdir(exist_ok = True)
 
-		return Directory
+		return DirectoryPath
 
-	#==========================================================================================#
-	# >>>>> ПУБЛИЧНЫЕ МЕТОДЫ <<<<< #
-	#==========================================================================================#
-
-	def __init__(self, common_settings: Common):
+	def __init__(self, parser_name: str, settings: dict[str, str | None]):
 		"""
 		Директории.
 
-		:param common_settings: Базовые настройки.
-		:type common_settings: Common
+		:param parser_name: Имя парсера.
+		:type parser_name: str
+		:param settings: Словарь настроек парсера.
+		:type settings: dict[str, Any]
 		"""
 
-		self.__Common = common_settings
+		self.__ParserName: str = parser_name
+		self.__DirectoriesDict: dict[str, str | None] = settings or dict()
 
-	def get_covers(self, used_name: str) -> PathLike:
-		"""
-		Возвращает путь к директории обложек. Если таковой нет, то создаёт её.
+class Common:
+	"""Базовые настройки."""
 
-		:param used_name: Используемое имя тайтла.
-		:type used_name: str
-		:return: Путь к директории обложек.
-		:rtype: PathLike
-		"""
+	#==========================================================================================#
+	# >>>>> СВОЙСТВА <<<<< #
+	#==========================================================================================#
 
-		return self.__GenerateDirectoryPath(used_name, "covers")
+	@property
+	def bad_image_stub(self) -> Path | None:
+		"""Путь к заглушке плохого изображения."""
+
+		StubPath: Path | None = Path(self.__CommonSettings["bad_image_stub"]) if self.__CommonSettings["bad_image_stub"] else None
+
+		return StubPath
 	
-	def get_persons(self, used_name: str) -> PathLike:
-		"""
-		Возвращает путь к директории портретов персонажей. Если таковой нет, то создаёт её.
+	@property
+	def delay(self) -> float:
+		"""Интервал ожидания между последовательными запросами."""
 
-		:param used_name: Используемое имя тайтла.
-		:type used_name: str
-		:return: Путь к директории обложек.
-		:rtype: PathLike
+		return self.__CommonSettings["delay"]
+
+	@property
+	def pretty(self) -> bool:
+		"""Состояние: включено ли улучшение качества контента."""
+
+		return self.__CommonSettings["pretty"]
+	
+	@property
+	def retries(self) -> int:
+		"""Количество повторов запроса при неудачном выполнении."""
+
+		return self.__CommonSettings["retries"]
+	
+	@property
+	def sizing_images(self) -> bool:
+		"""Указывает, нужно ли пытаться определить размер изображений."""
+
+		return self.__CommonSettings["sizing_images"]
+
+	@property
+	def use_id_as_filename(self) -> bool:
+		"""Указывает, нужно ли использовать ID в качестве имени описательного файла."""
+
+		return self.__CommonSettings["use_id_as_filename"]
+
+	#==========================================================================================#
+	# >>>>> МЕТОДЫ <<<<< #
+	#==========================================================================================#
+
+	def __init__(self, settings: dict[str, Any]):
+		"""
+		Базовые настройки.
+
+		:param settings: Словарь базовых настроек.
+		:type settings: dict
 		"""
 
-		return self.__GenerateDirectoryPath(used_name, "persons")
+		self.__CommonSettings: dict[str, Any] = cast(dict, _BASE_SETTINGS.copy().get("common")) | settings
+
+	def sleep_delay(self):
+		"""Приостанавливает исполнение на указанный в настройках интервал времени."""
+
+		sleep(self.delay)
 
 class Filters:
 	"""Фильтры контента."""
@@ -431,25 +340,22 @@ class Filters:
 		:type settings: dict
 		"""
 
-		if "filters" not in settings.keys() or type(settings["filters"]) != dict: settings["filters"] = dict()
+		if "filters" not in settings.keys() or type(settings["filters"]) is not dict: settings["filters"] = dict()
 		self.__TextFilters = TextFilters(settings["filters"])
 		self.__ImageFilters = ImageFilters(settings["filters"])
 
 class Custom:
 	"""Собственные настройки парсера."""
 
-	def __init__(self, settings: dict, logger: Logger):
+	def __init__(self, settings: dict[str, Any]):
 		"""
 		Собственные настройки парсера.
 
 		:param settings: Словарь настроек парсера.
-		:type settings: dict
-		:param logger: Оператор логгирования.
-		:type logger: Logger
+		:type settings: dict[str, Any]
 		"""
 
-		self.__Settings = settings["custom"] if "custom" in settings.keys() else dict()
-		self.__Logger = logger
+		self.__CustomSettings = settings.get("custom") or dict()
 
 	def __getitem__(self, key: str) -> Any:
 		"""
@@ -459,11 +365,10 @@ class Custom:
 		:type key: str
 		:return: Значение настройки.
 		:rtype: Any
+		:raises KeyError: Настройка не найдена.
 		"""
 
-		if key not in self.__Settings.keys(): self.__Logger.warning(f"No custom setting: \"{key}\".")
-		
-		return self.__Settings[key]
+		return self.__CustomSettings[key]
 
 #==========================================================================================#
 # >>>>> ОСНОВНОЙ КЛАСС <<<<< #
@@ -476,17 +381,26 @@ class ParserSettings:
 	# >>>>> СВОЙСТВА <<<<< #
 	#==========================================================================================#
 
+	def is_loaded_from_repository(self) -> bool:
+		"""Состояние: загружены ли настройки из репозитория."""
+
+		return self.__IsLoadedFromRepository
+
+	#==========================================================================================#
+	# >>>>> КАТЕГОРИИ НАСТРОЕК <<<<< #
+	#==========================================================================================#
+
+	@property
+	def directories(self) -> Directories:
+		"""Пути к директориям."""
+
+		return self.__Directories
+
 	@property
 	def common(self) -> Common:
 		"""Базовые настройки."""
 
 		return self.__Common
-	
-	@property
-	def directories(self) -> Directories:
-		"""Директории."""
-
-		return self.__Directories
 	
 	@property
 	def filters(self) -> Filters:
@@ -501,7 +415,7 @@ class ParserSettings:
 		return self.__Custom
 	
 	@property
-	def proxies(self) -> tuple[Proxy]:
+	def proxies(self) -> tuple[Proxy, ...]:
 		"""Набор прокси."""
 
 		return self.__Proxies
@@ -510,18 +424,19 @@ class ParserSettings:
 	# >>>>> ПРИВАТНЫЕ МЕТОДЫ <<<<< #
 	#==========================================================================================#
 
-	def __ParseProxies(self, settings: dict) -> tuple[Proxy]:
+	def __ParseProxies(self) -> tuple[Proxy, ...]:
 		"""
 		Парсит строковые представления прокси.
 
 		:return: Набор объектов данных прокси.
-		:rtype: tuple[Proxy]
+		:rtype: tuple[Proxy, ...]
 		"""
 
 		Proxies = list()
 
-		if "proxies" in settings.keys():
-			for String in settings["proxies"]: Proxies.append(Proxy().parse(String))
+		if "proxies" in self.__Settings:
+			for String in self.__Settings["proxies"]:
+				Proxies.append(Proxy().parse(String))
 			
 		return tuple(Proxies)
 
@@ -534,19 +449,21 @@ class ParserSettings:
 		"""
 
 		ParserSettingsDict = None
-		Paths = (
-			f"Configs/{self.__ParserName}/settings.json",
-			f"Parsers/{self.__ParserName}/settings.json"
+		Paths: tuple[Path, Path] = (
+			Path(f"Configs/{self.__ParserName}/settings.json"),
+			Path(f"Parsers/{self.__ParserName}/settings.json")
 		)
 
-		for Path in Paths:
+		for Index in range(len(Paths)):
+			CurrentPath = Paths[Index]
+			if Index:
+				self.__IsLoadedFromRepository = True
 
-			if os.path.exists(Path):
-				ParserSettingsDict = ReadJSON(Path)
-				if Path.startswith("Parsers"): self.__Logger.warning("Using parser settings from repository.")
+			if CurrentPath.exists():
+				ParserSettingsDict = ReadJSON(CurrentPath)
 				break
 
-		if not ParserSettingsDict: ParserSettingsDict = Settings.copy()
+		if not ParserSettingsDict: ParserSettingsDict = _BASE_SETTINGS.copy()
 
 		return ParserSettingsDict
 
@@ -554,22 +471,23 @@ class ParserSettings:
 	# >>>>> ПУБЛИЧНЫЕ МЕТОДЫ <<<<< #
 	#==========================================================================================#
 
-	def __init__(self, parser_name: str, logger: Logger):
+	def __init__(self, parser_name: str):
 		"""
 		Настройки парсера.
 
 		:param parser_name: Имя парсера.
 		:type parser_name: str
-		:param logger: Оператор логгирования.
-		:type logger: Logger
+		:param printer: Оператор логгирования.
+		:type printer: Printer
 		"""
 
-		self.__ParserName = parser_name
-		self.__Logger = logger
+		self.__ParserName: str = parser_name
 
-		self.__Settings = self.__ReadSettings()
-		self.__Common = Common(parser_name, self.__Settings, logger)
+		self.__Settings: dict = self.__ReadSettings()
+		self.__IsLoadedFromRepository = False
+
+		self.__Directories = Directories(self.__ParserName, self.__Settings)
+		self.__Common: Common = Common(self.__Settings.get("common") or dict())
 		self.__Filters = Filters(self.__Settings)
-		self.__Proxies = self.__ParseProxies(self.__Settings)
-		self.__Custom = Custom(self.__Settings, logger)
-		self.__Directories = Directories(self.__Common)
+		self.__Proxies: tuple[Proxy, ...] = self.__ParseProxies()
+		self.__Custom: Custom = Custom(self.__Settings)

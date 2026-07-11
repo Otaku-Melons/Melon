@@ -1,13 +1,20 @@
 from dublib.Methods.Data import Zerotify
 
-from typing import TYPE_CHECKING
+from typing import Sequence, TYPE_CHECKING
 import re
 
 if TYPE_CHECKING:
-	from Source.Core.Base.Formats.Manga import Manga
+	from Source.Core.Base.Parsers.Components.WordsDictionary import WordsDictionary
+	from Source.Core.Base.Parsers.BaseParser import BaseParser
 
-class ChapterHeaderParser:
+class MangaChapterHeaderParser:
 	"""Парсер заголовка главы."""
+
+	_Parser: "BaseParser"
+	_Header: str
+	_WordsDictionary: "WordsDictionary"
+	_Volume: str | None
+	_Number: str | None
 
 	#==========================================================================================#
 	# >>>>> СВОЙСТВА <<<<< #
@@ -43,7 +50,7 @@ class ChapterHeaderParser:
 		:type onky_for_chapter: bool
 		"""
 
-		Keywords = (self._WordsDictionary.chapter,)
+		Keywords: Sequence = (self._WordsDictionary.chapter,)
 
 		if not only_for_chapter:
 			Keywords = list(self._WordsDictionary.keywords)
@@ -89,7 +96,9 @@ class ChapterHeaderParser:
 	def _ExtractPart(self):
 		"""Пытается извлечь из названия главы номер части и добавить его к номеру главы."""
 
-		if not self._Header: return
+		if not self._Header or not self._WordsDictionary.part:
+			return
+		
 		Buffer = ""
 		Offset = 0
 
@@ -127,34 +136,44 @@ class ChapterHeaderParser:
 		self._Header = ChapterName
 
 	#==========================================================================================#
+	# >>>>> ПЕРЕОПРЕДЕЛЯЕМЫЕ МЕТОДЫ <<<<< #
+	#==========================================================================================#
+
+	def _PostInitMethod(self):
+		"""Метод, выполняющийся после инициализации объекта."""
+
+		pass
+
+	#==========================================================================================#
 	# >>>>> ПУБЛИЧНЫЙ МЕТОДЫ <<<<< #
 	#==========================================================================================#
 
-	def __init__(self, header: str, title: "Manga"):
+	def __init__(self, parser: "BaseParser", header: str):
 		"""
 		Парсер заголовка главы.
 
+		:param parser: Парсер.
+		:type parser: BaseParser
 		:param header: Заголовок главы.
 		:type header: str
-		:param words_dictionary: Словарь ключевых слов.
-		:type words_dictionary: WordsDictionary
 		"""
 
+		self._Parser = parser
 		self._Header = header
-		self._Title = title
 
-		self._WordsDictionary = title.words_dictionary
+		self._WordsDictionary = self._Parser.words_dictionary
 
 		self._Volume = None
 		self._Number = None
-		self._Type = None
+
+		self._PostInitMethod()
 	
 	def __repr__(self) -> str:
 		"""Реинтерпретирует экземпляр в строковое представление."""
 		
-		return f"ChapterData(volume={self.volume}, number={self.number}, type={self.type}, name={self._Header})"
+		return f"ChapterData(volume={self.volume}, number={self.number}, name={self._Header})"
 	
-	def parse(self) -> "ChapterHeaderParser":
+	def parse(self) -> "MangaChapterHeaderParser":
 		"""
 		Парсит заголовок главы.
 
@@ -169,6 +188,7 @@ class ChapterHeaderParser:
 		if self._Number: self._LeftCutTitle(self._Number)
 		self._LstripTitle()
 
-		if self._Title.parser.settings.common.pretty: self._ExtractPart()
+		if self._Parser.settings.common.pretty:
+			self._ExtractPart()
 
 		return self

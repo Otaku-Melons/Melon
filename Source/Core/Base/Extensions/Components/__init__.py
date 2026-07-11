@@ -1,1 +1,0 @@
-from .Manifest import ExtensionManifest

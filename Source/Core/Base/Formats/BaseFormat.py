@@ -1,154 +1,29 @@
-from .Components.WordsDictionary import CheckLanguageCode, GetDictionaryPreset, WordsDictionary
 from .Components.Functions import SafelyReadTitleJSON
 from .Components.Structs import ChapterSearchResult
-from .Components.Enums import *
+from .Components.Enums import By, Statuses
 
-from Source.Core.Base.Parsers.Components.ImagesDownloader import ImageDownloadingStatus, ImageResolution
+from Source.Core.Base.Parsers.Components.WordsDictionary import CheckLanguageCode
+from Source.Core.Base.Parsers.Components.ImagesDownloader import ImageData
 from Source.Core import Exceptions
 
 from dublib.Methods.Data import RemoveRecurringSubstrings, Zerotify
 from dublib.Methods.Filesystem import ReadJSON, WriteJSON
 
-from typing import Any, Iterable, TYPE_CHECKING
+from typing import Any, cast, Sequence, TYPE_CHECKING
+from abc import ABC, abstractmethod
 from pathlib import Path
 from os import PathLike
-from time import sleep
 import hashlib
+import orjson
+import json
 import os
 
-import validators
-
 if TYPE_CHECKING:
-	from Source.Core.Base.Parsers.RanobeParser import Chapter as RanobeChapter
-	from Source.Core.Base.Parsers.MangaParser import Chapter as MangaChapter
 	from Source.Core.Base.Parsers.BaseParser import BaseParser
-	from Source.Core.SystemObjects import SystemObjects
 
 #==========================================================================================#
 # >>>>> ВНУТРЕННИЕ СТРУКТУРЫ ДАННЫХ <<<<< #
 #==========================================================================================#
-
-class Cover:
-	"""Обложка."""
-
-	#==========================================================================================#
-	# >>>>> СВОЙСТВА <<<<< #
-	#==========================================================================================#
-
-	@property
-	def filename(self) -> str | None:
-		"""Имя файла."""
-
-		return self.__Filename
-
-	@property
-	def is_exists(self) -> bool | None:
-		"""Состояние: найден ли файл обложки в выходном каталоге парсера."""
-
-		return self.__IsExists
-
-	@property
-	def link(self) -> str | None:
-		"""Ссылка на изображение."""
-
-		return self.__Link
-	
-	@property
-	def resolution(self) -> ImageResolution | None:
-		"""Разрешение изображения."""
-
-		return self.__Resolution
-
-	#==========================================================================================#
-	# >>>>> ПУБЛИЧНЫЕ МЕТОДЫ <<<<< #
-	#==========================================================================================#
-
-	def __init__(self, system_objects: "SystemObjects", parser: "BaseParser"):
-		"""
-		Обложка.
-
-		:param system_objects: Коллекция системных объектов.
-		:type system_objects: SystemObjects
-		:param parser: Парсер.
-		:type parser: BaseParser
-		"""
-
-		self.__SystemObjects = system_objects
-		self.__Parser = parser
-
-		self.__Title = self.__Parser.title
-
-		self.__Directory = self.__Parser.settings.directories.get_covers(self.__Title.used_filename)
-		self.__Link: str | None = None
-		self.__Filename: str | None = None
-		self.__Resolution: ImageResolution | None = None
-		self.__IsExists: bool | None = None
-
-	def download(self) -> ImageDownloadingStatus:
-		"""
-		Скачивает обложку в выходной каталог парсера.
-
-		:return: Статус скачивания изображения.
-		:rtype: ImageDownloadingStatus
-		"""
-
-		if self.__IsExists and not self.__SystemObjects.FORCE_MODE:
-			Status = ImageDownloadingStatus()
-			Status.set_is_exists(True)
-			Status.value = self.__Filename
-			Status.push_message("Already exists.")
-			return Status
-		
-		Result = self.__Parser.source_operator.image(self.__Link)
-		if not Result: return Result
-		if Result.resolution: self.__Resolution = Result.resolution
-		Result += self.__Parser.images_downloader.move_from_temp(self.__Directory, self.__Filename)
-		
-		return Result
-
-	def set_link(self, link: str) -> "Cover":
-		"""
-		Задаёт ссылку на обложку.
-
-		:param link: Ссылка на обложку.
-		:type link: str
-		:raises ValueError: Выбрасывается при некорректном URL.
-		:return: Текущий объект данных обложки.
-		:rtype: Cover
-		"""
-
-		if not validators.url(link): raise ValueError("Invalid URL.")
-		self.__Link = link
-		self.__Filename = Path(link).name
-		self.__IsExists = self.__Parser.images_downloader.is_exists(self.__Link, self.__Directory, self.__Filename)
-
-		return self
-
-	def to_dict(self) -> dict[str, str | int | None]:
-		"""
-		Преобразует контейнер в словарное представление.
-
-		:return: Словарное представление данных обложки.
-		:rtype: dict[str, str | int | None]
-		"""
-
-		Buffer = {
-			"link": self.__Link,
-			"filename": self.__Filename,
-			"width": None,
-			"height": None
-		}
-
-		if self.__Parser.settings.common.sizing_images:
-			if self.__Resolution:
-				Buffer["width"] = self.__Resolution.width
-				Buffer["height"] = self.__Resolution.height
-
-		else:
-			del Buffer["width"]
-			del Buffer["height"]
-
-		return Buffer
 
 class Person:
 	"""Данные персонажа."""
@@ -170,10 +45,10 @@ class Person:
 		return self.__Data["another_names"]
 
 	@property
-	def images(self) -> list[dict]:
+	def images(self) -> list[ImageData]:
 		"""Список данных портретов."""
 
-		return self.__Data["images"]
+		return self.__Images.copy()
 
 	@property
 	def description(self) -> str | None:
@@ -191,14 +66,14 @@ class Person:
 			name – имя персонажа.
 		"""
 
-		#---> Генерация динамических атрибутов.
-		#==========================================================================================#
-		self.__Data = {
+		self.__Data: dict = {
 			"name": name,
 			"another_names": [],
 			"images": [],
 			"description": None
 		}
+
+		self.__Images: list[ImageData] = list()
 
 	def add_another_name(self, another_name: str):
 		"""
@@ -207,31 +82,41 @@ class Person:
 		"""
 		
 		another_name = another_name.strip()
-		if another_name and another_name != self.name and another_name not in self.another_names: self.__Data["another_names"].append(another_name)
+		if another_name and another_name != self.name and another_name not in self.another_names:
+			self.__Data["another_names"].append(another_name)
 
-	def add_image(self, link: str, filename: str | None = None, width: int | None = None, height: int | None = None):
+	def add_image(self, image: ImageData):
 		"""
-		Добавляет портрет.
-			link – ссылка на изображение;\n
-			filename – имя локального файла;\n
-			width – ширина обложки;\n
-			height – высота обложки.
+		Добавляет иллюстрацию персонажа.
+
+		:param image: Данные изображения.
+		:type image: ImageData
 		"""
 
-		if not filename: filename = link.split("/")[-1]
-		CoverInfo = {
-			"link": link,
-			"filename": filename,
-			"width": width,
-			"height": height
-		}
+		self.__Images.append(image)
 
-		self.__Data["images"].append(CoverInfo)
+	def find_image_by_link(self, link: str) -> ImageData | None:
+		"""
+		Производит поиск изображения по ссылке.
+
+		:param link: Ссылка на изображение.
+		:type link: str
+		:return: Изображение или `None` при отсутствии оного.
+		:rtype: ImageData | None
+		"""
+
+		for CurrentImage in self.__Images:
+			if CurrentImage.link == link:
+				return CurrentImage
+			
+		return None
 
 	def set_description(self, description: str | None):
 		"""
-		Задаёт описание.
-			description – описание.
+		Задаёт описание персонажа.
+
+		:param description: Описание.
+		:type description: str | None
 		"""
 
 		self.__Data["description"] = Zerotify(description)
@@ -240,23 +125,21 @@ class Person:
 		"""
 		Возвращает словарное представление данных персонажа.
 
-		:param sizing_images: Указывает, нужно ли указать размеры изображений персонажа.
+		:param sizing_images: Указывает, нужно ли сохранять ключи разрешения изображений персонажа.
 		:type sizing_images: bool
 		:return: Словарное представление данных персонажа.
 		:rtype: dict
 		"""
 
-		Data = self.__Data.copy()
+		Buffer = self.__Data.copy()
+		
+		for Index in range(len(self.__Images)):
+			Image = self.__Images[Index]
+			Buffer["images"].append(Image.to_dict(sizing = sizing_images))
 
-		if not sizing_images:
+		return Buffer
 
-			for Index in range(len(Data["images"])):
-				del Data["images"][Index]["width"]
-				del Data["images"][Index]["height"]
-
-		return Data
-
-class BaseChapter:
+class BaseChapter(ABC):
 	"""Базовая глава."""
 
 	#==========================================================================================#
@@ -264,100 +147,135 @@ class BaseChapter:
 	#==========================================================================================#
 
 	@property
-	def id(self) -> int | None:
+	def id(self) -> int:
 		"""Уникальный идентификатор главы."""
 
-		return self._Chapter["id"]
+		return self._Data["id"]
 	
 	@property
 	def slug(self) -> str | None:
 		"""Алиас главы."""
 
-		return self._Chapter["slug"]
-	
-	@property
-	def is_empty(self) -> bool:
-		"""Состояние: содержит ли глава контент."""
-
-		IsEmpty = True
-		if "slides" in self._Chapter.keys() and self._Chapter["slides"]: IsEmpty = False
-		elif "paragraphs" in self._Chapter.keys() and self._Chapter["paragraphs"]: IsEmpty = False
-
-		return IsEmpty
+		return self._Data["slug"]
 
 	@property
 	def volume(self) -> str | None:
 		"""Номер тома."""
 
-		return self._Chapter["volume"]
+		return self._Data["volume"]
 	
 	@property
 	def number(self) -> str | None:
 		"""Номер главы."""
 
-		return self._Chapter["number"]
+		return self._Data["number"]
 	
 	@property
 	def name(self) -> str | None:
 		"""Название главы."""
 
-		return self._Chapter["name"]
+		return self._Data["name"]
+
+	@property
+	def is_empty(self) -> bool:
+		"""Состояние: пуста ли глава."""
+
+		return self._IsEmpty()
 
 	@property
 	def is_paid(self) -> bool | None:
 		"""Состояние: платная ли глава."""
 
-		return self._Chapter["is_paid"]
+		return self._Data["is_paid"]
 	
 	@property
 	def workers(self) -> tuple[str]:
 		"""Набор идентификаторов лиц, адаптировавших контент."""
 
-		return tuple(self._Chapter["workers"])
+		return tuple(self._Data["workers"])
 	
-	#==========================================================================================#
-	# >>>>> ПРИВАТНЫЕ МЕТОДЫ <<<<< #
-	#==========================================================================================#
-
-	def __PrettyNumber(self, number: str | None) -> str | None:
-		"""Преобразует номер главы или тома в корректное значение."""
-
-		if number == None: number = ""
-		elif type(number) != str: number = str(number)
-		if "-" in number: number = number.split("-")[0]
-		number = number.strip("\t .\n")
-		number = Zerotify(number)
-
-		return number
-
 	#==========================================================================================#
 	# >>>>> НАСЛЕДУЕМЫЕ МЕТОДЫ <<<<< #
 	#==========================================================================================#
 
-	def _Pass(self, value: Any):
-		"""Заглушка Callable-объекта для неактивных методов установки контента."""
+	def _PrettyNumber(self, number: float | int | str | None) -> str | None:
+		"""
+		Преобразует номер главы или тома в корректное значение.
+
+		:param number: Номер главы или тома.
+		:type number: float | int | str | None
+		:return: Откорректированный номер.
+		:rtype: str | None
+		"""
+
+		if number is None: number = ""
+		elif type(number) is not str: number = str(number)
+		if "-" in number: number = number.split("-")[0]
+		number = number.strip("\t .\n")
+		Number = cast(str | None, Zerotify(number))
+
+		return Number
+
+	#==========================================================================================#
+	# >>>>> ПЕРЕОПРЕДЕЛЯЕМЫЕ МЕТОДЫ <<<<< #
+	#==========================================================================================#
+
+	@abstractmethod
+	def _Clear(self):
+		"""Очищает контент главы."""
+
+		pass
+
+	@abstractmethod
+	def _FromDict(self, data: dict):
+		"""
+		Заполняет данные главы из словаря.
+
+		:param data: Словарь данных главы.
+		:type data: dict
+		"""
+
+		pass
+
+	@abstractmethod
+	def _IsEmpty(self) -> bool:
+		"""
+		Проверяет, пустая ли глава.
+
+		:return: Состояние: пуста ли глава.
+		:rtype: bool
+		"""
+
+		return False
+
+	def _PostInitMethod(self):
+		"""Метод, выполняющийся после инициализации объекта."""
+
+		pass
+
+	def _PreFormatter(self):
+		"""Метод, запускающийся перед генерацией словарного представления объекта."""
 
 		pass
 
 	#==========================================================================================#
-	# >>>>> МЕТОДЫ <<<<< #
+	# >>>>> ПУБЛИЧНЫЕ МЕТОДЫ <<<<< #
 	#==========================================================================================#
 
-	def __init__(self, system_objects: "SystemObjects", title: "BaseTitle | None" = None):
+	def __init__(self, parser: "BaseParser", chapter_id: int):
 		"""
 		Базовая глава.
 
-		:param system_objects: Коллекция системных объектов.
-		:type system_objects: SystemObjects
-		:param title: Данные тайтла.
-		:type title: BaseTitle | None
+		:param parser: Парсер.
+		:type parser: BaseParser
+		:param chapter_id: ID главы.
+		:type chapter_id: int
 		"""
 
-		self._SystemObjects = system_objects
-		self._Title = title
+		self._Parser = parser
 
-		self._Chapter = {
-			"id": None,
+		self._Data: dict[str, Any] = {
+			"id": chapter_id,
 			"slug": None,
 			"volume": None,
 			"number": None,
@@ -366,25 +284,11 @@ class BaseChapter:
 			"workers": []
 		}
 
-		self._SetParagraphsMethod = self._Pass
-		self._SetSlidesMethod = self._Pass
+		self._PostInitMethod()
 
-	def __getitem__(self, key: str) -> Any:
+	def add_extra_data(self, key: str, value: Any):
 		"""
-		Возвращает значение из внутреннего словаря.
-
-		:param key: Ключ.
-		:type key: str
-		:raise KeyError: Выбрасывается при отсутствии ключа в данных главы.
-		:return: Значение.
-		:rtype: Any
-		"""
-
-		return self._Chapter[key]
-
-	def __setitem__(self, key: str, value: Any):
-		"""
-		Устанавливает значение напрямую в структуру данных по ключу.
+		Добавляет дополнительные данные о главе.
 
 		:param key: Ключ.
 		:type key: str
@@ -392,16 +296,7 @@ class BaseChapter:
 		:type value: Any
 		"""
 
-		self._Chapter[key] = value
-
-	def add_extra_data(self, key: str, value: Any):
-		"""
-		Добавляет дополнительные данные о главе.
-			key – ключ для доступа;\n
-			value – значение.
-		"""
-
-		self._Chapter[key] = value
+		self._Data[key] = value
 
 	def add_worker(self, worker: str):
 		"""
@@ -411,15 +306,23 @@ class BaseChapter:
 		:type worker: str
 		"""
 
-		if worker: self._Chapter["workers"].append(worker)
+		if worker not in self._Data["workers"]:
+			self._Data["workers"].append(worker)
 
 	def clear(self):
 		"""Удаляет содержимое главы."""
 
-		for ContentKey in ("slides", "paragraphs"):
-			if self._Chapter.get(ContentKey):
-				self._Chapter[ContentKey] = list()
-				break
+		self._Clear()
+
+	def from_dict(self, data: dict):
+		"""
+		Заполняет данные главы из словаря.
+
+		:param data: Словарь данных главы.
+		:type data: dict
+		"""
+
+		self._FromDict(data)
 
 	def remove_extra_data(self, key: str):
 		"""
@@ -429,69 +332,18 @@ class BaseChapter:
 		:type key: str
 		"""
 
-		try: del self._Chapter[key]
-		except KeyError: pass
-
-	def set_dict(self, dictionary: dict, use_methods: bool = False):
-		"""
-		Напрямую задаёт словарь, используемый в качестве хранилища данных главы.
-
-		:param dictionary: Данные главы. Будет создана копия.
-		:type dictionary: dict
-		:param use_methods: Если включить, вместо прямой перезаписи словаря все значения будут установлены через соответствующие методы с валидацией.
-		:type use_methods: bool
-		"""
-
-		dictionary = dictionary.copy()
-
-		if not use_methods:
-			self._Chapter = dictionary
-			return
-		
-		#---> Установка свойств через доступные методы.
-		#==========================================================================================#
-		KeyMethods = {
-			"id": self.set_id,
-			"volume": self.set_volume,
-			"name": self.set_name,
-			"is_paid": self.set_is_paid,
-			"workers": self.set_workers,
-		}
-
-		for Key in KeyMethods.keys():
-			
-			if Key in dictionary:
-				Value = dictionary[Key]
-				KeyMethods[Key](Value)
-				del dictionary[Key]
-
-		#---> Слияние контетна.
-		#==========================================================================================#
-		for Key in ("slides", "paragraphs"):
-			if Key in dictionary:
-				self._Chapter[Key] = dictionary[Key]
-				del dictionary[Key]
-				break
-
-		#---> Добавление дополнительных данных.
-		#==========================================================================================#
-		for Key in dictionary.keys(): self.add_extra_data(Key, dictionary[Key])
-
-	def set_id(self, id: int | None):
-		"""
-		Задаёт уникальный идентификатор главы.
-			ID – идентификатор.
-		"""
-
-		self._Chapter["id"] = id
+		if key in self._Data:
+			del self._Data[key]
 
 	def set_is_paid(self, is_paid: bool | None):
 		"""
 		Указывает, является ли глава платной.
-			is_paid – состояние: платная ли глава.
+
+		:param is_paid: Состояние: платная ли глава.
+		:type is_paid: bool | None
 		"""
 
-		self._Chapter["is_paid"] = is_paid
+		self._Data["is_paid"] = is_paid
 
 	def set_name(self, name: str | None):
 		"""
@@ -504,7 +356,7 @@ class BaseChapter:
 		name = Zerotify(name)
 		if name: name = name.strip()
 		
-		if name and self._SystemObjects.controller.current_parser_settings.common.pretty:
+		if name and self._Parser.settings.common.pretty:
 			if name.endswith("..."): name = name.rstrip(".") + "…"
 			else: name = name.rstrip(".–")
 		
@@ -513,48 +365,57 @@ class BaseChapter:
 
 			name = name.rstrip(":.")
 
-		self._Chapter["name"] = name
+		self._Data["name"] = name
 
 	def set_number(self, number: float | int | str | None):
 		"""
 		Задаёт номер главы.
-			number – номер главы.
+
+		:param number: Номер главы.
+		:type number: float | int | str | None
 		"""
 		
-		self._Chapter["number"] = self.__PrettyNumber(number)
+		self._Data["number"] = self._PrettyNumber(number)
 
-	def set_workers(self, workers: Iterable[str]):
+	def set_workers(self, workers: Sequence[str]):
 		"""
 		Задаёт идентификаторы лиц, адаптировавших контент.
 
 		:param workers: Набор идентификаторов.
-		:type workers: Iterable[str]
+		:type workers: Sequence[str]
 		"""
 
-		for Worker in workers: self.add_worker(Worker)
+		for Worker in workers:
+			self.add_worker(Worker)
 
 	def set_slug(self, slug: str | None):
 		"""
 		Задаёт алиас главы.
-			slug – алиас.
+
+		:param slug: Алиас главы.
+		:type slug: str | None
 		"""
 
-		self._Chapter["slug"] = slug
+		self._Data["slug"] = slug
 
 	def set_volume(self, volume: float | int | str | None):
 		"""
-		Задаёт номер тома.
-			volume – номер тома.
+		Задаёт номер тома, к которому принадлежит глава.
+
+		:param volume: Номер тома.
+		:type volume: float | int | str | None
 		"""
 
-		self._Chapter["volume"] = self.__PrettyNumber(volume)
+		self._Data["volume"] = self._PrettyNumber(volume)
 
 	def to_dict(self) -> dict:
-		"""Возвращает словарь данных главы."""
+		"""Возвращает копию словаря данных главы."""
 
-		return self._Chapter
+		self._PreFormatter()
+
+		return self._Data.copy()
 	
-class BaseBranch:
+class BaseBranch(ABC):
 	"""Базовая ветвь."""
 
 	#==========================================================================================#
@@ -562,53 +423,59 @@ class BaseBranch:
 	#==========================================================================================#
 
 	@property
-	def chapters(self) -> tuple[BaseChapter]:
+	def chapters(self) -> tuple[BaseChapter, ...]:
 		"""Последовательность глав."""
 
-		return tuple(self._Chapters)
+		return tuple(self._Chapters.values())
 
 	@property
 	def chapters_count(self) -> int:
 		"""Количество глав."""
 
-		return len(self._Chapters)
+		return len(self._Chapters.values())
 
 	@property
 	def empty_chapters_count(self) -> int:
 		"""Количество глав без контента."""
 
-		EmptyChaptersCount = 0
-
-		for CurrentChapter in self._Chapters:
-
-			try:
-				if not CurrentChapter.slides: EmptyChaptersCount += 1
-
-			except AttributeError:
-				if not CurrentChapter.paragraphs: EmptyChaptersCount += 1
-
-		return EmptyChaptersCount
+		return sum(1 for CurrentChapter in self._Chapters.values() if CurrentChapter.is_empty)
 
 	@property
 	def id(self) -> int:
 		"""Уникальный идентификатор ветви."""
 
 		return self._ID
-	
+
 	#==========================================================================================#
-	# >>>>> МЕТОДЫ <<<<< #
+	# >>>>> НАСЛЕДУЕМЫЕ МЕТОДЫ <<<<< #
 	#==========================================================================================#
 
-	def __init__(self, id: int):
+	def _FromSequence(self, chapters: Sequence[BaseChapter]) -> dict[int, BaseChapter]:
+		"""
+		Преобразует последовательность глав в словарь.
+
+		:param chapters: Последовательность глав.
+		:type chapters: Sequence[BaseChapter]
+		:return: Словарь глав.
+		:rtype: dict[int, BaseChapter]
+		"""
+
+		return {CurrentChapter.id: CurrentChapter for CurrentChapter in chapters}
+
+	#==========================================================================================#
+	# >>>>> ПУБЛИЧНЫЕ МЕТОДЫ <<<<< #
+	#==========================================================================================#
+
+	def __init__(self, branch_id: int):
 		"""
 		Базовая ветвь.
 
-		:param id: Уникальный идентификатор ветви.
-		:type id: int
+		:param branch_id: ID ветви.
+		:type branch_id: int
 		"""
 
-		self._ID = id
-		self._Chapters: list[BaseChapter] = list()
+		self._ID = branch_id
+		self._Chapters: dict[int, BaseChapter] = dict()
 
 	def add_chapter(self, chapter: BaseChapter):
 		"""
@@ -619,9 +486,13 @@ class BaseBranch:
 		:raises ParsingError: Выбрасывается при отсутствии у добавляемой главы ID.
 		"""
 
-		if chapter.id == None: raise Exceptions.ParsingError("Chapter must have unique ID.")
-		if chapter.id in tuple(Value.id for Value in self._Chapters): return
-		self._Chapters.append(chapter)
+		if chapter.id is None:
+			raise Exceptions.Parsers.ParsingError("Chapter must have unique ID.")
+		
+		if chapter.id in tuple(Value.id for Value in self._Chapters.values()):
+			return
+		
+		self._Chapters[chapter.id] = chapter
 
 	def get_chapter_by_id(self, id: int) -> BaseChapter:
 		"""
@@ -629,19 +500,24 @@ class BaseBranch:
 
 		:param id: ID главы.
 		:type id: int
-		:raises KeyError: Выбрасывается при отсутствии главы в ветви.
 		:return: Глава.
 		:rtype: BaseChapter
+		:raises KeyError: Глава не найдена.
 		"""
 
-		Data = None
+		return self._Chapters[id]
+	
+	def has_chapter(self, id: int) -> bool:
+		"""
+		Проверяет, содержится ли глава с таким ID в ветви.
 
-		for CurrentChapter in self._Chapters:
-			if CurrentChapter.id == id: Data = CurrentChapter
+		:param id: ID главы.
+		:type id: int
+		:return: Возвращает `True`, если глава с таким ID присутствует.
+		:rtype: bool
+		"""
 
-		if not Data: raise KeyError(id)
-
-		return CurrentChapter
+		return id in self._Chapters
 	
 	def remove_chapter(self, id: int):
 		"""
@@ -649,11 +525,10 @@ class BaseBranch:
 
 		:param id: ID главы.
 		:type id: int
-		:raises KeyError: ВЫбрасывается при отсутствии главы в ветви.
+		:raises KeyError: Глава не найдена.
 		"""
 		
-		TargetChapter = self.get_chapter_by_id(id)
-		self._Chapters.remove(TargetChapter)
+		del self._Chapters[id]
 
 	def replace_chapter_by_id(self, chapter: BaseChapter, id: int):
 		"""
@@ -663,23 +538,16 @@ class BaseBranch:
 		:type chapter: BaseChapter
 		:param id: ID заменяемой главы.
 		:type id: int
-		:raises KeyError: Выбрасывается при отсутствии заменяемой главы в ветви.
+		:raises KeyError: Глава не найдена.
 		"""
 
-		IsSuccess = False
-
-		for Index in range(len(self._Chapters)):
-
-			if self._Chapters[Index].id == id:
-				self._Chapters[Index] = chapter
-				IsSuccess = True
-
-		if not IsSuccess: raise KeyError(id)
+		self.get_chapter_by_id(id)
+		self._Chapters[id] = chapter
 	
 	def reverse(self):
 		"""Инвертирует порядок глав в ветви."""
 
-		self._Chapters = list(reversed(self._Chapters))
+		self._Chapters = self._FromSequence(tuple(reversed(self._Chapters.values())))
 
 	def sort(self):
 		"""
@@ -688,8 +556,8 @@ class BaseBranch:
 		Переопределите данный метод для использования иных алгоритмов сортировки.
 		"""
 
-		self._Chapters = list(sorted(
-			self._Chapters,
+		self._Chapters = self._FromSequence(sorted(
+			self._Chapters.values(),
 			key = lambda Value: (
 				list(map(int, Value.volume.split(".") if Value.volume else "")),
 				list(map(int, Value.number.split(".") if Value.number else ""))
@@ -700,7 +568,8 @@ class BaseBranch:
 		"""Возвращает список словарей данных глав, принадлежащих текущей ветви."""
 
 		BranchList = list()
-		for CurrentChapter in self._Chapters: BranchList.append(CurrentChapter.to_dict())
+		for CurrentChapter in self._Chapters.values():
+			BranchList.append(CurrentChapter.to_dict())
 
 		return BranchList
 	
@@ -708,7 +577,7 @@ class BaseBranch:
 # >>>>> ОСНОВНОЙ КЛАСС <<<<< #
 #==========================================================================================#
 
-class BaseTitle:
+class BaseTitle(ABC):
 	"""Базовый тайтл."""
 
 	#==========================================================================================#
@@ -716,137 +585,128 @@ class BaseTitle:
 	#==========================================================================================#
 
 	@property
-	def parser(self) -> "BaseParser":
-		"""Установленный парсер контента."""
+	def chapters_count(self) -> int:
+		"""Количество глав во всех ветвях."""
 
-		return self._Parser
-	
-	@property
-	def path(self) -> PathLike | None:
-		"""Путь к локальному файлу."""
-
-		return self._TitlePath
+		return sum(Branch.chapters_count for Branch in self._Branches.values())
 
 	@property
-	def used_filename(self) -> str | None:
+	def empty_chapters_count(self) -> int:
+		"""Количество глав без контента во всех ветвях."""
+
+		return sum(Branch.empty_chapters_count for Branch in self._Branches.values())
+
+	@property
+	def path(self) -> Path:
+		"""Путь к файлу."""
+
+		return self._Parser.settings.directories.titles / f"{self.used_filename}.json"
+
+	@property
+	def used_filename(self) -> str:
 		"""Используемое имя файла."""
 
-		return self._UsedFilename
+		if self._Parser.settings.common.use_id_as_filename and self.id:
+			return str(self.id)
 
-	@property
-	def words_dictionary(self) -> WordsDictionary | None:
-		"""Словарь ключевых слов."""
-
-		return self._WordsDictionary
+		return self.slug
 
 	#==========================================================================================#
 	# >>>>> СВОЙСТВА ТАЙТЛА <<<<< #
 	#==========================================================================================#
 
 	@property
-	def format(self) -> str | None:
-		"""Формат структуры данных."""
-
-		return self._Title["format"]
-
-	@property
 	def site(self) -> str | None:
 		"""Домен целевого сайта."""
 
-		return self._Title["site"]
+		return self._Data["site"]
 
 	@property
 	def id(self) -> int | None:
 		"""Целочисленный уникальный идентификатор тайтла."""
 
-		return self._Title["id"]
+		return self._Data["id"]
 
 	@property
-	def slug(self) -> str | None:
+	def slug(self) -> str:
 		"""Алиас."""
 
-		return self._Title["slug"]
+		return self._Data["slug"]
 	
 	@property
 	def content_language(self) -> str | None:
 		"""Код языка контента по стандарту ISO 639-3."""
 
-		return self._Title["content_language"]
+		return self._Data["content_language"]
 
 	@property
 	def localized_name(self) -> str | None:
 		"""Локализованное название."""
 
-		return self._Title["localized_name"]
+		return self._Data["localized_name"]
 
 	@property
 	def eng_name(self) -> str | None:
 		"""Название на английском."""
 
-		return self._Title["eng_name"]
+		return self._Data["eng_name"]
 
 	@property
-	def another_names(self) -> tuple[str]:
+	def another_names(self) -> tuple[str, ...]:
 		"""Последовательность альтернативных названий."""
 
-		return tuple(self._Title["another_names"])
-
-	@property
-	def content_language(self) -> str | None:
-		"""Язык контента по стандарту ISO 639-3."""
-
-		return self._Title["content_language"]
+		return tuple(self._Data["another_names"])
 	
 	@property
-	def covers(self) -> tuple[Cover]:
-		"""Последовательность описаний обложки."""
+	def covers(self) -> tuple[ImageData, ...]:
+		"""Последовательность данных обложек."""
 
 		return tuple(self._Covers)
 
 	@property
-	def authors(self) -> tuple[str]:
+	def authors(self) -> tuple[str, ...]:
 		"""Последовательность авторов."""
 
-		return tuple(self._Title["authors"])
+		return tuple(self._Data["authors"])
 
 	@property
 	def publication_year(self) -> int | None:
 		"""Год публикации."""
 
-		return self._Title["publication_year"]
+		return self._Data["publication_year"]
 
 	@property
 	def description(self) -> str | None:
 		"""Описание."""
 
-		return self._Title["description"]
+		return self._Data["description"]
 
 	@property
 	def age_limit(self) -> int | None:
 		"""Возрастное ограничение."""
 
-		return self._Title["age_limit"]
+		return self._Data["age_limit"]
 
 	@property
-	def genres(self) -> tuple[str]:
+	def genres(self) -> tuple[str, ...]:
 		"""Последовательность жанров."""
 
-		return tuple(self._Title["genres"])
+		return tuple(self._Data["genres"])
 
 	@property
-	def tags(self) -> tuple[str]:
+	def tags(self) -> tuple[str, ...]:
 		"""Последовательность тегов."""
 
-		return tuple(self._Title["tags"])
+		return tuple(self._Data["tags"])
 
 	@property
-	def franchises(self) -> tuple[str]:
+	def franchises(self) -> tuple[str, ...]:
 		"""Последовательность франшиз."""
 
-		return tuple(self._Title["franchises"])
+		return tuple(self._Data["franchises"])
 	
 	@property
-	def perons(self) -> tuple[Person]:
+	def perons(self) -> tuple[Person, ...]:
 		"""Последовательность персонажей."""
 
 		return tuple(self._Persons)
@@ -855,98 +715,110 @@ class BaseTitle:
 	def status(self) -> Statuses | None:
 		"""Статус тайтла."""
 
-		return self._Title["status"]
+		return self._Data["status"]
 
 	@property
 	def is_licensed(self) -> bool | None:
 		"""Состояние: лицензирован ли тайтл на данном ресурсе."""
 
-		return self._Title["is_licensed"]
+		return self._Data["is_licensed"]
 
 	@property
-	def branches(self) -> tuple[BaseBranch]:
+	def branches(self) -> tuple[BaseBranch, ...]:
 		"""Последовательность ветвей тайтла."""
 
-		return self._Branches
+		return tuple(self._Branches.values())
 	
 	#==========================================================================================#
 	# >>>>> НАСЛЕДУЕМЫЕ МЕТОДЫ <<<<< #
 	#==========================================================================================#
-
-	def _CalculateEmptyChapters(self) -> int:
-		"""Подсчитывает количество глав без контента во всех ветвях."""
-
-		EmptyChaptersCount = 0
-		for Branch in self._Branches: EmptyChaptersCount += Branch.empty_chapters_count
-
-		return EmptyChaptersCount
-
-	def _DownloadCovers(self):
-		"""Скачивает обложки."""
-
-		DownloadedCoversCount = 0
-
-		for CurrentCover in self._Covers:
-			print(f"Downloading cover: \"{CurrentCover.filename}\"… ", end = "", flush = True)
-			Result = CurrentCover.download()
-			if Result: DownloadedCoversCount += 1
-			Result.print_messages()
-
-		self._SystemObjects.logger.info(f"Covers downloaded: {DownloadedCoversCount}.")
-
-	def _DownloadPersonsImages(self):
-		"""Скачивает портреты персонажей."""
-
-		if self._Persons: PersonsDirectory = self._ParserSettings.directories.get_persons(self._UsedFilename)
-		DownloadedImagesCount = 0
-		PersonsCount = len(self._Persons)
-
-		for PersonIndex in range(PersonsCount):
-
-			for ImageData in self._Persons[PersonIndex].images:
-				Link = ImageData["link"]
-				Filename = ImageData["filename"]
-				IsExists = self._Parser.images_downloader.is_exists(Link, PersonsDirectory, Filename)
-				print(f"Downloading person image: \"{Filename}\"… ", end = "", flush = True)
-				
-				if IsExists and not self._SystemObjects.FORCE_MODE:
-					print("Already exists.")
-					continue
-
-				Result = self._Parser.source_operator.image(Link)
-			
-				if Result.code == 200:
-					self._Parser.images_downloader.move_from_temp(PersonsDirectory, Result.value, Filename)
-					if IsExists: print("Overwritten.")
-					else: print("Done.")
-					DownloadedImagesCount += 1
-
-				if PersonIndex < PersonsCount - 1: sleep(self._ParserSettings.common.delay)
-
-		self._SystemObjects.logger.info(f"Presons images downloaded: {DownloadedImagesCount}.")
-
-	def _FindChapterByID(self, chapter_id: int) -> ChapterSearchResult | None:
-		"""
-		Возвращает данные ветви и главы для указанного ID.
-			chapter_id – уникальный идентификатор главы.
-		"""
-
-		BranchResult = None
-		ChapterResult = None
-
-		for CurrentBranch in self._Branches:
-
-			for CurrentChapter in CurrentBranch.chapters:
-
-				if CurrentChapter.id == chapter_id:
-					BranchResult = CurrentBranch
-					ChapterResult = CurrentChapter
-					break
-
-		Result = ChapterSearchResult(BranchResult, ChapterResult) if ChapterResult else None
-
-		return Result
 	
+	def _LoadData(self, identificator: int | str, selector_type: By = By.Slug) -> dict | None:
+		"""
+		Открывает локальный JSON файл и считывает его данные.
+
+		:param identificator: Идентификатор тайтла: имя файла (без расширения), ID или алиас тайтла.
+		:type identificator: int | str
+		:param selector_type: Режим поиска файла. По умолчанию `By.Slug` – идентификатор соответствует алиасу тайтла.
+		:type selector_type: By
+		:return: Словарь данных тайтла или `None` при отсутствии файла.
+		:rtype: dict | None
+		:raises JSONDecodeError: Ошибка десериализации JSON.
+		:raises UnsupportedFormat: Неподдерживаемый формат JSON.
+		"""
+
+		DataBuffer: dict = dict()
+		TitlesDirectory = self._Parser.settings.directories.titles
+		Journal = self._Parser.source_operator.shared_data.journal
+		FilePath: Path | None = None
+
+		match selector_type:
+
+			case By.Filename:
+
+				if type(identificator) is int:
+					raise ValueError("Filename must be str.")
+				
+				identificator = cast(str, identificator)
+
+				Filename: str = identificator if identificator.endswith(".json") else f"{identificator}.json"
+				FilePath = TitlesDirectory / Filename
+
+				if FilePath.exists():
+					DataBuffer = SafelyReadTitleJSON(FilePath)
+
+			case By.Slug:
+				if self._Parser.settings.common.use_id_as_filename:
+					ID = Journal.get_id_by_slug(str(identificator))
+					if ID:
+						FilePath = TitlesDirectory / f"{ID}.json"
+						if FilePath.exists():
+							DataBuffer = SafelyReadTitleJSON(FilePath)
+				else:
+					FilePath = TitlesDirectory / f"{identificator}.json"
+					if FilePath.exists():
+						DataBuffer = SafelyReadTitleJSON(FilePath)
+				
+				if not DataBuffer:
+					DataBuffer = self._SearchFileInDirectory(TitlesDirectory, str(identificator), By.Slug) or dict()
+
+			case By.ID:
+				if not self._Parser.settings.common.use_id_as_filename:
+					Slug = Journal.get_slug_by_id(int(identificator))
+					if Slug:
+						FilePath = TitlesDirectory / f"{Slug}.json"
+						if FilePath.exists():
+							DataBuffer = SafelyReadTitleJSON(FilePath)
+				else:
+					FilePath = TitlesDirectory / f"{identificator}.json"
+					if FilePath.exists():
+						DataBuffer = SafelyReadTitleJSON(FilePath)
+					
+				if not DataBuffer:
+					DataBuffer = self._SearchFileInDirectory(TitlesDirectory, str(identificator), By.ID) or dict()
+
+		return Zerotify(DataBuffer)
+
+	def _MergeBranch(self, branch: BaseBranch) -> int:
+		"""
+		Выполняет слияние объектов вевтей с одинаковым ID.
+
+		:param branch: Ветвь.
+		:type branch: BaseBranch
+		:return: Количество добавленных глав.
+		:rtype: int
+		"""
+
+		CurrentBranch = self._Branches[branch.id]
+		AddedCount = 0
+
+		for NewChapter in branch.chapters:
+			if not CurrentBranch.has_chapter(NewChapter.id):
+				CurrentBranch.add_chapter(NewChapter)
+				AddedCount += 1
+
+		return AddedCount
+
 	def _IsLocalFileEqual(self) -> bool:
 		"""
 		Проверяет, идентичны ли данные тайтла локальным данным.
@@ -955,19 +827,20 @@ class BaseTitle:
 		:rtype: bool
 		"""
 
-		if not os.path.exists(self._TitlePath): return False
+		if not self.path.exists():
+			return False
 
-		LocalHasher = hashlib.sha256(str(ReadJSON(self._TitlePath)).encode())
-		MemoryHasher = hashlib.sha256(str(self._Title).encode())
-
+		LocalHasher = hashlib.sha256(orjson.dumps(ReadJSON(self.path)))
+		MemoryHasher = hashlib.sha256(orjson.dumps(self._Data))
+		
 		return LocalHasher.hexdigest() == MemoryHasher.hexdigest()
 
-	def _SearchFileInDirectory(self, directory: PathLike, identificator: str, type: By) -> dict | None:
+	def _SearchFileInDirectory(self, directory: str | PathLike[str], identificator: str, type: By) -> dict | None:
 		"""
 		Находит файл JSON в директории по идентификатору определённого типа.
 
 		:param directory: Путь к каталогу файлов.
-		:type directory: PathLike
+		:type directory: str | PathLike[str]
 		:param identificator: Идентификатор: ID или алиас.
 		:type identificator: str
 		:param type: Тип идентификатора: `By.Slug` или `By.ID`.
@@ -977,35 +850,70 @@ class BaseTitle:
 		"""
 
 		for Element in os.scandir(directory):
-			if not Element.is_file() or not Element.name.endswith(".json"): continue
+			if not Element.is_file() or not Element.name.endswith(".json"):
+				continue
 
 			try: 
 				Data = SafelyReadTitleJSON(Element.path)
-				if Data.get(type.value) == identificator: return Data
+				if Data.get(type.value) == identificator:
+					return Data
 
-			except: pass
+			except (json.JSONDecodeError, Exceptions.Parsers.UnsupportedFormat):
+				pass
 
-	def _SetUsedFilename(self, filename: str):
-		"""
-		Обновляет путь к локальному файлу JSON на основе используемого имени.
-
-		:param filename: Используемое имя файла.
-		:type filename: str
-		"""
-
-		self._UsedFilename = filename
-		self._TitlePath = f"{self._ParserSettings.common.titles_directory}/{filename}.json"
+		return None
 
 	#==========================================================================================#
-	# >>>>> НАСЛЕДУЕМЫЕ МЕТОДЫ ОБНОВЛЕНИЯ СЛОВАРНОЙ СТРУКТУРЫ <<<<< #
+	# >>>>> НАСЛЕДУЕМЫЕ МЕТОДЫ ПРЕОБРАЗОВАНИЯ СЛОВАРНОЙ СТРУКТУРЫ <<<<< #
 	#==========================================================================================#
+
+	def _ParseCovers(self):
+		"""Парсит обложки в объектные представления."""
+
+		self._Covers.clear()
+
+		for CoverData in self._Data["covers"]:
+			CoverData = cast(dict, CoverData)
+			Buffer = ImageData(CoverData["link"])
+			Buffer.create_resolution(CoverData.get("width"), CoverData.get("height"))
+			self._Covers.append(Buffer)
+
+	def _ParsePersons(self):
+		"""Парсит персонажей в объектные представления."""
+
+		self._Persons.clear()
+
+		for PersonData in self._Data["persons"]:
+			CoverData = cast(dict, PersonData)
+			Buffer = Person(CoverData["name"])
+			
+			AnotherNames = CoverData.get("another_names") or tuple()
+			Images = CoverData.get("images") or tuple()
+			Description = CoverData.get("description")
+
+			for AnotherName in AnotherNames:
+				Buffer.add_another_name(AnotherName)
+
+			for CurrentImageData in Images:
+				CurrentImageData = cast(dict, CurrentImageData)
+				Image = ImageData(CurrentImageData["link"])
+				Image.create_resolution(CurrentImageData.get("width"), CurrentImageData.get("height"))
+				Buffer.add_image(Image)
+
+			if Description:
+				Buffer.set_description(Description)
+
+			self._Persons.append(Buffer)
 
 	def _UpdateBranchesInfo(self):
 		"""Обновляет информацию о ветвях во внутреннем словарном хранилище тайтла."""
 
 		Branches = list()
-		for CurrentBranch in self._Branches: Branches.append({"id": CurrentBranch.id, "chapters_count": CurrentBranch.chapters_count})
-		self._Title["branches"] = sorted(Branches, key = lambda Value: Value["chapters_count"], reverse = True)
+
+		for CurrentBranch in self._Branches.values():
+			Branches.append({"id": CurrentBranch.id, "chapters_count": CurrentBranch.chapters_count})
+
+		self._Data["branches"] = sorted(Branches, key = lambda Value: Value["chapters_count"], reverse = True)
 
 	def _UpdateContent(self, brach_id: int | None = None, sorting: bool = True):
 		"""
@@ -1017,74 +925,43 @@ class BaseTitle:
 		:type sorting: bool
 		"""
 
-		for CurrentBranch in self._Branches:
+		for CurrentBranch in self._Branches.values():
 			if brach_id and brach_id == CurrentBranch.id or not brach_id:
 				if sorting: CurrentBranch.sort()
-				self._Title["content"][str(CurrentBranch.id)] = CurrentBranch.to_list()
+				self._Data["content"][str(CurrentBranch.id)] = CurrentBranch.to_list()
 				if brach_id: break
 
 	def _UpdateCovers(self):
 		"""Обновляет данные обложек во внутреннем словарном хранилище данных тайтла."""
 
-		for CurrentCover in self._Covers: self._Title["covers"].append(CurrentCover.to_dict())
+		self._Data["covers"] = list()
+
+		for CurrentCover in self._Covers:
+			self._Data["covers"].append(CurrentCover.to_dict())
 
 	def _UpdatePersons(self):
 		"""Обновляет данные персонажей во внутреннем словарном хранилище данных тайтла."""
 
-		self._Title["persons"] = list()
+		self._Data["persons"] = list()
 
 		for CurrentPerson in self._Persons:
-			self._Title["persons"].append(CurrentPerson.to_dict(self._ParserSettings.common.sizing_images))
+			self._Data["persons"].append(CurrentPerson.to_dict(self._Parser.settings.common.sizing_images))
 
 	#==========================================================================================#
 	# >>>>> ПЕРЕОПРЕДЕЛЯЕМЫЕ МЕТОДЫ <<<<< #
 	#==========================================================================================#
 
-	def _ParseBranchesToObjects(self):
-		"""Преобразует данные ветвей в объекты."""
-
-		pass
-
-	def _PostInitMethod(self):
-		"""Метод, выполняющийся после инициализации объекта."""
-
-		pass
-
-	#==========================================================================================#
-	# >>>>> ПУБЛИЧНЫЕ ПЕРЕОПРЕДЕЛЯЕМЫЕ МЕТОДЫ <<<<< #
-	#==========================================================================================#
-
-	def merge(self):
-		"""Выполняет слияние содержимого описанных локально глав с текущей структурой."""
-
-		raise Exceptions.MergingError("Called not implemented method.")
-
-	#==========================================================================================#
-	# >>>>> ПУБЛИЧНЫЕ МЕТОДЫ <<<<< #
-	#==========================================================================================#
-
-	def __init__(self, system_objects: "SystemObjects"):
+	def _GenerateTitleData(self) -> dict[str, Any]:
 		"""
-		Базовый тайтл.
+		Генерирует базовое словарное представление тайтла.
 
-		:param system_objects: Коллекция системных объектов.
-		:type system_objects: SystemObjects
+		:return: Базовое словарное представление тайтла.
+		:rtype: dict[str, Any]
 		"""
 
-		self._SystemObjects = system_objects
-
-		self._ParserSettings = self._SystemObjects.controller.current_parser_settings
-		self._Branches: list[BaseBranch] = list()
-		self._Persons: list[Person] = list()
-		self._Covers: list[Cover] = list()
-		self._Parser: "BaseParser" = None
-		self._WordsDictionary: WordsDictionary | None = None
-		
-		self._UsedFilename = None
-		self._TitlePath = None
-		self._Title = {
-			"format": None,
-			"site": None,
+		return {
+			"format": "melon-" + type(self).__name__.lower(),
+			"site": self._Parser.manifest.site,
 			"id": None,
 			"slug": None,
 			"content_language": None,
@@ -1111,178 +988,229 @@ class BaseTitle:
 			"content": {} 
 		}
 
-		self._PostInitMethod()
-
-	def amend(self):
-		"""Дополняет контент содержимым."""
-
-		AmendedChaptersCount = 0
-		ProgressIndex = 0
-
-		if not self._Branches:
-			self._SystemObjects.logger.info("No content for amending.")
-			return
-
-		for CurrentBranch in self._Branches:
-
-			for CurrentChapter in CurrentBranch.chapters:
-				CurrentChapter: "MangaChapter | RanobeChapter"
-				ChapterContent = list()
-
-				if self.format == "melon-manga": ChapterContent = CurrentChapter.slides
-				elif self.format == "melon-ranobe": ChapterContent = CurrentChapter.paragraphs
-
-				if not ChapterContent:
-					ProgressIndex += 1
-					
-					try: self._Parser.amend(CurrentBranch, CurrentChapter)
-					except Exceptions.ChapterNotFound: continue
-
-					if self.format == "melon-manga": ChapterContent = CurrentChapter.slides
-					elif self.format == "melon-ranobe": ChapterContent = CurrentChapter.paragraphs
-
-					if ChapterContent:
-						AmendedChaptersCount += 1
-						self._SystemObjects.logger.chapter_amended(CurrentChapter)
-						sleep(self._ParserSettings.common.delay)
-
-					else:
-						self._SystemObjects.logger.warning(f"Chapter {CurrentChapter.id} is empty.")
-
-		self._SystemObjects.logger.amending_end(AmendedChaptersCount)
-
-	def download_images(self):
-		"""Скачивает изображения из данных тайтла."""
-
-		if self.covers: self._DownloadCovers()
-		if self._Persons: self._DownloadPersonsImages()
-
-	def open(self, identificator: int | str, selector_type: By = By.Filename):
+	@abstractmethod
+	def _Merge(self, chapter: Any, data: dict[str, Any]):
 		"""
-		Открывает локальный JSON файл и интерпретирует его данные.
+		Задаёт новое содержимое для главы, используя словарь её данных.
 
-		:param identificator: Идентификатор тайтла: ID или алиас.
-		:type identificator: int | str
-		:param selector_type: Режим поиска файла. По умолчанию `By.Filename` – идентификатор соответствует имени файла без расширения.
-		:type selector_type: By
-		:raises FileNotFoundError: Не удалось найти файл с указанным именем.
-		:raises JSONDecodeError: Ошибка десериализации JSON.
-		:raises UnsupportedFormat: Неподдерживаемый формат JSON.
+		:param chapter: Глава.
+		:type chapter: Any
+		:param data: Словарь данных главы.
+		:type data: dict[str, Any]
 		"""
 
-		Data = None
-		Directory = self._ParserSettings.common.titles_directory
+		pass
 
-		match selector_type:
+	@abstractmethod
+	def _ParseBranchesToObjects(self):
+		"""Преобразует данные ветвей в объекты."""
 
-			case By.Filename:
-				Path = f"{Directory}/{identificator}.json"
-				Data = SafelyReadTitleJSON(f"{Directory}/{identificator}.json")
+		pass
 
-			case By.Slug:
-			
-				if self._ParserSettings.common.use_id_as_filename and self._SystemObjects.CACHING:
-					ID = self._SystemObjects.temper.shared_data.journal.get_id_by_slug(identificator)
+	def _PostInitMethod(self):
+		"""Метод, выполняющийся после инициализации объекта."""
 
-					if ID:
-						PathBuffer = f"{Directory}/{ID}.json"
-						if os.path.exists(PathBuffer): Data = SafelyReadTitleJSON(PathBuffer)
+		pass
 
-				else:
-					Path = f"{Directory}/{identificator}.json"
-					if os.path.exists(Path): Data = SafelyReadTitleJSON(f"{Directory}/{identificator}.json")
-				
-				if not Data: Data = self._SearchFileInDirectory(Directory, identificator, By.Slug)
+	#==========================================================================================#
+	# >>>>> ПУБЛИЧНЫЕ МЕТОДЫ <<<<< #
+	#==========================================================================================#
 
-			case By.ID:
-				
-				if self._ParserSettings.common.use_id_as_filename:
-					Path = f"{Directory}/{identificator}.json"
-					if os.path.exists(Path): Data = SafelyReadTitleJSON(f"{Directory}/{identificator}.json")
-
-				elif self._SystemObjects.CACHING:
-					Slug = self._SystemObjects.temper.shared_data.journal.get_slug_by_id(identificator)
-
-					if Slug:
-						PathBuffer = f"{Directory}/{Slug}.json"
-						if os.path.exists(PathBuffer): Data = SafelyReadTitleJSON(PathBuffer)
-
-				if not Data: Data = self._SearchFileInDirectory(Directory, identificator, By.ID)
-
-		if Data:
-			self._Title = Data
-			self._SetUsedFilename(str(self.id) if self._ParserSettings.common.use_id_as_filename else self.slug)
-
-		else: raise FileNotFoundError()
-
-		if self.content_language: self._WordsDictionary = GetDictionaryPreset(self.content_language)
-		self._ParseBranchesToObjects()
-
-	def parse(self, index: int = 0, titles_count: int = 1):
+	def __init__(self, parser: "BaseParser", slug: str):
 		"""
-		Получает основные данные тайтла.
-			index – индекс текущего тайтла;\n
-			titles_count – количество тайтлов в задаче.
-		"""
-	
-		self._SystemObjects.logger.parsing_start(self, index, titles_count)
-
-		self.set_site(self._Parser.manifest.site)
-		self._Parser.parse()
-
-	def repair(self, chapter_id: int):
-		"""
-		Восстанавливает содержимое главы, заново получая его из источника.
-
-		:param chapter_id: Уникальный идентификатор целевой главы.
-		:type chapter_id: int
-		:raises ChapterNotFound: Выбрасывается, если в локальном JSON не найдена глава с указанным ID.
-		"""
-
-		SearchResult = self._FindChapterByID(chapter_id)
-		if not SearchResult: raise Exceptions.ChapterNotFound(chapter_id)
-
-		BranchData: "BaseBranch" = SearchResult.branch
-		ChapterData: "MangaChapter | RanobeChapter" = SearchResult.chapter
-		
-		ChapterData.clear()
-		self._Parser.amend(BranchData, ChapterData)
-		
-		if self.format == "melon-manga" and ChapterData.slides or self.format == "melon-ranobe" and ChapterData.paragraphs:
-			self._SystemObjects.logger.chapter_repaired(ChapterData)
-
-	def save(self, sorting: bool = False):
-		"""
-		Сохраняет данные тайтла в локальный файл JSON.
-
-		:param sorting: Указывает, нужно ли провести сортировку глав на основе их нумерации.
-		:type sorting: bool
-		"""
-
-		self._Parser.postprocessor()
-		self._UpdateCovers()
-		self._UpdatePersons()
-		self._UpdateBranchesInfo()
-		self._UpdateContent(sorting = sorting)
-
-		if not self._IsLocalFileEqual():
-			WriteJSON(self._TitlePath, self._Title)
-			self._SystemObjects.logger.info("Saved.")
-
-		else: self._SystemObjects.logger.info("No changes. Saving skipped.")
-
-		if self._SystemObjects.CACHING and all((self.id, self.slug)): self._SystemObjects.temper.shared_data.journal.update(self.id, self.slug)
-			
-	def set_parser(self, parser: "BaseParser"):
-		"""
-		Задаёт парсер для вызова методов наполнения контентом.
+		Базовый тайтл.
 
 		:param parser: Парсер.
 		:type parser: BaseParser
 		"""
 
-		parser.set_title(self)
 		self._Parser = parser
+
+		self._SystemObjects = parser.source_operator.system_objects
+		
+		self._Data: dict[str, Any] = self._GenerateTitleData()
+		self._Data["format"] = "melon-" + type(self).__name__.lower()
+		self._Data["slug"] = slug
+
+		self._Branches: dict[int, BaseBranch] = dict()
+		self._Persons: list[Person] = list()
+		self._Covers: list[ImageData] = list()
+
+		self._PostInitMethod()
+
+	def load(self, identificator: int | str, selector_type: By = By.Slug) -> bool:
+		"""
+		Открывает локальный JSON файл и интерпретирует его данные.
+
+		:param identificator: Идентификатор тайтла: имя файла (без расширения), ID или алиас тайтла.
+		:type identificator: int | str
+		:param selector_type: Режим поиска файла. По умолчанию `By.Slug` – идентификатор соответствует алиасу тайтла.
+		:type selector_type: By
+		:return: Возвращает `True`, если удалось найти и открыть файл.
+		:rtype: bool
+		"""
+
+		DataBuffer = self._LoadData(identificator, selector_type)
+		
+		if DataBuffer:
+			self._Data = self._Data | DataBuffer
+			self._ParseCovers()
+			self._ParsePersons()
+			self._ParseBranchesToObjects()
+
+		return bool(DataBuffer)
+
+	def merge(self) -> int:
+		"""
+		Считывает данные о контенте тайтла.
+
+		:return: Количество глав, для которых считан контент.
+		:rtype: int
+		"""
+
+		DataBuffer: dict | None = self._LoadData(self.slug)
+
+		if not DataBuffer:
+			return 0
+		
+		#---> Слияние размеров обложек.
+		#==========================================================================================#
+		CoversData: list[dict] = DataBuffer["covers"]
+
+		for CoverData in CoversData:
+			Link = CoverData["link"]
+			TargetCover = self.find_cover_by_link(Link)
+			if TargetCover:
+				TargetCover.create_resolution(CoverData.get("width"), CoverData.get("height"))
+
+		#---> Слияние размеров портретов персонажей.
+		#==========================================================================================#
+		PersonsData: list[dict] = DataBuffer["persons"]
+
+		for PersonData in PersonsData:
+			PersonObject = self.find_person_by_name(PersonData["name"])
+			if not PersonObject: continue
+
+			for CurrentImage in cast(list[dict], PersonData["images"]):
+				Link = CurrentImage["link"]
+				TargetImage = PersonObject.find_image_by_link(Link)
+				if TargetImage:
+					TargetImage.create_resolution(CurrentImage.get("width"), CurrentImage.get("height"))
+			
+		#---> Слияние контента глав.
+		#==========================================================================================#
+		ContentData: dict[str, dict] = DataBuffer["content"]
+		MergedChaptersCount: int = 0
+
+		for BranchKey in ContentData.keys():
+			for ChapterData in ContentData[BranchKey]:
+				ChapterID = int(ChapterData["id"])
+				
+				SearchResult = self.find_chapter_by_id(ChapterID)
+
+				if SearchResult and SearchResult.chapter.is_empty:
+					self._Merge(SearchResult.chapter, ChapterData)
+					MergedChaptersCount += 1
+
+		return MergedChaptersCount
+
+	def save(self, sorting: bool = False) -> bool:
+		"""
+		Сохраняет данные тайтла в локальный файл JSON.
+
+		:param sorting: Указывает, нужно ли провести сортировку глав на основе их нумерации.
+		:type sorting: bool
+		:return: Возвращает `True`, если файл сохранён, и `False`, если изменений из-за отсутствия изменений запись не выполнялась.
+		:rtype: bool
+		"""
+
+		self._UpdateCovers()
+		self._UpdatePersons()
+		self._UpdateBranchesInfo()
+		self._UpdateContent(sorting = sorting)
+
+		IsLocalFileEqual = self._IsLocalFileEqual()
+
+		if not IsLocalFileEqual:
+			WriteJSON(self.path, self._Data)
+
+		if all((self.id, self.slug)):
+			self._Parser.source_operator.shared_data.journal.update(cast(int, self.id), cast(str, self.slug))
+
+		return not IsLocalFileEqual
+
+	#==========================================================================================#
+	# >>>>> ПУБЛИЧНЫЕ МЕТОДЫ ПОИСКА ОБЪЕКТОВ <<<<< #
+	#==========================================================================================#
+
+	def find_branch_by_id(self, branch_id: int) -> BaseBranch | None:
+		"""
+		Ищет ветвь по её ID.
+
+		:param branch_id: ID dtndb.
+		:type branch_id: int
+		:return: Результат поиска.
+		:rtype: BaseBranch | None
+		"""
+
+		return self._Branches.get(branch_id)
+
+	def find_cover_by_link(self, link: str) -> ImageData | None:
+		"""
+		Производит поиск обложки по ссылке.
+
+		:param link: Ссылка на обложку.
+		:type link: str
+		:return: Обложка или `None` при отсутствии оной.
+		:rtype: ImageData | None
+		"""
+
+		for CurrentCover in self._Covers:
+			if CurrentCover.link == link:
+				return CurrentCover
+			
+		return None
+
+	def find_chapter_by_id(self, chapter_id: int) -> ChapterSearchResult | None:
+		"""
+		Ищет главу по её ID.
+
+		:param chapter_id: ID главы.
+		:type chapter_id: int
+		:return: Результат поиска.
+		:rtype: ChapterSearchResult | None
+		"""
+
+		BranchResult = None
+		ChapterResult = None
+
+		for CurrentBranch in self._Branches.values():
+			for CurrentChapter in CurrentBranch.chapters:
+				if CurrentChapter.id == chapter_id:
+					BranchResult = CurrentBranch
+					ChapterResult = CurrentChapter
+					break
+
+		if all((BranchResult, ChapterResult)):
+			return ChapterSearchResult(cast(BaseBranch, BranchResult), ChapterResult) if ChapterResult else None
+
+		return None
+
+	def find_person_by_name(self, name: str) -> Person | None:
+		"""
+		Производит поиск персонажа по имени.
+
+		:param name: Имя персонажа.
+		:type name: str
+		:return: Обложка или `None` при отсутствии оной.
+		:rtype: ImageData | None
+		"""
+
+		for CurrentPerson in self._Persons:
+			if CurrentPerson.name == name:
+				return CurrentPerson
+			
+		return None
 
 	#==========================================================================================#
 	# >>>>> ПУБЛИЧНЫЕ МЕТОДЫ УСТАНОВКИ СВОЙСТВ <<<<< #
@@ -1297,18 +1225,25 @@ class BaseTitle:
 		"""
 		
 		another_name = another_name.strip()
-		if another_name != self._Title["localized_name"] and another_name != self._Title["eng_name"] and another_name: self._Title["another_names"].append(another_name)
+		if another_name != self._Data["localized_name"] and another_name != self._Data["eng_name"] and another_name and another_name not in self._Data["another_names"]:
+			self._Data["another_names"].append(another_name)
 
-	def add_cover(self, cover: Cover):
+	def add_cover(self, cover: ImageData):
 		"""
 		Добавляет обложку.
 
-		:param cover: Данные обложки.
-		:type cover: Cover
-		:raises ValueError: Выбрасывается при отсутствии ссылки в данных обложки.
+		:param cover: Обложка.
+		:type cover: ImageData
+		:raises ValueError: Отсутствует ссылка на обложку.
 		"""
 
-		if not cover.link: raise ValueError("Cover must have a link.")
+		if not cover.link:
+			raise ValueError("Cover must have a link.")
+		
+		for CurrentCover in self._Covers:
+			if CurrentCover.link == cover.link:
+				return
+		
 		self._Covers.append(cover)
 
 	def add_author(self, author: str):
@@ -1320,7 +1255,8 @@ class BaseTitle:
 		"""
 
 		author = author.strip()
-		if author and author not in self._Title["authors"]: self._Title["authors"].append(author)
+		if author and author not in self._Data["authors"]:
+			self._Data["authors"].append(author)
 
 	def add_genre(self, genre: str):
 		"""
@@ -1331,7 +1267,8 @@ class BaseTitle:
 		"""
 
 		genre = genre.strip()
-		if genre not in self._Title["genres"]: self._Title["genres"].append(genre)
+		if genre not in self._Data["genres"]:
+			self._Data["genres"].append(genre)
 
 	def add_tag(self, tag: str):
 		"""
@@ -1342,142 +1279,161 @@ class BaseTitle:
 		"""
 
 		tag = tag.strip()
-		if tag not in self._Title["tags"]: self._Title["tags"].append(tag)
+		if tag not in self._Data["tags"]:
+			self._Data["tags"].append(tag)
 
-	def add_franshise(self, franshise: str):
+	def add_franchise(self, franchise: str):
 		"""
 		Добавляет франшизу.
 
-		:param franshise: Франшиза.
-		:type franshise: str
+		:param franchise: Франшиза.
+		:type franchise: str
 		"""
 
-		franshise = franshise.strip()
-		if franshise and franshise not in self._Title["franshises"]: self._Title["franshises"].append(franshise)
+		franchise = franchise.strip()
+		if franchise and franchise not in self._Data["franchises"]:
+			self._Data["franchises"].append(franchise)
 
 	def add_person(self, person: Person):
 		"""
 		Добавляет персонажа.
-			person – данные персонажа.
+
+		:param person: Персонаж.
+		:type person: Person
 		"""
 		
-		if person not in self._Persons: self._Persons.append(person)
+		for CurrentPerson in self._Persons:
+			if CurrentPerson.name == person.name:
+				return
+			
+		self._Persons.append(person)
 
-	def add_branch(self, branch: BaseBranch):
+	def add_branch(self, branch: BaseBranch) -> int:
 		"""
-		Добавляет ветвь. Одинаковые объекты или ветви с повторяющимся ID будут проигнорированы.
+		Добавляет ветвь.
 
-		:param branch: Ветвь контента.
+		:param branch: Ветвь контента. Если ветвь с таким ID уже существует, будут добавлены только отсутствующие главы.
 		:type branch: BaseBranch
-		:raises ParsingError: Выбрасывается при отсутствии у добавляемой ветви ID.
+		:return: Количество добавленных глав.
+		:rtype: int
+		:raises ParsingError: Ветвь не имеет ID или ветвь с таким ID уже добавлена в тайтл.
 		"""
 
-		if branch.id == None: raise Exceptions.ParsingError("Branch must have unique ID.")
-		if branch.id in tuple(Element.id for Element in self._Branches): return
-		self._Branches.append(branch)
-		self._Branches = sorted(self._Branches, key = lambda Value: Value.chapters_count, reverse = True)
+		AddedCount = branch.chapters_count
 
-	def set_site(self, site: str):
-		"""
-		Задаёт домен источника.
-			site – домен сайта.
-		"""
+		if not branch.id:
+			Exceptions.Parsers.ParsingError("Branch must have ID.")
 
-		self._Title["site"] = site
+		if branch.id in self._Branches.keys():
+			AddedCount = self._MergeBranch(branch)
+		else:
+			self._Branches[branch.id] = branch
+			self._Branches = {CurrentBranch.id: CurrentBranch for CurrentBranch in sorted(self._Branches.values(), key = lambda Value: Value.chapters_count, reverse = True)}
 
-	def set_id(self, id: int):
-		"""
-		Задаёт целочисленный уникальный идентификатор тайтла.
-			id – идентификатор.
-		"""
+		return AddedCount
 
-		self._Title["id"] = id
-		if not self.slug: self.set_slug(self._SystemObjects.temper.shared_data.journal.get_slug_by_id(id))
-		if self._ParserSettings.common.use_id_as_filename: self._SetUsedFilename(id)
-
-	def set_slug(self, slug: str):
+	def set_site(self, site: str | None):
 		"""
-		Задаёт алиас манги.
-			slug – алиас.
+		Задаёт домен сайта-источника.
+
+		:param site: Домен сайта.
+		:type site: str | None
 		"""
 
-		self._Title["slug"] = slug
-		if not self.id: self.set_id(self._SystemObjects.temper.shared_data.journal.get_id_by_slug(slug))
-		if not self._ParserSettings.common.use_id_as_filename: self._SetUsedFilename(slug)
+		self._Data["site"] = site
 
-	def set_content_language(self, language_code: str | None) -> WordsDictionary | None:
+	def set_id(self, id: int | None):
+		"""
+		Задаёт ID тайтла.
+
+		:param id: ID тайтла.
+		:type id: int | None
+		"""
+
+		self._Data["id"] = id
+
+	def set_content_language(self, language_code: str | None, load_preset: bool = True):
 		"""
 		Задаёт язык контента по стандарту ISO 639-3.
 
 		:param original_language: Код языка.
 		:type original_language: str | None
+		:param load_preset: Указывает, стоит ли попытаться загрузить готовый словарь ключевых локальных определений.
+		:type load_preset: bool
 		:raise ValueError: Выбрасывается при несоответствии кода языка стандарту.
-		:return: Словарь ключевых слов для выбранного языка, если доступен.
-		:rtype: WordsDictionary | None
 		"""
 
-		if language_code: CheckLanguageCode(language_code)
-		self._Title["content_language"] = language_code
-		self._WordsDictionary = GetDictionaryPreset(self.content_language)
+		if language_code:
+			CheckLanguageCode(language_code)
 
-		return self._WordsDictionary
+			if load_preset:
+				self._Parser.load_words_dictionary_preset(language_code)
+
+		self._Data["content_language"] = language_code
 
 	def set_localized_name(self, localized_name: str | None):
 		"""
-		Задаёт главное название манги на русском.
-			ru_name – название на русском.
+		Задаёт локализованное название тайтла.
+
+		:param localized_name: Локализованное название.
+		:type localized_name: str | None
 		"""
 
-		self._Title["localized_name"] = localized_name.strip() if localized_name else None
+		self._Data["localized_name"] = localized_name.strip() if localized_name else None
 
 	def set_eng_name(self, eng_name: str | None):
 		"""
-		Задаёт главное название манги на английском.
-			en_name – название на английском.
+		Задаёт название на английском языке.
+
+		:param eng_name: Название на английском языке.
+		:type eng_name: str | None
 		"""
 
-		self._Title["eng_name"] = eng_name.strip() if eng_name else None
+		self._Data["eng_name"] = eng_name.strip() if eng_name else None
 
-	def set_another_names(self, another_names: Iterable[str]):
+	def set_another_names(self, another_names: Sequence[str]):
 		"""
 		Задаёт набор альтернативных названий.
 
 		:param another_names: Набор альтернативных названий.
-		:type another_names: Iterable[str]
+		:type another_names: Sequence[str]
 		"""
 
-		for Name in another_names: self.add_another_name(Name)
+		for Name in another_names:
+			self.add_another_name(Name)
 
-	def set_covers(self, covers: Iterable[Cover]):
+	def set_covers(self, covers: Sequence[ImageData]):
 		"""
 		Задаёт последовательность обложек.
 
 		:param covers: Последовательность обложек.
-		:type covers: Iterable[Cover]
+		:type covers: Sequence[Cover]
 		:raises ValueError: Выбрасывается при отсутствии ссылки в данных обложки.
 		"""
 
-		for CurrentCover in covers: self.add_cover(CurrentCover)
+		for CurrentCover in covers:
+			self.add_cover(CurrentCover)
 
-	def set_authors(self, authors: Iterable[str]):
+	def set_authors(self, authors: Sequence[str]):
 		"""
 		Задаёт список авторов.
 
 		:param authors: Список авторов.
-		:type authors: Iterable[str]
+		:type authors: Sequence[str]
 		"""
 
-		for Author in authors: self.add_author(Author)
+		for Author in authors:
+			self.add_author(Author)
 
-	def set_publication_year(self, publication_year: int | None):
+	def set_publication_year(self, publication_year: int):
 		"""
 		Задаёт год публикации тайтла.
 
-		:param publication_year: Год публикации.
-		:type publication_year: int | None
+		:param publication_year: Год публикации тайтла.
+		:type publication_year: int
 		"""
 
-		self._Title["publication_year"] = int(publication_year) if publication_year else None
+		self._Data["publication_year"] = publication_year
 
 	def set_description(self, description: str | None):
 		"""
@@ -1487,69 +1443,78 @@ class BaseTitle:
 		:type description: str | None
 		"""
 
-		self._Title["description"] = Zerotify(description) if not description else description.strip()
+		self._Data["description"] = description.strip() if description else None
 
 	def set_age_limit(self, age_limit: int | None):
 		"""
 		Задаёт возрастной рейтинг.
-			age_limit – возрастной рейтинг.
+
+		:param age_limit: Возрастной рейтинг.
+		:type age_limit: int | None
 		"""
 
-		self._Title["age_limit"] = age_limit
+		self._Data["age_limit"] = age_limit
 
-	def set_genres(self, genres: Iterable[str]):
+	def set_genres(self, genres: Sequence[str]):
 		"""
 		Задаёт список жанров.
 
 		:param genres: Список жанров.
-		:type genres: Iterable[str]
+		:type genres: Sequence[str]
 		"""
 
-		for Genre in genres: self.add_genre(Genre)
+		for Genre in genres:
+			self.add_genre(Genre)
 
-	def set_tags(self, tags: Iterable[str]):
+	def set_tags(self, tags: Sequence[str]):
 		"""
 		Задаёт список тегов.
 
 		:param tags: Список тегов.
-		:type tags: Iterable[str]
+		:type tags: Sequence[str]
 		"""
 
-		for Tag in tags: self.add_tag(Tag)
+		for Tag in tags:
+			self.add_tag(Tag)
 
-	def set_franchises(self, franchises: Iterable[str]):
+	def set_franchises(self, franchises: Sequence[str]):
 		"""
 		Задаёт список франшиз.
 
 		:param franchises: Список франшиз.
-		:type franchises: Iterable[str]
+		:type franchises: Sequence[str]
 		"""
 
-		for Franchise in franchises: self.add_franshise(Franchise)
+		for Franchise in franchises:
+			self.add_franchise(Franchise)
 
-	def set_persons(self, persons: Iterable[Person]):
+	def set_persons(self, persons: Sequence[Person]):
 		"""
 		Задаёт список персонажей.
 
 		:param persons: Список персонажей.
-		:type persons: Iterable[Person]
+		:type persons: Sequence[Person]
 		"""
 		
-		for CurrentPerson in persons: self.add_person(CurrentPerson)
+		for CurrentPerson in persons:
+			self.add_person(CurrentPerson)
 
 	def set_status(self, status: Statuses | None):
 		"""
-		Задаёт статус манги.
-			status – статус.
+		Задаёт статус тайтла.
+
+		:param status: Статус тайтла.
+		:type status: Statuses | None
 		"""
 
-		if status: self._Title["status"] = status.value
-		else: self._Title["status"] = None
+		self._Data["status"] = status.value if status else None
 	
 	def set_is_licensed(self, is_licensed: bool | None):
 		"""
-		Задаёт статус лицензирования манги.
-			is_licensed – статус лицензирования.
+		Задаёт состояние: лицензирован ли тайтл в источнике.
+
+		:param is_licensed: Состояние: лицензирован ли тайтл в источнике.
+		:type is_licensed: bool | None
 		"""
 
-		self._Title["is_licensed"] = is_licensed
+		self._Data["is_licensed"] = is_licensed

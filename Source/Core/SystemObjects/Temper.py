@@ -1,18 +1,16 @@
-from Source.Core.Exceptions import TempOwnerNotSpecified
-
 from dublib.Methods.Filesystem import ReadJSON, RemoveDirectoryContent, WriteJSON
 
-from typing import Iterable
-from os import PathLike
+from typing import Sequence
+from pathlib import Path
 import shutil
 import os
 
 #==========================================================================================#
-# >>>>> ВСПОМОГАТЕЛЬНЫЕ СТРУКТУРЫ ДАННЫХ <<<<< #
+# >>>>> СТРУКТУРЫ РАЗДЕЛЯЕМЫХ ДАННЫХ <<<<< #
 #==========================================================================================#
 
 class Journal:
-	"""Журнал хранения пар ID-алиас тайтлов."""
+	"""Журнал кэша пар ID-алиас тайтлов."""
 
 	def __init__(self, shared_data: "SharedData"):
 		"""
@@ -24,7 +22,8 @@ class Journal:
 
 		self.__SharedData = shared_data
 
-		self.__Data = dict()
+		self.__JournalPath = Path(f"{self.__SharedData.path}/journal.json")
+		self.__Data: dict[int, str] = dict()
 
 	def get_id_by_slug(self, slug: str) -> int | None:
 		"""
@@ -35,18 +34,23 @@ class Journal:
 		"""
 
 		for ID, Slug in self.__Data.items():
-			if slug == Slug: return int(ID)
+			if slug == Slug:
+				return ID
+
+		return None
 
 	def get_slug_by_id(self, title_id: int) -> str | None:
 		"""
 		Ищет алиас тайтла по его ID.
 
-		:param slug: Алиас тайтла.
-		:type slug: str
+		:param title_id: ID тайтла.
+		:type title_id: int
 		"""
 
-		try: return self.__Data[str(title_id)]
-		except KeyError: pass
+		try:
+			return self.__Data[title_id]
+		except KeyError:
+			return None
 
 	def drop(self):
 		"""Сбрасывает журнал."""
@@ -57,15 +61,16 @@ class Journal:
 	def load(self):
 		"""Загружает журнал."""
 
-		Path = f"{self.__SharedData.path}/journal.json"
-		if os.path.exists(Path): self.__Data = ReadJSON(Path)
-		else: self.__Data = dict()
+		if self.__JournalPath.exists():
+			self.__Data = {int(Key): Value for Key, Value in ReadJSON(self.__JournalPath).items()}
+		else:
+			self.__Data = dict()
 
 	def save(self):
 		"""Сохраняет журнал."""
 
-		self.__Data = {Key: self.__Data[Key] for Key in sorted(self.__Data.keys(), key = int)}
-		WriteJSON(f"{self.__SharedData.path}/journal.json", self.__Data)
+		self.__Data = dict(sorted(self.__Data.items()))
+		WriteJSON(self.__JournalPath, self.__Data)
 
 	def update(self, title_id: int, slug: str):
 		"""
@@ -78,13 +83,13 @@ class Journal:
 		:raise TypeError: Выбрасывается при неверном типе переданных данных.
 		"""
 
-		if type(title_id) != int: raise TypeError("Title ID must be integer.")
-		if type(slug) != str: raise TypeError("Title slug must be string.")
-		self.__Data[str(title_id)] = slug
+		if type(title_id) is not int: raise TypeError("Title ID must be integer.")
+		if type(slug) is not str: raise TypeError("Title slug must be string.")
+		self.__Data[title_id] = slug
 		self.save()
 
 class SharedData:
-	"""Разделяемые в контексте одного парсера данные."""
+	"""Разделяемые в контексте сессий одного парсера данные."""
 
 	#==========================================================================================#
 	# >>>>> СВОЙСТВА <<<<< #
@@ -92,7 +97,7 @@ class SharedData:
 
 	@property
 	def journal(self) -> Journal:
-		"""Журнал определений тайтлов."""
+		"""Журнал кэша пар ID-алиас тайтлов."""
 
 		return self.__Journal
 
@@ -100,42 +105,50 @@ class SharedData:
 	def last_parsed_slug(self) -> str | None:
 		"""Алиас последнего тайтла, обработанного парсером."""
 
-		return self.__Data["last_parsed_slug"]
+		return self.__Data.get("last_parsed_slug")
 
 	@property
-	def path(self) -> PathLike:
+	def path(self) -> Path:
 		"""Путь к каталогу разделяемых данных."""
 
-		Path = f"{self.__Temper.parser_temp}/shared"
-		if not os.path.exists(Path): os.makedirs(Path)
-
-		return Path
+		return self.__SharedDataDirectoryPath
 
 	#==========================================================================================#
 	# >>>>> СВОЙСТВА <<<<< #
 	#==========================================================================================#
 
-	def __init__(self, temper: "Temper"):
+	def __init__(self, temper: "Temper", parser_name: str):
 		"""
-		Разделяемые в контексте одного парсера данные.
+		Разделяемые в контексте сессий одного парсера данные.
 
 		:param temper: Дескриптор временных каталогов и объектов.
 		:type temper: Temper
+		:param parser_name: Имя парсера.
+		:type parser_name: str
 		"""
 
 		self.__Temper = temper
+		self.__ParserName = parser_name
 
-		self.__Journal = Journal(self)
-		self.__Data = {
+		self.__SharedDataDirectoryPath = Path(self.__Temper.get_parser_temp_directory(self.__ParserName) / "shared")
+		self.__SharedDataDirectoryPath.mkdir(exist_ok = True)
+
+		self.__SharedDataPath = Path(f"{self.__SharedDataDirectoryPath}/shared.json")
+
+		self.__Data: dict = {
 			"last_parsed_slug": None
 		}
+
+		self.__Journal = Journal(self)
+
+		self.load()
 
 	def load(self):
 		"""Загружает разделяемые данные."""
 
-		Path = f"{self.path}/shared.json"
-		if os.path.exists(Path): self.__Data = ReadJSON(Path)
-		else: self.__Data = dict()
+		if self.__SharedDataPath.exists():
+			self.__Data = self.__Data | ReadJSON(self.__SharedDataPath)
+
 		self.__Journal.load()
 
 	def set_last_parsed_slug(self, slug: str):
@@ -152,7 +165,7 @@ class SharedData:
 	def save(self):
 		"""Сохраняет разделяемые данные."""
 
-		WriteJSON(f"{self.path}/shared.json", self.__Data)
+		WriteJSON(self.__SharedDataPath, self.__Data)
 
 #==========================================================================================#
 # >>>>> ОСНОВНОЙ КЛАСС <<<<< #
@@ -161,124 +174,61 @@ class SharedData:
 class Temper:
 	"""Дескриптор временных каталогов и объектов."""
 
-	#==========================================================================================#
-	# >>>>> ПУТИ К КАТАЛОГАМ <<<<< #
-	#==========================================================================================#
+	def __init__(self):
+		"""Оператор временных каталогов и объектов."""
 
-	@property
-	def builder_temp(self) -> PathLike:
-		"""Путь к выделенному для сборки контента каталогу временных файлов."""
+		self.__TempDirectory = Path("Temp")
 
-		Path = f"{self.parser_temp}/build"
-		if not os.path.exists(Path): os.makedirs(Path)
+		self.__TempDirectory.mkdir(exist_ok = True)
 
-		return Path
-
-	@property
-	def extension_temp(self) -> PathLike:
-		"""Путь к выделенному для конкретного расширения каталогу временных файлов."""
-
-		if not self.__ParserName or not self.__ExtensionName: raise TempOwnerNotSpecified()
-		Path = f"{self.__Temp}/{self.__ParserName}/extensions/{self.__ExtensionName}"
-		if not os.path.exists(Path): os.makedirs(Path)
-
-		return Path
-
-	@property
-	def parser_temp(self) -> PathLike:
-		"""Путь к выделенному для конкретного парсера каталогу временных файлов."""
-
-		if not self.__ParserName: raise TempOwnerNotSpecified()
-		Path = f"{self.__Temp}/{self.__ParserName}"
-		os.makedirs(Path, exist_ok = True)
-
-		return Path
-
-	#==========================================================================================#
-	# >>>>> СВОЙСТВА <<<<< #
-	#==========================================================================================#
-
-	@property
-	def shared_data(self) -> SharedData:
-		"""Разделяемые в контексте одного парсера данные."""
-
-		return self.__SharedData
-
-	@property
-	def whitelist(self) -> tuple[str]:
-		"""Список имён файлов и каталогов, по умолчанию не удаляемых при очистке."""
-
-		return self.__StandartWhitelist + self.__CustomWhitelist
-
-	#==========================================================================================#
-	# >>>>> ПУБЛИЧНЫЕ МЕТОДЫ <<<<< #
-	#==========================================================================================#
-
-	def __init__(self, parser: str | None = None, extension: str | None = None):
-		"""
-		Дескриптор временных каталогов и объектов.
-
-		:param parser: Имя парсера.
-		:type parser: str | None
-		:param extension: Имя расширения.
-		:type extension: str | None
-		"""
-
-		self.__ParserName = parser
-		self.__ExtensionName = extension
-
-		self.__Temp = "Temp"
-	
-		self.__SharedData = SharedData(self)
-
-		self.__StandartWhitelist = ("Collection.txt", "shared")
-		self.__CustomWhitelist = tuple()
-
-	def clear_parser_temp(self, full: bool = False):
+	def clear_parser_temp(self, parser_name: str, whitelist: Sequence[str] | None = ("Collection.txt", "shared")):
 		"""
 		Очищает временный каталог парсера. По умолчанию не трогает файлы и каталоги из белого списка.
 
-		:param full: Если указать `True`, будут удалены также файлы и каталоги и из белого списка.
-		:type full: bool
+		:param parser_name: Имя парсера.
+		:type parser_name: str
+		:param whitelist: Последовательность не удаляемых файлов и папок во временном каталоге. При `None` происходит полная очистка.
+		:type whitelist: bool
 		"""
 
-		if full: 
-			RemoveDirectoryContent(self.parser_temp)
+		ParserTempDirectory = self.get_parser_temp_directory(parser_name)
+
+		if not whitelist: 
+			RemoveDirectoryContent(ParserTempDirectory)
 			return
 
-		for Descriptor in os.scandir(self.parser_temp):
-			if Descriptor.name in self.whitelist: continue
+		for Descriptor in os.scandir(ParserTempDirectory):
+			if Descriptor.name in whitelist:
+				continue
 
-			if Descriptor.is_file(): os.remove(Descriptor.path)
-			elif Descriptor.is_dir(): shutil.rmtree(Descriptor.path)
+			if Descriptor.is_file():
+				os.remove(Descriptor.path)
+			elif Descriptor.is_dir():
+				shutil.rmtree(Descriptor.path)
 
-	def select_extension(self, extension: str):
+	def get_parser_temp_directory(self, parser_name: str) -> Path:
 		"""
-		Задаёт имя используемого расширения.
-
-		:param extension: Имя расширения.
-		:type extension: str
-		"""
-
-		self.__ExtensionName = extension
-
-	def select_parser(self, parser_name: str):
-		"""
-		Задаёт имя используемого парсера.
+		Возвращает путь ко временной директории парсера и автоматически создаёт её.
 
 		:param parser_name: Имя парсера.
 		:type parser_name: str
+		:return: Путь ко временной директории парсера.
+		:rtype: Path
 		"""
 
-		self.__ParserName = parser_name
-		self.__SharedData.load()
+		ParserTempDirectory = self.__TempDirectory / parser_name
+		ParserTempDirectory.mkdir(exist_ok = True)
 
-	def set_whitelist(self, whitelist: Iterable[str]):
+		return ParserTempDirectory
+
+	def load_parser_shared_data(self, parser_name: str) -> SharedData:
 		"""
-		Задаёт белый список имён файлов и каталогов, по умолчанию не удаляемых при очистке.
+		Загружает разделяемые в контексте сессий одного парсера данные.
 
-		:param whitelist: Последовательность имён файлов и каталогов.
-		:type whitelist: Iterable[str]
+		:param parser_name: Имя парсера.
+		:type parser_name: str
+		:return: Разделяемые в контексте сессий одного парсера данные.
+		:rtype: SharedData
 		"""
 
-		self.__CustomWhitelist = tuple(whitelist)
+		return SharedData(self, parser_name)

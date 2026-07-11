@@ -1,32 +1,25 @@
-from Source.Core.Base.Builders.RanobeBuilder import RanobeBuilder
-from Source.Core.Base.Formats.Components import By, ContentTypes
-from Source.Core.Base.Builders.MangaBuilder import MangaBuilder
-from Source.Core.Development import DevelopmeptAssistant
-from Source.Core.SystemObjects import SystemObjects
-from Source.Core.Collector import Collector
-from Source.Core.Installer import Installer
-from Source.Core.Cacher import Cacher
-from Source.Core.Tagger import Tagger
-from Source.Core.Timer import Timer
+from . import Functions
+
+from Source.Core.Builders.MangaBuilder import MangaBuilder, MangaOutputFormats
+from Source.Core.Base.Parsers.Components.Manifest import ContentTypes
+from Source.Core.Builders.RanobeBuilder import RanobeBuilder
+from Source.Core.Base.Formats.Components.Enums import By
 from Source.Core import Exceptions
-from Source.CLI import Templates
+from Source import Utils
 
-from dublib.CLI.TextStyler import FastStyler, GetStyledTextFromHTML
-from dublib.CLI.Templates.Bus import PrintError, PrintWarning
-from dublib.CLI.Terminalyzer import ParsedCommandData
 from dublib.Methods.Filesystem import WriteJSON
-from dublib.Engine.Bus import ExecutionStatus
 
-from json.decoder import JSONDecodeError
-from typing import TYPE_CHECKING
-from time import sleep
+from typing import cast, TYPE_CHECKING
+from json import JSONDecodeError
+from pathlib import Path
 import traceback
 
+import orjson
+
 if TYPE_CHECKING:
-	from Source.Core.Base.Parsers.RanobeParser import RanobeParser
-	from Source.Core.Base.Parsers.MangaParser import MangaParser
-	from Source.Core.Base.Formats.Ranobe import Ranobe
-	from Source.Core.Base.Formats.Manga import Manga
+	from Source.Core.Base.Parsers.BaseParser import BaseParser
+	from Source.Core.SystemObjects import SystemObjects
+	from dublib.CLI.Terminalyzer import ParsedCommandData
 
 def com_build_manga(system_objects: SystemObjects, command: ParsedCommandData):
 	"""
@@ -38,32 +31,57 @@ def com_build_manga(system_objects: SystemObjects, command: ParsedCommandData):
 	:type command: ParsedCommandData
 	"""
 
-	Filename = command.arguments[0][:-5] if command.arguments[0].endswith(".json") else command.arguments[0]
-	TimerObject = Timer(start = True)
-	system_objects.logger.header("Building")
-	BuildSystemName = None
+	#---> Парсинг параметров команды.
+	#==========================================================================================#
+	Filename: str = command.get_important_position_value("FILE", expected_type = str)
+	ParserName: str = command.get_important_position_value("PARSER", expected_type = str)
 
-	for MangaBuilderSystem in ("simple", "zip", "cbz"):
-		if command.check_flag(MangaBuilderSystem):
-			BuildSystemName = MangaBuilderSystem
-			break
+	TargetID: int = command.get_important_position_value("TARGET", expected_type = int)
+	IsTargetChapter: bool = command.check_key("--chapter")
 
-	EntryPoint = system_objects.controller.get_entry_point()
-	Title: "Manga" = Title(system_objects)
-	Title.open(Filename, By.Filename)
-	Parser: "RanobeParser" = EntryPoint.launch_parser(ContentTypes.Ranobe)
-	Title.set_parser(Parser)
+	OutputFormat: str | None = command.get_position_value("FORMAT", expected_type = str)
+	if OutputFormat: OutputFormat = OutputFormat.lstrip("-")
 
-	Builder = MangaBuilder(system_objects, Parser)
-	Builder.select_build_system(BuildSystemName)
-	if command.check_key("ch-template"): Builder.set_chapter_name_template(command.get_key_value("ch-template"))
-	if command.check_key("vol-template"): Builder.set_volume_name_template(command.get_key_value("vol-template"))
-	Title.open(Filename)
-	
-	if command.check_key("chapter"): Builder.build_chapter(Title, command.get_key_value("chapter"))
-	elif command.check_key("branch"): Builder.build_branch(Title, command.get_key_value("branch"))
-	else: Builder.build_branch(Title)
-	TimerObject.done()
+	ChapterTemplate: str | None = command.get_key_value("--ct", expected_type = str)
+	VolumeTemplate: str | None = command.get_key_value("--vt", expected_type = str)
+
+	SortByVolumes: bool = command.check_flag("-s")
+
+	if not Filename.endswith(".json"):
+		Filename += ".json"
+
+	if ParserName not in system_objects.driver.parsers_names:
+		raise Exceptions.System.ParserNotFound(ParserName)
+
+	#---> Выполнение команды.
+	#==========================================================================================#
+	Timer = Utils.Timer(start = True)
+	EntryPoint = system_objects.driver.get_entry_point(ParserName)
+	SourceOperator = EntryPoint.source_operator
+	TypingResult = EntryPoint.get_content_type_by_file(Filename)
+	Parser: BaseParser = SourceOperator.launch_parser(TypingResult.content_type)
+	Title = Parser.init_empty_title(TypingResult.slug)
+
+	if Title.load(Filename, By.Filename):
+		system_objects.printer.emit(f"Loaded file: <i>{Filename}</i>.")
+	else:
+		system_objects.printer.error(f"Unable load file: <b>{Filename}</b>.")
+		exit(1)
+
+	Builder = MangaBuilder(Parser, Title)
+	if OutputFormat: Builder.select_output_format(MangaOutputFormats(OutputFormat))
+	if ChapterTemplate: Builder.set_chapter_name_template(ChapterTemplate)
+	if VolumeTemplate: Builder.set_volume_name_template(VolumeTemplate)
+	Builder.switch_volumes_sorting(SortByVolumes)
+
+	if IsTargetChapter:
+		Builder.build_chapter(TargetID)
+	elif command.check_key("--branch"):
+		Builder.build_branch(TargetID)
+	else:
+		Builder.build_branch()
+
+	system_objects.printer.emit(f"Done in {Timer.ends()}.")
 
 def com_build_ranobe(system_objects: SystemObjects, command: ParsedCommandData):
 	"""
@@ -75,24 +93,39 @@ def com_build_ranobe(system_objects: SystemObjects, command: ParsedCommandData):
 	:type command: ParsedCommandData
 	"""
 
-	Filename = command.arguments[0][:-5] if command.arguments[0].endswith(".json") else command.arguments[0]
-	TimerObject = Timer(start = True)
-	system_objects.logger.header("Building")
+	#---> Парсинг параметров команды.
+	#==========================================================================================#
+	Filename: str = command.get_important_position_value("FILE", expected_type = str)
+	ParserName: str = command.get_important_position_value("PARSER", expected_type = str)
+	BranchID: int | None = command.get_key_value("--branch", expected_type = int)
 
-	EntryPoint = system_objects.controller.get_entry_point()
-	Title: "Ranobe" = Title(system_objects)
-	Title.open(Filename, By.Filename)
-	Parser: "RanobeParser" = EntryPoint.launch_parser(ContentTypes.Ranobe)
-	Title.set_parser(Parser)
+	if not Filename.endswith(".json"):
+		Filename += ".json"
 
-	Builder = RanobeBuilder(system_objects, Parser)
-	if command.check_key("ch-template"): Builder.set_chapter_name_template(command.get_key_value("ch-template"))
-	if command.check_key("vol-template"): Builder.set_volume_name_template(command.get_key_value("vol-template"))
-	Title.open(Filename)
-	Builder.build_branch(Title)
-	TimerObject.done()
+	if ParserName not in system_objects.driver.parsers_names:
+		raise Exceptions.System.ParserNotFound(ParserName)
 
-def com_cacher(system_objects: SystemObjects, command: ParsedCommandData):
+	#---> Выполнение команды.
+	#==========================================================================================#
+	Timer = Utils.Timer(start = True)
+	EntryPoint = system_objects.driver.get_entry_point(ParserName)
+	SourceOperator = EntryPoint.source_operator
+	TypingResult = EntryPoint.get_content_type_by_file(Filename)
+	Parser: BaseParser = SourceOperator.launch_parser(TypingResult.content_type)
+	Title = Parser.init_empty_title(TypingResult.slug)
+
+	if Title.load(Filename, By.Filename):
+		system_objects.printer.emit(f"Loaded file: <i>{Filename}</i>.")
+	else:
+		system_objects.printer.error(f"Unable load file: <b>{Filename}</b>.")
+		exit(1)
+
+	Builder = RanobeBuilder(Parser, Title)
+	Builder.build(BranchID)
+
+	system_objects.printer.emit(f"Done in {Timer.ends()}.")
+
+def com_cacher(system_objects: "SystemObjects", command: "ParsedCommandData"):
 	"""
 	Кэширует пары ID-алиас для ускорения файловых операций.
 		
@@ -102,30 +135,28 @@ def com_cacher(system_objects: SystemObjects, command: ParsedCommandData):
 	:type command: ParsedCommandData
 	"""
 
-	system_objects.logger.header("Caching")
-	if not system_objects.CACHING: PrintWarning("Cache disabled.")
-	ParsersToCache = system_objects.controller.parsers_names
+	#---> Парсинг параметров команды.
+	#==========================================================================================#
+	KeyValue: str | None = command.get_key_value("--use", expected_type = str)
+	Parsers: tuple[str, ...] = Functions.GetParsersNamesFromKey(system_objects, KeyValue)
+			
+	#---> Выполнение команды.
+	#==========================================================================================#
+	TimerObject = Utils.Timer(start = True)
 
-	ParserNames: str = command.get_key_value("use")
-	if ParserNames: ParsersToCache = ParserNames.split(",")
+	for CurrentParser in Parsers:
+		system_objects.printer.emit(f"Caching titles for <b>{CurrentParser}</b>…")
+		EntryPoint = system_objects.driver.get_entry_point(CurrentParser)
+		Cacher = Utils.Cacher(EntryPoint)
+
+		Result = Cacher.cache_parser_output()
+		system_objects.printer.templates.caching_summary(Result)
 	
-	CacherObject = Cacher(system_objects)
+	system_objects.printer.emit(f"Done in {TimerObject.ends()}.")
 
-	for CurrentParser in ParsersToCache:
-
-		if CurrentParser not in system_objects.controller.parsers_names:
-			PrintError(f"Parser not found: \"{CurrentParser}\".")
-			continue
-
-		TimerObject = Timer(start = True)
-		print(GetStyledTextFromHTML(f"Caching titles for <b>{CurrentParser}</b>…"))
-		Result = CacherObject.cache_parser_output(CurrentParser)
-		Templates.CachingSummary(Result)
-		TimerObject.done()
-
-def com_collect(system_objects: SystemObjects, command: ParsedCommandData):
+def com_classify(system_objects: "SystemObjects", command: "ParsedCommandData"):
 	"""
-	Собирает алиасы тайтлов из каталога и помещает их в список.
+	Определяет тип классификатора и требуемые для него операции преобразования.
 		
 	:param system_objects: Коллекция системных объектов.
 	:type system_objects: SystemObjects
@@ -133,43 +164,102 @@ def com_collect(system_objects: SystemObjects, command: ParsedCommandData):
 	:type command: ParsedCommandData
 	"""
 
-	Filters = command.get_key_value("filters") if command.check_key("filters") else None
-	PagesCount = int(command.get_key_value("pages")) if command.check_key("pages") else None
-	Period = int(command.get_key_value("period")) if command.check_key("period") else None
+	#---> Парсинг параметров команды.
+	#==========================================================================================#
+	Target: str = command.get_important_position_value("VALUE", expected_type = str)
+	IsOutputJSON: bool = command.check_flag("-j")
+	FileToWrite: Path | None = command.get_key_value("--file", expected_type = Path)
+	IgnoreCase: bool = command.check_flag("-i")
 
-	IS_SORTING_ENABLED = not command.check_flag("no-sort")
+	#---> Выполнение команды.
+	#==========================================================================================#
+	ScriptPath: Path = Path("Configs/classificator.ini")
 
-	EntryPoint = system_objects.controller.get_entry_point()
+	if not ScriptPath.exists():
+		system_objects.printer.critical(f"Script file \"{ScriptPath}\" doesn't exists.")
+		return None
+	
+	ClassificatorObject = Utils.Classificator(ScriptPath)
+	ExecutableLines = ClassificatorObject.read_script()
+	ScriptValidationErrors = ClassificatorObject.validate_script(ExecutableLines)
 
-	CollectedTitlesCount = 0
-	Collection = list()
-	CollectorObject = Collector(system_objects, merge = system_objects.FORCE_MODE.status)
-	system_objects.logger.header("Collecting")
-	if system_objects.FORCE_MODE: system_objects.logger.warning("Collection will be overwritten.", stdout = True)
+	for ErrorData in ScriptValidationErrors:
+		system_objects.printer.error(f"[{ErrorData.line.file.name}:{ErrorData.line.number}] {ErrorData.message}")
 
-	if command.check_flag("local"):
-		TimerObject = Timer()
-		TimerObject.start()
-		print("Scanning titles… ", end = "", flush = True)
-		CollectedTitlesCount = CollectorObject.from_local()
-		ElapsedTime = TimerObject.ends()
-		print(f"Done in {ElapsedTime}.")
+	if ScriptValidationErrors:
+		system_objects.printer.critical("Script failure due to validation errors.")
+		return None
 
-	elif not system_objects.controller.check_method_collect():
-		system_objects.logger.error("Parser doesn't support \"collect\" method.")
+	try:
+		Procedures = ClassificatorObject.parse_procedures(ExecutableLines)
+	except Exceptions.Utils.Classificator.ScriptRuntimeError as ExecutionData:
+		system_objects.printer.critical(str(ExecutionData))
+		return None
+	
+	ClassificationResult = ClassificatorObject.classify(Target, Procedures, ignore_case = IgnoreCase)
+
+	if IsOutputJSON:
+		system_objects.printer.emit(orjson.dumps(ClassificationResult.to_dict()).decode())
+	else:
+		system_objects.printer.templates.classification_result(ClassificationResult)
+
+	if FileToWrite:
+		WriteJSON(FileToWrite, ClassificationResult.to_dict())
+		system_objects.printer.emit(f"Classification result dumped in file: \"{FileToWrite}\".")
+
+def com_collect(system_objects: "SystemObjects", command: "ParsedCommandData"):
+	"""
+	Собирает алиасы тайтлов в файл _Collection.txt_ во временном каталоге парсера.
+		
+	:param system_objects: Коллекция системных объектов.
+	:type system_objects: SystemObjects
+	:param command: Данные команды.
+	:type command: ParsedCommandData
+	"""
+
+	#---> Парсинг параметров команды.
+	#==========================================================================================#
+	Parser: str = cast(str, command.get_key_value("--use", expected_type = str))
+	ForceMode: bool = command.check_flag("-f")
+	CollectLocal: bool = command.check_flag("-local")
+	IsSortingEnabled: bool = not command.check_flag("-no-sort")
+
+	Period: int | None = command.get_key_value("--period", expected_type = int)
+	Filters: str | None = command.get_key_value("--filters", expected_type = str)
+	Pages: int | None = command.get_key_value("--pages", expected_type = int)
+
+	if Parser not in system_objects.driver.parsers_names:
+		raise Exceptions.System.ParserNotFound(Parser)	
+			
+	#---> Выполнение команды.
+	#==========================================================================================#
+	Timer = Utils.Timer(start = True)
+	EntryPoint = system_objects.driver.get_entry_point(Parser)
+	Collector = Utils.Collector(EntryPoint)
+	if not ForceMode: Collector.load()
+	AddedSlugs: int = 0
+
+	if CollectLocal:
+		AddedSlugs = Collector.scan_local()
+	elif EntryPoint.source_operator.is_collector_implemented:
+		CollectedSlugs = EntryPoint.source_operator.collect_slugs(Period, Filters, Pages)
+		AddedSlugs = Collector.add(CollectedSlugs)
+	else:
+		system_objects.printer.critical("Collector method not implemented.")
 		return
 
+	Collector.save(sort = IsSortingEnabled)
+
+	if AddedSlugs:
+		system_objects.printer.emit(f"Slugs collected: {AddedSlugs}.")
 	else:
-		Collection = EntryPoint.source_operator.collect(filters = Filters, period = Period, pages = PagesCount)
-		CollectedTitlesCount = len(Collection)
-		CollectorObject.append(Collection)
+		system_objects.printer.emit("No new slugs in collection.")
 
-	CollectorObject.save(sort = IS_SORTING_ENABLED)
-	system_objects.logger.titles_collected(CollectedTitlesCount)
+	system_objects.printer.emit(f"Done in {Timer.ends()}.")
 
-def com_fid(system_objects: SystemObjects, command: ParsedCommandData):
+def com_fid(system_objects: "SystemObjects", command: "ParsedCommandData"):
 	"""
-	Выводит ID татйла по его алиасу.
+	Ищет ID тайтла по алиасу в кэше.
 		
 	:param system_objects: Коллекция системных объектов.
 	:type system_objects: SystemObjects
@@ -177,36 +267,36 @@ def com_fid(system_objects: SystemObjects, command: ParsedCommandData):
 	:type command: ParsedCommandData
 	"""
 
-	system_objects.logger.header("Searching")
-	if not system_objects.CACHING: PrintWarning("Cache disabled.")
-	ParsersToCache = system_objects.controller.parsers_names
-	Results = 0
+	#---> Парсинг параметров команды.
+	#==========================================================================================#
+	Slug: str = command.get_important_position_value("SLUG", expected_type = str)
+	Parsers: tuple[str, ...] = Functions.GetParsersNamesFromKey(system_objects, command.get_key_value("--use", expected_type = str))
+	SearchAll: bool = command.check_flag("-all")
 
-	ParserNames: str = command.get_key_value("use")
-	if ParserNames: ParsersToCache = ParserNames.split(",")
-	TimerObject = Timer(start = True)
+	#---> Выполнение команды.
+	#==========================================================================================#
+	ResultsCount: int = 0
+	Timer = Utils.Timer(start = True)
 
-	for CurrentParser in ParsersToCache:
-		ID = None
-		
-		if CurrentParser not in system_objects.controller.parsers_names:
-			PrintError(f"Parser not found: \"{CurrentParser}\".")
-			continue
-
-		system_objects.temper.select_parser(CurrentParser)
-		ID = system_objects.temper.shared_data.journal.get_id_by_slug(command.arguments[0])
+	for CurrentParser in Parsers:
+		EntryPoint = system_objects.driver.get_entry_point(CurrentParser)
+		ID = EntryPoint.shared_data.journal.get_id_by_slug(Slug)
 
 		if ID:
-			Results += 1
-			print(f"Found ID {ID} for parser \"{CurrentParser}\".")
-			if not command.check_flag("all"): break
-			continue
+			ResultsCount += 1
+			system_objects.printer.emit(f"Found ID {ID} for parser \"{CurrentParser}\".")
 
-	if Results: print(f"Total cache cache entries found: {Results}.")
-	else: print("Tite with same slug not found in scanned cache.")
-	TimerObject.done()
+			if not SearchAll:
+				break
 
-def com_get(system_objects: SystemObjects, command: ParsedCommandData):
+	if ResultsCount:
+		system_objects.printer.emit(f"Total ID found in cache: {ResultsCount}.")
+	else:
+		system_objects.printer.emit("Tite with same slug not found in cache.")
+	
+	system_objects.printer.emit(f"Done in {Timer.ends()}.")
+
+def com_get(system_objects: "SystemObjects", command: "ParsedCommandData"):
 	"""
 	Скачивает изображение.
 		
@@ -216,32 +306,40 @@ def com_get(system_objects: SystemObjects, command: ParsedCommandData):
 	:type command: ParsedCommandData
 	"""
 
-	TimerObject = Timer(start = True)
-	Link = command.arguments[0]
-	Directory = command.get_key_value("dir") if command.check_key("dir") else system_objects.temper.parser_temp
-	Filename = command.get_key_value("name") if command.check_key("name") else None
-	FullName = command.check_key("fullname")
-	if FullName: Filename = command.get_key_value("fullname")
-	system_objects.logger.header("Downloading")
-	EntryPoint = system_objects.controller.get_entry_point()
-	IsImageExists = EntryPoint.source_operator.images_downloader.is_exists(Link, Directory, Filename, FullName)
-	print(f"URL: {command.arguments[0]}")
-	if IsImageExists: print("Already exists.")
+	#---> Парсинг параметров команды.
+	#==========================================================================================#
+	Link: str = cast(str, command.get_position_value("URL", expected_type = str))
+	Parser: str = cast(str, command.get_key_value("--use", expected_type = str))
+	Directory: Path | None = command.get_key_value("--dir", expected_type = Path)
+	ForceMode: bool = command.check_flag("-f")
 
-	if not IsImageExists or system_objects.FORCE_MODE:
-		Status = EntryPoint.source_operator.image(Link)
+	FullName: str | None = command.get_key_value("--fullname", expected_type = str)
+	Name: str | None = command.get_key_value("--name", expected_type = str)
 
-		if Status:
-			if command.check_key("dir"): Status += EntryPoint.source_operator.images_downloader.move_from_temp(Directory, Status.value, Filename, True)
-			if IsImageExists: print("Overwritten.")
+	if Parser not in system_objects.driver.parsers_names:
+		raise Exceptions.System.ParserNotFound(Parser)
 
-		else: Status.print_messages()
+	#---> Выполнение команды.
+	#==========================================================================================#
+	Timer = Utils.Timer(start = True)
+	EntryPoint = system_objects.driver.get_entry_point(Parser)
+	Result = EntryPoint.source_operator.download_image(Link, Directory, FullName or Name, bool(FullName), ForceMode)
 
-	TimerObject.done()
+	if Result.error_message:
+		system_objects.printer.error(Result.error_message)
+	elif Result.is_already_exists and not Result.is_downloaded:
+		system_objects.printer.emit("Image already exists.")
+	elif Result.is_already_exists and Result.is_downloaded:
+		system_objects.printer.emit("Image overwritten.")
+	
+	if Result.path:
+		system_objects.printer.emit(f"Image path: \"{Result.path}\".")
 
-def com_help(system_objects: SystemObjects, command: ParsedCommandData):
+	system_objects.printer.emit(f"Done in {Timer.ends()}.")
+
+def com_list(system_objects: "SystemObjects", command: "ParsedCommandData"):
 	"""
-	Заглушка для обработки помощи.
+	Выводит список парсеров.
 		
 	:param system_objects: Коллекция системных объектов.
 	:type system_objects: SystemObjects
@@ -249,66 +347,9 @@ def com_help(system_objects: SystemObjects, command: ParsedCommandData):
 	:type command: ParsedCommandData
 	"""
 
-	pass
-
-def com_init(system_objects: SystemObjects, command: ParsedCommandData):
-	"""
-	Производит инициализацию новых модулей для начала разработки.
-		
-	:param system_objects: Коллекция системных объектов.
-	:type system_objects: SystemObjects
-	:param command: Данные команды.
-	:type command: ParsedCommandData
-	"""
-
-	system_objects.logger.header("Initializing")
-	Name = command.arguments[0]
-	Assistant = DevelopmeptAssistant(system_objects)
-	Types = Assistant.parse_content_types(command.get_key_value("content"))
-
-	if command.check_flag("p"): Assistant.init_parser(Name, Types, git = command.check_flag("git"))
-	else: Assistant.init_extension(Name)
-
-def com_install(system_objects: SystemObjects, command: ParsedCommandData):
-	"""
-	Производит установку парсеров.
-		
-	:param system_objects: Коллекция системных объектов.
-	:type system_objects: SystemObjects
-	:param command: Данные команды.
-	:type command: ParsedCommandData
-	"""
-
-	FullInstallation = command.check_flag("all")
-	HaveFalgs = bool(command.flags)
-	system_objects.logger.header("Installation")
-	print("Running installation…")
-	InstallerObject = Installer(system_objects)
-	TimerObject = Timer(start = True)
-
-	if not HaveFalgs: 
-		print("No installation options.")
-		return
-
-	if command.check_flag("a") or FullInstallation: InstallerObject.alias()
-	if command.check_flag("r") or FullInstallation: InstallerObject.requirements()
-	if command.check_flag("s") or FullInstallation: InstallerObject.scripts()
-	if command.check_flag("c") or FullInstallation: InstallerObject.configs()
-	if command.check_flag("t") or FullInstallation: InstallerObject.releases()
-	TimerObject.done()
-
-def com_list(system_objects: SystemObjects, command: ParsedCommandData):
-	"""
-	Выводит список парсеров в консоль.
-		
-	:param system_objects: Коллекция системных объектов.
-	:type system_objects: SystemObjects
-	:param command: Данные команды.
-	:type command: ParsedCommandData
-	"""
-
-	Status = ExecutionStatus()
-	TableData = {
+	#---> Выполнение команды.
+	#==========================================================================================#
+	TableData: dict[str, list[str]] = {
 		"NAME": [],
 		"VERSION": [],
 		"TYPES": [],
@@ -316,233 +357,236 @@ def com_list(system_objects: SystemObjects, command: ParsedCommandData):
 		"collect": []
 	}
 
-	for Parser in system_objects.controller.parsers_names:
+	for ParserName in system_objects.driver.parsers_names:
+		EntryPoint = system_objects.driver.get_entry_point(ParserName)
+		TypesEmoji = {
+			ContentTypes.Manga: "m",
+			ContentTypes.Ranobe: "r"
+		}
 
-		try:
-			EntryPoint = system_objects.controller.get_entry_point(Parser, verbose = False)
-			TypesEmoji = {
-				ContentTypes.Anime: "🎬",
-				ContentTypes.Manga: "🌄",
-				ContentTypes.Ranobe: "📘"
-			}
+		ParserVersion = EntryPoint.version or ""
+		ParserContentTypes: list[str] = [TypesEmoji[CurrentType] for CurrentType in EntryPoint.manifest.content_types]
+		ParserSite: str = "https://" + EntryPoint.manifest.site
 
-			# Генерация переменных нужна для отлова исключений до записи в таблицу.
-			Version = EntryPoint.manifest.version or ""
-			Types = list()
-			for CurrentType in EntryPoint.manifest.content_types: Types.append(TypesEmoji[CurrentType])
-			Site = "https://" + EntryPoint.manifest.site
+		TableData["NAME"].append(ParserName)
+		TableData["VERSION"].append(ParserVersion)
+		TableData["TYPES"].append(", ".join(ParserContentTypes))
+		TableData["SITE"].append(ParserSite)
+		TableData["collect"].append(str(EntryPoint.source_operator.is_collector_implemented))
 
-			TableData["NAME"].append(Parser)
-			TableData["VERSION"].append(Version)
-			TableData["TYPES"].append(", ".join(Types))
-			TableData["SITE"].append(Site)
-			TableData["collect"].append(EntryPoint.is_supported_collect)
+	system_objects.printer.templates.parsers_table(TableData)
 
-		except Exception as ExceptionData:
-			TableData["NAME"].append(Parser)
-			TableData["VERSION"].append("")
-			TableData["TYPES"].append("")
-			TableData["SITE"].append("")
-			TableData["collect"].append(None)
-			Status.push_error(str(ExceptionData), Parser)
-
-	Templates.ParsersTable(TableData)
-	Status.print_messages()
-
-def com_parse(system_objects: SystemObjects, command: ParsedCommandData):
+def com_parse(system_objects: "SystemObjects", command: "ParsedCommandData"):
 	"""
-	Выполняет парсинг тайтла.
-
+	Парсит тайтлы.
+		
 	:param system_objects: Коллекция системных объектов.
 	:type system_objects: SystemObjects
 	:param command: Данные команды.
 	:type command: ParsedCommandData
 	"""
 
-	Slugs = list()
-	StartIndex = 0
-	system_objects.logger.header("Parsing")
+	#---> Парсинг параметров команды.
+	#==========================================================================================#
+	Target: str = command.get_important_position_value("TARGET", expected_type = str)
+	ParserName: str = cast(str, command.get_key_value("--use", expected_type = str))
 
-	IS_AMENDING_ENABLED = not command.check_flag("no-amend")
-	IS_SORTING_ENABLED = command.check_flag("sort")
-	if not IS_AMENDING_ENABLED: system_objects.logger.warning("Amending chapters content disabled.")
-	if IS_SORTING_ENABLED: system_objects.logger.info("Sorting chapters enabled.")
+	ForceMode: bool = command.check_flag("-f")
+	ParseFrom: str | None = command.get_key_value("--from", expected_type = str)
+	IsSortingEnabled: bool = command.check_flag("-sort")
+	IsAmendingEnabled: bool = not command.check_flag("-no-amend")
+
+	ParseLastTitle: bool = command.check_flag("-last")
+	ParseCollection: bool = command.check_flag("-collection")
+	ParseUpdates: bool = command.check_flag("-updates")
+	UpdatesPeriod: int | None = command.get_key_value("--period", expected_type = int)
+	ParseLocal: bool = command.check_flag("-local")
+	ParseByID: int | None = command.get_key_value("--id", expected_type = int)
+	DownloadImages: bool = not command.check_flag("-no-images")
+
+	if ParserName not in system_objects.driver.parsers_names:
+		raise Exceptions.System.ParserNotFound(ParserName)
 	
-	EntryPoint = system_objects.controller.get_entry_point()
+	#---> Выполнение команды.
+	#==========================================================================================#
+	Timer = Utils.Timer(start = True)
+	EntryPoint = system_objects.driver.get_entry_point(ParserName)
+	SourceOperator = EntryPoint.source_operator
 
-	if command.check_flag("last"):
+	Slugs: list[str] = list()
 
-		if not system_objects.CACHING:
-			Status = ExecutionStatus()
-			Status.push_error("Caching disabled. Last slug unavailable.")
-			Status.print_messages()
-			return
+	if ParseLastTitle:
+		LastParsedSlug = SourceOperator.shared_data.last_parsed_slug
 
-		if not system_objects.temper.shared_data.last_parsed_slug:
-			Status = ExecutionStatus()
-			Status.push_error("Last slug undefined. Parse anything firstly.")
-			Status.print_messages()
-			return
-		
-		else: Slugs.append(system_objects.temper.shared_data.last_parsed_slug)
-			
-	elif command.check_flag("collection"):
-		Slugs = Collector(system_objects).slugs
-		system_objects.logger.info(f"Titles in collection: {len(Slugs)}.")
+		if LastParsedSlug:
+			Slugs.append(LastParsedSlug)
+		else:
+			system_objects.printer.warning("Last slug undefined. Parse anything firstly.")
 
-	elif command.check_flag("updates"):
-		Period = int(command.get_key_value("period")) if command.check_key("period") else 24
-		print("Collecting updates…")
-		Slugs = EntryPoint.source_operator.collect(period = Period)
-		
-	elif command.check_flag("local"):
-		TimerObject = Timer(start = True)
-		print("Scanning titles… ", end = "", flush = True)
-		CollectorObject = Collector(system_objects)
-		CollectorObject.from_local()
-		Slugs += CollectorObject.slugs
-		ElapsedTime = TimerObject.ends()
-		print(f"Done in {ElapsedTime}.")
-		Text = "Local titles to parsing: " + str(len(Slugs)) + "."
-		system_objects.logger.info(Text, stdout = True)
+	elif ParseCollection:
+		Collector = Utils.Collector(EntryPoint)
+		Slugs = list(Collector.load())
+		system_objects.printer.emit(f"Titles in collection: {len(Slugs)}.")
 
-	elif command.check_key("id"):
-		TitleID = command.get_key_value("id")
-		TitleSlug = system_objects.temper.shared_data.journal.get_slug_by_id(TitleID)
-		if TitleSlug: Slugs.append(TitleSlug)
+	elif ParseUpdates:
+		system_objects.printer.emit("Collecting updates…")
+		Slugs = list(EntryPoint.source_operator.collect_slugs(period = UpdatesPeriod or 24))
+		system_objects.printer.emit(f"Updates collected: {len(Slugs)}.")
+
+	elif ParseLocal:
+		Collector = Utils.Collector(EntryPoint)
+		SlugsCount = Collector.scan_local()
+		Slugs = list(Collector.slugs)
+		system_objects.printer.emit(f"Local titles to parsing: {SlugsCount}.")
+
+	elif ParseByID:
+		SlugByID = SourceOperator.shared_data.journal.get_slug_by_id(ParseByID)
+
+		if SlugByID:
+			Slugs.append(SlugByID)
+		else:
+			system_objects.printer.warning(f"Title with ID {SlugByID} uncached.")
 
 	else:
-		Data = command.arguments[0]
-		Slug = EntryPoint.source_operator.get_slug_from_string(Data).value
+		TargetSlug = EntryPoint.source_operator.parse_slug_from_string(Target)
 
-		if not Slug: 
-			PrintError(f"Unable to parse slug from: \"{Data}.\"")
-			return
+		if TargetSlug:
+			Slugs.append(TargetSlug)
+		else:
+			system_objects.printer.warning("Unable to parse title slug from target.")
+
+	if ParseFrom:
+		if ParseFrom in Slugs:
+			system_objects.printer.emit(f"Parsing started from title: \"{ParseFrom}\".")
+			StartIndex = Slugs.index(ParseFrom)
+			Slugs = Slugs[StartIndex:]
+		else:
+			system_objects.printer.warning("Starting slug not found in targets. Ignored.")
+
+	if not Slugs:
+		system_objects.printer.error("No slugs for parsing.")
+		system_objects.printer.emit(f"Done in {Timer.ends()}.")
+		return
+
+	ParsedCount: int = 0
+	NotFoundCount: int = 0
+	ErrorsCount: int = 0
+	TotalCount: int = len(Slugs)
+
+	CurrentContentType: ContentTypes | None = None
+	Parser: BaseParser = SourceOperator.launch_parser()
+
+	for Index in range(len(Slugs)):
+		Slug = Slugs[Index]
+		SourceOperator.shared_data.set_last_parsed_slug(Slug)
 		
-		Slugs.append(Slug)
+		ContentType = SourceOperator.get_content_type_by_slug(Slug)
+		if ContentType is not CurrentContentType:
+			CurrentContentType = ContentType
+			Parser = SourceOperator.launch_parser(ContentType)
+
+		Title = Parser.init_empty_title(Slug)
+		system_objects.printer.stages.parsing_start(Title, Index, TotalCount)
+
+		ChaptersLoaded = Title.chapters_count
+		if ChaptersLoaded:
+			BranchesCount = len(Title.branches)
+			system_objects.printer.emit(f"Loaded {ChaptersLoaded} chapters on {BranchesCount} branches.")
 		
-	if command.check_key("from"):
-		system_objects.logger.info("Processing will be started from slug: \"" + command.get_key_value("from") + "\".")
-			
-		if command.get_key_value("from") in Slugs: StartIndex = Slugs.index(command.get_key_value("from"))
-		else: system_objects.logger.warning("No starting slug in collection. Ignored.")
-
-	ParsedCount = 0
-	NotFoundCount = 0
-	ErrorsCount = 0
-	TotalCount = len(Slugs)
-	Parser: "MangaParser | RanobeParser" = None
-
-	for Index in range(StartIndex, TotalCount):
-		if system_objects.CACHING: system_objects.temper.shared_data.set_last_parsed_slug(Slugs[Index])
-		ContentType = EntryPoint.get_content_type_by_slug(Slugs[Index])
-		if not Parser or ContentType != Parser.content_type: Parser = EntryPoint.launch_parser(ContentType)
-		Title = EntryPoint.create_title(ContentType, Slugs[Index])
-		Title.set_parser(Parser)
-
 		try:
-			TimerObject = Timer(start = True)
-			
-			Title.parse(Index, TotalCount)
-			if not system_objects.FORCE_MODE: Title.merge()
-			if IS_AMENDING_ENABLED: Title.amend()
-			Title.download_images()
-			Title.save(sorting = IS_SORTING_ENABLED)
+			Parser.parse()
 
-			TimerObject.done()
-			ParsedCount += 1
+			if not ForceMode:
+				MergedChaptersCount = Title.merge()
+				if MergedChaptersCount: system_objects.printer.emit(f"Merged {MergedChaptersCount} chapters.")
 
-		except JSONDecodeError as ExceptionData:
-			system_objects.logger.error(str(ExceptionData))
+			if IsAmendingEnabled:
+				if Title.empty_chapters_count: Parser.amend()
+				else: system_objects.printer.emit("No empty chapters. Amending skipped.")
+			else:
+				system_objects.printer.emit("Amending skipped by flag.")
+
+		except Exceptions.Parsers.AuthorizationRequired:
+			break
+
+		except Exceptions.Parsers.ParsingError:
 			ErrorsCount += 1
+			continue
 
-		except Exceptions.UnsupportedFormat as ExceptionData:
-			system_objects.logger.error(str(ExceptionData))
+		except Exceptions.Parsers.TitleNotFound:
+			NotFoundCount += 1
+			continue
+
+		except (JSONDecodeError, Exceptions.Parsers.UnsupportedFormat):
+			system_objects.printer.error("Unsupported JSON format or decoding error.")
 			ErrorsCount += 1
+			continue
 
-		except Exceptions.AuthorizationRequired: break
-		except Exceptions.ParsingError: ErrorsCount += 1
-		except Exceptions.TitleNotFound: NotFoundCount += 1
+		except Exception:
+			Traceback = traceback.format_exc().rstrip()
+			system_objects.printer.error(f"Current title skipped due to exception: \"{Traceback}\".")
+			ErrorsCount += 1
+			continue
+
+		if DownloadImages: Parser.download_images(ForceMode)
+		else: system_objects.printer.emit("Images downloading skipped by flag.")
+
+		if Parser.save(IsSortingEnabled): system_objects.printer.emit("Saved.")
+		else: system_objects.printer.emit("No changes. Saving skipped.")
+		ParsedCount += 1
+
+	system_objects.printer.templates.parsing_summary(ParsedCount, NotFoundCount, ErrorsCount)
+	system_objects.printer.emit(f"Done in {Timer.ends()}.")
+
+def com_repair(system_objects: "SystemObjects", command: "ParsedCommandData"):
+	"""
+	Заново получает элемент контента с сервера.
 		
-		except Exception as ExceptionData:
-			print(FastStyler(traceback.format_exc().rstrip()).colorize.red)
-			system_objects.logger.error(f"Raised exception: \"{ExceptionData}\".", stdout = False)
-			system_objects.logger.warning("Current title skipped due to exception.")
-			ErrorsCount += 1
-
-		if Index != len(Slugs) - 1: sleep(EntryPoint.settings.common.delay)
-
-	Templates.ParsingSummary(ParsedCount, NotFoundCount, ErrorsCount)
-
-def com_repair(system_objects: SystemObjects, command: ParsedCommandData):
-	"""
-	Восстанавливает содержимое главы, заново получая его из источника.
-		
 	:param system_objects: Коллекция системных объектов.
 	:type system_objects: SystemObjects
 	:param command: Данные команды.
 	:type command: ParsedCommandData
 	"""
 
-	Filename = command.arguments[0][:-5] if command.arguments[0].endswith(".json") else command.arguments[0]
-	ChapterID = command.get_key_value("chapter")
-	EntryPoint = system_objects.controller.get_entry_point()
-	ContentType = EntryPoint.get_content_type_by_file(Filename)
-	Parser = EntryPoint.launch_parser(ContentType)
-	Title = EntryPoint.create_title(ContentType)
-	Title.set_parser(Parser)
-	system_objects.logger.header("Repairing")
-	system_objects.EXIT_CODE = -1
+	#---> Выполнение команды.
+	#==========================================================================================#
+	Filename: str = command.get_important_position_value("FILE", expected_type = str)
+	ParserName: str = command.get_important_position_value("PARSER", expected_type = str)
+	TargetID: int = command.get_important_position_value("TARGET", expected_type = int)
 
-	try:
-		TimerObject = Timer(start = True)
+	IsTargetChapter: bool = command.check_key("--chapter")
 
-		Title.open(Filename)
-		Title.repair(ChapterID)
-		Title.save(sorting = False)
+	if not IsTargetChapter:
+		system_objects.printer.error("For now only chapters supported as target to repairing.")
+		exit(1)
 
-		TimerObject.done()
+	if not Filename.endswith(".json"):
+		Filename += ".json"
 
-	except Exceptions.ChapterNotFound: system_objects.logger.error(f"Chapter with ID {ChapterID} not found in JSON.")
-	except FileNotFoundError: system_objects.logger.error(f"File \"{Filename}.json\" not found in titles directory.")
-	except (Exceptions.TitleNotFound, Exceptions.ParsingError): pass
-	else: system_objects.EXIT_CODE = 0
-
-def com_run(system_objects: SystemObjects, command: ParsedCommandData):
-	"""
-	Восстанавливает содержимое главы, заново получая его из источника.
+	if ParserName not in system_objects.driver.parsers_names:
+		raise Exceptions.System.ParserNotFound(ParserName)
 	
-	:param system_objects: Коллекция системных объектов.
-	:type system_objects: SystemObjects
-	:param command: Данные команды.
-	:type command: ParsedCommandData
-	"""
+	#---> Выполнение команды.
+	#==========================================================================================#
+	Timer = Utils.Timer(start = True)
+	EntryPoint = system_objects.driver.get_entry_point(ParserName)
+	SourceOperator = EntryPoint.source_operator
+	TypingResult = EntryPoint.get_content_type_by_file(Filename)
+	Parser: BaseParser = SourceOperator.launch_parser(TypingResult.content_type)
+	Title = Parser.init_empty_title(TypingResult.slug)
 
-	ExtensionFullName: str = command.get_key_value("extension", exception = True)
-	ParserName, ExtensionName = ExtensionFullName.split("-")
-	system_objects.select_parser(ParserName)
-	system_objects.select_extension(ExtensionName)
-	ExtensionCommand = command.get_key_value("command")
+	if Title.load(Filename, By.Filename):
+		system_objects.printer.emit(f"Loaded file: <i>{Filename}</i>.")
+	else:
+		system_objects.printer.error(f"Unable load file: <b>{Filename}</b>.")
+		exit(1)
 
-	Extension = system_objects.controller.launch_extension(ParserName, ExtensionName)
-	system_objects.logger.header(f"{ParserName}:{ExtensionName}")
-	Status: ExecutionStatus = Extension.run(ExtensionCommand)
-	Status.print_messages()
+	system_objects.printer.emit(f"Repairing chapter <b>{TargetID}</b>… ", end_line = False)
 
-def com_tagger(system_objects: SystemObjects, command: ParsedCommandData):
-	"""
-	Запускает обработчик классификаторов тайтлов.
-	
-	:param system_objects: Коллекция системных объектов.
-	:type system_objects: SystemObjects
-	:param command: Данные команды.
-	:type command: ParsedCommandData
-	"""
+	if Parser.repair(TargetID): system_objects.printer.emit("Done.")
+	else: system_objects.printer.warning("Chapter is empty. Repairing failure?")
 
-	TaggerObject = Tagger()
-	Type, Name = TaggerObject.get_classificator_data(command)
-	Operation = TaggerObject.process(Name, Type, system_objects.parser_name)
+	if Parser.save(): system_objects.printer.emit("Saved.")
+	else: system_objects.printer.emit("No changes. Saving skipped.")
 
-	if command.check_flag("json"): print(Operation.to_json())
-	elif command.check_key("file"): WriteJSON(command.get_key_value("file"), Operation.to_dict())
-	else: Operation.print()
+	system_objects.printer.emit(f"Done in {Timer.ends()}.")

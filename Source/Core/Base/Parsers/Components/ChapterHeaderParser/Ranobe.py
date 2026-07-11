@@ -1,13 +1,10 @@
 from Source.Core.Base.Formats.Ranobe.Enums import ChaptersTypes
-from .Manga import ChapterHeaderParser as MangaChapterHeaderParser
+from .Manga import MangaChapterHeaderParser
 
-from typing import TYPE_CHECKING
-
-if TYPE_CHECKING:
-	from Source.Core.Base.Formats.Ranobe import Ranobe
-
-class ChapterHeaderParser(MangaChapterHeaderParser):
+class RanobeChapterHeaderParser(MangaChapterHeaderParser):
 	"""Парсер заголовка главы."""
+
+	_Type: ChaptersTypes | None
 
 	#==========================================================================================#
 	# >>>>> СВОЙСТВА <<<<< #
@@ -26,7 +23,7 @@ class ChapterHeaderParser(MangaChapterHeaderParser):
 	def _GetType(self):
 		"""Получает тип главы из заголовка."""
 
-		Determinations = {
+		Determinations: dict = {
 			ChaptersTypes.prologue: self._WordsDictionary.prologue,
 			ChaptersTypes.epilogue: self._WordsDictionary.epilogue,
 			ChaptersTypes.art: self._WordsDictionary.art,
@@ -60,22 +57,24 @@ class ChapterHeaderParser(MangaChapterHeaderParser):
 				break
 
 	#==========================================================================================#
-	# >>>>> ПУБЛИЧНЫЙ МЕТОДЫ <<<<< #
+	# >>>>> ПЕРЕОПРЕДЕЛЯЕМЫЕ МЕТОДЫ <<<<< #
 	#==========================================================================================#
 
-	def __init__(self, header: str, title: "Ranobe"):
-		"""
-		Парсер заголовка главы.
+	def _PostInitMethod(self):
+		"""Метод, выполняющийся после инициализации объекта."""
 
-		:param header: Заголовок главы.
-		:type header: str
-		:param words_dictionary: Словарь ключевых слов.
-		:type words_dictionary: WordsDictionary
-		"""
+		self._Type: ChaptersTypes | None = None
 
-		super().__init__(header, title)
+	#==========================================================================================#
+	# >>>>> ПУБЛИЧНЫЙ МЕТОДЫ <<<<< #
+	#==========================================================================================#
 	
-	def parse(self) -> "ChapterHeaderParser":
+	def __repr__(self) -> str:
+		"""Реинтерпретирует экземпляр в строковое представление."""
+		
+		return f"ChapterData(volume={self.volume}, number={self.number}, type={self._Type}, name={self._Header})"
+
+	def parse(self) -> "RanobeChapterHeaderParser":
 		"""
 		Парсит заголовок главы.
 
@@ -92,6 +91,6 @@ class ChapterHeaderParser(MangaChapterHeaderParser):
 		self._LstripTitle()
 		self._RemovePartTypers()
 
-		if self._Title.parser.settings.common.pretty: self._ExtractPart()
+		if self._Parser.settings.common.pretty: self._ExtractPart()
 
 		return self

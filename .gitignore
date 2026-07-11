@@ -1,6 +1,5 @@
 # Python virtual enviroment and cache.
 __pycache__
-.venv
 # Parsers and titles data.
 Configs
 Output

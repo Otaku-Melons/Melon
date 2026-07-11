@@ -1,10 +1,8 @@
-from Source.Core.SystemObjects.Controller import Controller
-from Source.Core.SystemObjects.Logger import Logger
+from Source.Core.SystemObjects.Driver import Driver
+from Source.Core.SystemObjects.Printer import Printer
 from Source.Core.SystemObjects.Temper import Temper
 
-from packaging.version import Version
-
-from dulwich.contrib.release_robot import get_current_version
+from dulwich import porcelain
 
 #==========================================================================================#
 # >>>>> ВСПОМОГАТЕЛЬНЫЕ СТРУКТУРЫ ДАННЫХ <<<<< #
@@ -13,11 +11,19 @@ from dulwich.contrib.release_robot import get_current_version
 class GlobalFlag:
 	"""Глоабльный флаг."""
 
+	#==========================================================================================#
+	# >>>>> СВОЙСТВА <<<<< #
+	#==========================================================================================#
+
 	@property
 	def status(self) -> bool:
 		"""Статус активации флага."""
 
 		return self.__Value
+
+	#==========================================================================================#
+	# >>>>> ПУБЛИЧНЫЕ МЕТОДЫ <<<<< #
+	#==========================================================================================#
 
 	def __init__(self, status: bool):
 		"""Глоабльный флаг."""
@@ -49,26 +55,6 @@ class GlobalFlag:
 
 		self.__Value = status
 
-class TaggedVersion(Version):
-	"""Представление версии с поддержкой хранения исходного тега."""
-
-	@property
-	def tag(self) -> str:
-		"""Имя Git-тега Melon."""
-
-		return self.__Tag
-	
-	def __init__(self, tag: str):
-		"""
-		Представление версии с поддержкой хранения исходного тега.
-
-		:param tag: Имя Git-тега Melon.
-		:type tag: str
-		"""
-
-		self.__Tag = tag
-		super().__init__(tag)
-
 #==========================================================================================#
 # >>>>> ОСНОВНОЙ КЛАСС <<<<< #
 #==========================================================================================#
@@ -91,54 +77,50 @@ class SystemObjects:
 		"""Глоабльный флаг: включен ли режим перезаписи."""
 
 		return self.__ForceMode
-	
-	@property
-	def LIVE_MODE(self) -> GlobalFlag:
-		"""Глоабльный флаг: активирован ли Live-режим."""
-
-		return self.__LiveMode
-
-	#==========================================================================================#
-	# >>>>> ГЛОБАЛЬНЫЕ ДАННЫЕ <<<<< #
-	#==========================================================================================#
-
-	@property
-	def MELON_VERSION(self) -> TaggedVersion | None:
-		"""Используемая версия Melon."""
-
-		try: return TaggedVersion(get_current_version())
-		except TypeError: pass
-
-	EXIT_CODE = 0
 
 	#==========================================================================================#
 	# >>>>> СВОЙСТВА <<<<< #
 	#==========================================================================================#
 
 	@property
-	def controller(self) -> Controller:
-		"""Менеджер парсеров"""
+	def MELON_VERSION(self) -> str:
+		"""Используемая версия Melon."""
 
-		return self.__Controller
-
-	@property
-	def extension_name(self) -> str | None:
-		"""Название используемого расширения."""
-
-		return self.__ExtensionName
-
-	@property
-	def logger(self) -> Logger:
-		"""Менеджер портов CLI и логов."""
-
-		return self.__Logger
+		return porcelain.tag_list(".")[-1].decode().lstrip("v")
 	
 	@property
-	def parser_name(self) -> str | None:
-		"""Название используемого парсера."""
+	def EXIT_CODE(self) -> int:
+		"""Код завершения. При успешнов выполнении 0."""
 
-		return self.__ParserName
+		return self.__ExitCode
+	
+	@EXIT_CODE.setter
+	def EXIT_CODE(self, code: int):
+		"""
+		Задаёт код завершения.
 
+		:param code: Код завершения.
+		:type code: int
+		"""
+
+		self.__ExitCode = code
+
+	#==========================================================================================#
+	# >>>>> СИСТЕМНЫЕ ОБЪЕКТЫ <<<<< #
+	#==========================================================================================#
+
+	@property
+	def driver(self) -> Driver:
+		"""Менеджер парсеров"""
+
+		return self.__Driver
+
+	@property
+	def printer(self) -> Printer:
+		"""Оператор вывода."""
+
+		return self.__Printer
+	
 	@property
 	def temper(self) -> Temper:
 		"""Дескриптор каталога временных файлов."""
@@ -152,35 +134,10 @@ class SystemObjects:
 	def __init__(self):
 		"""Коллекция системных объектов."""
 
-		self.__Controller = Controller(self)
-		self.__Logger = Logger(self)
+		self.__Driver = Driver(self)
+		self.__Printer = Printer(self)
 		self.__Temper = Temper()
 
-		self.__ExtensionName = None
-		self.__ParserName = None
-
 		self.__ForceMode = GlobalFlag(False)
-		self.__LiveMode = GlobalFlag(False)
 		self.__CachingEnabled = GlobalFlag(True)
-
-	def select_extension(self, extension_name: str):
-		"""
-		Задаёт используемое расширение и настраивает согласно ему системные объекты.
-			extension_name – имя расширения.
-		"""
-
-		self.__ExtensionName = extension_name
-		self.__Controller.select_extension(extension_name)
-		self.__Temper.select_extension(extension_name)
-
-	def select_parser(self, parser_name: str):
-		"""
-		Задаёт используемое расширение и настраивает согласно ему системные объекты.
-			parser_name – имя парсера.
-		"""
-
-		self.__ParserName = parser_name
-
-		self.__Controller.select_parser(parser_name)
-		self.__Logger.select_parser(parser_name)
-		self.__Temper.select_parser(parser_name)
+		self.__ExitCode = 0

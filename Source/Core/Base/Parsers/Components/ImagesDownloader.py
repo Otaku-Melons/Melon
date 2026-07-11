@@ -1,19 +1,14 @@
-from dublib.Methods.Filesystem import NormalizePath
-from dublib.Engine.Bus import ExecutionStatus
-from dublib.WebRequestor import WebRequestor
-
+from typing import cast, TYPE_CHECKING
 from dataclasses import dataclass
-from typing import TYPE_CHECKING
 from pathlib import Path
 from os import PathLike
 from io import BytesIO
 import shutil
-import os
 
 from PIL import Image
 
 if TYPE_CHECKING:
-	from Source.Core.SystemObjects import SystemObjects
+	from Source.Core.Base.SourceOperator import BaseSourceOperator
 
 #==========================================================================================#
 # >>>>> ВСПОМОГАТЕЛЬНЫЕ СТРУКТУРЫ ДАННЫХ <<<<< #
@@ -24,75 +19,120 @@ class ImageResolution:
 	width: int
 	height: int
 
-class ImageDownloadingStatus(ExecutionStatus):
-	"""Статус скачивания изображения."""
+@dataclass(frozen = True)
+class ImageDownloadingResult:
+	"""Результат скачивания изображения."""
+
+	is_already_exists: bool
+	is_downloaded: bool
+	is_replaced_by_stub: bool
+	resolution: ImageResolution | None
+	path: Path | None
+	error_message: str | None
+
+class ImageData:
+	"""Данные изображения."""
 
 	#==========================================================================================#
 	# >>>>> СВОЙСТВА <<<<< #
 	#==========================================================================================#
 
 	@property
-	def is_exists(self) -> bool:
-		"""Состояние: существует ли файл обложки в целевой директории."""
+	def filename(self) -> str:
+		"""Имя файла."""
 
-		return self.__IsExists
-	
+		return Path(self._Link.split("?", maxsplit = 1)[0]).name
+
 	@property
-	def is_replaced_by_stub(self) -> bool:
-		"""Состояние: замещена ли обложка заглушкой."""
+	def link(self) -> str:
+		"""Ссылка на изображение."""
 
-		return self.__IsReplacedByStub
-	
+		return self._Link
+
 	@property
 	def resolution(self) -> ImageResolution | None:
 		"""Разрешение изображения."""
 
-		return self.__Resolution
-
-	#==========================================================================================#
-	# >>>>> ПЕРЕОПРЕДЕЛЯЕМЫЕ МЕТОДЫ <<<<< #
-	#==========================================================================================#
-	
-	def _PostInitMethod(self):
-		"""Метод, срабатывающий после инициализации объекта."""
-
-		self.__Resolution: ImageResolution | None = None
-		self.__IsReplacedByStub: bool = False
-		self.__IsExists: bool = False
+		return self._Resolution
 
 	#==========================================================================================#
 	# >>>>> ПУБЛИЧНЫЕ МЕТОДЫ <<<<< #
 	#==========================================================================================#
 
-	def set_is_exists(self, status: bool):
+	def __init__(self, link: str):
 		"""
-		Задаёт состояние: существует ли файл обложки в целевой директории.
+		Данные изображения.
 
-		:param status: Состояние.
-		:type status: bool
-		"""
-
-		self.__IsExists = status
-
-	def set_is_replaced_by_stub(self, status: bool):
-		"""
-		Задаёт состояние: замещена ли обложка заглушкой.
-
-		:param status: Состояние.
-		:type status: bool
+		:param link: Ссылка на изображение.
+		:type link: str
 		"""
 
-		self.__IsReplacedByStub = status
+		self._Link: str = link
 
-	def set_resolution(self, resolution: ImageResolution):
+		self._Resolution: ImageResolution | None = None
+
+	def create_resolution(self, width: int | None, height: int | None):
 		"""
-		Задаёт разрешение изображения.
+		Создаёт и устанавливает разрешение изображения. Если одно или оба значения `None`, операция пропускается.
 
-		:param resolution: Разрешение.
-		:type resolution: ImageResolution
+		:param width: Ширина изображения.
+		:type width: int | None
+		:param height: Высота изображения.
+		:type height: int | None
 		"""
 
-		self.__Resolution = resolution
+		if not all((width, height)):
+			return None
+
+		self.set_resolution(ImageResolution(cast(int, width), cast(int, height)))
+
+	def set_link(self, link: str):
+		"""
+		Задаёт ссылку.
+
+		:param link: Ссылка на изображение.
+		:type link: str
+		"""
+
+		self._Link = link
+
+	def set_resolution(self, resolution: ImageResolution | None):
+		"""
+		Указывает разрешение изображения.
+
+		:param resolution: Разрешение изображения.
+		:type resolution: ImageResolution | None
+		"""
+
+		self._Resolution = resolution
+
+	def to_dict(self, add_filename: bool = False, sizing: bool = True) -> dict:
+		"""
+		Возвращает словарное представление объекта.
+
+		:param add_filename: Указывает, нужно ли добавлять ключ с именем файла.
+		:type add_filename: bool
+		:param sizing: Указывает, нужно ли сохранять ключи с разрешением изображения.
+		:type sizing: bool
+		:return: Словарное представление объекта.
+		:rtype: dict
+		"""
+
+		Buffer: dict = {
+			"link": self._Link,
+			"filename": self.filename,
+			"width": self._Resolution.width if self._Resolution else None,
+			"height": self._Resolution.height if self._Resolution else None
+		}
+
+		if not sizing:
+			del Buffer["width"]
+			del Buffer["height"]
+
+		if not add_filename:
+			del Buffer["filename"]
+
+		return Buffer
 
 #==========================================================================================#
 # >>>>> ОСНОВНОЙ КЛАСС <<<<< #
@@ -102,198 +142,218 @@ class ImagesDownloader:
 	"""Оператор загрузки изображений."""
 
 	#==========================================================================================#
-	# >>>>> СВОЙСТВА <<<<< #
-	#==========================================================================================#
-
-	@property
-	def requestor(self) -> WebRequestor:
-		"""Установленный менеджер запросов."""
-
-		return self.__Requestor
-			
-	#==========================================================================================#
 	# >>>>> ПУБЛИЧНЫЕ МЕТОДЫ <<<<< #
 	#==========================================================================================#
-	
-	def __init__(self, system_objects: "SystemObjects", requestor: WebRequestor):
+
+	def __init__(self, source_operator: "BaseSourceOperator"):
 		"""
 		Оператор загрузки изображений.
 
-		:param system_objects: Коллекция системных объектов.
-		:type system_objects: SystemObjects
-		:param requestor: Менеджер запросов.
-		:type requestor: WebRequestor
+		:param source_operator: Оператор источника.
+		:type source_operator: BaseSourceOperator
 		"""
 		
-		self.__SystemObjects = system_objects
-		self.__Requestor = requestor
+		self.__SourceOperator = source_operator
 
-		self.__ParserSettings = self.__SystemObjects.controller.current_parser_settings
+		self.__SystemObjects = self.__SourceOperator.system_objects
+		self.__Temper = self.__SystemObjects.temper
+		self.__ParserSettings = self.__SourceOperator.settings
+		self.__Requestor = self.__SourceOperator.requestor
 
-	def get_image_resolution(self, data: bytes) -> ImageResolution | None:
+	def build_target_filename(self, url: str, filename: str | None = None, is_full_filename: bool = True) -> str:
 		"""
-		Получает разрешение иллюстрации. Вычисляется на основе бинарного представления.
+		Строит имя файла на основе URL по заданным параметрам.
 
-		При отключении опцией парсера возвращает `None`.
-
-		:return: Разрешение изображения или `None` при ошибке вычисления или отключении получения размера.
-		:rtype: ImageResolution | None
-		"""
-
-		if not self.__ParserSettings.common.sizing_images: return
-		if not data: return
-
-		Resolution = None
-
-		try:
-			Buffer = Image.open(BytesIO(data))
-			Resolution = ImageResolution(Buffer.size[0], Buffer.size[1])
-
-		except: return
-
-		return Resolution
-
-	def is_exists(self, url: str, directory: PathLike | None = None, filename: str | None = None, is_full_filename: bool = True) -> bool:
-		"""
-		Проверяет существование изображения в целевой директории по ссылке.
-
-		:param url: Ссылка на изображение.
+		:param url: Ссылка на изображение или псевдоссылка из оригинального имени файла.
 		:type url: str
-		:param directory: Целевая директория. По умолчанию будет проверен временный каталог парсера.
-		:type directory: PathLike | None
 		:param filename: Имя файла. По умолчанию будет сгенерировано на основе URL.
 		:type filename: str | none
 		:param is_full_filename: Указывает, является ли имя файла полным. Если имя неполное, то расширение для файла будет сгенерировано автоматически (например, для имени *image* будет создан файл *image.jpg* на основе ссылки), в ином случае имя файла задаётся жёстко. 
 		:type is_full_filename: bool
-		:return: Возвращает `True`, если файл с таким именем уже существует в директории.
-		:rtype: bool
+		:return: Имя файла.
+		:rtype: str
 		"""
 
-		ParsedURL = Path(url)
-		Filetype = ""
-		if not is_full_filename: Filetype = ParsedURL.suffix
-		if not filename: filename = ParsedURL.stem
+		ParsedUrl = Path(url.split("?", maxsplit = 1)[0])
 
-		if not directory: directory = self.__SystemObjects.temper.parser_temp
-		else: directory = NormalizePath(directory)
+		if filename:
+			if is_full_filename:
+				return ParsedUrl.with_name(filename).name
+			else:
+				return ParsedUrl.with_stem(filename).name
+			
+		return ParsedUrl.name
 
-		return os.path.exists(f"{directory}/{filename}{Filetype}")
+	def build_target_path(self, url: str, directory: str | PathLike[str] | None = None, filename: str | None = None, is_full_filename: bool = True) -> Path:
+		"""
+		Строит целевой путь изображения.
 
-	def image(self, url: str, directory: PathLike | None = None, filename: str | None = None, is_full_filename: bool = False) -> ImageDownloadingStatus:
+		:param url: Ссылка на изображение.
+		:type url: str
+		:param directory: Целевая директория. По умолчанию будет проверен временный каталог парсера.
+		:type directory: str | PathLike[str] | None
+		:param filename: Имя файла. По умолчанию будет сгенерировано на основе URL.
+		:type filename: str | none
+		:param is_full_filename: Указывает, является ли имя файла полным. Если имя неполное, то расширение для файла будет сгенерировано автоматически (например, для имени *image* будет создан файл *image.jpg* на основе ссылки), в ином случае имя файла задаётся жёстко. 
+		:type is_full_filename: bool
+		:return: Целевой путь изображения.
+		:rtype: Path
+		"""
+
+		ImageDirectory: Path = Path(directory) if directory else self.__Temper.get_parser_temp_directory(self.__SourceOperator.manifest.parser_name)
+		ImagePath = ImageDirectory / self.build_target_filename(url, filename, is_full_filename)
+
+		return ImagePath
+
+	def download_image(self, url: str, directory: str | PathLike[str] | None = None, filename: str | None = None, is_full_filename: bool = False, force_mode: bool = False) -> ImageDownloadingResult:
 		"""
 		Скачивает изображение.
 
 		:param url: Ссылка на изображение.
 		:type url: str
 		:param directory: Путь к каталогу, в который нужно сохранить файл. По умолчанию будет использован временный каталог парсера.
-		:type directory: PathLike | None
+		:type directory: str | PathLike[str] | None
 		:param filename: Имя файла. По умолчанию будет сгенерировано на основе URL.
 		:type filename: str | None
 		:param is_full_filename: Указывает, является ли имя файла полным. Если имя неполное, то расширение для файла будет сгенерировано автоматически (например, для имени *image* будет создан файл *image.jpg* на основе ссылки), в ином случае имя файла задаётся жёстко. 
 		:type is_full_filename: bool
-		:return: Статус скачивания изображения.
-		:rtype: ImageDownloadingStatus
+		:param force_mode: Переключает режим перезаписи существующих изображений.
+		:type force_mode: bool
+		:return: Результат скачивания изображения.
+		:rtype: ImageDownloadingResult
 		"""
 
-		Status = ImageDownloadingStatus()
-		if not directory: directory = self.__SystemObjects.temper.parser_temp
-		else: directory = NormalizePath(directory)
+		TempDirectory = self.__Temper.get_parser_temp_directory(self.__SourceOperator.manifest.parser_name)
+		ImageDirectory = Path(directory) if directory else TempDirectory
+		ImageFilename = self.build_target_filename(url, filename, is_full_filename)
+		ImagePath = ImageDirectory / ImageFilename
 
-		#---> Определение параметров файла.
-		#==========================================================================================#
-		ParsedURL = Path(url)
-		Filetype = ""
-		if not is_full_filename: Filetype = ParsedURL.suffix
-		if not filename: filename = ParsedURL.stem
-		ImagePath = f"{directory}/{filename}{Filetype}"
-
-		if os.path.exists(ImagePath):
-			Status.set_is_exists(True)
-			Status.value = filename + Filetype
+		IsAlreadyExists: bool = ImagePath.exists()
+		IsReplacedByStub: bool = False
+		Resolution: ImageResolution | None = None
+		IsDownloaded: bool = False
+		ErrorMessage: str | None = None
 
 		#---> Скачивание файла.
 		#==========================================================================================#
-		if not Status.is_exists or self.__SystemObjects.FORCE_MODE:
+		if not IsAlreadyExists or force_mode:
 			Response = self.__Requestor.get(url)
-			Status.code = Response.status_code
-			IsDownloaded = False
 
-			if Response.status_code == 200:
+			if Response.ok and Response.content:
 				Resolution = self.get_image_resolution(Response.content)
-				if Resolution: Status.set_resolution(Resolution)
-				
+			
 				if len(Response.content) > 1000:
-					with open(ImagePath, "wb") as FileWriter: FileWriter.write(Response.content)
-					Status.value = filename + Filetype
+					with open(ImagePath, "wb") as FileWriter:
+						FileWriter.write(Response.content)
 					IsDownloaded = True
 
-					if Status.is_exists: Status.push_message("Overwritten.")
-					else: Status.push_message("Done.")
-					
-				elif self.__ParserSettings.common.bad_image_stub: Message = f"Image doesn't contain enough bytes: \"{url}\"."
+				else:
+					ErrorMessage = "Less than 1000 bytes in image."
 
-			elif Response.status_code == 404: Message = f"Image not found: \"{url}\"."
-			else: Message = f"Unable to download image: \"{url}\"."
+			else:
+				ErrorMessage = f"Response code: {Response.status_code}."
 
-			#---> Замена изображения заглушкой.
-			#==========================================================================================#
-			if not IsDownloaded and self.__ParserSettings.common.bad_image_stub:
-				shutil.copy2(self.__ParserSettings.common.bad_image_stub, ImagePath)
-				Message = f"{Message} Replaced by stub."
-				Status.set_is_replaced_by_stub(True)
-				Status.push_warning(Message)
+		#---> Замена изображения заглушкой.
+		#==========================================================================================#
+		if all((not IsDownloaded, not IsAlreadyExists)) and self.__ParserSettings.common.bad_image_stub:
+			shutil.copy2(self.__ParserSettings.common.bad_image_stub, ImagePath)
+			IsReplacedByStub = True
 
-			elif not IsDownloaded:
-				Status.push_error(Message)
-				if not Response.ok: self.__SystemObjects.logger.request_error(Response, Message)
-				else: self.__SystemObjects.logger.error(Message)
+		return ImageDownloadingResult(IsAlreadyExists, IsDownloaded, IsReplacedByStub, Resolution, ImagePath, ErrorMessage)
 
-		else: Status.push_message("Already exists.")
-			
-		return Status
+	def get_image_resolution(self, data: bytes) -> ImageResolution | None:
+		"""
+		Вычисляется на основе бинарного представления разрешение изображения.
 
-	def move_from_temp(self, directory: PathLike, original_filename: str, filename: str | None = None, is_full_filename: bool = True) -> ExecutionStatus:
+		:return: Разрешение изображения или `None` при ошибке вычисления или отключении получения размера настройками парсера.
+		:rtype: ImageResolution | None
+		"""
+
+		if not self.__ParserSettings.common.sizing_images:
+			return None
+		
+		if not data:
+			return None
+
+		Resolution = None
+
+		try:
+			Buffer = Image.open(BytesIO(data))
+			Resolution = ImageResolution(Buffer.size[0], Buffer.size[1])
+		except Exception:
+			return None
+
+		return Resolution
+	
+	def move_from_temp(self, directory: str | PathLike[str], original_filename: str, filename: str | None = None, is_full_filename: bool = True, force_mode: bool = False) -> Path:
 		"""
 		Перемещает изображение из временного каталога парсера в друкгую директорию.
 
+		Если в целевой директории уже существует файл с таким именем, в зависимости от состояния режима перезаписи он будет или перезаписан, или временный файл будет удалён.
+
 		:param directory: Целевая директория.
-		:type directory: PathLike
-		:param original_filename: Имя файла во временном каталоге пользователя.
+		:type directory: str | PathLike[str]
+		:param original_filename: Имя файла во временном каталоге парсера.
 		:type original_filename: str
 		:param filename: Новое имя файла. По умолчанию будет использовано оригинальное.
 		:type filename: str | None
 		:param is_full_filename: Указывает, является ли новое имя файла полным. Если имя неполное, то расширение для файла будет сгенерировано автоматически (например, для имени *image* будет создан файл *image.jpg* на основе оригинального имени), в ином случае имя файла задаётся жёстко. 
 		:type is_full_filename: bool
-		:return: Контейнер статуса выполнения. Под ключём `is_exists` содержится информация о том, существовал ли файл в целевом каталоге на момент вызова метода.
-		:rtype: ExecutionStatus
+		:return: Путь к изображению после перемещения.
+		:rtype: Path
+		:param force_mode: Переключает режим перезаписи существующих изображений.
+		:type force_mode: bool
+		:raises FileNotFoundError: Не найден оригинальный файл.
 		"""
-		
-		Status = ExecutionStatus()
-		Status["exists"] = False
-		Filetype = ""
 
-		if filename and not is_full_filename:
-			Filetype = Path(original_filename).suffix
-			filename = Path(filename).stem
-			
-		elif not filename: filename = original_filename
+		ImageOriginalDirectory = self.__Temper.get_parser_temp_directory(self.__SourceOperator.manifest.parser_name)
+		ImageOriginalFilename = original_filename
+		ImageOriginalPath = ImageOriginalDirectory / ImageOriginalFilename
 
-		directory = NormalizePath(directory)
-		OriginalPath = f"Temp/{self.__SystemObjects.parser_name}/{original_filename}"
-		TargetPath = f"{directory}/{filename}{Filetype}"
+		ImageTargetDirectory = Path(directory)
+		ImageTargetFilename = self.build_target_filename(original_filename, filename, is_full_filename)
+		ImageTargetPath = ImageTargetDirectory / ImageTargetFilename
 
-		if os.path.exists(TargetPath): 
-			Status.value = True
-			Status["exists"] = True
-			os.remove(OriginalPath)
+		if not ImageOriginalPath.exists():
+			raise FileNotFoundError(ImageOriginalPath)
+
+		if ImageTargetPath.exists():
+			if force_mode:
+				ImageTargetPath.unlink()
+				ImageOriginalPath.replace(ImageTargetPath)
+		else:
+			ImageOriginalPath.replace(ImageTargetPath)
+
+		if ImageOriginalPath.exists():
+			ImageOriginalPath.unlink()
+
+		return ImageTargetPath
+	
+	def print_result(self, result: ImageDownloadingResult):
+		"""
+		Выводит в терминал текстовое представление результата скачивания изображения.
+
+		:param result: Результат скачивания изображения.
+		:type result: ImageDownloadingResult
+		"""
+
+		Portals = self.__SourceOperator.entry_point.portals
+
+		if result.is_downloaded:
+			if result.is_already_exists: Portals.printer.emit("Overwritten.")
+			else: Portals.printer.emit("Done.")
+
+		elif result.is_already_exists:
+			Portals.printer.emit("Already exists.")
+
+		elif result.is_replaced_by_stub:
+			Portals.printer.emit("Replaced by stub.")
 
 		else:
-			shutil.move(OriginalPath, TargetPath)
-			Status.value = True
+			if result.error_message: Portals.printer.error(result.error_message)
+			else: Portals.printer.error("Unknown error.")
 
-		return Status
-	
-	def temp_image(self, url: str, filename: str | None = None, is_full_filename: bool = False) -> ImageDownloadingStatus:
+	def temp_image(self, url: str, filename: str | None = None, is_full_filename: bool = False, force_mode: bool = False) -> ImageDownloadingResult:
 		"""
 		Скачивает изображение во временный каталог парсера..
 
@@ -303,8 +363,10 @@ class ImagesDownloader:
 		:type filename: str | None
 		:param is_full_filename: Указывает, является ли имя файла полным. Если имя неполное, то расширение для файла будет сгенерировано автоматически (например, для имени *image* будет создан файл *image.jpg* на основе ссылки), в ином случае имя файла задаётся жёстко. 
 		:type is_full_filename: bool
-		:return: Статус скачивания изображения.
-		:rtype: ImageDownloadingStatus
+		:param force_mode: Переключает режим перезаписи существующих изображений.
+		:type force_mode: bool
+		:return: Результат скачивания изображения.
+		:rtype: ImageDownloadingResult
 		"""
 
-		return self.image(url, filename = filename, is_full_filename = is_full_filename)
+		return self.download_image(url, filename = filename, is_full_filename = is_full_filename)
