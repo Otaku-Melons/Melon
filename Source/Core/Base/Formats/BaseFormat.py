@@ -108,6 +108,8 @@ class Person:
 		for CurrentImage in self.__Images:
 			if CurrentImage.link == link:
 				return CurrentImage
+			
+		return None
 
 	def set_description(self, description: str | None):
 		"""
@@ -1076,7 +1078,7 @@ class BaseTitle(ABC):
 		CoversData: list[dict] = DataBuffer["covers"]
 
 		for CoverData in CoversData:
-			Link: str = CoverData["link"]
+			Link = CoverData["link"]
 			TargetCover = self.find_cover_by_link(Link)
 			if TargetCover:
 				TargetCover.create_resolution(CoverData.get("width"), CoverData.get("height"))
@@ -1090,7 +1092,7 @@ class BaseTitle(ABC):
 			if not PersonObject: continue
 
 			for CurrentImage in cast(list[dict], PersonData["images"]):
-				Link: str = CurrentImage["link"]
+				Link = CurrentImage["link"]
 				TargetImage = PersonObject.find_image_by_link(Link)
 				if TargetImage:
 					TargetImage.create_resolution(CurrentImage.get("width"), CurrentImage.get("height"))
@@ -1141,6 +1143,18 @@ class BaseTitle(ABC):
 	# >>>>> ПУБЛИЧНЫЕ МЕТОДЫ ПОИСКА ОБЪЕКТОВ <<<<< #
 	#==========================================================================================#
 
+	def find_branch_by_id(self, branch_id: int) -> BaseBranch | None:
+		"""
+		Ищет ветвь по её ID.
+
+		:param branch_id: ID dtndb.
+		:type branch_id: int
+		:return: Результат поиска.
+		:rtype: BaseBranch | None
+		"""
+
+		return self._Branches.get(branch_id)
+
 	def find_cover_by_link(self, link: str) -> ImageData | None:
 		"""
 		Производит поиск обложки по ссылке.
@@ -1154,6 +1168,8 @@ class BaseTitle(ABC):
 		for CurrentCover in self._Covers:
 			if CurrentCover.link == link:
 				return CurrentCover
+			
+		return None
 
 	def find_chapter_by_id(self, chapter_id: int) -> ChapterSearchResult | None:
 		"""
@@ -1193,6 +1209,8 @@ class BaseTitle(ABC):
 		for CurrentPerson in self._Persons:
 			if CurrentPerson.name == name:
 				return CurrentPerson
+			
+		return None
 
 	#==========================================================================================#
 	# >>>>> ПУБЛИЧНЫЕ МЕТОДЫ УСТАНОВКИ СВОЙСТВ <<<<< #

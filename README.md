@@ -45,38 +45,6 @@ melon help
 > [!WARNING]  
 > Melon не проходит тестирование на Windows, поскольку эта ОС не является целевой платформой, но мы всегда рады обратной связи. Кроме того, на Windows требуется использовать `.venv\Scripts\activate` вместо `source .venv/bin/activate`.
 
-### Контейнер
-Вместе с Melon поставляется _Containerfile_, благодаря [OCI](https://opencontainers.org) совместимый с [Docker](https://www.docker.com), [Podman](https://podman.io) и некоторыми другими поддерживающими данный стандарт системами.
-
-Для корректной работы требуется проброс изменяемых каталогов, что может потребовать написания Shell-скрипта для удобства или Compose-файла.
-
-#### Пример использования
-```Shell
-# Создание каталогов на хосте.
-mkdir ~/Melon
-cd ~/Melon
-mkdir Configs Logs Output Temp
-# Создание выходных каталогов парсера.
-cd ~/Melon/Output
-mkdir -p parsername/archives
-mkdir parsername/images
-mkdir parsername/titles
-# Запуск команды Melon.
-./run.sh parse title-slug --use parsername
-```
-##### run.sh
-```Shell
-podman run --rm \
-  -v ~/Melon/Output:/app/Output:Z \
-  -v ~/Melon/Configs:/app/Configs:Z \
-  -v ~/Melon/Logs:/app/Logs:Z \
-  -v ~/Melon/Temp:/app/Temp:Z \
-  melon "$@"
-```
-_В данном файле `melon` является идентификатором образа._
-
-Выше представлена лишь одна из множества реализаций, чья основная задача – наглядность потребностей Melon. Реальные сценарии использования могут значительно отличаться.
-
 ## Настройки
 Для каждого парсера поставляется файл _settings.json_. Melon ищет его сразу в директории _Configs_, а потом в каталоге самого модуля. Настоятельно рекомендуем редактировать этот файл только внутри _Configs_, это позволит избежать утраты данных при переустановке парсеров, а также поддерживает неизменяемое состояние модулей.
 

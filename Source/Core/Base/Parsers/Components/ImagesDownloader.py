@@ -329,6 +329,30 @@ class ImagesDownloader:
 
 		return ImageTargetPath
 	
+	def print_result(self, result: ImageDownloadingResult):
+		"""
+		Выводит в терминал текстовое представление результата скачивания изображения.
+
+		:param result: Результат скачивания изображения.
+		:type result: ImageDownloadingResult
+		"""
+
+		Portals = self.__SourceOperator.entry_point.portals
+
+		if result.is_downloaded:
+			if result.is_already_exists: Portals.printer.emit("Overwritten.")
+			else: Portals.printer.emit("Done.")
+
+		elif result.is_already_exists:
+			Portals.printer.emit("Already exists.")
+
+		elif result.is_replaced_by_stub:
+			Portals.printer.emit("Replaced by stub.")
+
+		else:
+			if result.error_message: Portals.printer.error(result.error_message)
+			else: Portals.printer.error("Unknown error.")
+
 	def temp_image(self, url: str, filename: str | None = None, is_full_filename: bool = False, force_mode: bool = False) -> ImageDownloadingResult:
 		"""
 		Скачивает изображение во временный каталог парсера..

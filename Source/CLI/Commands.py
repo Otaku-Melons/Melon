@@ -1,5 +1,6 @@
 from . import Functions
 
+from Source.Core.Base.Builders.MangaBuilder import MangaBuilder, MangaOutputFormats
 from Source.Core.Base.Parsers.Components.Manifest import ContentTypes
 from Source.Core.Base.Formats.Components.Enums import By
 from Source.Core import Exceptions
@@ -18,6 +19,68 @@ if TYPE_CHECKING:
 	from Source.Core.Base.Parsers.BaseParser import BaseParser
 	from Source.Core.SystemObjects import SystemObjects
 	from dublib.CLI.Terminalyzer import ParsedCommandData
+
+def com_build_manga(system_objects: SystemObjects, command: ParsedCommandData):
+	"""
+	Строит читаемый контент манги из описательного файла.
+		
+	:param system_objects: Коллекция системных объектов.
+	:type system_objects: SystemObjects
+	:param command: Данные команды.
+	:type command: ParsedCommandData
+	"""
+
+	#---> Парсинг параметров команды.
+	#==========================================================================================#
+	Filename: str = command.get_position_value("FILE", expected_type = str)
+	ParserName: str = command.get_position_value("PARSER", expected_type = str)
+
+	TargetID: int = command.get_position_value("TARGET", expected_type = int)
+	IsTargetChapter: bool = command.check_key("--chapter")
+
+	OutputFormat: str | None = command.get_position_value("FORMAT", expected_type = str)
+	if OutputFormat: OutputFormat = OutputFormat.lstrip("-")
+
+	ChapterTemplate: str | None = command.get_key_value("--ct", expected_type = str)
+	VolumeTemplate: str | None = command.get_key_value("--vt", expected_type = str)
+
+	SortByVolumes: bool = command.check_flag("-s")
+
+	if not Filename.endswith(".json"):
+		Filename += ".json"
+
+	if ParserName not in system_objects.driver.parsers_names:
+		raise Exceptions.System.ParserNotFound(ParserName)
+
+	#---> Выполнение команды.
+	#==========================================================================================#
+	Timer = Utils.Timer(start = True)
+	EntryPoint = system_objects.driver.get_entry_point(ParserName)
+	SourceOperator = EntryPoint.source_operator
+	TypingResult = EntryPoint.get_content_type_by_file(Filename)
+	Parser: BaseParser = SourceOperator.launch_parser(TypingResult.content_type)
+	Title = Parser.init_empty_title(TypingResult.slug)
+
+	if Title.load(Filename, By.Filename):
+		system_objects.printer.emit(f"Loaded file: <i>{Filename}</i>.")
+	else:
+		system_objects.printer.error(f"Unable load file: <b>{Filename}</b>.")
+		exit(1)
+
+	Builder = MangaBuilder(Parser, Title)
+	if OutputFormat: Builder.select_output_format(MangaOutputFormats(OutputFormat))
+	if ChapterTemplate: Builder.set_chapter_name_template(ChapterTemplate)
+	if VolumeTemplate: Builder.set_volume_name_template(VolumeTemplate)
+	Builder.switch_volumes_sorting(SortByVolumes)
+
+	if IsTargetChapter:
+		Builder.build_chapter(TargetID)
+	elif command.check_key("--branch"):
+		Builder.build_branch(TargetID)
+	else:
+		Builder.build_branch()
+
+	system_objects.printer.emit(f"Done in {Timer.ends()}.")
 
 def com_cacher(system_objects: "SystemObjects", command: "ParsedCommandData"):
 	"""
@@ -254,7 +317,6 @@ def com_list(system_objects: "SystemObjects", command: "ParsedCommandData"):
 	for ParserName in system_objects.driver.parsers_names:
 		EntryPoint = system_objects.driver.get_entry_point(ParserName)
 		TypesEmoji = {
-			ContentTypes.Anime: "a",
 			ContentTypes.Manga: "m",
 			ContentTypes.Ranobe: "r"
 		}
@@ -466,8 +528,6 @@ def com_repair(system_objects: "SystemObjects", command: "ParsedCommandData"):
 	Timer = Utils.Timer(start = True)
 	EntryPoint = system_objects.driver.get_entry_point(ParserName)
 	SourceOperator = EntryPoint.source_operator
-	
-
 	TypingResult = EntryPoint.get_content_type_by_file(Filename)
 	Parser: BaseParser = SourceOperator.launch_parser(TypingResult.content_type)
 	Title = Parser.init_empty_title(TypingResult.slug)

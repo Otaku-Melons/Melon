@@ -2,9 +2,10 @@ from dublib.Methods.Filesystem import ReadJSON
 from dublib.WebRequestor import Proxy
 
 from types import MappingProxyType
-from typing import Any, cast
+from typing import Any, cast, Literal
 from pathlib import Path
 from os import PathLike
+from time import sleep
 import hashlib
 import re
 
@@ -197,32 +198,47 @@ class ImageFilters:
 class Directories:
 	"""Директории."""
 
+	#==========================================================================================#
+	# >>>>> СВОЙСТВА <<<<< #
+	#==========================================================================================#
+
 	@property
 	def content(self) -> Path:
 		"""Путь к директории контента."""
 
-		ContentDirectory: str | None = self.__DirectoriesDict.get("content")
-		ContentPath: Path = Path(ContentDirectory) if ContentDirectory else Path(f"Output/{self.__ParserName}/content")
-
-		return ContentPath
+		return self.__GetDirectory("content")
 	
 	@property
 	def images(self) -> Path:
 		"""Путь к директории изображений."""
 
-		ContentDirectory: str | None = self.__DirectoriesDict.get("images")
-		ContentPath: Path = Path(ContentDirectory) if ContentDirectory else Path(f"Output/{self.__ParserName}/images")
-
-		return ContentPath
+		return self.__GetDirectory("images")
 	
 	@property
 	def titles(self) -> Path:
 		"""Путь к директории файлов тайтлов."""
 
-		ContentDirectory: str | None = self.__DirectoriesDict.get("titles")
-		ContentPath: Path = Path(ContentDirectory) if ContentDirectory else Path(f"Output/{self.__ParserName}/titles")
+		return self.__GetDirectory("titles")
+	
+	#==========================================================================================#
+	# >>>>> МЕТОДЫ <<<<< #
+	#==========================================================================================#
 
-		return ContentPath
+	def __GetDirectory(self, dir_type: Literal["content", "images", "titles"]) -> Path:
+		"""
+		Возвращает путь к каталогу. Автоматически создаёт его при отсутствии.
+
+		:param dir_type: Тип каталога.
+		:type dir_type: Literal["content", "images", "titles"]
+		:return: Путь к каталогу.
+		:rtype: Path
+		"""
+
+		Directory: str | None = self.__DirectoriesDict.get(dir_type)
+		DirectoryPath: Path = Path(Directory) if Directory else Path(f"Output/{self.__ParserName}/{dir_type}")
+		DirectoryPath.mkdir(exist_ok = True)
+
+		return DirectoryPath
 
 	def __init__(self, parser_name: str, settings: dict[str, str | None]):
 		"""
@@ -295,6 +311,11 @@ class Common:
 		"""
 
 		self.__CommonSettings: dict[str, Any] = cast(dict, _BASE_SETTINGS.copy().get("common")) | settings
+
+	def sleep_delay(self):
+		"""Приостанавливает исполнение на указанный в настройках интервал времени."""
+
+		sleep(self.delay)
 
 class Filters:
 	"""Фильтры контента."""

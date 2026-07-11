@@ -16,7 +16,6 @@ if TYPE_CHECKING:
 class ContentTypes(Enum):
 	"""Перечисление типов контента."""
 
-	Anime = "anime"
 	Manga = "manga"
 	Ranobe = "ranobe"
 
@@ -97,7 +96,7 @@ class ParserManifest:
 		if not self.__Data["content_types"]:
 			raise Exceptions.System.BadManifest("Types must be specified.")
 		for ContentType in self.__Data["content_types"]:
-			if ContentType not in ("manga", "ranobe", "anime"):
+			if ContentType not in ("manga", "ranobe"):
 				raise Exceptions.System.BadManifest(f"Unsupported content type \"{ContentType}\".")
 
 		for Key in ("version", "melon_required_version"):

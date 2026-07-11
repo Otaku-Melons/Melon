@@ -1,11 +1,9 @@
-from Source.Core.Base.Parsers.Components.ImagesDownloader import ImagesDownloader
-
 from typing import TYPE_CHECKING
+import re
 
 if TYPE_CHECKING:
-	from Source.Core.Base.Formats.BaseFormat import BaseBranch, BaseChapter
+	from Source.Core.Base.Formats.BaseFormat import BaseTitle, BaseChapter
 	from Source.Core.Base.Parsers.BaseParser import BaseParser
-	from Source.Core.SystemObjects import SystemObjects
 
 #==========================================================================================#
 # >>>>> БАЗОВЫЙ СБОРЩИК <<<<< #
@@ -18,64 +16,37 @@ class BaseBuilder:
 	# >>>>> НАСЛЕДУЕМЫЕ МЕТОДЫ <<<<< #
 	#==========================================================================================#
 
-	def _FindChapter(self, branches: list["BaseBranch"], chapter_id: int) -> "BaseChapter | None":
+	def _GenerateNameByTemplate(self, chapter: "BaseChapter", template: str) -> str:
 		"""
-		Находит главу по её ID.
-			branches – список ветвей в тайтле;\n
-			chapter_id – ID искомой главы.
-		"""
+		Генерирует название главы по шаблону. Если номер и имя главы не определены, в качестве названия будет использован ID.
 
-		if not branches: return None
-
-		for CurrentBranch in branches:
-			for CurrentChapter in CurrentBranch.chapters:
-				if CurrentChapter.id == chapter_id: return CurrentChapter
-
-	def _GenerateChapterNameByTemplate(self, chapter: "BaseChapter") -> str:
-		"""
-		Генерирует название главы по шаблону.
-			chapter – данные главы.
+		:param chapter: Глава.
+		:type chapter: BaseChapter
+		:return: Название главы.
+		:rtype: str
 		"""
 
-		Name = self._ChapterNameTemplate
-		Name = Name.replace("{number}", str(chapter.number))
-		if chapter.name: Name = Name.replace("{name}", chapter.name)
-		else: Name = Name.replace("{name}", "")
-		Name = Name.strip()
-		Name = Name.rstrip(".")
+		Replacements: dict[str, str] = {
+			"ch_word": self._WordsDictionary.chapter.title() if self._WordsDictionary and self._WordsDictionary.chapter else "",
+			"vol_word": self._WordsDictionary.volume.title() if self._WordsDictionary and self._WordsDictionary.volume else "",
+			"id": str(chapter.id),
+			"name": chapter.name or "",
+			"ch_number": chapter.number or "",
+			"vol_number": chapter.volume or "",
+			"separator": ". " if chapter.name else ""
+		}
 
-		return Name
-	
-	def _GenerateVolumeNameByTemplate(self, chapter: "BaseChapter") -> str:
-		"""
-		Генерирует название тома, к которому принадлежит глава, по шаблону.
-			chapter – данные главы.
-		"""
+		for Replacement in Replacements:
+			Identificator: str = "{" + Replacement + "}"
+			if Identificator in template:
+				template = template.replace(Identificator, Replacements[Replacement])
 
-		Name = self._VolumeNameTemplate
-		Name = Name.replace("{number}", str(chapter.volume))
-		Name = Name.strip()
-		Name = Name.rstrip(".")
+			Pattern = "{" + f"if:{Replacement}:(.*)" + "}"
+			Match = re.match(Pattern, template)
+			Value =  Value = Match[0].split(":")[-1][:-1] if Match else ""
+			template = re.sub(Pattern, Value, template)
 
-		return Name
-
-	def _SelectBranch(self, branches: list["BaseBranch"], branch_id: int | None = None) -> "BaseBranch | None":
-		"""
-		Выбирает ветвь для построения.
-
-		:param branches: Список ветвей в тайтле.
-		:type branches: list[BaseBranch]
-		:param branch_id: ID нужной ветви или `None` для выбора первой.
-		:type branch_id: int | None
-		:return: Возвращает данные ветви или `None`, если не удалось выбрать.
-		:rtype: BaseBranch | None
-		"""
-
-		if not branches: return None
-		if not branch_id: return branches[0]
-
-		for CurrentBranch in branches:
-			if CurrentBranch.id == branch_id: return CurrentBranch
+		return template.strip()
 
 	#==========================================================================================#
 	# >>>>> ПЕРЕОПРЕДЕЛЯЕМЫЕ МЕТОДЫ <<<<< #
@@ -90,45 +61,40 @@ class BaseBuilder:
 	# >>>>> ПУБЛИЧНЫЕ МЕТОДЫ <<<<< #
 	#==========================================================================================#
 
-	def __init__(self, system_objects: "SystemObjects", parser: "BaseParser"):
+	def __init__(self, parser: "BaseParser", title: "BaseTitle"):
 		"""
 		Базовый сборщик.
 
-		:param system_objects: Коллекция системных объектов.
-		:type system_objects: SystemObjects
 		:param parser: Парсер.
 		:type parser: BaseParser
+		:param title: Тайтл.
+		:type title: BaseTitle
 		"""
-
-		self._SystemObjects = system_objects
+		
 		self._Parser = parser
-
+		self._Title = title
+		
+		self._SystemObjects = self._Parser.source_operator.system_objects
 		self._ParserSettings = self._Parser.settings
 		self._Temper = self._SystemObjects.temper
 		self._Printer = self._SystemObjects.printer
 
-		self._BuildSystem = None
+		self._Portals = parser.source_operator.entry_point.portals
+		self._ParserTempDirectory = self._Temper.get_parser_temp_directory(self._Parser.manifest.parser_name)
+		self._WordsDictionary = self._Parser.load_words_dictionary_preset(self._Title.content_language) if self._Title.content_language else None
 
-		self._ChapterNameTemplate: str = "{number}. {name}"
-		self._VolumeNameTemplate: str = "{number}. {name}"
+		self._BuildSystem: str | None = None
+		self._ChapterNameTemplate: str = "{ch_word} {ch_number}{if:name:. } {name}"
+		self._VolumeNameTemplate: str = "{vol_word} {vol_number}"
 
 		self._PostInitMethod()
-
-	def select_build_system(self, build_system: str | None):
-		"""
-		Выбирает систему сборки.
-
-		:param build_system: Название системы сборки. Нечувствительно к регистру.
-		:type build_system: str | None
-		"""
-
-		if type(build_system) == str: build_system = build_system.lower()
-		self._BuildSystem = build_system or None
 
 	def set_chapter_name_template(self, template: str):
 		"""
 		Задаёт шаблон именования глав.
-			template – шаблон.
+
+		:param template: Строковый шаблон, в котором подстроки `{number}` и `{name}` заменяются на номер и название главы соответственно.
+		:type template: str
 		"""
 
 		self._ChapterNameTemplate = template
@@ -136,7 +102,9 @@ class BaseBuilder:
 	def set_volume_name_template(self, template: str):
 		"""
 		Задаёт шаблон именования томов.
-			template – шаблон.
+
+		:param template: Строковый шаблон, в котором подстрока `{number}` заменяется на номер тома.
+		:type template: str
 		"""
 
 		self._VolumeNameTemplate = template

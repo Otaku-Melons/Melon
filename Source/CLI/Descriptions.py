@@ -3,6 +3,23 @@ from dublib.CLI.TextStyler import GetStyledTextFromHTML
 
 COMMANDS: list[Command] = list()
 
+Com = Command("build-manga", "Build manga read-ready manga content.")
+ComPos = Com.create_position("FILE", "Filename of local JSON.", important = True)
+ComPos.set_argument()
+ComPos = Com.create_position("PARSER", "Name of parser.", important = True)
+ComPos.add_key("--use")
+ComPos = Com.create_position("TARGET", "Target for building. By default longest branch.")
+ComPos.add_key("--branch", type = ValidableTypes.UnsignedInteger, description = "Branch ID.")
+ComPos.add_key("--chapter", type = ValidableTypes.UnsignedInteger, description = "Chapter ID.")
+ComPos = Com.create_position("FORMAT", "Format of output content. By default downloads images in folder.")
+ComPos.add_flag("-zip", description = "Make *.ZIP archives.")
+ComPos.add_flag("-cbz", description = "Make *.CBZ files.")
+ComPos.add_flag("-pdf", description = "Make *.CBZ files.")
+Com.base.add_key("--cnt", description = "Template for chapters naming.")
+Com.base.add_key("--vnt", description = "Template for volumes naming.")
+Com.base.add_flag("-s", description = "Enable chapters sorting by volumes directories.")
+COMMANDS.append(Com)
+
 Com = Command("cacher", "Run ID-slug caching.")
 ComPos = Com.create_position("PARSERS", "One or more parsers names separated by comma. By default all.")
 ComPos.add_key("--use")

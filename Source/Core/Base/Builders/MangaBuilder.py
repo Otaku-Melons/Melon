@@ -1,27 +1,159 @@
 from Source.Core.Base.Builders.BaseBuilder import BaseBuilder
+from Source.Core import Exceptions
 
+from dublib.Methods.Data import StringifyFloat
 from dublib.Methods.Filesystem import ListDir
+from dublib.CLI.TextStyler import FastStyler
 
-from typing import TYPE_CHECKING
+from tempfile import TemporaryDirectory
+from abc import ABC, abstractmethod
+from typing import cast, TYPE_CHECKING
 from pathlib import Path
 import shutil
 import enum
 import os
 
+import img2pdf
+
 if TYPE_CHECKING:
-	from Source.Core.Base.Parsers.BaseMangaParser import BaseMangaParser
-	from Source.Core.Base.Formats.Manga import BaseBranch, Chapter, Manga
+	from Source.Core.Base.Formats.Manga import BaseBranch, Chapter
 
 #==========================================================================================#
 # >>>>> ВСПОМОГАТЕЛЬНЫЕ СТРУКТУРЫ ДАННЫХ <<<<< #
 #==========================================================================================#
 
-class MangaBuildSystems(enum.Enum):
-	"""Перечисление систем сборки глав манги."""
+class MangaOutputFormats(enum.Enum):
+	"""Перечисление форматов сборки манги."""
 
-	Simple = "simple"
-	ZIP = "zip"
 	CBZ = "cbz"
+	PDF = "pdf"
+	ZIP = "zip"
+	Simple = None
+
+#==========================================================================================#
+# >>>>> СБОРЩИКИ ГЛАВ <<<<< #
+#==========================================================================================#
+
+class _BaseChapterBuilder(ABC):
+	"""Базовый сборщик главы манги."""
+
+	@abstractmethod
+	def build_chapter(self, name: str, temp_dir: Path, target_dir: Path) -> Path:
+		"""
+		Собирает главу в пригодный для чтения формат.
+
+		:param name: Название главы.
+		:type name: str
+		:param temp_dir: Временный каталог со слайдами.
+		:type temp_dir: Path
+		:param target_dir: Каталог для размещения результата.
+		:type target_dir: Path
+		:return: Путь к главе.
+		:rtype: Path
+		"""
+
+		pass
+
+class _MCBF_Simple(_BaseChapterBuilder):
+	"""Формат сборки: каталог с изображениями."""
+
+	def build_chapter(self, name: str, temp_dir: Path, target_dir: Path) -> Path:
+		"""
+		Собирает главу в пригодный для чтения формат.
+
+		:param name: Название главы.
+		:type name: str
+		:param temp_dir: Временный каталог со слайдами.
+		:type temp_dir: Path
+		:param target_dir: Каталог для размещения результата.
+		:type target_dir: Path
+		:return: Путь к главе.
+		:rtype: Path
+		"""
+
+		target_dir = target_dir / name
+		target_dir.mkdir(exist_ok = True)
+		Files = ListDir(temp_dir)
+
+		for File in Files:
+			os.replace(temp_dir / File, target_dir / File)
+
+		return target_dir
+	
+class _MCBF_ZIP(_BaseChapterBuilder):
+	"""Формат сборки: архив *.zip."""
+
+	def build_chapter(self, name: str, temp_dir: Path, target_dir: Path) -> Path:
+		"""
+		Собирает главу в пригодный для чтения формат.
+
+		:param name: Название главы.
+		:type name: str
+		:param temp_dir: Временный каталог со слайдами.
+		:type temp_dir: Path
+		:param target_dir: Каталог для размещения результата.
+		:type target_dir: Path
+		:return: Путь к главе.
+		:rtype: Path
+		"""
+
+		BaseName = target_dir / name
+		shutil.make_archive(BaseName.as_posix(), "zip", temp_dir)
+
+		return target_dir / f"{name}.zip"
+	
+class _MCBF_CBZ(_MCBF_ZIP):
+	"""Формат сборки: архив *.cbz."""
+
+	def build_chapter(self, name: str, temp_dir: Path, target_dir: Path) -> Path:
+		"""
+		Собирает главу в пригодный для чтения формат.
+
+		:param name: Название главы.
+		:type name: str
+		:param temp_dir: Временный каталог со слайдами.
+		:type temp_dir: Path
+		:param target_dir: Каталог для размещения результата.
+		:type target_dir: Path
+		:return: Путь к главе.
+		:rtype: Path
+		"""
+
+		ArchivePath = super().build_chapter(name, temp_dir, target_dir)
+		ComicArchivePath = ArchivePath.with_suffix(".cbz")
+		ArchivePath.rename(ComicArchivePath)
+	
+		return ComicArchivePath
+
+class _MCBF_PDF(_BaseChapterBuilder):
+	"""Формат сборки: файл *.pdf."""
+
+	def build_chapter(self, name: str, temp_dir: Path, target_dir: Path) -> Path:
+		"""
+		Собирает главу в пригодный для чтения формат.
+
+		:param name: Название главы.
+		:type name: str
+		:param temp_dir: Временный каталог со слайдами.
+		:type temp_dir: Path
+		:param target_dir: Каталог для размещения результата.
+		:type target_dir: Path
+		:return: Путь к главе.
+		:rtype: Path
+		"""
+
+		FilePath = target_dir / f"{name}.pdf"
+		Images = ListDir(temp_dir)
+		Images.sort()
+
+		for Index in range(len(Images)):
+			Images[Index] = temp_dir.joinpath(Images[Index]).as_posix()
+
+		with open(FilePath, "wb") as FileWriter:
+			Buffer = img2pdf.convert(Images)
+			if Buffer: FileWriter.write(Buffer)
+
+		return FilePath
 
 #==========================================================================================#
 # >>>>> ОСНОВНОЙ КЛАСС <<<<< #
@@ -31,45 +163,84 @@ class MangaBuilder(BaseBuilder):
 	"""Сборщик манги."""
 
 	#==========================================================================================#
-	# >>>>> СИСТЕМЫ СБОРКИ <<<<< #
+	# >>>>> ПРИВАТНЫЕ МЕТОДЫ <<<<< #
 	#==========================================================================================#
 
-	def __cbz(self, title: "Manga", chapter: "Chapter", directory: str) -> str:
-		"""Система сборки: *.CBZ-архив."""
+	def __BuildChapter(self, chapter: "Chapter", progress: float | None = None):
+		"""
+		Собирает главу манги.
 
-		ArchivePath = self.__zip(title, chapter, directory)
-		OutputPath = ArchivePath[:-3] + "cbz"
-		os.rename(ArchivePath, OutputPath)
+		:param chapter: Глава.
+		:type chapter: Chapter
+		:param progress: Доля собранных глав в ветви.
+		:type progress: float | None
+		:raises BuildingError: Ошибка сборки.
+		"""
+		
+		ProgressString = self.__GetProgressString(progress)
+		self._SystemObjects.printer.emit(f"{ProgressString}Building chapter <b>{chapter.id}</b>…")
 
-		return OutputPath
+		with TemporaryDirectory(dir = self._ParserTempDirectory) as TempDir:
+			TempDirPath = Path(TempDir)
+			Slides = chapter.slides 
+			SlidesCount = len(Slides)
+			
+			for Index in range(SlidesCount):
+				SlideInfo = Slides[Index]
+				FileIndex = Index + 1
 
-	def __simple(self, title: "Manga", chapter: "Chapter", directory: str) -> str:
-		"""Система сборки: каталог с изображениями."""
+				self._Printer.emit(f"[{FileIndex} / {SlidesCount}] Downloading slide \"{SlideInfo.filename}\"… ", end_line = False, flush = True)
 
-		ChapterName = self._GenerateChapterNameByTemplate(chapter)
-		Volume = ""
-		if self.__SortingByVolumes and chapter.volume: Volume = self._GenerateVolumeNameByTemplate(chapter)
-		OutputPath = f"{self._ParserSettings.directories.content}/{title.used_filename}/{Volume}/{ChapterName}"
-		OutputPath = Path(OutputPath).as_posix()
+				Filename = str(FileIndex).rjust(len(str(SlidesCount)), "0")
+				Result = self._Parser.source_operator.download_image(SlideInfo.link, TempDirPath, filename = Filename)
+				self._Parser.images_downloader.print_result(Result)
 
-		if not os.path.exists(OutputPath): os.makedirs(OutputPath)
-		Files = ListDir(directory)
-		for File in Files: os.replace(f"{directory}/{File}", f"{OutputPath}/{File}")
+				if not Result.path or not Result.path.exists():
+					raise Exceptions.Builders.BuildingError("Unable download slide.")
 
-		return OutputPath
+				if FileIndex != SlidesCount:
+					self._ParserSettings.common.sleep_delay()
 
-	def __zip(self, title: "Manga", chapter: "Chapter", directory: str) -> str:
-		"""Система сборки: *.ZIP-архив."""
+			self.__RunChapterBuilder(chapter, TempDirPath)
 
-		ChapterName = self._GenerateChapterNameByTemplate(chapter)
-		Volume = ""
-		if self.__SortingByVolumes and chapter.volume: Volume = self._GenerateVolumeNameByTemplate(chapter)
-		OutputPath = f"{self._ParserSettings.directories.content}/{title.used_filename}/{Volume}/{ChapterName}"
-		OutputPath = Path(OutputPath).as_posix()
+	def __GetProgressString(self, progress: float | None) -> str:
+		"""
+		Возвращает строку, указывающую прогресс сборки ветви.
 
-		shutil.make_archive(OutputPath, "zip", directory)
+		:param progress: Прогресс сборки ветви.
+		:type progress: float | None
+		:return: Строка, указывающая прогресс.
+		:rtype: str
+		"""
 
-		return OutputPath + ".zip"
+		if progress is None:
+			return ""
+		
+		ProgressString = StringifyFloat(progress * 100.0) + "%"
+		ProgressString = FastStyler(ProgressString).colorize.bright_cyan
+
+		return f"[{ProgressString}] "
+
+	def __RunChapterBuilder(self, chapter: "Chapter", temp_dir: Path):
+		"""
+		Запуаскает сборку главы в определённый формат.
+
+		:param chapter: Глава.
+		:type chapter: Chapter
+		:param temp_dir: Временный каталог со слайдами.
+		:type temp_dir: Path
+		"""
+
+		TargetDirectory: Path = self._ParserSettings.directories.content / self._Title.used_filename
+		TargetDirectory.mkdir(exist_ok = True)
+		ChapterName: str = self._GenerateNameByTemplate(chapter, self._ChapterNameTemplate)
+
+		if self.__SortingByVolumes:
+			TargetDirectory = TargetDirectory / self._GenerateNameByTemplate(chapter, self._VolumeNameTemplate)
+			TargetDirectory.mkdir(exist_ok = True)
+
+		ChapterPath = self.__FormatsBuilders[self.__OutputFormat]().build_chapter(ChapterName, temp_dir, TargetDirectory)
+		self._Printer.emit(f"Chapter <b>{chapter.id}</b> builded in: <i>{ChapterPath}</i>.")
 
 	#==========================================================================================#
 	# >>>>> ПЕРЕОПРЕДЕЛЯЕМЫЕ МЕТОДЫ <<<<< #
@@ -78,71 +249,85 @@ class MangaBuilder(BaseBuilder):
 	def _PostInitMethod(self):
 		"""Метод, выполняющийся после инициализации объекта."""
 
-		self.__BuildSystemsMethods = {
-			MangaBuildSystems.Simple: self.__simple,
-			MangaBuildSystems.CBZ: self.__cbz,
-			MangaBuildSystems.ZIP: self.__zip,
-		}
+		self.__OutputFormat: MangaOutputFormats = MangaOutputFormats.Simple
+		self.__SortingByVolumes: bool = False
 
-		self.__SortingByVolumes = False
+		self.__FormatsBuilders: dict[MangaOutputFormats, _BaseChapterBuilder.__class__] = {
+			MangaOutputFormats.CBZ: _MCBF_CBZ,
+			MangaOutputFormats.PDF: _MCBF_PDF,
+			MangaOutputFormats.Simple: _MCBF_Simple,
+			MangaOutputFormats.ZIP: _MCBF_ZIP,
+		}
 
 	#==========================================================================================#
 	# >>>>> ПУБЛИЧНЫЕ МЕТОДЫ <<<<< #
 	#==========================================================================================#
 
-	def build_chapter(self, title: "Manga", chapter_id: int):
+	def build_chapter(self, chapter_id: int):
 		"""
-		Строит главу манги.
-			title – данные тайтла;\n
-			chapter_id – ID целевой главы;\n
-			build_system – система сборки главы.
+		Собирает главу манги.
+
+		:param chapter_id: ID главы.
+		:type chapter_id: int
+		:raises ChapterNotFound: Глава не найдена.
 		"""
 
-		self._SystemObjects.printer.emit(f"Building chapter {chapter_id}…")
+		ChapterSearchResult = self._Title.find_chapter_by_id(chapter_id)
 
-		if not self._BuildSystem: self._BuildSystem = MangaBuildSystems.Simple
+		if not ChapterSearchResult:
+			raise Exceptions.Parsers.ChapterNotFound(chapter_id)
 
-		TargetChapter: "Chapter | None" = self._FindChapter(title.branches, chapter_id)
-		SlidesCount = len(TargetChapter.slides)
-		WorkDirectory = f"{self._Temper.builder_temp}/{title.used_filename}"
+		self.__BuildChapter(cast("Chapter", ChapterSearchResult.chapter))
 
-		for Slide in TargetChapter.slides:
-			Link: str = Slide["link"]
-			Filename: str = Link.split("/")[-1]
-			Index: int = Slide["index"]
+	def build_branch(self, branch_id: int | None = None):
+		"""
+		Собирает ветвь манги.
+
+		:param branch_id: ID ветви или `None` для сборки самой длинной.
+		:type branch_id: int | None
+		:raises BuildingError: Ошибка сборки.
+		"""
+
+		Branches = self._Title.branches
+		if not Branches:
+			raise Exceptions.Builders.BuildingError("Title hasn't branches.")
+		
+		BranchToBuild = Branches[0]
+
+		if branch_id:
+			SearchResult = self._Title.find_branch_by_id(branch_id)
+
+			if SearchResult:
+				raise Exceptions.Builders.BuildingError(f"Branch {branch_id} not found.")
 			
-			if not os.path.exists(WorkDirectory): os.mkdir(WorkDirectory)
-			Parser: "BaseMangaParser" = title.parser
-			print(f"[{Index} / {SlidesCount}] Downloading \"{Filename}\"… ", flush = True, end = "")
-			DownloadingStatus = Parser.source_operator.image(Link)
-			DownloadingStatus.print_messages()
+			BranchToBuild = cast("BaseBranch", SearchResult)
 
-			if not DownloadingStatus.has_errors:
-				print("Done.")
-				self._SystemObjects.printer.emit(f"Slide \"{Filename}\" downloaded.", stdout = False)
+		Chapters = BranchToBuild.chapters
 
-			else: self._Printer.error(f"Unable download slide \"{Filename}\". Response code: {DownloadingStatus.code}.")
+		for Index in range(BranchToBuild.chapters_count):
+			CurrentChapter = cast("Chapter", Chapters[Index])
+			Progress = float(Index) / BranchToBuild.chapters_count
+			self.__BuildChapter(CurrentChapter, Progress)
 
-			MovingStatus = self._Parser.images_downloader.move_from_temp(WorkDirectory, Filename, f"{Index}", is_full_filename = False)
-			MovingStatus.print_messages()
-			self.__BuildSystemsMethods[self._BuildSystem](title, TargetChapter, WorkDirectory)
+		ProgressString = self.__GetProgressString(1.0)
+		self._Printer.emit(f"{ProgressString}In branch <b>{BranchToBuild.id}</b> builded {BranchToBuild.chapters_count} chapters.")
 
-		shutil.rmtree(WorkDirectory)
-
-	def build_branch(self, title: "Manga", branch_id: int | None = None):
+	def select_output_format(self, format: MangaOutputFormats):
 		"""
-		Строит ветвь контента манги.
-			branch_id – ID выбранной ветви (по умолчанию самая длинная).
+		Выбирает формат для сборки манги.
+
+		:param format: Формат сборки или.
+		:type format: MangaOutputFormats
 		"""
 
-		TargetBranch: "BaseBranch" = self._SelectBranch(title.branches, branch_id)
-		self._SystemObjects.printer.emit(f"Building branch {TargetBranch.id}…")
-		for CurrentChapter in TargetBranch.chapters: self.build_chapter(title, CurrentChapter.id)
+		self.__OutputFormat = format
 
-	def select_build_system(self, build_system: str | None):
+	def switch_volumes_sorting(self, status: bool):
 		"""
-		Задаёт систему сборки контента.
-			build_system – название системы сборки.
+		Переключает сортировку глав по каталогам томов.
+
+		:param status: Состояние сортировки.
+		:type status: bool
 		"""
 
-		self._BuildSystem = MangaBuildSystems(build_system) if build_system else None
+		self.__SortingByVolumes = status

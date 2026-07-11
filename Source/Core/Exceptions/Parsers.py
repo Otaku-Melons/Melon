@@ -8,6 +8,19 @@ if TYPE_CHECKING:
 # >>>>> ИСКЛЮЧЕНИЯ ПАРСЕРОВ <<<<< #
 #==========================================================================================#
 	
+class AuthorizationRequired(Exception):
+	"""Исключение: требуется авторизация."""
+
+	def __init__(self, message: str):
+		"""
+		Исключение: требуется авторизация.
+
+		:param message: Описание требования авторизации.
+		:type message: str
+		"""
+
+		super().__init__(message) 
+
 class ChapterNotFound(Exception):
 	"""Исключение: глава не найдена."""
 
@@ -42,6 +55,19 @@ class ParsingError(Exception):
 		"""
 
 		super().__init__(description or "Error occurs during parsing.") 
+
+class TitleNotFound(Exception):
+	"""Исключение: тайтл не найден."""
+
+	def __init__(self, title: "BaseTitle"):
+		"""
+		Исключение: тайтл не найден.
+
+		:param title: Тайтл.
+		:type title: BaseTitle
+		"""
+
+		super().__init__(f"Title \"{title.slug}\" not found.") 
 
 class TitleNotSetted(Exception):
 	"""Исключение: не задан тайтл."""
@@ -107,66 +133,3 @@ class UnresolvedTag(Exception):
 		"""
 
 		super().__init__(f"Unresolved tag \"{tag}\".") 
-
-
-
-
-
-
-
-
-
-
-		
-
-class AuthorizationRequired(Exception):
-	"""Исключение: требуется авторизация."""
-
-	def __init__(self, message: str):
-		"""
-		Исключение: требуется авторизация.
-
-		:param message: Описание требования авторизации.
-		:type message: str
-		"""
-
-		super().__init__(message) 
-
-
-class BadSettings(Exception):
-	"""Исключение: неверно определены настройки парсера."""
-
-	def __init__(self, parser_name: str):
-		"""
-		Исключение: неверно определены настройки парсера.
-
-		:param parser_name: Имя парсера.
-		:type parser_name: str
-		"""
-
-		super().__init__(f"Error during parsing \"{parser_name}\" settings.") 
-
-
-	
-
-
-
-class TitleNotFound(Exception):
-	"""Исключение: тайтл не найден в источнике."""
-
-	def __init__(self, title: "BaseTitle"):
-		"""
-		Исключение: тайтл не найден в источнике.
-
-		:param title: Данные тайтла.
-		:type title: BaseTitle
-		"""
-
-		super().__init__(f"Title \"{title.slug}\" not found.") 
-	
-
-
-#==========================================================================================#
-# >>>>> ИСКЛЮЧЕНИЯ ФОРМАТИРОВЩИКОВ КОНТЕНТА <<<<< #
-#==========================================================================================#
-	

@@ -35,6 +35,8 @@ class _ImagesTypes(Enum):
 class BaseParser(ABC):
 	"""Базовый парсер."""
 
+	_Title: BaseTitle | None
+
 	#==========================================================================================#
 	# >>>>> СВОЙСТВА <<<<< #
 	#==========================================================================================#
@@ -104,8 +106,11 @@ class BaseParser(ABC):
 		ImageDirecory: Path = self.settings.directories.images / self._Title.used_filename / image_type.value
 		ImageDirecory.mkdir(parents = True, exist_ok = True)
 		Results: list = list()
+		ImagesCount: int = len(images_data)
 
-		for CurrentImageData in images_data:
+		for Index in range(ImagesCount):
+			CurrentImageData = images_data[Index]
+
 			Type = image_type.name.lower()
 			self.portals.printer.emit(f"Downloading {Type} \"{CurrentImageData.filename}\"… ", end_line = False)
 			
@@ -114,20 +119,11 @@ class BaseParser(ABC):
 			
 			if Result.resolution:
 				CurrentImageData.set_resolution(Result.resolution)
-			
-			if Result.is_downloaded:
-				if Result.is_already_exists: self.portals.printer.emit("Overwritten.")
-				else: self.portals.printer.emit("Done.")
 
-			elif Result.is_already_exists:
-				self.portals.printer.emit("Already exists.")
+			self._SourceOperator.images_downloader.print_result(Result)
 
-			elif Result.is_replaced_by_stub:
-				self.portals.printer.emit("Replaced by stub.")
-
-			else:
-				if Result.error_message: self.portals.printer.error(Result.error_message)
-				else: self.portals.printer.error("Unknown error.")
+			if Index + 1 != ImagesCount:
+				self.settings.common.sleep_delay()
 
 		return Results
 
