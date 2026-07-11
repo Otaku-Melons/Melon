@@ -252,7 +252,7 @@ class MangaBuilder(BaseBuilder):
 		self.__OutputFormat: MangaOutputFormats = MangaOutputFormats.Simple
 		self.__SortingByVolumes: bool = False
 
-		self.__FormatsBuilders: dict[MangaOutputFormats, _BaseChapterBuilder.__class__] = {
+		self.__FormatsBuilders: dict[MangaOutputFormats, type[_BaseChapterBuilder]] = {
 			MangaOutputFormats.CBZ: _MCBF_CBZ,
 			MangaOutputFormats.PDF: _MCBF_PDF,
 			MangaOutputFormats.Simple: _MCBF_Simple,

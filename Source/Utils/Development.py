@@ -1,4 +1,5 @@
 from Source.Core.Base.Parsers.Components.Manifest import _BASE_MANIFEST, ContentTypes
+from Source.Core.Base.Parsers.Components.Settings import _BASE_SETTINGS
 from Source.Core.SystemObjects import SystemObjects
 from Source.Utils.Timer import Timer
 
@@ -78,7 +79,7 @@ class DevelopmeptAssistant:
 		:type path: PathLike[str]
 		"""
 		
-		WriteJSON(f"{path}/manifest.json", Settings.copy())
+		WriteJSON(f"{path}/manifest.json", _BASE_SETTINGS.copy())
 		self.__Printer.emit("Settings file created.")
 
 	#==========================================================================================#
