@@ -15,6 +15,7 @@ if TYPE_CHECKING:
 	from Source.Core.Base.Parsers.Components import ParserSettings
 	from Source.Core.Base.Parsers.BaseParser import BaseParser
 	from Source.Core.SystemObjects.Temper import SharedData
+	from Source.Core.SystemObjects.Printer import Portals
 	from Source.Core.SystemObjects import SystemObjects
 
 class BaseSourceOperator:
@@ -47,6 +48,12 @@ class BaseSourceOperator:
 		"""Манифест парсера."""
 
 		return self._Manifest
+
+	@property
+	def portals(self) -> "Portals":
+		"""Порталы вывода парсера."""
+
+		return self._EntryPoint.portals
 
 	@property
 	def settings(self) -> "ParserSettings":

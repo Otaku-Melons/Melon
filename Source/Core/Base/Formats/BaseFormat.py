@@ -1038,6 +1038,31 @@ class BaseTitle(ABC):
 
 		self._PostInitMethod()
 
+	def __getitem__(self, key: str) -> Any:
+		"""
+		Возвращает значение из внутреннего словаря тайтла.
+
+		:param key: Ключ значения.
+		:type key: str
+		:return: Значение.
+		:rtype: Any
+		:raises KeyError: Ключ не найден.
+		"""
+
+		return self._Data[key]
+
+	def __setitem__(self, key: str, value: Any):
+		"""
+		Задаёт значение во внутренний словарь тайтла.
+
+		:param key: Ключ значения.
+		:type key: str
+		:param value: Значение.
+		:type value: Any
+		"""
+
+		self._Data[key] = value
+
 	def load(self, identificator: int | str, selector_type: By = By.Slug) -> bool:
 		"""
 		Открывает локальный JSON файл и интерпретирует его данные.

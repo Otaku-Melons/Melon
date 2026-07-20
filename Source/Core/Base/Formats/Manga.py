@@ -1,7 +1,7 @@
 from Source.Core.Base.Formats.BaseFormat import BaseChapter, BaseBranch, BaseTitle
 from Source.Core.Base.Parsers.Components.ImagesDownloader import ImageData
 
-from typing import Any, cast
+from typing import Any, cast, Sequence
 
 from enum import Enum
 
@@ -132,6 +132,19 @@ class Chapter(BaseChapter):
 		Index = self.__GetNewSlideIndex()
 		self.__Slides[Index] = image
 		
+	def set_slides(self, images: "Sequence[ImageData]"):
+		"""
+		Задаёт слайды.
+
+		:param images: Данные изображений.
+		:type images: Sequence[ImageData]
+		"""
+
+		self.__Slides.clear()
+		
+		for CurrentImage in images:
+			self.add_slide(CurrentImage)
+
 #==========================================================================================#
 # >>>>> ОСНОВНОЙ КЛАСС <<<<< #
 #==========================================================================================#
