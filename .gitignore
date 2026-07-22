@@ -1,16 +1,6 @@
-# Python virtual enviroment and cache.
+# Python cache.
 __pycache__
 # Parsers and titles data.
 Configs
 Output
-Logs
 Temp
-# Ignore non standart parsers modules.
-Parsers/*
-!Parsers/desu
-!Parsers/ifreedom
-!Parsers/mangalib
-!Parsers/ranobehub
-!Parsers/ranobes
-!Parsers/remanga
-!Parsers/renovels

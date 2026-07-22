@@ -3,10 +3,11 @@ name = "Melon"
 dynamic = ["version"]
 dependencies = [
 	"beautifulsoup4",
-	"EbookLib",
+	"dublib==0.28.5",
 	"dulwich>=1.2.6",
-	"dublib==0.28.4",
-	"pillow",
+	"EbookLib",
+	"img2pdf",
+	"pillow"
 ]
 
 [project.optional-dependencies]

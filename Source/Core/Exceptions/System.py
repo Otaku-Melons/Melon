@@ -9,7 +9,21 @@ class BadManifest(Exception):
 		:type message: str
 		"""
 
-		super().__init__(message) 
+		super().__init__(message)
+
+
+class ParserAlreadyExists(Exception):
+	"""Исключение: парсер уже существует."""
+
+	def __init__(self, parser_name: str):
+		"""
+		Исключение: парсер уже существует.
+
+		:param parser_name: Имя парсера.
+		:type parser_name: str
+		"""
+
+		super().__init__(parser_name) 
 
 class ParserNotFound(Exception):
 	"""Исключение: парсер не найден."""

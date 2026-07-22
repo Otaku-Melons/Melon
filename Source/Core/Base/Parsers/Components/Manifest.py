@@ -20,10 +20,10 @@ class ContentTypes(Enum):
 	Ranobe = "ranobe"
 
 _BASE_MANIFEST: MappingProxyType = MappingProxyType({
-	"object": "parser",
 	"site": None,
 	"content_types": [],
 	"parent": None,
+	"version": None,
 	"melon_required_version": None
 })
 
@@ -88,8 +88,6 @@ class ParserManifest:
 			if Key not in self.__Data:
 				raise Exceptions.System.BadManifest(f"Key \"{Key}\" not found.")
 
-		if self.__Data["object"] != "parser":
-			raise Exceptions.System.BadManifest("Parser manifest required, not other object.")
 		if not self.__Data["site"]:
 			raise Exceptions.System.BadManifest("Site must be specified.")
 

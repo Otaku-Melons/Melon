@@ -376,6 +376,31 @@ def com_list(system_objects: "SystemObjects", command: "ParsedCommandData"):
 
 	system_objects.printer.templates.parsers_table(TableData)
 
+def com_new(system_objects: SystemObjects, command: ParsedCommandData):
+	"""
+	Иницилизирует новый парсер для разработки.
+		
+	:param system_objects: Коллекция системных объектов.
+	:type system_objects: SystemObjects
+	:param command: Данные команды.
+	:type command: ParsedCommandData
+	"""
+
+	#---> Парсинг параметров команды.
+	#==========================================================================================#
+	ParserName: str = command.get_important_position_value("NAME", expected_type = str)
+	Domain: str = command.get_important_position_value("DOMAIN", expected_type = str)
+	UseGit: bool = command.check_flag("-git")
+	ContentTypesString: str = command.get_important_position_value("CONTENT_TYPES", expected_type = str)
+	ContentTypesValues = Utils.DevelopmeptAssistant.parse_content_types(ContentTypesString)
+
+	#---> Выполнение команды.
+	#==========================================================================================#
+	Timer = Utils.Timer(start = True)
+	Developer = Utils.DevelopmeptAssistant(system_objects)
+	Developer.create_parser(ParserName, Domain, ContentTypesValues, UseGit)
+	system_objects.printer.emit(f"Done in {Timer.ends()}.")
+
 def com_parse(system_objects: "SystemObjects", command: "ParsedCommandData"):
 	"""
 	Парсит тайтлы.
