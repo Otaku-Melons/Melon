@@ -1,13 +1,13 @@
-from dublib.Methods.Filesystem import ReadJSON
-from dublib.WebRequestor import Proxy
-
-from types import MappingProxyType
-from typing import Any, cast, Literal
-from pathlib import Path
-from os import PathLike
-from time import sleep
 import hashlib
 import re
+from os import PathLike
+from pathlib import Path
+from time import sleep
+from types import MappingProxyType
+from typing import Any, Literal, cast
+
+from dublib.Methods.Filesystem import ReadJSON
+from dublib.WebRequestor import Proxy
 
 #==========================================================================================#
 # >>>>> СТАНДАРТНЫЕ НАСТРОЙКИ <<<<< #

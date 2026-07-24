@@ -1,22 +1,23 @@
-from .Components.Functions import SafelyReadTitleJSON
-from .Components.Structs import ChapterSearchResult
-from .Components.Enums import By, Statuses
+import hashlib
+import json
+import os
+from abc import ABC, abstractmethod
+from os import PathLike
+from pathlib import Path
+from typing import TYPE_CHECKING, Any, Sequence, cast
 
-from Source.Core.Base.Parsers.Components.WordsDictionary import CheckLanguageCode
-from Source.Core.Base.Parsers.Components.ImagesDownloader import ImageData
-from Source.Core import Exceptions
+import orjson
 
 from dublib.Methods.Data import RemoveRecurringSubstrings, Zerotify
 from dublib.Methods.Filesystem import ReadJSON, WriteJSON
 
-from typing import Any, cast, Sequence, TYPE_CHECKING
-from abc import ABC, abstractmethod
-from pathlib import Path
-from os import PathLike
-import hashlib
-import orjson
-import json
-import os
+from Source.Core import Exceptions
+from Source.Core.Base.Parsers.Components.ImagesDownloader import ImageData
+from Source.Core.Base.Parsers.Components.WordsDictionary import CheckLanguageCode
+
+from .Components.Enums import By, Statuses
+from .Components.Functions import SafelyReadTitleJSON
+from .Components.Structs import ChapterSearchResult
 
 if TYPE_CHECKING:
 	from Source.Core.Base.Parsers.BaseParser import BaseParser

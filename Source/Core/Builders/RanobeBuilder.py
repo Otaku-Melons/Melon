@@ -1,12 +1,12 @@
-from Source.Core.Base.Builder import BaseBuilder
-from Source.Core import Exceptions
-
-from typing import cast, TYPE_CHECKING
 from dataclasses import dataclass
 from pathlib import Path
+from typing import TYPE_CHECKING, cast
 
 from bs4 import BeautifulSoup
 from ebooklib import epub
+
+from Source.Core import Exceptions
+from Source.Core.Base.Builder import BaseBuilder
 
 if TYPE_CHECKING:
 	from Source.Core.Base.Formats.Ranobe import BaseBranch, Chapter

@@ -1,11 +1,10 @@
-from .Elements import Blockquote, Header, Image, Paragraph
-from .Enums import ChaptersTypes
+from typing import Any, Sequence, cast
+
+from Source.Core.Base.Formats.BaseFormat import BaseBranch, BaseChapter, BaseTitle
 
 from ...Parsers.Components.WordsDictionary import CheckLanguageCode
-
-from Source.Core.Base.Formats.BaseFormat import BaseChapter, BaseBranch, BaseTitle
-
-from typing import Any, cast, Sequence
+from .Elements import Blockquote, Header, Image, Paragraph
+from .Enums import ChaptersTypes
 
 #==========================================================================================#
 # >>>>> ВНУТРЕННИЕ СТРУКТУРЫ ДАННЫХ <<<<< #

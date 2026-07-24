@@ -1,25 +1,26 @@
-from . import Functions
-
-from Source.Core.Builders.MangaBuilder import MangaBuilder, MangaOutputFormats
-from Source.Core.Base.Parsers.Components.Manifest import ContentTypes
-from Source.Core.Builders.RanobeBuilder import RanobeBuilder
-from Source.Core.Base.Formats.Components.Enums import By
-from Source.Core import Exceptions
-from Source import Utils
-
-from dublib.Methods.Filesystem import WriteJSON
-
-from typing import cast, TYPE_CHECKING
+import traceback
 from json import JSONDecodeError
 from pathlib import Path
-import traceback
+from typing import TYPE_CHECKING, cast
 
 import orjson
 
+from dublib.Methods.Filesystem import WriteJSON
+
+from Source import Utils
+from Source.Core import Exceptions
+from Source.Core.Base.Formats.Components.Enums import By
+from Source.Core.Base.Parsers.Components.Manifest import ContentTypes
+from Source.Core.Builders.MangaBuilder import MangaBuilder, MangaOutputFormats
+from Source.Core.Builders.RanobeBuilder import RanobeBuilder
+
+from . import Functions
+
 if TYPE_CHECKING:
+	from dublib.CLI.Terminalyzer import ParsedCommandData
+
 	from Source.Core.Base.Parsers.BaseParser import BaseParser
 	from Source.Core.SystemObjects import SystemObjects
-	from dublib.CLI.Terminalyzer import ParsedCommandData
 
 def com_build_manga(system_objects: SystemObjects, command: ParsedCommandData):
 	"""

@@ -1,6 +1,6 @@
-from .. import CheckLanguageCode, WordsDictionary
-
 import importlib
+
+from .. import CheckLanguageCode, WordsDictionary
 
 def GetDictionaryPreset(language_code: str) -> WordsDictionary | None:
 	"""

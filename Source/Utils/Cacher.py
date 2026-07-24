@@ -1,9 +1,9 @@
-from Source.Core.Base.Formats.Components.Functions import SafelyReadTitleJSON
-from Source.Core import Exceptions
-
+import os
 from dataclasses import dataclass
 from typing import TYPE_CHECKING
-import os
+
+from Source.Core import Exceptions
+from Source.Core.Base.Formats.Components.Functions import SafelyReadTitleJSON
 
 if TYPE_CHECKING:
 	from Source.Core.Base.EntryPoint import BaseEntryPoint

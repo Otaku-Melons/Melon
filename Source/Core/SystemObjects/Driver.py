@@ -1,11 +1,11 @@
-from Source.Core.Base.Parsers.Components import ParserManifest
-from Source.Core.Base.EntryPoint import BaseEntryPoint
+import importlib
+from pathlib import Path
+from typing import TYPE_CHECKING
 
 from dublib.Methods.Filesystem import ListDir
 
-from typing import TYPE_CHECKING
-from pathlib import Path
-import importlib
+from Source.Core.Base.EntryPoint import BaseEntryPoint
+from Source.Core.Base.Parsers.Components import ParserManifest
 
 if TYPE_CHECKING:
 	from Source.Core.SystemObjects import SystemObjects

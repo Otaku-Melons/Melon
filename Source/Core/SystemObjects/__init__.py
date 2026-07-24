@@ -1,8 +1,8 @@
+from dulwich import porcelain
+
 from Source.Core.SystemObjects.Driver import Driver
 from Source.Core.SystemObjects.Printer import Printer
 from Source.Core.SystemObjects.Temper import Temper
-
-from dulwich import porcelain
 
 #==========================================================================================#
 # >>>>> ВСПОМОГАТЕЛЬНЫЕ СТРУКТУРЫ ДАННЫХ <<<<< #

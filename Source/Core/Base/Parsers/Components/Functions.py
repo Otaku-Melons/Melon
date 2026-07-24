@@ -1,5 +1,5 @@
-from typing import cast, Sequence
 import re
+from typing import Sequence, cast
 
 from bs4 import BeautifulSoup, Tag
 
@@ -31,7 +31,7 @@ def SplitParagraph(soup: BeautifulSoup, paragraph: Tag, splitter: str | re.Patte
 		for Line in re.split(splitter, Text):
 			Line = Line.strip()
 			if Line: Parts.append(Line)
-		 
+	
 	elif type(splitter) is str:
 		if splitter not in Text: return (paragraph,)
 

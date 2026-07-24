@@ -1,9 +1,9 @@
-from typing import cast, TYPE_CHECKING
-from dataclasses import dataclass
-from pathlib import Path
-from os import PathLike
-from io import BytesIO
 import shutil
+from dataclasses import dataclass
+from io import BytesIO
+from os import PathLike
+from pathlib import Path
+from typing import TYPE_CHECKING, cast
 
 from PIL import Image
 

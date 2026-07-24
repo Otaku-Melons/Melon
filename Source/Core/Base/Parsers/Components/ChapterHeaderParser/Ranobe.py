@@ -1,4 +1,5 @@
 from Source.Core.Base.Formats.Ranobe.Enums import ChaptersTypes
+
 from .Manga import MangaChapterHeaderParser
 
 class RanobeChapterHeaderParser(MangaChapterHeaderParser):

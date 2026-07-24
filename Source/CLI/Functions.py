@@ -1,6 +1,6 @@
-from Source.Core import Exceptions
-
 from typing import TYPE_CHECKING
+
+from Source.Core import Exceptions
 
 if TYPE_CHECKING:
 	from Source.Core.SystemObjects import SystemObjects

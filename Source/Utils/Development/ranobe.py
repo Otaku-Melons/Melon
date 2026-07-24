@@ -1,5 +1,5 @@
-from Source.Core.Base.Parsers.BaseRanobeParser import BaseRanobeParser
 from Source.Core.Base.Formats.Ranobe import BaseBranch, Chapter
+from Source.Core.Base.Parsers.BaseRanobeParser import BaseRanobeParser
 
 class Parser(BaseRanobeParser):
 	"""Парсер."""

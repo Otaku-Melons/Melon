@@ -1,16 +1,15 @@
-from dublib.Methods.Data import StringifyFloat
-from dublib.CLI.TextStyler import FastStyler
-
 from typing import TYPE_CHECKING
-
 
 from prettytable import PLAIN_COLUMNS, PrettyTable
 
+from dublib.CLI.TextStyler import FastStyler
+from dublib.Methods.Data import StringifyFloat
+
 if TYPE_CHECKING:
-	from . import Printer
-	
-	from Source.Utils.Classificator import ClassificationResult
 	from Source.Utils.Cacher import CachingResult
+	from Source.Utils.Classificator import ClassificationResult
+
+	from . import Printer
 
 class Templates:
 	"""Расширенные шаблоны вывода."""

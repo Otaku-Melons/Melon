@@ -1,22 +1,25 @@
-from Source.Core.Base.Parsers.Components.ImagesDownloader import ImageDownloadingResult, ImagesDownloader
-from Source.Core.Base.Parsers.Components.Manifest import ContentTypes, ParserManifest
-from Source.Core import Exceptions
-
-from dublib.WebRequestor import WebConfig, WebLibs, WebRequestor
-from dublib.CLI.Validators import Validator_URL
-
-from typing import Sequence, TYPE_CHECKING
-from os import PathLike
 import importlib
+from os import PathLike
+from typing import TYPE_CHECKING, Sequence
+
+from dublib.CLI.Validators import Validator_URL
+from dublib.WebRequestor import WebConfig, WebLibs, WebRequestor
+
+from Source.Core import Exceptions
+from Source.Core.Base.Parsers.Components.ImagesDownloader import (
+	ImageDownloadingResult,
+	ImagesDownloader,
+)
+from Source.Core.Base.Parsers.Components.Manifest import ContentTypes, ParserManifest
 
 if TYPE_CHECKING:
-	from .EntryPoint import BaseEntryPoint
-
-	from Source.Core.Base.Parsers.Components import ParserSettings
 	from Source.Core.Base.Parsers.BaseParser import BaseParser
-	from Source.Core.SystemObjects.Temper import SharedData
-	from Source.Core.SystemObjects.Printer import Portals
+	from Source.Core.Base.Parsers.Components import ParserSettings
 	from Source.Core.SystemObjects import SystemObjects
+	from Source.Core.SystemObjects.Printer import Portals
+	from Source.Core.SystemObjects.Temper import SharedData
+
+	from .EntryPoint import BaseEntryPoint
 
 class BaseSourceOperator:
 	"""Базовый оператор источника."""

@@ -1,17 +1,18 @@
-from Source.Core.Base.Parsers.Components.Manifest import _BASE_MANIFEST, ContentTypes
-from Source.Core.Base.Parsers.Components.Settings import _BASE_SETTINGS
-from Source.Core import Exceptions
-
-from dublib.Methods.Filesystem import WriteJSON, WriteTextFile
-from dublib.Methods.Data import ToSequence
-from dublib.Engine.Patcher import Patch
-
-from typing import TYPE_CHECKING, Sequence
-from urllib.parse import urlparse
-from pathlib import Path
 import shutil
+from collections.abc import Sequence
+from pathlib import Path
+from typing import TYPE_CHECKING
+from urllib.parse import urlparse
 
 from dulwich.repo import Repo
+
+from dublib.Engine.Patcher import Patch
+from dublib.Methods.Data import ToSequence
+from dublib.Methods.Filesystem import WriteJSON, WriteTextFile
+
+from Source.Core import Exceptions
+from Source.Core.Base.Parsers.Components.Manifest import _BASE_MANIFEST, ContentTypes
+from Source.Core.Base.Parsers.Components.Settings import _BASE_SETTINGS
 
 if TYPE_CHECKING:
 	from Source.Core.SystemObjects import SystemObjects
@@ -145,7 +146,7 @@ class DevelopmeptAssistant:
 
 		data = data.replace(" ", "")
 
-		Types = list()
+		Types = []
 		for TypeName in data.split(","):
 			Types.append(ContentTypes(TypeName))
 

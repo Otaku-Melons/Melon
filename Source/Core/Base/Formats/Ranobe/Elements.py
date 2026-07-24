@@ -1,23 +1,23 @@
-from Source.Core import Exceptions
+import base64
+import os
+import uuid
+from pathlib import Path
+from typing import TYPE_CHECKING, Literal, cast
+
+import validators
+from bs4 import BeautifulSoup, Tag
 
 from dublib.Methods.Data import RemoveRecurringSubstrings
 from dublib.Polyglot import HTML
 
-from typing import cast, Literal, TYPE_CHECKING
-from pathlib import Path
-import base64
-import uuid
-import os
-
-from bs4 import BeautifulSoup, Tag
-import validators
+from Source.Core import Exceptions
 
 if TYPE_CHECKING:
-	from . import Chapter
-
-	from Source.Core.Base.Parsers.Components.ImagesDownloader import ImageResolution
-	from Source.Core.Base.Parsers.BaseRanobeParser import BaseRanobeParser
 	from Source.Core.Base.Formats.BaseFormat import BaseTitle
+	from Source.Core.Base.Parsers.BaseRanobeParser import BaseRanobeParser
+	from Source.Core.Base.Parsers.Components.ImagesDownloader import ImageResolution
+
+	from . import Chapter
 
 class Footnote:
 	"""

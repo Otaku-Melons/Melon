@@ -1,12 +1,12 @@
-from .BaseParser import BaseParser
-
-from Source.Core.Base.Formats.Manga import Chapter, Manga
-from Source.Core import Exceptions
+from time import sleep
+from typing import cast
 
 from dublib.Methods.Decorators import run_before_method
 
-from typing import cast
-from time import sleep
+from Source.Core import Exceptions
+from Source.Core.Base.Formats.Manga import Chapter, Manga
+
+from .BaseParser import BaseParser
 
 class BaseMangaParser(BaseParser):
 	"""Базовый парсер манги."""

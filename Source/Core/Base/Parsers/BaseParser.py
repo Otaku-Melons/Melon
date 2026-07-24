@@ -1,22 +1,26 @@
-from .Components.WordsDictionary import Presets, WordsDictionary
-
-from Source.Core.Base.Parsers.Components.ImagesDownloader import ImageData, ImagesDownloader, ImageDownloadingResult
-from Source.Core.Base.Formats.BaseFormat import BaseBranch, BaseTitle
-from Source.Core import Exceptions
+from abc import ABC, abstractmethod
+from enum import Enum
+from pathlib import Path
+from typing import TYPE_CHECKING, Any, Sequence, cast
 
 from dublib.Methods.Decorators import run_before_method
 
-from typing import Any, cast, Sequence, TYPE_CHECKING
-from abc import ABC, abstractmethod
-from pathlib import Path
-from enum import Enum
+from Source.Core import Exceptions
+from Source.Core.Base.Formats.BaseFormat import BaseBranch, BaseTitle
+from Source.Core.Base.Parsers.Components.ImagesDownloader import (
+	ImageData,
+	ImageDownloadingResult,
+	ImagesDownloader,
+)
+
+from .Components.WordsDictionary import Presets, WordsDictionary
 
 if TYPE_CHECKING:
+	from dublib.WebRequestor import WebRequestor
+
 	from Source.Core.Base.Parsers.Components import ParserManifest, ParserSettings
 	from Source.Core.Base.SourceOperator import BaseSourceOperator
 	from Source.Core.SystemObjects.Printer import Portals
-
-	from dublib.WebRequestor import WebRequestor
 
 #==========================================================================================#
 # >>>>> ПЕРЕЧИСЛЕНИЯ <<<<< #

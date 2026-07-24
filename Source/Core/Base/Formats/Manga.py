@@ -1,9 +1,8 @@
-from Source.Core.Base.Formats.BaseFormat import BaseChapter, BaseBranch, BaseTitle
-from Source.Core.Base.Parsers.Components.ImagesDownloader import ImageData
-
-from typing import Any, cast, Sequence
-
 from enum import Enum
+from typing import Any, Sequence, cast
+
+from Source.Core.Base.Formats.BaseFormat import BaseBranch, BaseChapter, BaseTitle
+from Source.Core.Base.Parsers.Components.ImagesDownloader import ImageData
 
 #==========================================================================================#
 # >>>>> ПЕРЕЧИСЛЕНИЯ <<<<< #

@@ -1,19 +1,19 @@
-from dublib.Engine.Bus import ExecutionResult
-from dublib.Methods.Filesystem import ListDir
-
-from difflib import get_close_matches
-from urllib.parse import urlparse
-from typing import Sequence
-from pathlib import Path
-import shutil
 import io
 import os
+import shutil
+from difflib import get_close_matches
+from pathlib import Path
+from typing import Sequence
+from urllib.parse import urlparse
 
-from dulwich.porcelain import clone, submodule_list
-from dulwich.client import get_transport_and_path
-from dulwich.repo import Repo
-from dulwich import errors
 import validators
+from dulwich import errors
+from dulwich.client import get_transport_and_path
+from dulwich.porcelain import clone, submodule_list
+from dulwich.repo import Repo
+
+from dublib.Engine.Bus import ExecutionResult
+from dublib.Methods.Filesystem import ListDir
 
 class ParsersManager:
 	"""Менеджер парсеров."""

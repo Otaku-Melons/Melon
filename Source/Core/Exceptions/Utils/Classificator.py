@@ -1,8 +1,9 @@
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
-	from Source.Utils.Classificator import ExecutableLine
 	from pathlib import Path
+
+	from Source.Utils.Classificator import ExecutableLine
 
 class IncludeDirectiveDenied(Exception):
 	"""Исключение: директива `@INCLUDE` запрещена."""

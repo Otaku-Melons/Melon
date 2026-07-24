@@ -1,5 +1,5 @@
-from Source.Core.Base.Parsers.BaseMangaParser import BaseMangaParser
 from Source.Core.Base.Formats.Manga import BaseBranch, Chapter
+from Source.Core.Base.Parsers.BaseMangaParser import BaseMangaParser
 
 class Parser(BaseMangaParser):
 	"""Парсер."""

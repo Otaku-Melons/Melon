@@ -1,8 +1,8 @@
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
-	from Source.Core.Base.Parsers.Components.Manifest import ContentTypes
 	from Source.Core.Base.Formats.BaseFormat import BaseTitle
+	from Source.Core.Base.Parsers.Components.Manifest import ContentTypes
 
 #==========================================================================================#
 # >>>>> ИСКЛЮЧЕНИЯ ПАРСЕРОВ <<<<< #

@@ -1,9 +1,11 @@
-from Source.Core.SystemObjects import SystemObjects
-from Source.CLI.Descriptions import COMMANDS
-from Source.CLI import Commands as Commands
+import sys
 
-from dublib.Methods.System import CheckPythonMinimalVersion
 from dublib.CLI.Terminalyzer import Terminalyzer
+from dublib.Methods.System import CheckPythonMinimalVersion
+
+from Source.CLI import Commands as Commands
+from Source.CLI.Descriptions import COMMANDS
+from Source.Core.SystemObjects import SystemObjects
 
 #==========================================================================================#
 # >>>>> ИНИЦИАЛИЗАЦИЯ <<<<< #
@@ -22,7 +24,7 @@ CommandData = Analyzer.check_commands(COMMANDS)
 
 if CommandData is None:
 	Objects.printer.critical("Unknown command!")
-	exit()
+	sys.exit()
 
 try:
 	CommandName = CommandData.name.replace("-", "_")

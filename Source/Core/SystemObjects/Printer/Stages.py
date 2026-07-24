@@ -1,9 +1,9 @@
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
-	from . import Printer
-	
 	from Source.Core.Base.Formats.BaseFormat import BaseChapter, BaseTitle
+
+	from . import Printer
 
 class Stages:
 	"""Сообщения этапов выполнения."""

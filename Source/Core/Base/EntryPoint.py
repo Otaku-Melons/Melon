@@ -1,20 +1,20 @@
-from .SourceOperator import BaseSourceOperator
-
-from Source.Core.Base.Formats.Components.Functions import SafelyReadTitleJSON
-from Source.Core.Base.Parsers.Components.Manifest import ContentTypes
-from Source.Core.Base.Parsers.Components import ParserSettings
-
+import importlib
 from dataclasses import dataclass
 from typing import TYPE_CHECKING
-import importlib
 
 from dulwich import errors, porcelain
 
+from Source.Core.Base.Formats.Components.Functions import SafelyReadTitleJSON
+from Source.Core.Base.Parsers.Components import ParserSettings
+from Source.Core.Base.Parsers.Components.Manifest import ContentTypes
+
+from .SourceOperator import BaseSourceOperator
+
 if TYPE_CHECKING:
 	from Source.Core.Base.Parsers.Components import ParserManifest
-	from Source.Core.SystemObjects.Temper import SharedData
-	from Source.Core.SystemObjects.Printer import Portals
 	from Source.Core.SystemObjects import SystemObjects
+	from Source.Core.SystemObjects.Printer import Portals
+	from Source.Core.SystemObjects.Temper import SharedData
 
 #==========================================================================================#
 # >>>>> ВСПОМОГАТЕЛЬНЫЕ СТРУКТУРЫ ДАННЫХ <<<<< #

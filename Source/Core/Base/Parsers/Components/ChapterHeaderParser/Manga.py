@@ -1,11 +1,11 @@
+import re
+from typing import TYPE_CHECKING, Sequence
+
 from dublib.Methods.Data import Zerotify
 
-from typing import Sequence, TYPE_CHECKING
-import re
-
 if TYPE_CHECKING:
-	from Source.Core.Base.Parsers.Components.WordsDictionary import WordsDictionary
 	from Source.Core.Base.Parsers.BaseParser import BaseParser
+	from Source.Core.Base.Parsers.Components.WordsDictionary import WordsDictionary
 
 class MangaChapterHeaderParser:
 	"""Парсер заголовка главы."""

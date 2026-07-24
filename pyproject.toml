@@ -7,14 +7,11 @@ dependencies = [
 	"dulwich>=1.2.6",
 	"EbookLib",
 	"img2pdf",
-	"pillow"
+	"pillow",
 ]
 
 [project.optional-dependencies]
-dev = [
-	"mypy",
-	"ruff"
-]
+dev = ["mypy", "ruff"]
 
 [tool.setuptools.packages.find]
 include = ["Source*"]
@@ -24,22 +21,21 @@ ignore_missing_imports = true
 check_untyped_defs = true
 non_interactive = true
 follow_imports = "silent"
-files = [
-	"main.py",
-	"Source"
-]
-exclude = [
-	"__pycache__"
-]
-
-[tool.ruff]
-include = [
-	"main.py",
-	"Source"
-]
-exclude = [
-	"__pycache__"
-]
+files = ["main.py", "Source"]
+exclude = ["__pycache__"]
 
 [tool.ruff.lint]
-ignore = ["E701"]
+select = ["E", "I"]
+ignore = ["E701", "E501"]
+
+[tool.ruff.lint.isort]
+lines-after-imports = 1
+sections = {"dublib" = ["dublib"]}
+section-order = [
+	"future",
+	"standard-library",
+	"third-party",
+	"dublib",
+	"first-party",
+	"local-folder"
+]

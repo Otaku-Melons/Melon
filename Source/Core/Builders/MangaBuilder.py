@@ -1,19 +1,19 @@
-from Source.Core.Base.Builder import BaseBuilder
-from Source.Core import Exceptions
-
-from dublib.Methods.Data import StringifyFloat
-from dublib.Methods.Filesystem import ListDir
-from dublib.CLI.TextStyler import FastStyler
-
-from tempfile import TemporaryDirectory
-from abc import ABC, abstractmethod
-from typing import cast, TYPE_CHECKING
-from pathlib import Path
-import shutil
 import enum
 import os
+import shutil
+from abc import ABC, abstractmethod
+from pathlib import Path
+from tempfile import TemporaryDirectory
+from typing import TYPE_CHECKING, cast
 
 import img2pdf
+
+from dublib.CLI.TextStyler import FastStyler
+from dublib.Methods.Data import StringifyFloat
+from dublib.Methods.Filesystem import ListDir
+
+from Source.Core import Exceptions
+from Source.Core.Base.Builder import BaseBuilder
 
 if TYPE_CHECKING:
 	from Source.Core.Base.Formats.Manga import BaseBranch, Chapter

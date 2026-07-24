@@ -1,13 +1,13 @@
-from Source.Core import Exceptions
+from typing import TYPE_CHECKING
 
 from dublib.WebRequestor import WebResponse
 
-from typing import TYPE_CHECKING
+from Source.Core import Exceptions
 
 if TYPE_CHECKING:
-	from . import Printer
-
 	from Source.Core.Base.Formats.BaseFormat import BaseChapter, BaseTitle
+
+	from . import Printer
 
 class Portals:
 	"""Порталы вывода парсера."""

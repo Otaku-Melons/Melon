@@ -1,8 +1,8 @@
-from typing import TYPE_CHECKING
 import re
+from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
-	from Source.Core.Base.Formats.BaseFormat import BaseTitle, BaseChapter
+	from Source.Core.Base.Formats.BaseFormat import BaseChapter, BaseTitle
 	from Source.Core.Base.Parsers.BaseParser import BaseParser
 
 #==========================================================================================#

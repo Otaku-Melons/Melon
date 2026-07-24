@@ -1,12 +1,12 @@
-from Source.Core.Base.Formats.Components.Functions import SafelyReadTitleJSON
-from Source.Core import Exceptions
-
-from dublib.Methods.Filesystem import ReadTextFile, WriteTextFile
-from dublib.Methods.Data import ToSequence
-
-from typing import Sequence, TYPE_CHECKING
-from json import JSONDecodeError
 import os
+from json import JSONDecodeError
+from typing import TYPE_CHECKING, Sequence
+
+from dublib.Methods.Data import ToSequence
+from dublib.Methods.Filesystem import ReadTextFile, WriteTextFile
+
+from Source.Core import Exceptions
+from Source.Core.Base.Formats.Components.Functions import SafelyReadTitleJSON
 
 if TYPE_CHECKING:
 	from Source.Core.Base.EntryPoint import BaseEntryPoint

@@ -1,9 +1,9 @@
-from Source.Core.Base.Parsers.Components.ImagesDownloader import ImageDownloadingResult
-from Source.Core.Base.SourceOperator import BaseSourceOperator
+from typing import Sequence
 
 from dublib.WebRequestor import WebRequestor
 
-from typing import Sequence
+from Source.Core.Base.Parsers.Components.ImagesDownloader import ImageDownloadingResult
+from Source.Core.Base.SourceOperator import BaseSourceOperator
 
 class SourceOperator(BaseSourceOperator):
 	"""Оператор источника."""

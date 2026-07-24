@@ -1,9 +1,9 @@
-from dublib.Methods.Filesystem import ReadJSON, RemoveDirectoryContent, WriteJSON
-
-from typing import Sequence
-from pathlib import Path
-import shutil
 import os
+import shutil
+from pathlib import Path
+from typing import Sequence
+
+from dublib.Methods.Filesystem import ReadJSON, RemoveDirectoryContent, WriteJSON
 
 #==========================================================================================#
 # >>>>> СТРУКТУРЫ РАЗДЕЛЯЕМЫХ ДАННЫХ <<<<< #

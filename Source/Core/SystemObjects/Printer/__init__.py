@@ -1,11 +1,11 @@
-from .Templates import Templates
-from .Portals import Portals
-from .Stages import Stages
+from typing import TYPE_CHECKING
 
 from dublib.CLI.Templates.Bus import GenerateMessage, MessagesTypes
 from dublib.CLI.TextStyler import GetStyledTextFromHTML
 
-from typing import TYPE_CHECKING
+from .Portals import Portals
+from .Stages import Stages
+from .Templates import Templates
 
 if TYPE_CHECKING:
 	from Source.Core.SystemObjects import SystemObjects

@@ -2,7 +2,7 @@ from dataclasses import dataclass
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
-	from ..BaseFormat import BaseChapter, BaseBranch
+	from ..BaseFormat import BaseBranch, BaseChapter
 
 @dataclass
 class ChapterSearchResult:

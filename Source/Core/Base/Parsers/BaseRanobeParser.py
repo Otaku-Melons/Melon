@@ -1,12 +1,12 @@
-from .BaseParser import BaseParser
-
-from Source.Core.Base.Formats.Ranobe import Chapter, Ranobe
-from Source.Core import Exceptions
+from time import sleep
+from typing import cast
 
 from dublib.Methods.Decorators import run_before_method
 
-from typing import cast
-from time import sleep
+from Source.Core import Exceptions
+from Source.Core.Base.Formats.Ranobe import Chapter, Ranobe
+
+from .BaseParser import BaseParser
 
 class BaseRanobeParser(BaseParser):
 	"""Базовый парсер ранобэ."""

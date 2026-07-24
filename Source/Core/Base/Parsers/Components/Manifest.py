@@ -1,10 +1,10 @@
-from Source.Core import Exceptions
+from enum import Enum
+from types import MappingProxyType
+from typing import TYPE_CHECKING
 
 from dublib.Methods.Filesystem import ReadJSON
 
-from types import MappingProxyType
-from typing import TYPE_CHECKING
-from enum import Enum
+from Source.Core import Exceptions
 
 if TYPE_CHECKING:
 	from Source.Core.SystemObjects import SystemObjects

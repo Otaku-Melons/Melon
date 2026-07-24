@@ -1,13 +1,13 @@
-from Source.Core.Exceptions.Utils import Classificator as ClassificatorExceptions
+import shlex
+from dataclasses import dataclass
+from enum import Enum
+from os import PathLike
+from pathlib import Path
+from typing import Literal, Sequence, cast
 
 from dublib.Methods.Filesystem import ReadTextFile
 
-from typing import cast, Literal, Sequence
-from dataclasses import dataclass
-from pathlib import Path
-from os import PathLike
-from enum import Enum
-import shlex
+from Source.Core.Exceptions.Utils import Classificator as ClassificatorExceptions
 
 #==========================================================================================#
 # >>>>> ВСОПОГАТЕЛЬНЫЕ СТРУКТУРЫ ДАННЫХ <<<<< #
