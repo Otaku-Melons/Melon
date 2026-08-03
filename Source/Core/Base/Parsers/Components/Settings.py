@@ -1,6 +1,4 @@
-import hashlib
 import re
-from os import PathLike
 from pathlib import Path
 from time import sleep
 from types import MappingProxyType
@@ -103,12 +101,6 @@ class ImageFilters:
 	#==========================================================================================#
 
 	@property
-	def md5(self) -> list[str]:
-		"""Список MD5-хэшей нежелательных изображений."""
-
-		return self.__Data["image_md5"]
-
-	@property
 	def min_height(self) -> int | None:
 		"""Минимальная высота изображения."""
 
@@ -151,24 +143,6 @@ class ImageFilters:
 
 		for Key in Keys:
 			if Key not in self.__Data.keys() or type(self.__Data[Key]) is not int: self.__Data[Key] = None
-
-	def check_hash(self, path: PathLike) -> bool:
-		"""
-		Проверяет, соответствует ли изображение указанным в чёрном списке MD5 хешам.
-
-		:param path: Путь к изображению.
-		:type path: str
-		:return: Возвращает `True`, если хеш изображения найден в чёрном списке.
-		:rtype: bool
-		"""
-
-		Hash = None
-		
-		with open(path, "rb") as FileReader: 
-			BinaryContent = FileReader.read()
-			Hash = hashlib.md5(BinaryContent).hexdigest()
-
-		return Hash in self.md5
 
 	def check_sizes(self, width: int, height: int) -> bool:
 		"""
