@@ -121,7 +121,14 @@ class DevelopmeptAssistant:
 		if domain.startswith("http"): domain = urlparse(domain).netloc
 		content_types = ToSequence(content_types)
 
-		ParserPath = Path("Parsers") / name
+		ParsersDirectoryPath = Path("Parsers")
+		ParsersDirectoryPath.mkdir(exist_ok = True)
+
+		ParsersGitIgnore = ParsersDirectoryPath / ".gitignore"
+		if not ParsersGitIgnore.exists():
+			WriteTextFile(ParsersGitIgnore, "*")
+
+		ParserPath = ParsersDirectoryPath / name
 
 		if ParserPath.exists():
 			raise Exceptions.System.ParserAlreadyExists(name)
