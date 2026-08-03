@@ -104,7 +104,7 @@ class BaseParser(ABC):
 	#==========================================================================================#
 
 	@run_before_method("_RequireTitle")
-	def __DownloadImages(self, images_data: Sequence[ImageData], image_type: _ImagesTypes, force_mode: bool) -> list[ImageDownloadingResult]:
+	def _DownloadImages(self, images_data: Sequence[ImageData], image_type: _ImagesTypes, force_mode: bool) -> list[ImageDownloadingResult]:
 
 		self._Title = cast(BaseTitle, self._Title)
 		ImageDirecory: Path = self.settings.directories.images / self._Title.used_filename / image_type.value
@@ -212,13 +212,13 @@ class BaseParser(ABC):
 
 		self._Title = cast(BaseTitle, self._Title)
 		
-		Results = self.__DownloadImages(self._Title.covers, _ImagesTypes.Cover, force_mode)
+		Results = self._DownloadImages(self._Title.covers, _ImagesTypes.Cover, force_mode)
 
 		PersonsImages: list[ImageData] = list()
 		for CurrentPerson in self._Title.perons:
 			PersonsImages += list(CurrentPerson.images)
 
-		Results += self.__DownloadImages(PersonsImages, _ImagesTypes.Person, force_mode)
+		Results += self._DownloadImages(PersonsImages, _ImagesTypes.Person, force_mode)
 
 		return tuple(Results)
 

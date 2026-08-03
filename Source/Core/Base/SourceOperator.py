@@ -2,7 +2,7 @@ import importlib
 from os import PathLike
 from typing import TYPE_CHECKING, Sequence
 
-from dublib.CLI.Validators import Validator_URL
+from dublib.Validators import Validator_Domain, Validator_URL
 from dublib.WebRequestor import WebConfig, WebLibs, WebRequestor
 
 from Source.Core import Exceptions
@@ -114,7 +114,7 @@ class BaseSourceOperator:
 		Config.select_lib(WebLibs.requests)
 		Config.set_retries_count(self._Settings.common.retries)
 		Config.generate_user_agent()
-		Config.add_header("Referer", f"https://{self._Manifest.site}/")
+		Config.add_header("Referer", f"https://{self._Manifest.domain}/")
 		Config.enable_proxy_protocol_switching(True)
 		WebRequestorObject = WebRequestor(Config)
 		WebRequestorObject.add_proxies(self._Settings.proxies)
@@ -135,6 +135,16 @@ class BaseSourceOperator:
 
 	def _PostInitMethod(self):
 		"""Метод, выполняющийся после инициализации объекта."""
+
+		pass
+
+	def _PostMirrorChanging(self, mirror: str | None):
+		"""
+		Выполняется после изменения зеркала.
+
+		:param mirror: Домен зеркала.
+		:type mirror: str | None
+		"""
 
 		pass
 
@@ -287,3 +297,25 @@ class BaseSourceOperator:
 		"""
 
 		return self._ParseSlugFromString(string)
+
+	def set_mirror(self, mirror: str | None) -> bool:
+		"""
+		Задаёт домен зеркала, подменяя его в манифесте. Не сохраняет изменения в файл.
+		
+		:param mirror: Домен зеркала.
+		:type mirror: str | None
+		:raises ValueError: Некорректный домен зеркала.
+		:return: Возвращает `True`, если зеркало было изменено.
+		:rtype: bool
+		"""
+
+		if mirror and not Validator_Domain.validate(mirror):
+			raise ValueError("Incorrect mirror domain.")
+
+		if mirror == self.manifest.original_domain or mirror == self.manifest.mirror:
+			return False
+
+		self.manifest.set_mirror(mirror)
+		self._PostMirrorChanging(mirror)
+
+		return True

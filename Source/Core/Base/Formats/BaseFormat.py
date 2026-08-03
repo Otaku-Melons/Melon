@@ -502,8 +502,8 @@ class BaseChapter(ABC):
 
 		self._PreFormatter()
 
-		return self._Data.copy()
-	
+		return InsertDictionaryAfterKey(self._Data.copy(), self.extra_data.to_dict(), "workers")
+
 class BaseBranch(ABC):
 	"""Базовая ветвь."""
 
@@ -705,10 +705,10 @@ class BaseTitle(ABC):
 	#==========================================================================================#
 
 	@property
-	def site(self) -> str | None:
-		"""Домен целевого сайта."""
+	def domain(self) -> str | None:
+		"""Домен источника."""
 
-		return self._Data["site"]
+		return self._Data["domain"]
 
 	@property
 	def id(self) -> int | None:
@@ -1050,7 +1050,7 @@ class BaseTitle(ABC):
 
 		return {
 			"format": "melon-" + type(self).__name__.lower(),
-			"site": self._Parser.manifest.site,
+			"domain": self._Parser.manifest.domain,
 			"id": None,
 			"slug": None,
 			"content_language": None,
@@ -1445,15 +1445,19 @@ class BaseTitle(ABC):
 
 		return AddedCount
 
-	def set_site(self, site: str | None):
+	def set_domain(self, domain: str | None):
 		"""
-		Задаёт домен сайта-источника.
+		Задаёт домен источника.
 
-		:param site: Домен сайта.
+		:param site: Домен источника.
 		:type site: str | None
+		:raises ValueError: Некорректный домен.
 		"""
 
-		self._Data["site"] = site
+		if domain and not Validator_Domain.validate(domain):
+			raise ValueError("Incorrect domain.")
+
+		self._Data["domain"] = domain
 
 	def set_id(self, id: int | None):
 		"""
@@ -1538,12 +1542,12 @@ class BaseTitle(ABC):
 		for Author in authors:
 			self.add_author(Author)
 
-	def set_publication_year(self, publication_year: int):
+	def set_publication_year(self, publication_year: int | None):
 		"""
 		Задаёт год публикации тайтла.
 
 		:param publication_year: Год публикации тайтла.
-		:type publication_year: int
+		:type publication_year: int | None
 		"""
 
 		self._Data["publication_year"] = publication_year

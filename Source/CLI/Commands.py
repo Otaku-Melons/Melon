@@ -354,7 +354,7 @@ def com_list(system_objects: "SystemObjects", command: "ParsedCommandData"):
 		"NAME": [],
 		"VERSION": [],
 		"TYPES": [],
-		"SITE": [],
+		"DOMAIN": [],
 		"collect": []
 	}
 
@@ -367,12 +367,12 @@ def com_list(system_objects: "SystemObjects", command: "ParsedCommandData"):
 
 		ParserVersion = EntryPoint.version or ""
 		ParserContentTypes: list[str] = [TypesEmoji[CurrentType] for CurrentType in EntryPoint.manifest.content_types]
-		ParserSite: str = "https://" + EntryPoint.manifest.site
+		ParserSite: str = "https://" + EntryPoint.manifest.domain
 
 		TableData["NAME"].append(ParserName)
 		TableData["VERSION"].append(ParserVersion)
 		TableData["TYPES"].append(", ".join(ParserContentTypes))
-		TableData["SITE"].append(ParserSite)
+		TableData["DOMAIN"].append(ParserSite)
 		TableData["collect"].append(str(EntryPoint.source_operator.is_collector_implemented))
 
 	system_objects.printer.templates.parsers_table(TableData)

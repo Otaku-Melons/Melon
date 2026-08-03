@@ -92,8 +92,8 @@ class Templates:
 			"None": FastStyler("error").colorize.red,
 		}
 
-		for SiteIndex in range(len(columns["SITE"])):
-			columns["SITE"][SiteIndex] = FastStyler(columns["SITE"][SiteIndex]).decorate.italic
+		for DomainIndex in range(len(columns["DOMAIN"])):
+			columns["DOMAIN"][DomainIndex] = FastStyler(columns["DOMAIN"][DomainIndex]).decorate.italic
 
 		for ColumnName in Implementations:
 

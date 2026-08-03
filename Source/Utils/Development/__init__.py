@@ -73,7 +73,7 @@ class DevelopmeptAssistant:
 		"""
 		
 		ManifestDict: dict = _BASE_MANIFEST.copy()
-		ManifestDict["site"] = domain
+		ManifestDict["domain"] = domain
 		ManifestDict["content_types"] = tuple(CurrentType.value for CurrentType in types)
 		ManifestDict["version"] = "$last_git_tag"
 		ManifestDict["melon_required_version"] = f">={self.__SystemObjects.MELON_VERSION}" if self.__SystemObjects.MELON_VERSION else None

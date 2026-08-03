@@ -20,7 +20,7 @@ class ContentTypes(Enum):
 	Ranobe = "ranobe"
 
 _BASE_MANIFEST: MappingProxyType = MappingProxyType({
-	"site": None,
+	"domain": None,
 	"content_types": [],
 	"parent": None,
 	"version": None,
@@ -45,10 +45,22 @@ class ParserManifest:
 		return self.__ParserName
 
 	@property
-	def site(self) -> str:
-		"""Домен сайта."""
+	def original_domain(self) -> str:
+		"""Оригинальный домен источника."""
 
-		return self.__Data["site"]
+		return self.__Data["domain"]
+
+	@property
+	def mirror(self) -> str | None:
+		"""Домен зеркала."""
+
+		return self.__Mirror
+
+	@property
+	def domain(self) -> str:
+		"""Домен зеркала или источника."""
+
+		return self.__Mirror or self.original_domain
 	
 	@property
 	def content_types(self) -> tuple[ContentTypes, ...]:
@@ -88,8 +100,8 @@ class ParserManifest:
 			if Key not in self.__Data:
 				raise Exceptions.System.BadManifest(f"Key \"{Key}\" not found.")
 
-		if not self.__Data["site"]:
-			raise Exceptions.System.BadManifest("Site must be specified.")
+		if not self.__Data["domain"]:
+			raise Exceptions.System.BadManifest("Domain must be specified.")
 
 		if not self.__Data["content_types"]:
 			raise Exceptions.System.BadManifest("Types must be specified.")
@@ -123,3 +135,15 @@ class ParserManifest:
 
 		self.__Data = ReadJSON(f"Parsers/{self.__ParserName}/manifest.json")
 		self.__Validate()
+
+		self.__Mirror: str | None = None
+
+	def set_mirror(self, mirror: str | None):
+		"""
+		Задаёт домен зеркала, подменяя его в манифесте. Не сохраняет изменения в файл.
+
+		:param mirror: Домен.
+		:type mirror: str | None
+		"""
+
+		self.__Mirror = mirror
