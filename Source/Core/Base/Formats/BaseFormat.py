@@ -8,8 +8,13 @@ from typing import TYPE_CHECKING, Any, Sequence, cast
 
 import orjson
 
-from dublib.Methods.Data import RemoveRecurringSubstrings, Zerotify
+from dublib.Methods.Data import (
+	InsertDictionaryAfterKey,
+	RemoveRecurringSubstrings,
+	Zerotify,
+)
 from dublib.Methods.Filesystem import ReadJSON, WriteJSON
+from dublib.Validators import Validator_Domain
 
 from Source.Core import Exceptions
 from Source.Core.Base.Parsers.Components.ImagesDownloader import ImageData
@@ -140,6 +145,104 @@ class Person:
 
 		return Buffer
 
+class ExtraData:
+	"""Дополнительные данные главы."""
+
+	def __init__(self, base_keys: Sequence[str]):
+		"""
+		Дополнительные данные главы.
+
+		:param base_keys: Последовательность базовых ключей, которые не могут быть использованы в дополнительных данных.
+		:type base_keys: Sequence[str]
+		"""
+
+		self.__BaseKeys = base_keys
+
+		self.__Data: dict = dict()
+
+	def clear(self):
+		"""Удаляет все дополнительные данные."""
+
+		self.__Data.clear()
+
+	def exists(self, key: str) -> bool:
+		"""
+		Проверяет существования дополнительных данных.
+
+		:param key: Проверяемый ключ.
+		:type key: str
+		:return: Возвращает `True`, если ключ найден.
+		:rtype: bool
+		:raises ValueError: Ключ зарезервирован обязательными значениями.
+		"""
+
+		if key in self.__BaseKeys:
+			raise ValueError("Key ir reserved by important values, not extra.")
+
+		return key in self.__Data
+
+	def from_dict(self, data: dict):
+		"""
+		Копирует все пары ключ-значение, ключи которых не являются обязательными, в дополнительные данные.
+
+		:param data: Словарь данных главы.
+		:type data: dict
+		"""
+
+		for Key in data.keys():
+			if Key not in self.__BaseKeys:
+				self.set(Key, data[Key])
+
+	def get(self, key: str) -> Any:
+		"""
+		Возвращает дополнительные данные главы.
+		
+		:param key: Ключ, под которым хранятся дополнительные данные.
+		:type key: str
+		:return: Дополнительные данные.
+		:rtype: Any
+		:raises KeyError: Ключ не найден.
+		"""
+
+		return self.__Data[key]
+
+	def remove(self, key: str):
+		"""
+		Удаляет дополнительные данные главы. Игнорирует отсутствие ключа.
+		
+		:param key: Ключ, под которым хранятся дополнительные данные.
+		:type key: str
+		"""
+
+		if key in self.__Data:
+			del self.__Data[key]
+
+	def set(self, key: str, value: Any):
+		"""
+		Задаёт дополнительные данные.
+
+		:param key: Ключ.
+		:type key: str
+		:param value: Значение.
+		:type value: Any
+		:raises KeyError: Ключ используется для обязательных полей данных.
+		"""
+
+		if key in self.__BaseKeys:
+			raise KeyError(key)
+	
+		self.__Data[key] = value
+
+	def to_dict(self) -> dict:
+		"""
+		Возвращает словарное представление объекта.
+
+		:return: Словарное представление объекта.
+		:rtype: dict
+		"""
+	
+		return self.__Data.copy()
+
 class BaseChapter(ABC):
 	"""Базовая глава."""
 
@@ -195,6 +298,12 @@ class BaseChapter(ABC):
 
 		return tuple(self._Data["workers"])
 	
+	@property
+	def extra_data(self) -> ExtraData:
+		"""Дополнительные данные главы."""
+
+		return self._ExtraData
+
 	#==========================================================================================#
 	# >>>>> НАСЛЕДУЕМЫЕ МЕТОДЫ <<<<< #
 	#==========================================================================================#
@@ -286,18 +395,7 @@ class BaseChapter(ABC):
 		}
 
 		self._PostInitMethod()
-
-	def add_extra_data(self, key: str, value: Any):
-		"""
-		Добавляет дополнительные данные о главе.
-
-		:param key: Ключ.
-		:type key: str
-		:param value: Значение.
-		:type value: Any
-		"""
-
-		self._Data[key] = value
+		self._ExtraData = ExtraData(tuple(self._Data.keys()))
 
 	def add_worker(self, worker: str):
 		"""
@@ -324,17 +422,7 @@ class BaseChapter(ABC):
 		"""
 
 		self._FromDict(data)
-
-	def remove_extra_data(self, key: str):
-		"""
-		Удаляет дополнительные данные главы.
-
-		:param key: Ключ, под которым хранятся дополнительные данные.
-		:type key: str
-		"""
-
-		if key in self._Data:
-			del self._Data[key]
+		self.extra_data.from_dict(data)
 
 	def set_is_paid(self, is_paid: bool | None):
 		"""
@@ -976,7 +1064,6 @@ class BaseTitle(ABC):
 			"publication_year": None,
 			"description": None,
 			"age_limit": None,
-
 			"status": None,
 			"is_licensed": None,
 			
