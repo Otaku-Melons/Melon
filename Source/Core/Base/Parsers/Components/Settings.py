@@ -210,7 +210,7 @@ class Directories:
 
 		Directory: str | None = self.__DirectoriesDict.get(dir_type)
 		DirectoryPath: Path = Path(Directory) if Directory else Path(f"Output/{self.__ParserName}/{dir_type}")
-		DirectoryPath.mkdir(exist_ok = True)
+		DirectoryPath.mkdir(parents = True, exist_ok = True)
 
 		return DirectoryPath
 

@@ -3,10 +3,9 @@ from json import JSONDecodeError
 from typing import TYPE_CHECKING, Sequence
 
 from dublib.Methods.Data import ToSequence
-from dublib.Methods.Filesystem import ReadTextFile, WriteTextFile
+from dublib.Methods.Filesystem import ReadJSON, ReadTextFile, WriteTextFile
 
 from Source.Core import Exceptions
-from Source.Core.Base.Formats.Components.Functions import SafelyReadTitleJSON
 
 if TYPE_CHECKING:
 	from Source.Core.Base.EntryPoint import BaseEntryPoint
@@ -111,7 +110,7 @@ class Collector:
 				continue
 
 			try:
-				Title = SafelyReadTitleJSON(TitlesDirectoryPath / Entry.name) 
+				Title = ReadJSON(TitlesDirectoryPath / Entry.name) 
 				Slug = Title.get("slug")
 
 				if Slug:

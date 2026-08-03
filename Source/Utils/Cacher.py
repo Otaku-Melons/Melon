@@ -2,8 +2,9 @@ import os
 from dataclasses import dataclass
 from typing import TYPE_CHECKING
 
+from dublib.Methods.Filesystem import ReadJSON
+
 from Source.Core import Exceptions
-from Source.Core.Base.Formats.Components.Functions import SafelyReadTitleJSON
 
 if TYPE_CHECKING:
 	from Source.Core.Base.EntryPoint import BaseEntryPoint
@@ -65,7 +66,7 @@ class Cacher:
 
 		for CurrentFile in Files:
 				try:
-					Data = SafelyReadTitleJSON(TitlesDirectory / f"{CurrentFile}.json")
+					Data = ReadJSON(TitlesDirectory / f"{CurrentFile}.json")
 				except Exceptions.Parsers.UnsupportedFormat:
 					Errors.append(CurrentFile)
 					continue

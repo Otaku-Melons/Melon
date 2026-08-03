@@ -21,7 +21,6 @@ from Source.Core.Base.Parsers.Components.ImagesDownloader import ImageData
 from Source.Core.Base.Parsers.Components.WordsDictionary import CheckLanguageCode
 
 from .Components.Enums import By, Statuses
-from .Components.Functions import SafelyReadTitleJSON
 from .Components.Structs import ChapterSearchResult
 
 if TYPE_CHECKING:
@@ -854,7 +853,7 @@ class BaseTitle(ABC):
 				FilePath = TitlesDirectory / Filename
 
 				if FilePath.exists():
-					DataBuffer = SafelyReadTitleJSON(FilePath)
+					DataBuffer = ReadJSON(FilePath)
 
 			case By.Slug:
 				if self._Parser.settings.common.use_id_as_filename:
@@ -862,11 +861,11 @@ class BaseTitle(ABC):
 					if ID:
 						FilePath = TitlesDirectory / f"{ID}.json"
 						if FilePath.exists():
-							DataBuffer = SafelyReadTitleJSON(FilePath)
+							DataBuffer = ReadJSON(FilePath)
 				else:
 					FilePath = TitlesDirectory / f"{identificator}.json"
 					if FilePath.exists():
-						DataBuffer = SafelyReadTitleJSON(FilePath)
+						DataBuffer = ReadJSON(FilePath)
 				
 				if not DataBuffer:
 					DataBuffer = self._SearchFileInDirectory(TitlesDirectory, str(identificator), By.Slug) or dict()
@@ -877,11 +876,11 @@ class BaseTitle(ABC):
 					if Slug:
 						FilePath = TitlesDirectory / f"{Slug}.json"
 						if FilePath.exists():
-							DataBuffer = SafelyReadTitleJSON(FilePath)
+							DataBuffer = ReadJSON(FilePath)
 				else:
 					FilePath = TitlesDirectory / f"{identificator}.json"
 					if FilePath.exists():
-						DataBuffer = SafelyReadTitleJSON(FilePath)
+						DataBuffer = ReadJSON(FilePath)
 					
 				if not DataBuffer:
 					DataBuffer = self._SearchFileInDirectory(TitlesDirectory, str(identificator), By.ID) or dict()
@@ -943,7 +942,7 @@ class BaseTitle(ABC):
 				continue
 
 			try: 
-				Data = SafelyReadTitleJSON(Element.path)
+				Data = ReadJSON(Element.path)
 				if Data.get(type.value) == identificator:
 					return Data
 

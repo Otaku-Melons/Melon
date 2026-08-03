@@ -4,7 +4,8 @@ from typing import TYPE_CHECKING
 
 from dulwich import errors, porcelain
 
-from Source.Core.Base.Formats.Components.Functions import SafelyReadTitleJSON
+from dublib.Methods.Filesystem import ReadJSON
+
 from Source.Core.Base.Parsers.Components import ParserSettings
 from Source.Core.Base.Parsers.Components.Manifest import ContentTypes
 
@@ -145,7 +146,7 @@ class BaseEntryPoint:
 			filename += ".json"
 
 		FilePath = self.settings.directories.titles / filename
-		TitleData = SafelyReadTitleJSON(FilePath)
+		TitleData = ReadJSON(FilePath)
 		Type: str = TitleData["format"]
 		TypeName: str = Type.split("-")[1]
 		
