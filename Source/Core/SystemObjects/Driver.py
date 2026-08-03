@@ -1,8 +1,7 @@
 import importlib
+import os
 from pathlib import Path
 from typing import TYPE_CHECKING
-
-from dublib.Methods.Filesystem import ListDir
 
 from Source.Core.Base.EntryPoint import BaseEntryPoint
 from Source.Core.Base.Parsers.Components import ParserManifest
@@ -21,8 +20,12 @@ class Driver:
 	def parsers_names(self) -> tuple[str, ...]:
 		"""Последовательность названий всех установленных парсеров."""
 
-		# To-Do: проверка каталогов на соответствие парсерной структуре?
-		return tuple(ListDir("Parsers"))
+		ParsersDirectoryPath = Path("Parsers")
+		
+		if not ParsersDirectoryPath.exists():
+			return tuple()
+
+		return tuple(Element.name for Element in os.scandir("Parsers") if Element.is_dir())
 
 	#==========================================================================================#
 	# >>>>> ПУБЛИЧНЫЕ МЕТОДЫ <<<<< #
