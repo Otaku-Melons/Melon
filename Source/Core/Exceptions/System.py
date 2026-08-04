@@ -11,7 +11,6 @@ class BadManifest(Exception):
 
 		super().__init__(message)
 
-
 class ParserAlreadyExists(Exception):
 	"""Исключение: парсер уже существует."""
 
