@@ -42,8 +42,8 @@ class Chapter(BaseChapter):
 	def _Clear(self):
 		"""Очищает контент главы."""
 
-		self._Data["paragraphs"] = list()
-		self._Data["footnotes"] = list()
+		self._Data["paragraphs"] = []
+		self._Data["footnotes"] = []
 
 	def _IsEmpty(self) -> bool:
 		"""
@@ -68,8 +68,8 @@ class Chapter(BaseChapter):
 	def _PostInitMethod(self):
 		"""Метод, выполняющийся после инициализации объекта."""
 
-		self._Data["paragraphs"] = list()
-		self._Data["footnotes"] = list()
+		self._Data["paragraphs"] = []
+		self._Data["footnotes"] = []
 
 	#==========================================================================================#
 	# >>>>> ПУБЛИЧНЫЕ МЕТОДЫ <<<<< #

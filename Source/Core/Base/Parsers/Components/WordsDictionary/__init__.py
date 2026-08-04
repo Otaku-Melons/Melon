@@ -158,9 +158,9 @@ class WordsDictionary:
 
 		self._Language = language_code
 
-		self._AdditionalData: dict[str, str] = dict()
+		self._AdditionalData: dict[str, str] = {}
 		self._Keys = ("afterword", "art", "chapter", "epilogue", "extra", "glossary", "part", "prologue", "volume")
-		self._Data: dict[str, str | None] = dict()
+		self._Data: dict[str, str | None] = {}
 
 		self._GenerateData()
 		self._CheckData()

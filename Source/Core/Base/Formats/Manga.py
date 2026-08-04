@@ -102,13 +102,13 @@ class Chapter(BaseChapter):
 	def _PostInitMethod(self):
 		"""Метод, выполняющийся после инициализации объекта."""
 
-		self._Data["slides"] = list()
-		self.__Slides: "dict[int, ImageData]" = dict()
+		self._Data["slides"] = []
+		self.__Slides: "dict[int, ImageData]" = {}
 
 	def _PreFormatter(self):
 		"""Метод, запускающийся перед генерацией словарного представления объекта."""
 
-		SlidesData: list[dict] = list()
+		SlidesData: list[dict] = []
 		
 		for Index, Image in self.__Slides.items():
 			Buffer: dict = {"index": Index} | Image.to_dict(sizing = self._Parser.settings.common.sizing_images)

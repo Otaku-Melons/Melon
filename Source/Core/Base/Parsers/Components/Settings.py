@@ -4,7 +4,8 @@ from time import sleep
 from types import MappingProxyType
 from typing import Any, Literal, cast
 
-from dublib.Methods.Filesystem import ReadJSON
+from dublib.Functions.Data import Zerotify
+from dublib.Functions.Filesystem import ReadJSON
 from dublib.WebRequestor import Proxy
 
 #==========================================================================================#
@@ -72,8 +73,8 @@ class TextFilters:
 		:type data: dict
 		"""
 
-		self.__Regexs = list()
-		self.__Strings = list()
+		self.__Regexs = []
+		self.__Strings = []
 
 		if "text_regexs" in data.keys() and type(data["text_regexs"]) is list: self.__Regexs = data["text_regexs"]
 		if "text_strings" in data.keys() and type(data["text_strings"]) is list: self.__Strings = data["text_strings"]
@@ -138,7 +139,7 @@ class ImageFilters:
 
 		self.__Data = data
 
-		if "image_md5" not in self.__Data.keys() or type(self.__Data["image_md5"]) is not list: self.__Data["image_md5"] = list()
+		if "image_md5" not in self.__Data.keys() or type(self.__Data["image_md5"]) is not list: self.__Data["image_md5"] = []
 		Keys = ["image_min_height", "image_min_width", "image_max_height", "image_max_width"]
 
 		for Key in Keys:
@@ -208,9 +209,9 @@ class Directories:
 		:rtype: Path
 		"""
 
-		Directory: str | None = self.__DirectoriesDict.get(dir_type)
+		Directory: str | None = Zerotify(self.__DirectoriesDict.get(dir_type))
 		DirectoryPath: Path = Path(Directory) if Directory else Path(f"Output/{self.__ParserName}/{dir_type}")
-		DirectoryPath.mkdir(parents = True, exist_ok = True)
+		if Directory in (None, "Output"): DirectoryPath.mkdir(parents = True, exist_ok = True)
 
 		return DirectoryPath
 
@@ -225,7 +226,7 @@ class Directories:
 		"""
 
 		self.__ParserName: str = parser_name
-		self.__DirectoriesDict: dict[str, str | None] = settings or dict()
+		self.__DirectoriesDict: dict[str, str | None] = settings or {}
 
 class Common:
 	"""Базовые настройки."""
@@ -314,7 +315,7 @@ class Filters:
 		:type settings: dict
 		"""
 
-		if "filters" not in settings.keys() or type(settings["filters"]) is not dict: settings["filters"] = dict()
+		if "filters" not in settings.keys() or type(settings["filters"]) is not dict: settings["filters"] = {}
 		self.__TextFilters = TextFilters(settings["filters"])
 		self.__ImageFilters = ImageFilters(settings["filters"])
 
@@ -329,7 +330,7 @@ class Custom:
 		:type settings: dict[str, Any]
 		"""
 
-		self.__CustomSettings = settings.get("custom") or dict()
+		self.__CustomSettings = settings.get("custom") or {}
 
 	def __getitem__(self, key: str) -> Any:
 		"""
@@ -418,7 +419,7 @@ class ParserSettings:
 		:rtype: tuple[Proxy, ...]
 		"""
 
-		Proxies = list()
+		Proxies = []
 
 		if "proxies" in self.__Settings:
 			for String in self.__Settings["proxies"]:
@@ -473,7 +474,7 @@ class ParserSettings:
 		self.__IsLoadedFromRepository = False
 
 		self.__Directories = Directories(self.__ParserName, self.__Settings)
-		self.__Common: Common = Common(self.__Settings.get("common") or dict())
+		self.__Common: Common = Common(self.__Settings.get("common") or {})
 		self.__Filters = Filters(self.__Settings)
 		self.__Proxies: tuple[Proxy, ...] = self.__ParseProxies()
 		self.__Custom: Custom = Custom(self.__Settings)

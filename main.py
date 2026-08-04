@@ -1,7 +1,7 @@
 import sys
 
 from dublib.CLI.Terminalyzer import Terminalyzer
-from dublib.Methods.System import CheckPythonMinimalVersion
+from dublib.Functions.System import CheckPythonMinimalVersion
 
 from Source.CLI import Commands as Commands
 from Source.CLI.Descriptions import COMMANDS

@@ -1,7 +1,7 @@
 from time import sleep
 from typing import cast
 
-from dublib.Methods.Decorators import run_before_method
+from dublib.Functions.Decorators import run_before_method
 
 from Source.Core import Exceptions
 from Source.Core.Base.Formats.Manga import Chapter, Manga

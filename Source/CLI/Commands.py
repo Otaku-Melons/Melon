@@ -5,7 +5,7 @@ from typing import TYPE_CHECKING, cast
 
 import orjson
 
-from dublib.Methods.Filesystem import WriteJSON
+from dublib.Functions.Filesystem import WriteJSON
 
 from Source import Utils
 from Source.Core import Exceptions
@@ -439,7 +439,7 @@ def com_parse(system_objects: "SystemObjects", command: "ParsedCommandData"):
 	EntryPoint = system_objects.driver.get_entry_point(ParserName)
 	SourceOperator = EntryPoint.source_operator
 
-	Slugs: list[str] = list()
+	Slugs: list[str] = []
 
 	if ParseLastTitle:
 		LastParsedSlug = SourceOperator.shared_data.last_parsed_slug

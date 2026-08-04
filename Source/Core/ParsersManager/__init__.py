@@ -13,7 +13,7 @@ from dulwich.porcelain import clone, submodule_list
 from dulwich.repo import Repo
 
 from dublib.Engine.Bus import ExecutionResult
-from dublib.Methods.Filesystem import ListDir
+from dublib.Functions.Filesystem import ListDir
 
 class ParsersManager:
 	"""Менеджер парсеров."""
@@ -26,7 +26,7 @@ class ParsersManager:
 	def available_parsers(self) -> list[str]:
 		"""Список имён доступных в репозиториях парсеров."""
 
-		ParserNames = list()
+		ParserNames = []
 
 		for Repository in self.__Repositories:
 			ParserNames.append(Path(Repository).name)
@@ -37,7 +37,7 @@ class ParsersManager:
 	def installed_parsers(self) -> list[str]:
 		"""Список названий доступных парсеров."""
 
-		ParsersNames = list()
+		ParsersNames = []
 
 		for ParserName in ListDir("Parsers"):
 			if self.__IsParserValid(ParserName): ParsersNames.append(ParserName)
@@ -54,7 +54,7 @@ class ParsersManager:
 	def submoduled_parsers(self) -> list[str]:
 		"""Список парсеров, поставляемых в качестве подмодулей."""
 
-		ParsersNames = list()
+		ParsersNames = []
 		for SubmoduleData in submodule_list(self.__MelonRepo): ParsersNames.append(Path(SubmoduleData[0]).name)
 
 		return ParsersNames
@@ -136,7 +136,7 @@ class ParsersManager:
 		"""Менеджер парсеров."""
 
 		self.__MelonRepo = Repo("")
-		self.__Repositories: list[str] = list()
+		self.__Repositories: list[str] = []
 
 	def add_repository(self, url: str):
 		"""

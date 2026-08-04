@@ -7,8 +7,8 @@ from urllib.parse import urlparse
 from dulwich.repo import Repo
 
 from dublib.Engine.Patcher import Patch
-from dublib.Methods.Data import ToSequence
-from dublib.Methods.Filesystem import WriteJSON, WriteTextFile
+from dublib.Functions.Data import ToSequence
+from dublib.Functions.Filesystem import WriteJSON, WriteTextFile
 
 from Source.Core import Exceptions
 from Source.Core.Base.Parsers.Components.Manifest import _BASE_MANIFEST, ContentTypes

@@ -3,7 +3,7 @@ import shutil
 from pathlib import Path
 from typing import Sequence
 
-from dublib.Methods.Filesystem import ReadJSON, RemoveDirectoryContent, WriteJSON
+from dublib.Functions.Filesystem import ReadJSON, RemoveDirectoryContent, WriteJSON
 
 #==========================================================================================#
 # >>>>> СТРУКТУРЫ РАЗДЕЛЯЕМЫХ ДАННЫХ <<<<< #
@@ -23,7 +23,7 @@ class Journal:
 		self.__SharedData = shared_data
 
 		self.__JournalPath = Path(f"{self.__SharedData.path}/journal.json")
-		self.__Data: dict[int, str] = dict()
+		self.__Data: dict[int, str] = {}
 
 	def get_id_by_slug(self, slug: str) -> int | None:
 		"""
@@ -55,7 +55,7 @@ class Journal:
 	def drop(self):
 		"""Сбрасывает журнал."""
 
-		self.__Data = dict()
+		self.__Data = {}
 		self.save()
 
 	def load(self):
@@ -64,7 +64,7 @@ class Journal:
 		if self.__JournalPath.exists():
 			self.__Data = {int(Key): Value for Key, Value in ReadJSON(self.__JournalPath).items()}
 		else:
-			self.__Data = dict()
+			self.__Data = {}
 
 	def save(self):
 		"""Сохраняет журнал."""

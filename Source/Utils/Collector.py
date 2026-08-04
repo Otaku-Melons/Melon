@@ -2,8 +2,8 @@ import os
 from json import JSONDecodeError
 from typing import TYPE_CHECKING, Sequence
 
-from dublib.Methods.Data import ToSequence
-from dublib.Methods.Filesystem import ReadJSON, ReadTextFile, WriteTextFile
+from dublib.Functions.Data import ToSequence
+from dublib.Functions.Filesystem import ReadJSON, ReadTextFile, WriteTextFile
 
 from Source.Core import Exceptions
 
@@ -38,7 +38,7 @@ class Collector:
 		self.__EntryPoint = entry_point
 
 		self.__CollectionPath = self.__EntryPoint.system_objects.temper.get_parser_temp_directory(self.__EntryPoint.parser_name) / "Collection.txt"
-		self.__Collection: list[str] = list()
+		self.__Collection: list[str] = []
 
 	def add(self, slugs: str | Sequence[str]) -> int:
 		"""
@@ -71,7 +71,7 @@ class Collector:
 			self.add(CollectionSlugs)
 			return tuple(CollectionSlugs)
 		
-		return tuple()
+		return ()
 
 	def save(self, sort: bool = True):
 		"""
@@ -99,7 +99,7 @@ class Collector:
 		"""
 		
 		TitlesDirectoryPath = self.__EntryPoint.settings.directories.titles
-		LocalSlugs: list[str] = list()
+		LocalSlugs: list[str] = []
 
 		for Entry in os.scandir(TitlesDirectoryPath):
 			if not Entry.is_file() or not Entry.name.endswith(".json"):

@@ -18,7 +18,7 @@ if TYPE_CHECKING:
 @dataclass(frozen = True)
 class ChapterItems:
 	content: epub.EpubHtml
-	images: tuple[epub.EpubImage, ...] = tuple()
+	images: tuple[epub.EpubImage, ...] = ()
 
 #==========================================================================================#
 # >>>>> ОСНОВНОЙ КЛАСС <<<<< #
@@ -47,7 +47,7 @@ class RanobeBuilder(BaseBuilder):
 		if chapter.number: ChapterNumeration += f"Глава {chapter.number}. "
 		if chapter.name: ChapterTitle = ChapterNumeration + chapter.name
 
-		ChapterImages = list()
+		ChapterImages = []
 
 		Soup = BeautifulSoup("".join(chapter.paragraphs), "html.parser")
 		
@@ -105,7 +105,7 @@ class RanobeBuilder(BaseBuilder):
 		Book.set_language(self._Title.content_language)
 		for Author in self._Title.authors: Book.add_author(Author)
 
-		Chapters = list()
+		Chapters = []
 
 		for CurrentChapter in BranchToBuild.chapters:
 			ChapterItems = self.__BuildChapter(cast("Chapter", CurrentChapter))

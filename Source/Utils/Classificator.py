@@ -5,7 +5,7 @@ from os import PathLike
 from pathlib import Path
 from typing import Literal, Sequence, cast
 
-from dublib.Methods.Filesystem import ReadTextFile
+from dublib.Functions.Filesystem import ReadTextFile
 
 from Source.Core.Exceptions.Utils import Classificator as ClassificatorExceptions
 
@@ -126,11 +126,11 @@ class Classificator:
 		"""
 
 		Parts = line.value.split("[", maxsplit = 1)
-		if len(Parts) == 1: return tuple()
+		if len(Parts) == 1: return ()
 
 		ValueString = Parts[1].rstrip("]")
 		ValueStringElements = ValueString.split(",")
-		Result: list[str] = list()
+		Result: list[str] = []
 
 		for Element in ValueStringElements:
 			Result.append(Element.strip())
@@ -204,7 +204,7 @@ class Classificator:
 
 		ScriptPath: Path = Path(script_file)
 		ScriptLines: list[str] = ReadTextFile(ScriptPath, split = True)
-		FileOperationsLines: list[ExecutableLine] = list()
+		FileOperationsLines: list[ExecutableLine] = []
 
 		for Index in range(len(ScriptLines)):
 			Line = ScriptLines[Index].strip()
@@ -246,7 +246,7 @@ class Classificator:
 		:rtype: list[ScriptValidationError]
 		"""
 
-		ERRORS: list[ScriptValidationError] = list()
+		ERRORS: list[ScriptValidationError] = []
 
 		if "[" in line.value and "]" not in line.value:
 			ERRORS.append(ScriptValidationError(line, "Unclosed values declaration."))
@@ -295,7 +295,7 @@ class Classificator:
 		:rtype: list[ScriptValidationError]
 		"""
 
-		ERRORS: list[ScriptValidationError] = list()
+		ERRORS: list[ScriptValidationError] = []
 		
 		OperationString: str = line.value.lstrip("*").lstrip()
 		OperationParts: tuple[str, ...] = tuple(shlex.split(OperationString))
@@ -345,7 +345,7 @@ class Classificator:
 		:rtype: ClassificationResult
 		"""
 
-		ProceduresCache: dict[str, Procedure] = dict()
+		ProceduresCache: dict[str, Procedure] = {}
 
 		if ignore_case:
 			ProceduresCache = {CurrentProcedure.name.lower(): CurrentProcedure for CurrentProcedure in procedures}
@@ -377,7 +377,7 @@ class Classificator:
 		:raises ScriptRuntimeError: Ошибка исполнения скрипта.
 		"""
 
-		Procedures: list[Procedure] = list()
+		Procedures: list[Procedure] = []
 
 		Type: ClassificatorsTypes | None = None
 		Format: Literal["low", "up"] | None = None
@@ -464,7 +464,7 @@ class Classificator:
 		:rtype: tuple[ScriptValidationError, ...]
 		"""
 
-		ERRORS: list[ScriptValidationError] = list()
+		ERRORS: list[ScriptValidationError] = []
 
 		for Line in script_lines:
 			if Line.value.startswith("@"):

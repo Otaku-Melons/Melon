@@ -1,7 +1,7 @@
 import re
 from typing import TYPE_CHECKING, Sequence
 
-from dublib.Methods.Data import Zerotify
+from dublib.Functions.Data import Zerotify
 
 if TYPE_CHECKING:
 	from Source.Core.Base.Parsers.BaseParser import BaseParser

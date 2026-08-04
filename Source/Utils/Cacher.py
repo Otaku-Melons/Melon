@@ -2,7 +2,7 @@ import os
 from dataclasses import dataclass
 from typing import TYPE_CHECKING
 
-from dublib.Methods.Filesystem import ReadJSON
+from dublib.Functions.Filesystem import ReadJSON
 
 from Source.Core import Exceptions
 
@@ -50,10 +50,10 @@ class Cacher:
 		TotalFiles: int = 0
 		FoundInCache: int = 0
 		CachedFiles: int = 0
-		Errors: list[str] = list()
+		Errors: list[str] = []
 
 		TitlesDirectory = self.__EntryPoint.settings.directories.titles
-		Files: list[str] = list()
+		Files: list[str] = []
 		SuffixCharactersCount: int = len(".json") * -1
 
 		for Element in os.scandir(TitlesDirectory):

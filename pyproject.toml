@@ -3,7 +3,7 @@ name = "Melon"
 dynamic = ["version"]
 dependencies = [
 	"beautifulsoup4",
-	"dublib==0.28.6",
+	"dublib==0.29.0",
 	"dulwich>=1.2.6",
 	"EbookLib",
 	"img2pdf",
@@ -25,7 +25,7 @@ files = ["main.py", "Source"]
 exclude = ["__pycache__"]
 
 [tool.ruff.lint]
-select = ["E", "I"]
+select = ["C", "E", "I"]
 ignore = ["E701", "E501"]
 
 [tool.ruff.lint.isort]

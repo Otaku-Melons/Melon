@@ -2,7 +2,7 @@ from enum import Enum
 from types import MappingProxyType
 from typing import TYPE_CHECKING
 
-from dublib.Methods.Filesystem import ReadJSON
+from dublib.Functions.Filesystem import ReadJSON
 
 from Source.Core import Exceptions
 

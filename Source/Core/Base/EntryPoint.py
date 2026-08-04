@@ -4,7 +4,7 @@ from typing import TYPE_CHECKING
 
 from dulwich import errors, porcelain
 
-from dublib.Methods.Filesystem import ReadJSON
+from dublib.Functions.Filesystem import ReadJSON
 
 from Source.Core.Base.Parsers.Components import ParserSettings
 from Source.Core.Base.Parsers.Components.Manifest import ContentTypes

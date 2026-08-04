@@ -1,7 +1,7 @@
 from dublib.CLI.Terminalyzer import Command, ValidableTypes
 from dublib.CLI.TextStyler import GetStyledTextFromHTML
 
-COMMANDS: list[Command] = list()
+COMMANDS: list[Command] = []
 
 Com = Command("build-manga", "Build read-ready manga content.")
 ComPos = Com.create_position("FILE", "Filename of local JSON.", important = True)

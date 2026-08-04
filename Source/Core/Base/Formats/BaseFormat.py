@@ -8,12 +8,12 @@ from typing import TYPE_CHECKING, Any, Sequence, cast
 
 import orjson
 
-from dublib.Methods.Data import (
+from dublib.Functions.Data import (
 	InsertDictionaryAfterKey,
 	RemoveRecurringSubstrings,
 	Zerotify,
 )
-from dublib.Methods.Filesystem import ReadJSON, WriteJSON
+from dublib.Functions.Filesystem import ReadJSON, WriteJSON
 from dublib.Validators import Validator_Domain
 
 from Source.Core import Exceptions
@@ -78,7 +78,7 @@ class Person:
 			"description": None
 		}
 
-		self.__Images: list[ImageData] = list()
+		self.__Images: list[ImageData] = []
 
 	def add_another_name(self, another_name: str):
 		"""
@@ -157,7 +157,7 @@ class ExtraData:
 
 		self.__BaseKeys = base_keys
 
-		self.__Data: dict = dict()
+		self.__Data: dict = {}
 
 	def clear(self):
 		"""Удаляет все дополнительные данные."""
@@ -563,7 +563,7 @@ class BaseBranch(ABC):
 		"""
 
 		self._ID = branch_id
-		self._Chapters: dict[int, BaseChapter] = dict()
+		self._Chapters: dict[int, BaseChapter] = {}
 
 	def add_chapter(self, chapter: BaseChapter):
 		"""
@@ -655,7 +655,7 @@ class BaseBranch(ABC):
 	def to_list(self) -> list[dict]:
 		"""Возвращает список словарей данных глав, принадлежащих текущей ветви."""
 
-		BranchList = list()
+		BranchList = []
 		for CurrentChapter in self._Chapters.values():
 			BranchList.append(CurrentChapter.to_dict())
 
@@ -835,7 +835,7 @@ class BaseTitle(ABC):
 		:raises UnsupportedFormat: Неподдерживаемый формат JSON.
 		"""
 
-		DataBuffer: dict = dict()
+		DataBuffer: dict = {}
 		TitlesDirectory = self._Parser.settings.directories.titles
 		Journal = self._Parser.source_operator.shared_data.journal
 		FilePath: Path | None = None
@@ -868,7 +868,7 @@ class BaseTitle(ABC):
 						DataBuffer = ReadJSON(FilePath)
 				
 				if not DataBuffer:
-					DataBuffer = self._SearchFileInDirectory(TitlesDirectory, str(identificator), By.Slug) or dict()
+					DataBuffer = self._SearchFileInDirectory(TitlesDirectory, str(identificator), By.Slug) or {}
 
 			case By.ID:
 				if not self._Parser.settings.common.use_id_as_filename:
@@ -883,7 +883,7 @@ class BaseTitle(ABC):
 						DataBuffer = ReadJSON(FilePath)
 					
 				if not DataBuffer:
-					DataBuffer = self._SearchFileInDirectory(TitlesDirectory, str(identificator), By.ID) or dict()
+					DataBuffer = self._SearchFileInDirectory(TitlesDirectory, str(identificator), By.ID) or {}
 
 		return Zerotify(DataBuffer)
 
@@ -975,8 +975,8 @@ class BaseTitle(ABC):
 			CoverData = cast(dict, PersonData)
 			Buffer = Person(CoverData["name"])
 			
-			AnotherNames = CoverData.get("another_names") or tuple()
-			Images = CoverData.get("images") or tuple()
+			AnotherNames = CoverData.get("another_names") or ()
+			Images = CoverData.get("images") or ()
 			Description = CoverData.get("description")
 
 			for AnotherName in AnotherNames:
@@ -996,7 +996,7 @@ class BaseTitle(ABC):
 	def _UpdateBranchesInfo(self):
 		"""Обновляет информацию о ветвях во внутреннем словарном хранилище тайтла."""
 
-		Branches = list()
+		Branches = []
 
 		for CurrentBranch in self._Branches.values():
 			Branches.append({"id": CurrentBranch.id, "chapters_count": CurrentBranch.chapters_count})
@@ -1022,7 +1022,7 @@ class BaseTitle(ABC):
 	def _UpdateCovers(self):
 		"""Обновляет данные обложек во внутреннем словарном хранилище данных тайтла."""
 
-		self._Data["covers"] = list()
+		self._Data["covers"] = []
 
 		for CurrentCover in self._Covers:
 			self._Data["covers"].append(CurrentCover.to_dict())
@@ -1030,7 +1030,7 @@ class BaseTitle(ABC):
 	def _UpdatePersons(self):
 		"""Обновляет данные персонажей во внутреннем словарном хранилище данных тайтла."""
 
-		self._Data["persons"] = list()
+		self._Data["persons"] = []
 
 		for CurrentPerson in self._Persons:
 			self._Data["persons"].append(CurrentPerson.to_dict(self._Parser.settings.common.sizing_images))
@@ -1119,9 +1119,9 @@ class BaseTitle(ABC):
 		self._Data["format"] = "melon-" + type(self).__name__.lower()
 		self._Data["slug"] = slug
 
-		self._Branches: dict[int, BaseBranch] = dict()
-		self._Persons: list[Person] = list()
-		self._Covers: list[ImageData] = list()
+		self._Branches: dict[int, BaseBranch] = {}
+		self._Persons: list[Person] = []
+		self._Covers: list[ImageData] = []
 
 		self._PostInitMethod()
 

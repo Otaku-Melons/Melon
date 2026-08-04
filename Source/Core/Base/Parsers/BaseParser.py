@@ -3,7 +3,7 @@ from enum import Enum
 from pathlib import Path
 from typing import TYPE_CHECKING, Any, Sequence, cast
 
-from dublib.Methods.Decorators import run_before_method
+from dublib.Functions.Decorators import run_before_method
 
 from Source.Core import Exceptions
 from Source.Core.Base.Formats.BaseFormat import BaseBranch, BaseTitle
@@ -109,7 +109,7 @@ class BaseParser(ABC):
 		self._Title = cast(BaseTitle, self._Title)
 		ImageDirecory: Path = self.settings.directories.images / self._Title.used_filename / image_type.value
 		ImageDirecory.mkdir(parents = True, exist_ok = True)
-		Results: list = list()
+		Results: list = []
 		ImagesCount: int = len(images_data)
 
 		for Index in range(ImagesCount):
@@ -214,7 +214,7 @@ class BaseParser(ABC):
 		
 		Results = self._DownloadImages(self._Title.covers, _ImagesTypes.Cover, force_mode)
 
-		PersonsImages: list[ImageData] = list()
+		PersonsImages: list[ImageData] = []
 		for CurrentPerson in self._Title.perons:
 			PersonsImages += list(CurrentPerson.images)
 

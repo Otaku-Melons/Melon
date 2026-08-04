@@ -3,7 +3,7 @@ from typing import TYPE_CHECKING
 from prettytable import PLAIN_COLUMNS, PrettyTable
 
 from dublib.CLI.TextStyler import FastStyler
-from dublib.Methods.Data import StringifyFloat
+from dublib.Functions.Data import StringifyFloat
 
 if TYPE_CHECKING:
 	from Source.Utils.Cacher import CachingResult

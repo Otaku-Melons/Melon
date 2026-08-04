@@ -7,7 +7,7 @@ from typing import TYPE_CHECKING, Literal, cast
 import validators
 from bs4 import BeautifulSoup, Tag
 
-from dublib.Methods.Data import RemoveRecurringSubstrings
+from dublib.Functions.Data import RemoveRecurringSubstrings
 from dublib.Polyglot import HTML
 
 from Source.Core import Exceptions
@@ -59,7 +59,7 @@ class Footnote:
 		self.__Portals = self.__Parser.portals
 		
 		self.__UUID = str(uuid.uuid4())
-		self.__Elements: list[Paragraph | Image] = list()
+		self.__Elements: list[Paragraph | Image] = []
 		self.__Placeholder = "*"
 		self.__ImagesCount = 0
 
@@ -219,7 +219,7 @@ class Header:
 
 		#---> Удаление пробельных символов в начале и конце строк.
 		#==========================================================================================#
-		TextFragments = list()
+		TextFragments = []
 
 		for Fragment in text.split("\n"):
 			Fragment = Fragment.strip()
@@ -246,7 +246,7 @@ class Header:
 
 		self._Text: str | None = None
 		self._Align: Literal["right", "center"] | None = None
-		self._Footnotes: list[Footnote] = list()
+		self._Footnotes: list[Footnote] = []
 		self._WrapperTag = "h3"
 
 	def add_footnote(self, footnote: Footnote):
@@ -597,7 +597,7 @@ class Paragraph(Header):
 
 		self._Text: str | None = None
 		self._Align: Literal["right", "center"] | None = None
-		self._Footnotes: list[Footnote] = list()
+		self._Footnotes: list[Footnote] = []
 		self._WrapperTag = "p"
 
 		self.__ParserSettings = self._Parser.settings
@@ -654,9 +654,9 @@ class Blockquote:
 	def __init__(self):
 		"""Блок текста."""
 
-		self.__Elements: list[Paragraph | Image] = list()
-		self.__ExtraData: dict[str, str] = dict()
-		self.__Footnotes: list[Footnote] = list()
+		self.__Elements: list[Paragraph | Image] = []
+		self.__ExtraData: dict[str, str] = {}
+		self.__Footnotes: list[Footnote] = []
 
 	def add_element(self, element: Paragraph | Image):
 		"""
@@ -710,7 +710,7 @@ class Blockquote:
 			else:
 				Content += Element.to_html() or ""
 
-		ExtraData = list()
+		ExtraData = []
 		for Key, Value in self.__ExtraData.items():
 			ExtraData.append(f"data-{Key}=\"{Value}\"")
 

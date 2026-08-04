@@ -23,7 +23,7 @@ class Driver:
 		ParsersDirectoryPath = Path("Parsers")
 		
 		if not ParsersDirectoryPath.exists():
-			return tuple()
+			return ()
 
 		return tuple(Element.name for Element in os.scandir("Parsers") if Element.is_dir())
 

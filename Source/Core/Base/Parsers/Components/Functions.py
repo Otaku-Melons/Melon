@@ -23,7 +23,7 @@ def SplitParagraph(soup: BeautifulSoup, paragraph: Tag, splitter: str | re.Patte
 	if not splitter: splitter = re.compile(r"<br\s*/?>")
 	Text = paragraph.decode_contents()
 
-	Parts: list[str] = list()
+	Parts: list[str] = []
 
 	if type(splitter) is re.Pattern:
 		if not re.findall(splitter, Text): return (paragraph,)

@@ -20,7 +20,7 @@ def GetParsersNamesFromKey(system_objects: "SystemObjects", key_value: str | Non
 	:rtype: tuple[str, ...]
 	"""
 
-	Parsers: tuple[str, ...] = tuple()
+	Parsers: tuple[str, ...] = ()
 
 	if key_value:
 		Parsers = tuple(Element.strip() for Element in key_value.split(","))

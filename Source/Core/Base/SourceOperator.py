@@ -100,7 +100,7 @@ class BaseSourceOperator:
 		:rtype: Sequence[str]
 		"""
 
-		return tuple()
+		return ()
 
 	def _InitializeRequestor(self) -> WebRequestor:
 		"""
