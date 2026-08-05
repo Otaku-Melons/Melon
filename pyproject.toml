@@ -25,8 +25,8 @@ files = ["main.py", "Source"]
 exclude = ["__pycache__"]
 
 [tool.ruff.lint]
-select = ["C", "E", "I"]
-ignore = ["E701", "E501"]
+select = ["C", "E", "I", "S"]
+ignore = ["C901", "E701", "E501"]
 
 [tool.ruff.lint.isort]
 lines-after-imports = 1

@@ -1,11 +1,9 @@
 import sys
 from dataclasses import dataclass
-from typing import Literal, cast
 
 from dublib.CLI.Terminalyzer import Command, ParsedCommandData, ValidableTypes
 
 from Source.Core.Base.Formats.Components.Enums import By
-from Source.Core.Builders.MangaBuilder import MangaBuilder, MangaOutputFormats
 
 from ..BaseProcessor import BaseCommandProcessor, PreparedData
 
@@ -17,14 +15,10 @@ from ..BaseProcessor import BaseCommandProcessor, PreparedData
 class Parameters:
 	"""Параметры, требуемые обработчиком."""
 
+	parser: str
 	filename: str
-	parser_name: str
-	target_id: int | None
-	target_type: Literal["branch", "chapter"] | None
-	output_format: str | None
-	chapter_template: str | None
-	volume_template: str | None
-	is_sort_by_volumes: bool
+	target_id: int
+	is_target_chapter: bool
 
 #==========================================================================================#
 # >>>>> ОСНОВНОЙ КЛАСС <<<<< #
@@ -45,7 +39,7 @@ class CommandProcessor(BaseCommandProcessor[Parameters]):
 		:rtype: str
 		"""
 
-		return "Build read-ready manga content."
+		return "Repair chapter chapter in local title."
 
 	def _GenerateCommand(self, command: Command) -> Command:
 		"""
@@ -57,24 +51,14 @@ class CommandProcessor(BaseCommandProcessor[Parameters]):
 		:rtype: Command
 		"""
 
-		ComPos = command.create_position("FILE", "Filename of local JSON.", important = True)
+		ComPos = command.create_position("FILE", "Title filename with or without type.", important = True)
 		ComPos.set_argument()
 
-		self._AddParserPosition()
-
-		ComPos = command.create_position("TARGET", "Target for building. By default longest branch.")
+		ComPos = command.create_position("TARGET", "Target to repairing.", important = True)
 		ComPos.add_key("--branch", type = ValidableTypes.UnsignedInteger, description = "Branch ID.")
 		ComPos.add_key("--chapter", type = ValidableTypes.UnsignedInteger, description = "Chapter ID.")
 
-		ComPos = command.create_position("FORMAT", "Format of output content. By default downloads images in folder.")
-		ComPos.add_flag("-cbz", description = "Make *.CBZ files.")
-		ComPos.add_flag("-pdf", description = "Make *.PDF file.")
-		ComPos.add_flag("-zip", description = "Make *.ZIP archives.")
-
-		command.base.add_flag("-s", description = "Enable chapters sorting by volumes directories.")
-
-		command.base.add_key("--cnt", description = "Template for chapters naming.")
-		command.base.add_key("--vnt", description = "Template for volumes naming.")
+		self._AddParserPosition()
 
 		return command
 
@@ -91,29 +75,17 @@ class CommandProcessor(BaseCommandProcessor[Parameters]):
 		"""
 
 		Filename: str = data.get_important_position_value("FILE", expected_type = str)
-	
-		TargetID: int | None = data.get_position_value("TARGET", expected_type = int)
-		TargetType: Literal["branch", "chapter"] | None = None
-		if data.check_key("--chapter"): TargetType = "chapter"
-		elif data.check_key("--branch"): TargetType = "branch"
-	
-		OutputFormat: str | None = data.get_position_value("FORMAT", expected_type = str)
-		if OutputFormat: OutputFormat = OutputFormat.lstrip("-")
-	
-		ChapterTemplate: str | None = data.get_key_value("--ct", expected_type = str)
-		VolumeTemplate: str | None = data.get_key_value("--vt", expected_type = str)
-	
-		SortByVolumes: bool = data.check_flag("-s")
+		TargetID: int = data.get_important_position_value("TARGET", expected_type = int)
+		IsTargetChapter: bool = data.check_key("--chapter")
+
+		if not Filename.endswith(".json"):
+			Filename += ".json"
 
 		return Parameters(
+			parser = prepared_data.required_parsers_names[0],
 			filename = Filename,
-			parser_name = prepared_data.required_parsers_names[0],
 			target_id = TargetID,
-			target_type = TargetType,
-			output_format = OutputFormat,
-			chapter_template = ChapterTemplate,
-			volume_template = VolumeTemplate,
-			is_sort_by_volumes = SortByVolumes
+			is_target_chapter = IsTargetChapter
 		)
 
 	def _Process(self, parameters: Parameters):
@@ -124,7 +96,11 @@ class CommandProcessor(BaseCommandProcessor[Parameters]):
 		:type parameters: Parameters
 		"""
 
-		EntryPoint = self._SystemObjects.driver.get_entry_point(parameters.parser_name)
+		if not parameters.is_target_chapter:
+			self.printer.error("For now only chapters supported as target to repairing.")
+			sys.exit(1)
+	
+		EntryPoint = self.system_objects.driver.get_entry_point(parameters.parser)
 		SourceOperator = EntryPoint.source_operator
 		TypingResult = EntryPoint.get_content_type_by_file(parameters.filename)
 		Parser = SourceOperator.launch_parser(TypingResult.content_type)
@@ -136,13 +112,10 @@ class CommandProcessor(BaseCommandProcessor[Parameters]):
 			self.printer.error(f"Unable load file: <b>{parameters.filename}</b>.")
 			sys.exit(1)
 	
-		Builder = MangaBuilder(Parser, Title)
-		if parameters.output_format: Builder.select_output_format(MangaOutputFormats(parameters.output_format))
-		if parameters.chapter_template: Builder.set_chapter_name_template(parameters.chapter_template)
-		if parameters.chapter_template: Builder.set_volume_name_template(parameters.chapter_template)
-		Builder.switch_volumes_sorting(parameters.is_sort_by_volumes)
+		self.printer.emit(f"Repairing chapter <b>{parameters.target_id}</b>… ", end_line = False)
 	
-		match parameters.target_type:
-			case "branch": Builder.build_branch(parameters.target_id)
-			case "chapter": Builder.build_chapter(cast(int, parameters.target_id))
-			case _: Builder.build_branch()
+		if Parser.repair(parameters.target_id): self.printer.emit("Done.")
+		else: self.printer.warning("Chapter is empty. Repairing failure?")
+	
+		if Parser.save(): self.printer.emit("Saved.")
+		else: self.printer.emit("No changes. Saving skipped.")

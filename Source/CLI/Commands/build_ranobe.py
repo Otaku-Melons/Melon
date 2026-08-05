@@ -1,3 +1,4 @@
+import sys
 from dataclasses import dataclass
 
 from dublib.CLI.Terminalyzer import Command, ParsedCommandData, ValidableTypes
@@ -99,7 +100,7 @@ class CommandProcessor(BaseCommandProcessor[Parameters]):
 			self.printer.emit(f"Loaded file: <i>{parameters.filename}</i>.")
 		else:
 			self.printer.error(f"Unable load file: <b>{parameters.filename}</b>.")
-			exit(1)
+			sys.exit(1)
 	
 		Builder = RanobeBuilder(Parser, Title)
 		Builder.build(parameters.branch_id)
