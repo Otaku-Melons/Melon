@@ -1,6 +1,8 @@
 # Python cache.
 __pycache__
 # Parsers data.
-Configs
-Output
-Temp
+configs
+output
+temp
+# Enviroment variables.
+.env

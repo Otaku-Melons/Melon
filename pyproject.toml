@@ -1,6 +1,12 @@
 [project]
-name = "Melon"
-dynamic = ["version"]
+name = "melon"
+version = "1.0.0-rc.4"
+description = "Modular parsera management system."
+readme = "README.md"
+authors = [
+    { name = "DUB1401", email = "vlad.milosta@outlook.com" }
+]
+requires-python = ">=3.12"
 dependencies = [
 	"beautifulsoup4",
 	"dublib==0.29.0",
@@ -8,21 +14,25 @@ dependencies = [
 	"EbookLib",
 	"img2pdf",
 	"pillow",
+	"python-dotenv"
 ]
 
 [project.optional-dependencies]
 dev = ["mypy", "ruff"]
 
-[tool.setuptools.packages.find]
-include = ["Source*"]
+[project.scripts]
+melon = "melon:main"
+
+[build-system]
+requires = ["uv-build>=0.12.2,<0.13.0", "uv-dynamic-versioning"]
+build-backend = "uv_build"
 
 [tool.mypy]
 ignore_missing_imports = true
 check_untyped_defs = true
 non_interactive = true
 follow_imports = "silent"
-files = ["main.py", "Source"]
-exclude = ["__pycache__"]
+files = ["src"]
 
 [tool.ruff.lint]
 select = ["C", "E", "I", "S"]
