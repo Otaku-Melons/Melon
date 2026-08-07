@@ -5,18 +5,18 @@ from typing import TYPE_CHECKING, Any, ClassVar, Generic, Protocol, TypeVar
 
 from dublib.cli.terminalyzer import Command, ParsedCommandData, ValidableTypes
 
-from .. import utils
-from ..core import exceptions
+from ... import utils
+from ...core import exceptions
 
 if TYPE_CHECKING:
-	from ..core.base.entry_point import BaseEntryPoint
-	from ..core.base.source_operator import (
+	from ...core.base.entry_point import BaseEntryPoint
+	from ...core.base.source_operator import (
 		BaseSourceOperator,
 		ParserManifest,
 		ParserSettings,
 	)
-	from ..core.system_objects import SystemObjects
-	from ..core.system_objects.printer import Printer
+	from ...core.system_objects import SystemObjects
+	from ...core.system_objects.printer import Printer
 	
 #==========================================================================================#
 # >>>>> КОНСТРУКЦИИ АННОТАЦИЙ ТИПОВ <<<<< #

@@ -7,9 +7,9 @@ from typing import TYPE_CHECKING
 from dublib.cli.terminalyzer import Command, ParsedCommandData, ValidableTypes
 from dublib.cli.text_styler import GetStyledTextFromHTML
 
-from ... import utils
-from ...core import exceptions
-from ...core.base.parsers.components.manifest import ContentTypes
+from .... import utils
+from ....core import exceptions
+from ....core.base.parsers.components.manifest import ContentTypes
 from ..base_processor import (
 	BaseCommandProcessor,
 	PreparedData,
@@ -18,10 +18,10 @@ from ..base_processor import (
 )
 
 if TYPE_CHECKING:
-	from ...core.base.entry_point import BaseEntryPoint
-	from ...core.base.formats.base_format import BaseTitle
-	from ...core.base.parsers.base_parser import BaseParser
-	from ...core.base.source_operator import BaseSourceOperator
+	from ....core.base.entry_point import BaseEntryPoint
+	from ....core.base.formats.base_format import BaseTitle
+	from ....core.base.parsers.base_parser import BaseParser
+	from ....core.base.source_operator import BaseSourceOperator
 
 #==========================================================================================#
 # >>>>> ВСПОМОГАТЕЛЬНЫЕ СТРУКТУРЫ ДАННЫХ <<<<< #

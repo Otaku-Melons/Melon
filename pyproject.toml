@@ -14,7 +14,8 @@ dependencies = [
 	"EbookLib",
 	"img2pdf",
 	"pillow",
-	"python-dotenv"
+	"python-dotenv",
+	"uv"
 ]
 
 [project.optional-dependencies]
@@ -22,6 +23,7 @@ dev = ["mypy", "ruff"]
 
 [project.scripts]
 melon = "melon:main"
+pxm = "melon:main"
 
 [build-system]
 requires = ["uv-build>=0.12.2,<0.13.0", "uv-dynamic-versioning"]
@@ -35,7 +37,7 @@ follow_imports = "silent"
 files = ["src"]
 
 [tool.ruff.lint]
-select = ["C", "E", "I", "S"]
+select = ["C", "E", "I"]
 ignore = ["C901", "E701", "E501"]
 
 [tool.ruff.lint.isort]

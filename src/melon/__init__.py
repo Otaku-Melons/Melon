@@ -8,9 +8,13 @@ from .core.system_objects import SystemObjects
 
 def main():
 	CheckPythonMinimalVersion(3, 12)
-	sys.path.append(os.getcwd())
 	Objects = SystemObjects()
-	CommandsOrchestrator(Objects).run()
+
+	CalledCommand: str = sys.argv[0].split("/")[-1]
+	WorkingDirectory: str = os.getcwd()
+
+	sys.path.append(WorkingDirectory)
+	CommandsOrchestrator(Objects, CalledCommand).run()
 
 if __name__ == "__main__":
 	main()

@@ -20,12 +20,12 @@ class Driver:
 	def parsers_names(self) -> tuple[str, ...]:
 		"""Последовательность названий всех установленных парсеров."""
 
-		ParsersDirectoryPath = Path("Parsers")
+		ParsersDirectoryPath = Path("parsers")
 		
 		if not ParsersDirectoryPath.exists():
 			return ()
 
-		return tuple(Element.name for Element in os.scandir("Parsers") if Element.is_dir())
+		return tuple(Element.name for Element in os.scandir("parsers") if Element.is_dir())
 
 	#==========================================================================================#
 	# >>>>> ПУБЛИЧНЫЕ МЕТОДЫ <<<<< #
@@ -52,7 +52,7 @@ class Driver:
 		:raises FileNotFoundError: Файл точки входа в парсер не найден.
 		"""
 
-		ParserMainPath = Path(f"Parsers/{parser_name}/__init__.py")
+		ParserMainPath = Path(f"parsers/{parser_name}/__init__.py")
 
 		if not ParserMainPath.exists():
 			raise FileNotFoundError(ParserMainPath)
@@ -76,7 +76,7 @@ class Driver:
 		:raises FileNotFoundError: Файл манифеста не найден.
 		"""
 
-		ManifestPath = Path(f"Parsers/{parser_name}/manifest.json")
+		ManifestPath = Path(f"parsers/{parser_name}/manifest.json")
 		if not ManifestPath.exists():
 			raise FileNotFoundError(ManifestPath)
 		

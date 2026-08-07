@@ -7,7 +7,7 @@ from dublib.cli.terminalyzer import Command, ParsedCommandData, Terminalyzer
 
 if TYPE_CHECKING:
 	from ..core.system_objects import Printer, SystemObjects
-	from .base_processor import BaseCommandProcessor
+	from .commands.base_processor import BaseCommandProcessor
 
 class CommandsOrchestrator:
 	"""Оркестратор команд."""
@@ -34,7 +34,7 @@ class CommandsOrchestrator:
 		:rtype: tuple[str, ...]
 		"""
 
-		CommandsPackage: str = f"{__package__}.commands"
+		CommandsPackage: str = f"{__package__}.commands.{self.__Group}"
 		CommandModulesNames: list[str] = [
 			file.name[:-3]
 			for file in resources.files(CommandsPackage).iterdir()
@@ -50,7 +50,7 @@ class CommandsOrchestrator:
 		self.__Commands.clear()
 
 		for ProcessorModuleName in self.__GetCommandsModulesNames():
-			Module = importlib.import_module(f"melon.cli.commands.{ProcessorModuleName}")
+			Module = importlib.import_module(f"melon.cli.commands.{self.__Group}.{ProcessorModuleName}")
 			Processor = cast("BaseCommandProcessor", Module.CommandProcessor(self.__SystemObjects))
 			CommandData = Processor.command
 			
@@ -61,15 +61,18 @@ class CommandsOrchestrator:
 	# >>>>> ПУБЛИЧНЫЕ МЕТОДЫ <<<<< #
 	#==========================================================================================#
 
-	def __init__(self, system_objects: "SystemObjects"):
+	def __init__(self, system_objects: "SystemObjects", group: str):
 		"""
 		Базовый обработчик команды.
 
 		:param system_objects: Коллекция системных объектов.
 		:type system_objects: SystemObjects
+		:param group: Группа команд.
+		:type group: str
 		"""
 
 		self.__SystemObjects: "SystemObjects" = system_objects
+		self.__Group: str = group
 
 		self.__Processors: "dict[str, BaseCommandProcessor]" = {}
 		self.__Commands: list[Command] = []

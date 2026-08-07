@@ -6,8 +6,8 @@ import orjson
 from dublib.cli.terminalyzer import Command, ParsedCommandData, ValidableTypes
 from dublib.functions.filesystem import WriteJSON
 
-from ... import utils
-from ...core import exceptions
+from .... import utils
+from ....core import exceptions
 from ..base_processor import BaseCommandProcessor, PreparedData, ProcessorOptions
 
 #==========================================================================================#

@@ -1,4 +1,3 @@
-
 class BadManifest(Exception):
 	"""Исключение: неверное определение манифеста."""
 
@@ -37,3 +36,16 @@ class ParserNotFound(Exception):
 		"""
 
 		super().__init__(parser_name) 
+
+class ReposError(Exception):
+	"""Исключение: ошибка работы с репозиториями."""
+
+	def __init__(self, message: str):
+		"""
+		Исключение: ошибка работы с репозиториями.
+
+		:param message: Сообщение об ошибке.
+		:type message: str
+		"""
+
+		super().__init__(message) 

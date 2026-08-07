@@ -6,3 +6,6 @@ output
 temp
 # Enviroment variables.
 .env
+# Parsers manager data.
+repositories.txt
+parsers

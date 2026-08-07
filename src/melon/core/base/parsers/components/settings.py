@@ -450,7 +450,7 @@ class ParserSettings:
 
 		Settings: dict = _BASE_SETTINGS.copy()
 		ConfigsPaths: tuple[Path, Path] = (
-			Path(f"Parsers/{self.__ParserName}/settings.json"),
+			Path(f"parsers/{self.__ParserName}/settings.json"),
 			Path(f"{self.__SystemObjects.options.CONFIGS_DIR}/{self.__ParserName}/settings.json")
 		)
 

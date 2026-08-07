@@ -1,22 +1,170 @@
 import io
-import os
 import shutil
+import subprocess
 from difflib import get_close_matches
 from pathlib import Path
-from typing import TYPE_CHECKING, Sequence
-from urllib.parse import urlparse
+from typing import TYPE_CHECKING, Sequence, cast
 
-import validators
-from dulwich import errors
-from dulwich.client import get_transport_and_path
-from dulwich.porcelain import clone, submodule_list
-from dulwich.repo import Repo
+from dulwich import errors, porcelain
+from dulwich.porcelain import clone
 
-from dublib.engine.bus import ExecutionResult
-from dublib.functions.filesystem import ListDir
+from dublib.functions.filesystem import ListDir, ReadTextFile, WriteTextFile
+from dublib.validators import Validator_URL
+
+from ..core import exceptions
 
 if TYPE_CHECKING:
 	from ..core.system_objects import SystemObjects
+
+class Repositories:
+	"""Менеджер репозиториев."""
+
+	#==========================================================================================#
+	# >>>>> СВОЙСТВА <<<<< #
+	#==========================================================================================#
+
+	@property
+	def availabel_parsers(self) -> tuple[str, ...]:
+		"""Последовательность имён доступных в репозиториях парсеров."""
+
+		return tuple(self.__Repositories.keys())
+
+	#==========================================================================================#
+	# >>>>> ПРИВАТНЫЕ МЕТОДЫ <<<<< #
+	#==========================================================================================#
+
+	def __CheckURL(self, url: str, is_available: bool = False) -> str:
+		"""
+		Проверяет валидность URL репозитория.
+
+		:param url: Ссылка на удалённый Git-репозиторий.
+		:type url: str
+		:param is_available: Переключает проверку доступности репозитория.
+		:type is_available: bool
+		:return: Ссылка на удалённый Git-репозиторий.
+		:rtype: str
+		:raises ValidationError: Некорректный URL репозитория.
+		:raises ReposError: Репозиторий недоступен.
+		"""
+
+		url = url.split("?", maxsplit = 1)[0]
+
+		if is_available and not self.__IsRepositoryAvailable(url):
+			raise exceptions.system.ReposError("Remote repository is't available.")
+
+		return Validator_URL.parse(url)
+
+	def __IsRepositoryAvailable(self, url: str) -> bool:
+		"""
+		Проверяет, доступен ли удалённый Git репозиторий.
+
+		:param url: Ссылка на удалённый Git-репозиторий.
+		:type url: str
+		:return: Возвращает `True`, если репозиторий доступен.
+		:rtype: bool
+		"""
+
+		try:
+			porcelain.ls_remote(url)
+			return True
+		except (errors.GitProtocolError, Exception):
+			return False
+
+	#==========================================================================================#
+	# >>>>> ПУБЛИЧНЫЕ МЕТОДЫ <<<<< #
+	#==========================================================================================#
+
+	def __init__(self):
+		"""Менеджер репозиториев."""
+
+		self.__StorageFilePath: Path = Path("repositories.txt")
+		self.__Repositories: dict[str, str] = {}
+
+		self.load()
+
+	def add(self, url: str) -> str:
+		"""
+		Добавляет репозиторий.
+
+		:param url: Ссылка на удалённый Git-репозиторий.
+		:type url: str
+		:raises ReposError: Ошибка работы с репозиториями.
+		:return: Имя парсера, для которого добавлен репозиторий.
+		:rtype: str
+		"""
+
+		url = self.__CheckURL(url, is_available = True)
+		ParserName: str = Path(url).name
+
+		if ParserName in self.__Repositories:
+			raise exceptions.system.ReposError(f"Repository for parser \"{ParserName}\" already exists.")
+
+		self.__Repositories[ParserName] = url
+		self.save()
+
+		return ParserName
+
+	def get(self, parser: str, exception: bool = False) -> str | None:
+		"""
+		Получает репозиторий по имени парсера.
+
+		:param parser: Имя парсера.
+		:type parser: str
+		:param exception: Указывает, нужно ли выбрасывать исключение `KeyError` при неудаче.
+		:type exception: bool
+		:return: URL репозитория.
+		:rtype: str | None
+		:raises KeyError: Репозиторий не найден.
+		"""
+
+		if exception:
+			return self.__Repositories[parser]
+		
+		return self.__Repositories.get(parser)
+
+	def load(self) -> int:
+		"""
+		Загружает установленные репозитории из файла _repositories.txt_.
+
+		:return: Количество загруженных репозиториев.
+		:rtype: int
+		:raises ValidationError: Некорректный URL репозитория.
+		"""
+
+		self.__Repositories.clear()
+		
+		if not self.__StorageFilePath.exists():
+			return 0
+
+		Links: list[str] = ReadTextFile(self.__StorageFilePath, split = True, strip = True)
+		Links = [Element for Element in Links if Element]
+
+		for URL in Links:
+			URL = Validator_URL.parse(URL)
+			Name = Path(URL).name
+			self.__Repositories[Name] = URL
+
+		return len(self.__Repositories.keys())
+
+	def remove(self, parser: str):
+		"""
+		Удаляет репозиторий.
+
+		:param parser: Имя парсера.
+		:type parser: str
+		:raises ReposError: Репозиторий не найден.
+		"""
+
+		if parser not in self.__Repositories:
+			raise exceptions.system.ReposError(f"Repository for parser \"{parser}\" not found.")
+
+		del self.__Repositories[parser]
+		self.save()
+
+	def save(self):
+		"""Сохраняет репозитории в файл _repositories.txt_."""
+
+		WriteTextFile(self.__StorageFilePath, tuple(self.__Repositories.values()))
 
 class ParsersManager:
 	"""Менеджер парсеров."""
@@ -26,41 +174,21 @@ class ParsersManager:
 	#==========================================================================================#
 
 	@property
-	def available_parsers(self) -> list[str]:
-		"""Список имён доступных в репозиториях парсеров."""
-
-		ParserNames = []
-
-		for Repository in self.__Repositories:
-			ParserNames.append(Path(Repository).name)
-
-		return ParserNames
-
-	@property
-	def installed_parsers(self) -> list[str]:
+	def installed_parsers(self) -> tuple[str, ...]:
 		"""Список названий доступных парсеров."""
 
 		ParsersNames = []
 
-		for ParserName in ListDir("Parsers"):
+		for ParserName in ListDir("parsers"):
 			if self.__IsParserValid(ParserName): ParsersNames.append(ParserName)
 
-		return ParsersNames
-	
+		return tuple(ParsersNames)
+
 	@property
-	def repositories(self) -> list[str]:
-		"""Список репозиториев парсеров."""
+	def repositories(self) -> Repositories:
+		"""Менеджер репозиториев."""
 
-		return self.__Repositories.copy()
-	
-	@property
-	def submoduled_parsers(self) -> list[str]:
-		"""Список парсеров, поставляемых в качестве подмодулей."""
-
-		ParsersNames = []
-		for SubmoduleData in submodule_list(self.__MelonRepo): ParsersNames.append(Path(SubmoduleData[0]).name)
-
-		return ParsersNames
+		return self.__Repositories
 
 	#==========================================================================================#
 	# >>>>> ПРИВАТНЫЕ МЕТОДЫ <<<<< #
@@ -85,41 +213,24 @@ class ParsersManager:
 		
 		return None
 
-	def __GetRepositoryOwner(self, link: str) -> str:
+	def __InstallRequirements(self, parser: str):
 		"""
-		Получает имя владельца репозитория.
+		Устанавливает зависимости парсера.
 
-		:param link: Ссылка на Git репозиторий.
-		:type link: str
-		:return: Имя владельца.
-		:rtype: str
+		:param parser: Имя парсера.
+		:type parser: str
 		"""
 
-		PathString = urlparse(link).path.strip("/")
-		Owner, _ = PathString.split("/", 1)
+		RequirementsPath: Path = Path(f"parsers/{parser}/requirements.txt")
 
-		return Owner
+		if not RequirementsPath.exists():
+			return
 
-	def __IsLinkToGitRepository(self, url: str) -> bool:
-		"""
-		Проверяет, ссылается ли ссылка на Git-репозиторий.
-
-		:param url: Проверяемая ссылка.
-		:type url: str
-		:return: Возвращает `True` в случае успеха.
-		:rtype: bool
-		"""
-
-		try:
-			Client, Path = get_transport_and_path(url)
-			Client.get_refs(Path.encode())
-			return True
-		
-		except errors.GitProtocolError: return False
+		subprocess.run(("uv", "pip", "install", "-r", RequirementsPath.as_posix()), check = True)
 
 	def __IsParserValid(self, parser: str) -> bool:
 		"""
-		Проверяет валидность парсера.
+		Проверяет валидность парсера методом оценки файловой структуры.
 
 		:param parser: Имя парсера.
 		:type parser: str
@@ -127,9 +238,12 @@ class ParsersManager:
 		:rtype: bool
 		"""
 
-		if not bool(Path(f"Parsers/{parser}").iterdir()): return False
-
-		return True
+		return all((
+			Path(f"parsers/{parser}").exists(),
+			Path(f"parsers/{parser}/manifest.json").exists(),
+			Path(f"parsers/{parser}/__init__.json").exists(),
+			Path(f"parsers/{parser}/manga.json").exists() or Path(f"parsers/{parser}/ranobe.json").exists()
+		))
 
 	#==========================================================================================#
 	# >>>>> ПУБЛИЧНЫЕ БАЗОВЫЕ МЕТОДЫ <<<<< #
@@ -145,23 +259,8 @@ class ParsersManager:
 
 		self.__SystemObjects: "SystemObjects" = system_objects
 
-		self.__MelonRepo = Repo("")
-		self.__Repositories: list[str] = []
-
-	def add_repository(self, url: str):
-		"""
-		Добавляет репозиторий.
-
-		:param url: Ссылка Git-репозиторий парсера.
-		:type url: str
-		:raises ValueError: Выбрасывается при некорректной ссылке на репозиторий.
-		"""
-
-		if not validators.url(url): return ValueError("Incorrect repository URL.")
-		if not self.__IsLinkToGitRepository(url): raise ValueError("No git repository found by URL.")
-
-		if url not in self.__Repositories: self.__Repositories.append(url)
-
+		self.__Repositories: Repositories = Repositories()
+		
 	def delete(self, parser: str, clear: bool = False):
 		"""
 		Удаляет парсер.
@@ -172,106 +271,48 @@ class ParsersManager:
 		:type clear: bool
 		"""
 
-		DirectoriesToRemove = [f"Parsers/{parser}"]
-		if clear: DirectoriesToRemove += [f"{self.__SystemObjects.options.CONFIGS_DIR}/{parser}", f"{self.__SystemObjects.options.TEMP_DIR}/{parser}"]
+		DirectoriesToRemove = [Path(f"parsers/{parser}")]
+
+		if clear:
+			DirectoriesToRemove += [
+				Path(f"{self.__SystemObjects.options.CONFIGS_DIR}/{parser}"),
+				Path(f"{self.__SystemObjects.options.TEMP_DIR}/{parser}")
+			]
 
 		for Directory in DirectoriesToRemove:
-			if os.path.exists(Directory): shutil.rmtree(Directory)
+			if Directory.exists():
+				shutil.rmtree(Directory)
 
-	def get_owner_repositories(self, owner: str) -> list[str]:
+	def install_by_name(self, parser: str):
 		"""
-		Возвращает список репозиториев, принадлежащих одному владельцу.
-
-		:param owner: Имя владельца.
-		:type owner: str
-		:return: Список ссылок на Git репозитории.
-		:rtype: list[str]
-		"""
-
-		return [Repository for Repository in self.__Repositories if self.__GetRepositoryOwner(Repository) == owner]
-
-	def get_parser_repository(self, parser: str) -> str | None:
-		"""
-		Вовзращает URL репозитория парсера при его наличии.
+		Устанавливает парсер по его имени.
 
 		:param parser: Имя парсера.
 		:type parser: str
-		:return: URL репозитория или `None` в случае неудачи.
-		:rtype: str | None
+		:raises ReposError: Репозиторий парсера не найден.
 		"""
 
-		for Repository in self.__Repositories:
-			if Path(Repository).name == parser:
-				return Repository
-			
-		return None
+		URL: str | None = self.__Repositories.get(parser)
 
-	def install(self, parser: str) -> ExecutionResult:
+		if not URL:
+			raise exceptions.system.ReposError(f"Repository for \"{parser}\" not found.")
+
+		self.install_by_url(URL)
+
+	def install_by_url(self, url: str):
 		"""
-		Выполняет установку парсера.
+		Устанавливает парсер по ссылке на репозиторий.
 
-		:param parser: Имя парсера.
-		:type parser: str
-		:return: Результат установки, содержащий уведомления процесса и состояние успеха.
-		:rtype: ExecutionResult
-		"""
-
-		Status = ExecutionResult()
-		Status.value = False
-
-		Repository = self.get_parser_repository(parser)
-
-		if parser in self.installed_parsers:
-			Status.messages.push_info("Parser already installed.")
-			Status.value = True
-			return Status
-		
-		if parser not in self.available_parsers or not Repository:
-			Status.messages.push_error("Repository not found.")
-			return Status
-
-		try:
-			clone(Repository, f"Parsers/{parser}", errstream = io.BytesIO(), recurse_submodules = True)
-			Status.value = True
-
-		except Exception as ExceptionData: Status.messages.push_error(str(ExceptionData))
-
-		return Status
-
-	def is_parser_installed(self, parser: str) -> bool:
-		"""
-		Проверяет наличие парсера в системе.
-
-		:param parser: Имя парсера.
-		:type parser: str
-		:return: Возвращает `True`, если парсер найден в системе.
-		:rtype: bool
+		:param url: Ссылка на удалённый Git-репозиторий.
+		:type url: str
 		"""
 
-		return parser in self.installed_parsers
-	
-	#==========================================================================================#
-	# >>>>> ПУБЛИЧНЫЕ РАСШИРЕННЫЕ МЕТОДЫ <<<<< #
-	#==========================================================================================#
+		ParserName: str | None = self.__Repositories.get(url)
 
-	def install_by_url(self, link: str) -> ExecutionResult:
-		"""
-		Устанавливает парсер по ссылке на его удалённый Git репозиторий.
+		if not ParserName:
+			ParserName = self.__Repositories.add(url)
 
-		:param link: Ссылка на удалённый Git репозиторий.
-		:type link: str
-		:return: Результат установки.
-		:rtype: ExecutionResult
-		"""
+		ParserName = cast(str, ParserName)
 
-		Status = ExecutionResult()
-		Status.value = False
-
-		try: self.add_repository(link)
-		except ValueError:
-			Status.messages.push_error("Link isn't supported Git protocol.")
-			return Status
-		
-		Status += self.install(Path(link).name)
-
-		return Status
+		clone(url, f"parsers/{ParserName}", errstream = io.BytesIO(), recurse_submodules = True)
+		self.__InstallRequirements(ParserName)

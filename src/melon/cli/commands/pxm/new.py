@@ -2,8 +2,8 @@ from dataclasses import dataclass
 
 from dublib.cli.terminalyzer import Command, ParsedCommandData, ValidableTypes
 
-from ... import utils
-from ...core.base.parsers.components.manifest import ContentTypes
+from .... import utils
+from ....core.base.parsers.components.manifest import ContentTypes
 from ..base_processor import BaseCommandProcessor, PreparedData
 
 #==========================================================================================#

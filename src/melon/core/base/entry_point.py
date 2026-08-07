@@ -85,7 +85,7 @@ class BaseEntryPoint:
 		"""Версия парсера."""
 
 		try:
-			ParserTags = porcelain.tag_list(f"Parsers/{self._Manifest.parser_name}")
+			ParserTags = porcelain.tag_list(f"parsers/{self._Manifest.parser_name}")
 		except errors.NotGitRepository:
 			return None
 		

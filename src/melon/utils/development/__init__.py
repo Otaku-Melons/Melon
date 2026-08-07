@@ -121,12 +121,8 @@ class DevelopmeptAssistant:
 		if domain.startswith("http"): domain = urlparse(domain).netloc
 		content_types = ToSequence(content_types)
 
-		ParsersDirectoryPath = Path("Parsers")
+		ParsersDirectoryPath = Path("parsers")
 		ParsersDirectoryPath.mkdir(exist_ok = True)
-
-		ParsersGitIgnore = ParsersDirectoryPath / ".gitignore"
-		if not ParsersGitIgnore.exists():
-			WriteTextFile(ParsersGitIgnore, "*")
 
 		ParserPath = ParsersDirectoryPath / name
 

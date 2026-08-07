@@ -1,6 +1,6 @@
 from dublib.cli.terminalyzer import Command, ParsedCommandData
 
-from ...core.base.parsers.components.manifest import ContentTypes
+from ....core.base.parsers.components.manifest import ContentTypes
 from ..base_processor import (
 	BaseCommandProcessor,
 	DataclassStub,

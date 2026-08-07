@@ -133,7 +133,7 @@ class ParserManifest:
 		self.__SystemObjects = system_objects
 		self.__ParserName = parser_name
 
-		self.__Data = ReadJSON(f"Parsers/{self.__ParserName}/manifest.json")
+		self.__Data = ReadJSON(f"parsers/{self.__ParserName}/manifest.json")
 		self.__Validate()
 
 		self.__Mirror: str | None = None
