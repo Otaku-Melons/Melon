@@ -3,7 +3,7 @@ import sys
 from importlib import resources
 from typing import TYPE_CHECKING, cast
 
-from dublib.CLI.Terminalyzer import Command, ParsedCommandData, Terminalyzer
+from dublib.cli.terminalyzer import Command, ParsedCommandData, Terminalyzer
 
 if TYPE_CHECKING:
 	from ..core.system_objects import Printer, SystemObjects

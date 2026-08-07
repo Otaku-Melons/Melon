@@ -3,7 +3,7 @@ from abc import ABC, abstractmethod
 from dataclasses import dataclass
 from typing import TYPE_CHECKING, Any, ClassVar, Generic, Protocol, TypeVar
 
-from dublib.CLI.Terminalyzer import Command, ParsedCommandData, ValidableTypes
+from dublib.cli.terminalyzer import Command, ParsedCommandData, ValidableTypes
 
 from .. import utils
 from ..core import exceptions

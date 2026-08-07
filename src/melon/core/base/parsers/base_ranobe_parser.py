@@ -1,7 +1,7 @@
 from time import sleep
 from typing import cast
 
-from dublib.Functions.Decorators import run_before_method
+from dublib.functions.decorators import run_before_method
 
 from ....core import exceptions
 from ....core.base.formats.ranobe import Chapter, Ranobe

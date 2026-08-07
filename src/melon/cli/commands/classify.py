@@ -3,8 +3,8 @@ from pathlib import Path
 
 import orjson
 
-from dublib.CLI.Terminalyzer import Command, ParsedCommandData, ValidableTypes
-from dublib.Functions.Filesystem import WriteJSON
+from dublib.cli.terminalyzer import Command, ParsedCommandData, ValidableTypes
+from dublib.functions.filesystem import WriteJSON
 
 from ... import utils
 from ...core import exceptions

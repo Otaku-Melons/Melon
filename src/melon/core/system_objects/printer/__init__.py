@@ -1,7 +1,7 @@
 from typing import TYPE_CHECKING
 
-from dublib.CLI.Templates.Bus import GenerateMessage, MessagesTypes
-from dublib.CLI.TextStyler import GetStyledTextFromHTML
+from dublib.cli.templates.bus import GenerateMessage, MessagesTypes
+from dublib.cli.text_styler import GetStyledTextFromHTML
 
 from .portals import Portals
 from .stages import Stages

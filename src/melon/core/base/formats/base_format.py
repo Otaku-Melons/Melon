@@ -8,13 +8,13 @@ from typing import TYPE_CHECKING, Any, Sequence, cast
 
 import orjson
 
-from dublib.Functions.Data import (
+from dublib.functions.data import (
 	InsertDictionaryAfterKey,
 	RemoveRecurringSubstrings,
 	Zerotify,
 )
-from dublib.Functions.Filesystem import ReadJSON, WriteJSON
-from dublib.Validators import Validator_Domain
+from dublib.functions.filesystem import ReadJSON, WriteJSON
+from dublib.validators import Validator_Domain
 
 from ....core import exceptions
 from ....core.base.parsers.components.images_downloader import ImageData

@@ -1,7 +1,7 @@
 from dataclasses import dataclass
 
-from dublib.CLI.Terminalyzer import Command, ParsedCommandData, ValidableTypes
-from dublib.CLI.TextStyler import GetStyledTextFromHTML
+from dublib.cli.terminalyzer import Command, ParsedCommandData, ValidableTypes
+from dublib.cli.text_styler import GetStyledTextFromHTML
 
 from ... import utils
 from ..base_processor import (

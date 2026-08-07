@@ -9,7 +9,7 @@ authors = [
 requires-python = ">=3.12"
 dependencies = [
 	"beautifulsoup4",
-	"dublib==0.29.0",
+	"dublib @ git+https://github.com/DUB1401/dublib",
 	"dulwich>=1.2.6",
 	"EbookLib",
 	"img2pdf",

@@ -6,9 +6,9 @@ from urllib.parse import urlparse
 
 from dulwich.repo import Repo
 
-from dublib.Engine.Patcher import Patch
-from dublib.Functions.Data import ToSequence
-from dublib.Functions.Filesystem import WriteJSON, WriteTextFile
+from dublib.engine.patcher import Patch
+from dublib.functions.data import ToSequence
+from dublib.functions.filesystem import WriteJSON, WriteTextFile
 
 from ...core import exceptions
 from ...core.base.parsers.components.manifest import _BASE_MANIFEST, ContentTypes

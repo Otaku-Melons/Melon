@@ -2,8 +2,8 @@ import importlib
 from os import PathLike
 from typing import TYPE_CHECKING, Sequence
 
-from dublib.Validators import Validator_Domain, Validator_URL
-from dublib.WebRequestor import WebConfig, WebLibs, WebRequestor
+from dublib.validators import Validator_Domain, Validator_URL
+from dublib.web_requestor import WebConfig, WebLibs, WebRequestor
 
 from ...core import exceptions
 from ...core.base.parsers.components.images_downloader import (

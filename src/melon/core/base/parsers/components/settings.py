@@ -5,9 +5,9 @@ from time import sleep
 from types import MappingProxyType
 from typing import TYPE_CHECKING, Any, Literal, cast
 
-from dublib.Functions.Data import Zerotify
-from dublib.Functions.Filesystem import ReadJSON
-from dublib.WebRequestor import Proxy
+from dublib.functions.data import Zerotify
+from dublib.functions.filesystem import ReadJSON
+from dublib.web_requestor import Proxy
 
 if TYPE_CHECKING:
 	from .....core.system_objects import SystemObjects

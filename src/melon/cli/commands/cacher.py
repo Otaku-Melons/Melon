@@ -1,6 +1,6 @@
 from dataclasses import dataclass
 
-from dublib.CLI.Terminalyzer import Command, ParsedCommandData
+from dublib.cli.terminalyzer import Command, ParsedCommandData
 
 from ... import utils
 from ..base_processor import (

@@ -1,6 +1,6 @@
 from typing import Sequence
 
-from dublib.WebRequestor import WebRequestor
+from dublib.web_requestor import WebRequestor
 
 from ...core.base.parsers.components.images_downloader import ImageDownloadingResult
 from ...core.base.source_operator import BaseSourceOperator

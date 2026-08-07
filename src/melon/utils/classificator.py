@@ -5,7 +5,7 @@ from os import PathLike
 from pathlib import Path
 from typing import Literal, Sequence, cast
 
-from dublib.Functions.Filesystem import ReadTextFile
+from dublib.functions.filesystem import ReadTextFile
 
 from ..core.exceptions.utils import classificator as classificator_exceptions
 

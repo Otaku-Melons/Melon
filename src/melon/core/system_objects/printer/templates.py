@@ -2,13 +2,12 @@ from typing import TYPE_CHECKING
 
 from prettytable import PLAIN_COLUMNS, PrettyTable
 
-from dublib.CLI.TextStyler import FastStyler
-from dublib.Functions.Data import StringifyFloat
+from dublib.cli.text_styler import FastStyler
+from dublib.functions.data import StringifyFloat
 
 if TYPE_CHECKING:
-	from Source.Utils.Cacher import CachingResult
-	from Source.Utils.Classificator import ClassificationResult
-
+	from ....utils.cacher import CachingResult
+	from ....utils.classificator import ClassificationResult
 	from . import Printer
 
 class Templates:

@@ -1,4 +1,4 @@
-from dublib.CLI.Terminalyzer import Command, ParsedCommandData
+from dublib.cli.terminalyzer import Command, ParsedCommandData
 
 from ...core.base.parsers.components.manifest import ContentTypes
 from ..base_processor import (

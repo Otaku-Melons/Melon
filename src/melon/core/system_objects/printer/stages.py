@@ -2,8 +2,7 @@
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
-	from Source.core.base.formats.BaseFormat import BaseChapter, BaseTitle
-
+	from ....core.base.formats.base_format import BaseChapter, BaseTitle
 	from . import Printer
 
 class Stages:

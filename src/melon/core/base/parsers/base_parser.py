@@ -3,7 +3,7 @@ from enum import Enum
 from pathlib import Path
 from typing import TYPE_CHECKING, Any, Sequence, cast
 
-from dublib.Functions.Decorators import run_before_method
+from dublib.functions.decorators import run_before_method
 
 from ....core import exceptions
 from ....core.base.formats.base_format import BaseBranch, BaseTitle
@@ -15,7 +15,7 @@ from ....core.base.parsers.components.images_downloader import (
 from .components.words_dictionary import WordsDictionary, presets
 
 if TYPE_CHECKING:
-	from dublib.WebRequestor import WebRequestor
+	from dublib.web_requestor import WebRequestor
 
 	from ....core.base.parsers.components import ParserManifest, ParserSettings
 	from ....core.base.source_operator import BaseSourceOperator

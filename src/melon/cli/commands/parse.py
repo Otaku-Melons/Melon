@@ -4,8 +4,8 @@ from enum import Enum
 from json import JSONDecodeError
 from typing import TYPE_CHECKING
 
-from dublib.CLI.Terminalyzer import Command, ParsedCommandData, ValidableTypes
-from dublib.CLI.TextStyler import GetStyledTextFromHTML
+from dublib.cli.terminalyzer import Command, ParsedCommandData, ValidableTypes
+from dublib.cli.text_styler import GetStyledTextFromHTML
 
 from ... import utils
 from ...core import exceptions

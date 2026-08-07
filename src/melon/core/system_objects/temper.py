@@ -3,7 +3,7 @@ import shutil
 from pathlib import Path
 from typing import TYPE_CHECKING, Sequence
 
-from dublib.Functions.Filesystem import ReadJSON, RemoveDirectoryContent, WriteJSON
+from dublib.functions.filesystem import ReadJSON, RemoveDirectoryContent, WriteJSON
 
 if TYPE_CHECKING:
 	from ...core.system_objects import SystemObjects

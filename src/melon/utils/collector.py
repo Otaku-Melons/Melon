@@ -2,8 +2,8 @@ import os
 from json import JSONDecodeError
 from typing import TYPE_CHECKING, Sequence
 
-from dublib.Functions.Data import ToSequence
-from dublib.Functions.Filesystem import ReadJSON, ReadTextFile, WriteTextFile
+from dublib.functions.data import ToSequence
+from dublib.functions.filesystem import ReadJSON, ReadTextFile, WriteTextFile
 
 from ..core import exceptions
 

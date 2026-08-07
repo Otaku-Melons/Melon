@@ -2,7 +2,7 @@ import os
 from dataclasses import dataclass
 from typing import TYPE_CHECKING
 
-from dublib.Functions.Filesystem import ReadJSON
+from dublib.functions.filesystem import ReadJSON
 
 from ..core import exceptions
 

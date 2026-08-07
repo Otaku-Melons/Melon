@@ -1,7 +1,6 @@
 from dataclasses import dataclass
-from pathlib import Path
 
-from dublib.CLI.Terminalyzer import Command, ParsedCommandData, ValidableTypes
+from dublib.cli.terminalyzer import Command, ParsedCommandData, ValidableTypes
 
 from ... import utils
 from ...core.base.parsers.components.manifest import ContentTypes

@@ -1,7 +1,7 @@
 import os
 import sys
 
-from dublib.Functions.System import CheckPythonMinimalVersion
+from dublib.functions.system import CheckPythonMinimalVersion
 
 from .cli import CommandsOrchestrator
 from .core.system_objects import SystemObjects

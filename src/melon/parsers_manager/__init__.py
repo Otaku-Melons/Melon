@@ -12,11 +12,11 @@ from dulwich.client import get_transport_and_path
 from dulwich.porcelain import clone, submodule_list
 from dulwich.repo import Repo
 
-from dublib.Engine.Bus import ExecutionResult
-from dublib.Functions.Filesystem import ListDir
+from dublib.engine.bus import ExecutionResult
+from dublib.functions.filesystem import ListDir
 
 if TYPE_CHECKING:
-	from ...core.system_objects import SystemObjects
+	from ..core.system_objects import SystemObjects
 
 class ParsersManager:
 	"""Менеджер парсеров."""

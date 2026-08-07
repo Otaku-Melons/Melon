@@ -2,7 +2,7 @@ import sys
 from dataclasses import dataclass
 from typing import Literal, cast
 
-from dublib.CLI.Terminalyzer import Command, ParsedCommandData, ValidableTypes
+from dublib.cli.terminalyzer import Command, ParsedCommandData, ValidableTypes
 
 from ...core.base.formats.components.enums import By
 from ...core.builders.manga_builder import MangaBuilder, MangaOutputFormats

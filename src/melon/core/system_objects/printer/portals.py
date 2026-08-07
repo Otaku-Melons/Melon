@@ -1,6 +1,6 @@
 from typing import TYPE_CHECKING
 
-from dublib.WebRequestor import WebResponse
+from dublib.web_requestor import WebResponse
 
 from ....core import exceptions
 

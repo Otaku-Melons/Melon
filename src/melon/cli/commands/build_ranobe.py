@@ -1,7 +1,7 @@
 import sys
 from dataclasses import dataclass
 
-from dublib.CLI.Terminalyzer import Command, ParsedCommandData, ValidableTypes
+from dublib.cli.terminalyzer import Command, ParsedCommandData, ValidableTypes
 
 from ...core.base.formats.components.enums import By
 from ...core.builders.ranobe_builder import RanobeBuilder

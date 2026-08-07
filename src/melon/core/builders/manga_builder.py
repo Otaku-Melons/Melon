@@ -8,9 +8,9 @@ from typing import TYPE_CHECKING, cast
 
 import img2pdf
 
-from dublib.CLI.TextStyler import FastStyler
-from dublib.Functions.Data import StringifyFloat
-from dublib.Functions.Filesystem import ListDir
+from dublib.cli.text_styler import FastStyler
+from dublib.functions.data import StringifyFloat
+from dublib.functions.filesystem import ListDir
 
 from ...core import exceptions
 from ...core.base.builder import BaseBuilder
