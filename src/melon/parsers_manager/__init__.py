@@ -309,7 +309,7 @@ class ParsersManager:
 
 		self.__Repositories: Repositories = Repositories()
 
-	def clone_parser(self, parser_name: str, hide_output: bool = False) -> bool:
+	def clone_parser(self, parser_name: str, hide_output: bool = True) -> bool:
 		"""
 		Клонирует файлы парсера из репозитория.
 
@@ -320,6 +320,10 @@ class ParsersManager:
 		:return: Возвращает `True`, если парсер успешно клонирован, и `False`, если репозиторий не найден.
 		:rtype: bool
 		"""
+
+		ParsersRootModulePath: Path = Path("parsers")
+		ParsersRootModulePath.mkdir(exist_ok = True)
+
 		RepositoryURL: str | None = self.__Repositories.get(parser_name)
 		if not RepositoryURL: return False
 
