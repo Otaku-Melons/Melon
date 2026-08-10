@@ -238,7 +238,13 @@ class BaseCommandProcessor(ABC, Generic[_PARAMS]):
 
 		self._Command.base.add_key("--mirror", type = ValidableTypes.Domain, description = "Source mirror to requests.")
 
-	def _AddParserPosition(self, multiple: bool = False):
+	def _AddParserPositionForPXM(self):
+		"""Добавляет позицию имени парсера, используюмую **pxm**."""
+
+		ComPos = self._Command.create_position("PARSER", "Parser name.", important = True)
+		ComPos.set_argument()
+
+	def _AddParserUsePosition(self, multiple: bool = False):
 		"""
 		Добавляет позицию для имени парсера(ов).
 

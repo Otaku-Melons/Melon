@@ -57,7 +57,7 @@ class CommandProcessor(BaseCommandProcessor[Parameters]):
 		:rtype: Command
 		"""
 
-		self._AddParserPosition()
+		self._AddParserUsePosition()
 		self._AddForceModeFlag()
 
 		command.base.add_flag("-local", description = "Scan local titles and put into collection.")

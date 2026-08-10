@@ -56,7 +56,7 @@ class CommandProcessor(BaseCommandProcessor[Parameters]):
 		ComPos.add_key("--branch", type = ValidableTypes.UnsignedInteger, description = "Branch ID.")
 		ComPos.add_key("--chapter", type = ValidableTypes.UnsignedInteger, description = "Chapter ID.")
 
-		self._AddParserPosition()
+		self._AddParserUsePosition()
 
 		self._AddMirrorKey()
 

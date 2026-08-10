@@ -4,11 +4,12 @@ import subprocess
 from difflib import get_close_matches
 from enum import Enum
 from pathlib import Path
-from typing import TYPE_CHECKING, Sequence
+from typing import TYPE_CHECKING, Literal, Sequence, overload
+from urllib.parse import urlparse
 
 from deepmerge import always_merger
 from dulwich import errors, porcelain
-from dulwich.porcelain import clone
+from dulwich.porcelain import clone, default_bytes_err_stream
 
 from dublib.functions.filesystem import (
 	ListDir,
@@ -32,9 +33,10 @@ if TYPE_CHECKING:
 class ConfigInstallationResult(Enum):
 	"""Результат установки конфигурации."""
 
-	Installed = 0
-	Overwtitted = 1
-	Skipped = 2
+	Missing = 0
+	Installed = 1
+	AlreadyExists = 2
+	Overwtitten = 3
 
 #==========================================================================================#
 # >>>>> ВСПОМОГАТЕЛЬНЫЕ СТРУКТУРЫ ДАННЫХ <<<<< #
@@ -106,27 +108,36 @@ class Repositories:
 
 		self.load()
 
-	def add(self, url: str) -> str:
+	def add(self, url: str, exists_ok: bool = False) -> str:
 		"""
 		Добавляет репозиторий.
 
 		:param url: Ссылка на удалённый Git-репозиторий.
 		:type url: str
-		:raises ReposError: Ошибка работы с репозиториями.
+		:param exists_ok: Если включено, попытка установки уже установленного репозитория будет считаться нормальным поведением.
+		:type exists_ok: bool
 		:return: Имя парсера, для которого добавлен репозиторий.
 		:rtype: str
+		:raises ReposError: Ошибка работы с репозиториями.
 		"""
 
 		url = self.__CheckURL(url, is_available = True)
-		ParserName: str = Path(url).name
+		ParserName: str = self.get_parser_name_from_repository_url(url)
 
 		if ParserName in self.__Repositories:
-			raise exceptions.system.ReposError(f"Repository for parser \"{ParserName}\" already exists.")
+			if not exists_ok: raise exceptions.system.ReposError(f"Repository for parser \"{ParserName}\" already exists.")
+			return ParserName
 
 		self.__Repositories[ParserName] = url
 		self.save()
 
 		return ParserName
+
+	@overload
+	def get(self, parser: str, exception: Literal[True]) -> str: ...
+
+	@overload
+	def get(self, parser: str, exception: Literal[False] = False) -> str | None: ...
 
 	def get(self, parser: str, exception: bool = False) -> str | None:
 		"""
@@ -138,13 +149,32 @@ class Repositories:
 		:type exception: bool
 		:return: URL репозитория.
 		:rtype: str | None
-		:raises KeyError: Репозиторий не найден.
+		:raises ReposError: Репозиторий не найден.
 		"""
 
-		if exception:
-			return self.__Repositories[parser]
+		RepositoryURL: str | None = self.__Repositories.get(parser)
+
+		if not RepositoryURL and exception:
+			raise exceptions.system.ReposError(f"Repository for parser \"{parser}\" not found.")
 		
-		return self.__Repositories.get(parser)
+		return RepositoryURL
+
+	def get_parser_name_from_repository_url(self, url: str) -> str:
+		"""
+		Возвращает имя парсера по ссылке на его Git репозиторий.
+
+		:param url: Ссылка на удалённый Git-репозиторий.
+		:type url: str
+		:return: Имя парсера.
+		:rtype: str
+		:raises ValidationError: Передан некорректный URL.
+		"""
+		
+		url = Validator_URL.parse(url)
+		URL: str = urlparse(url).path
+		ParserName: str = Path(URL).name
+
+		return ParserName
 
 	def load(self) -> int:
 		"""
@@ -188,7 +218,7 @@ class Repositories:
 	def save(self):
 		"""Сохраняет репозитории в файл _repositories.txt_."""
 
-		WriteTextFile(self.__StorageFilePath, tuple(self.__Repositories.values()))
+		WriteTextFile(self.__StorageFilePath, tuple(sorted(self.__Repositories.values())))
 
 #==========================================================================================#
 # >>>>> ОСНОВНОЙ КЛАСС <<<<< #
@@ -215,12 +245,7 @@ class ParsersManager:
 	def installed_parsers(self) -> tuple[str, ...]:
 		"""Список названий доступных парсеров."""
 
-		ParsersNames = []
-
-		for ParserName in ListDir("parsers"):
-			if self.__IsParserValid(ParserName): ParsersNames.append(ParserName)
-
-		return tuple(ParsersNames)
+		return tuple(ListDir("parsers"))
 
 	@property
 	def repositories(self) -> Repositories:
@@ -251,56 +276,6 @@ class ParsersManager:
 		
 		return None
 
-	def __InstallConfig(self, parser: str, force_mode: bool = False) -> ConfigInstallationResult:
-		"""
-		Устанавливает зависимости парсера.
-
-		:param parser: Имя парсера.
-		:type parser: str
-		:param force_mode: Переключает режим перезаписи
-		:type force_mode: bool
-		:return: Результат установки конфигурации.
-		:rtype: ConfigInstallationResult
-		"""
-
-		Result: ConfigInstallationResult = ConfigInstallationResult.Skipped
-
-		Config: dict = _BASE_SETTINGS.copy()
-		ConfigPresetPath: Path = Path(f"parsers/{parser}/settings.json")
-		ConfigStoragePath: Path = Path(f"{self.__SystemObjects.options.CONFIGS_DIR}/{parser}")
-		ConfigStoragePath.mkdir(parents = not self.__SystemObjects.options.CONFIGS_DIR.is_overrrided, exist_ok = True)
-		ConfigTargetFile: Path = ConfigStoragePath / "settings.json"
-
-		if ConfigPresetPath.exists():
-			Buffer: dict = ReadJSON(ConfigPresetPath)
-			Config = always_merger.merge(Config, Buffer)
-
-		WriteJSON(ConfigTargetFile, Config)
-
-		return Result
-
-	def __InstallRequirements(self, parser: str) -> int:
-		"""
-		Устанавливает зависимости парсера.
-
-		:param parser: Имя парсера.
-		:type parser: str
-		:return: Количество установленных пакетов зависимостей.
-		:rtype: int
-		"""
-
-		RequirementsPath: Path = Path(f"parsers/{parser}/requirements.txt")
-
-		if not RequirementsPath.exists():
-			return 0
-
-		subprocess.run(("uv", "pip", "install", "-r", RequirementsPath.as_posix()), check = True)
-
-		Requirements: list[str] = ReadTextFile(RequirementsPath, split = True, strip = True)
-		Requirements = [Element for Element in Requirements if Element]
-
-		return len(Requirements)
-
 	def __IsParserValid(self, parser: str) -> bool:
 		"""
 		Проверяет валидность парсера методом оценки файловой структуры.
@@ -314,8 +289,8 @@ class ParsersManager:
 		return all((
 			Path(f"parsers/{parser}").exists(),
 			Path(f"parsers/{parser}/manifest.json").exists(),
-			Path(f"parsers/{parser}/__init__.json").exists(),
-			Path(f"parsers/{parser}/manga.json").exists() or Path(f"parsers/{parser}/ranobe.json").exists()
+			Path(f"parsers/{parser}/__init__.py").exists(),
+			Path(f"parsers/{parser}/manga.py").exists() or Path(f"parsers/{parser}/ranobe.py").exists()
 		))
 
 	#==========================================================================================#
@@ -333,8 +308,90 @@ class ParsersManager:
 		self.__SystemObjects: "SystemObjects" = system_objects
 
 		self.__Repositories: Repositories = Repositories()
+
+	def clone_parser(self, parser_name: str, hide_output: bool = False) -> bool:
+		"""
+		Клонирует файлы парсера из репозитория.
+
+		:param parser_name: Имя парсера.
+		:type parser_name: str
+		:param hide_output: Указывает, перехватывать ли вывод в терминал из библиотеки клонирования.
+		:type hide_output: bool
+		:return: Возвращает `True`, если парсер успешно клонирован, и `False`, если репозиторий не найден.
+		:rtype: bool
+		"""
+		RepositoryURL: str | None = self.__Repositories.get(parser_name)
+		if not RepositoryURL: return False
+
+		Repository = clone(
+			source = RepositoryURL,
+			target = f"parsers/{parser_name}",
+			errstream = io.BytesIO() if hide_output else default_bytes_err_stream,
+			recurse_submodules = True
+		)
+
+		return bool(Repository)
 		
-	def delete(self, parser: str, clear: bool = False):
+	def install_config(self, parser: str, force_mode: bool = False) -> ConfigInstallationResult:
+		"""
+		Устанавливает зависимости парсера.
+
+		:param parser: Имя парсера.
+		:type parser: str
+		:param force_mode: Переключает режим перезаписи
+		:type force_mode: bool
+		:return: Результат установки конфигурации.
+		:rtype: ConfigInstallationResult
+		"""
+
+		Config: dict = _BASE_SETTINGS.copy()
+
+		ConfigStoragePath: Path = Path(f"{self.__SystemObjects.options.CONFIGS_DIR}/{parser}")
+		ConfigStoragePath.mkdir(parents = not self.__SystemObjects.options.CONFIGS_DIR.is_overrrided, exist_ok = True)
+
+		ConfigPresetFilePath: Path = Path(f"parsers/{parser}/settings.json")
+		ConfigStorageFilePath: Path = ConfigStoragePath / "settings.json"
+
+		if ConfigPresetFilePath.exists():
+			Buffer: dict = ReadJSON(ConfigPresetFilePath)
+			Config = always_merger.merge(Config, Buffer)
+		else:
+			return ConfigInstallationResult.Missing
+
+		if ConfigStorageFilePath.exists():
+			if force_mode:
+				WriteJSON(ConfigStorageFilePath, Config)
+				return ConfigInstallationResult.Overwtitten
+			else:
+				return ConfigInstallationResult.AlreadyExists
+
+		WriteJSON(ConfigStorageFilePath, Config)
+
+		return ConfigInstallationResult.Installed
+
+	def install_requirements(self, parser_name: str) -> int:
+		"""
+		Устанавливает зависимости парсера.
+
+		:param parser_name: Имя парсера.
+		:type parser_name: str
+		:return: Количество установленных пакетов зависимостей.
+		:rtype: int
+		"""
+
+		RequirementsPath: Path = Path(f"parsers/{parser_name}/requirements.txt")
+
+		if not RequirementsPath.exists():
+			return 0
+
+		subprocess.run(("uv", "pip", "install", "-r", RequirementsPath.as_posix()), check = True)
+
+		Requirements: list[str] = ReadTextFile(RequirementsPath, split = True, strip = True)
+		Requirements = [Element for Element in Requirements if Element]
+
+		return len(Requirements)
+
+	def uninstall_parser(self, parser_name: str, clear: bool = False):
 		"""
 		Удаляет парсер.
 
@@ -342,52 +399,20 @@ class ParsersManager:
 		:type parser: str
 		:param clear: Указывает, нужно ли удалить временные данные и конфигурацию парсера.
 		:type clear: bool
+		:raises ParserNotFound: Парсер не найден.
 		"""
+		
+		if parser_name not in self.installed_parsers:
+			raise exceptions.system.ParserNotFound(parser_name)
 
-		DirectoriesToRemove = [Path(f"parsers/{parser}")]
+		DirectoriesToRemove = [Path(f"parsers/{parser_name}")]
 
 		if clear:
 			DirectoriesToRemove += [
-				Path(f"{self.__SystemObjects.options.CONFIGS_DIR}/{parser}"),
-				Path(f"{self.__SystemObjects.options.TEMP_DIR}/{parser}")
+				Path(f"{self.__SystemObjects.options.CONFIGS_DIR}/{parser_name}"),
+				Path(f"{self.__SystemObjects.options.TEMP_DIR}/{parser_name}")
 			]
 
 		for Directory in DirectoriesToRemove:
 			if Directory.exists():
 				shutil.rmtree(Directory)
-
-	def install_by_name(self, parser: str):
-		"""
-		Устанавливает парсер по его имени.
-
-		:param parser: Имя парсера.
-		:type parser: str
-		:raises ReposError: Репозиторий парсера не найден.
-		"""
-
-		URL: str | None = self.__Repositories.get(parser)
-
-		if not URL:
-			raise exceptions.system.ReposError(f"Repository for parser \"{parser}\" not found.")
-
-		self.install_by_url(URL)
-
-	def install_by_url(self, url: str):
-		"""
-		Устанавливает парсер по ссылке на репозиторий.
-
-		:param url: Ссылка на удалённый Git-репозиторий.
-		:type url: str
-		"""
-
-		ParserName: str = url.split("/")[-1].split("?", maxsplit = 1)[0]
-		Repository: str | None = self.__Repositories.get(ParserName)
-		if not Repository: self.__Repositories.add(url)
-
-		clone(url, f"parsers/{ParserName}", errstream = io.BytesIO(), recurse_submodules = True)
-		self.printer.emit("Git repository clonned.")
-
-		RequirementsCount: int = self.__InstallRequirements(ParserName)
-		if RequirementsCount: self.printer.emit(f"Installed {RequirementsCount} requirements.")
-
-		self.__InstallConfig(ParserName)

@@ -58,7 +58,7 @@ class CommandProcessor(BaseCommandProcessor[Parameters]):
 		ComPos = command.create_position("FILE", "Filename of local JSON.", important = True)
 		ComPos.set_argument()
 
-		self._AddParserPosition()
+		self._AddParserUsePosition()
 
 		ComPos = command.create_position("TARGET", "Target for building. By default longest branch.")
 		ComPos.add_key("--branch", type = ValidableTypes.UnsignedInteger, description = "Branch ID.")

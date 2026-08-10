@@ -1,17 +1,9 @@
 from dataclasses import dataclass
-from typing import cast
 
-from dublib.cli.templates.bus import PrintError
 from dublib.cli.terminalyzer import Command, ParsedCommandData
-from dublib.validators import Validator_URL
 
-from ....core import exceptions
-from ....parsers_manager import ParsersManager
-from ..base_processor import (
-	BaseCommandProcessor,
-	PreparedData,
-	ProcessorOptions,
-)
+from ....parsers_manager import ConfigInstallationResult, ParsersManager
+from ..base_processor import BaseCommandProcessor, PreparedData
 
 #==========================================================================================#
 # >>>>> ВСПОМОГАТЕЛЬНЫЕ СТРУКТУРЫ ДАННЫХ <<<<< #
@@ -21,7 +13,7 @@ from ..base_processor import (
 class Parameters:
 	"""Параметры, требуемые обработчиком."""
 
-	target: str
+	parser: str
 
 #==========================================================================================#
 # >>>>> ОСНОВНОЙ КЛАСС <<<<< #
@@ -54,8 +46,7 @@ class CommandProcessor(BaseCommandProcessor[Parameters]):
 		:rtype: Command
 		"""
 
-		ComPos = command.create_position("TARGET", "URL of Git repository or parser name if exists.", important = True)
-		ComPos.set_argument()
+		self._AddParserPositionForPXM()
 		
 		return command
 
@@ -71,21 +62,37 @@ class CommandProcessor(BaseCommandProcessor[Parameters]):
 		:rtype: Parameters
 		"""
 
-		Target: str = data.get_important_position_value("TARGET", expected_type = str)
+		Parser: str = data.get_important_position_value("PARSER", expected_type = str)
 
-		return Parameters(target = Target)
+		return Parameters(parser = Parser)
 
 	def _Process(self, parameters: Parameters):
 		"""
 		Выполняет команду.
 
 		:param parameters: Параметры команды.
-		:type parameters: DataclassStub
+		:type parameters: Parameters
 		"""
 
 		Installer = ParsersManager(self.system_objects)
+		RepositoryURL: str | None = Installer.repositories.get(parameters.parser)
 
-		if Validator_URL.validate(parameters.target):
-			Installer.install_by_url(parameters.target)
-		else:
-			Installer.install_by_name(parameters.target)
+		if not RepositoryURL:
+			self.printer.error(f"Repository for parser \"{parameters.parser}\" not found.")
+			return
+
+		self.printer.emit(f"Repository: <i>{RepositoryURL}</i>.")
+
+		Installer.clone_parser(parameters.parser)
+		self.printer.emit(f"Parser clonned.")
+
+		RequirementsCount: int = Installer.install_requirements(parameters.parser)
+		if RequirementsCount: self.printer.emit(f"Installed {RequirementsCount} requirements.")
+
+		Result: ConfigInstallationResult = Installer.install_config(parameters.parser)
+		
+		match Result:
+			case ConfigInstallationResult.Missing: self.printer.emit("Parser doesn't provide configuration.")
+			case ConfigInstallationResult.Installed: self.printer.emit("Parser configuration installed.")
+			case ConfigInstallationResult.AlreadyExists: self.printer.emit("Parser configuration already exists. Skipped.")
+			case ConfigInstallationResult.Overwtitten: self.printer.emit("Parser configuration overwritten.")

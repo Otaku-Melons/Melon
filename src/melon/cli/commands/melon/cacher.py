@@ -50,7 +50,7 @@ class CommandProcessor(BaseCommandProcessor[Parameters]):
 		:rtype: Command
 		"""
 
-		self._AddParserPosition(multiple = True)
+		self._AddParserUsePosition(multiple = True)
 
 		return command
 

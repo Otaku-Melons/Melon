@@ -53,7 +53,7 @@ class CommandProcessor(BaseCommandProcessor[Parameters]):
 		ComPos = command.create_position("SLUG", "Title slug.")
 		ComPos.set_argument()
 
-		self._AddParserPosition(multiple = True)
+		self._AddParserUsePosition(multiple = True)
 
 		command.base.add_flag("-all", description = "Print all search results instead only first.")
 

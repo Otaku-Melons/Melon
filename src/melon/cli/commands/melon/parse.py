@@ -278,7 +278,7 @@ class CommandProcessor(BaseCommandProcessor[Parameters]):
 		ComPos.add_flag("-updates", description = "Parse titles updated for last 24 hours. Use key \"--period\" to change it.")
 		ComPos.add_flag("-last", description = "Parse last parsed title.")
 
-		self._AddParserPosition()
+		self._AddParserUsePosition()
 
 		self._AddForceModeFlag()
 
