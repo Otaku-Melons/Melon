@@ -92,7 +92,7 @@ class CommandProcessor(BaseCommandProcessor[Parameters]):
 		Result: ConfigInstallationResult = Installer.install_config(parameters.parser)
 		
 		match Result:
-			case ConfigInstallationResult.Missing: self.printer.emit("Parser doesn't provide configuration.")
-			case ConfigInstallationResult.Installed: self.printer.emit("Parser configuration installed.")
-			case ConfigInstallationResult.AlreadyExists: self.printer.emit("Parser configuration already exists. Skipped.")
-			case ConfigInstallationResult.Overwtitten: self.printer.emit("Parser configuration overwritten.")
+			case ConfigInstallationResult.Missing: self.printer.emit("Configuration missing. Skipped.")
+			case ConfigInstallationResult.Installed: self.printer.emit("Configuration installed.")
+			case ConfigInstallationResult.AlreadyExists: self.printer.emit("Configuration already exists. Skipped.")
+			case ConfigInstallationResult.Overwtitten: self.printer.emit("Configuration overwritten.")

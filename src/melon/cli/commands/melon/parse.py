@@ -270,13 +270,14 @@ class CommandProcessor(BaseCommandProcessor[Parameters]):
 		:return: Команда.
 		:rtype: Command
 		"""
+
 		ComPos = command.create_position("TARGET", "Target for parsing.", important = True)
 		ComPos.set_argument(description = "Title slug.")
-		ComPos.add_key("--id", type = ValidableTypes.UnsignedInteger, description = "Title ID.")
-		ComPos.add_key("-collection", description = GetStyledTextFromHTML("Parse slugs from <i>Collection.txt</i> file."))
+		ComPos.add_flag("-collection", description = GetStyledTextFromHTML("Parse slugs from <i>Collection.txt</i> file."))
 		ComPos.add_flag("-local", description = "Parse all locally saved titles.")
 		ComPos.add_flag("-updates", description = "Parse titles updated for last 24 hours. Use key \"--period\" to change it.")
 		ComPos.add_flag("-last", description = "Parse last parsed title.")
+		ComPos.add_key("--id", type = ValidableTypes.UnsignedInteger, description = "Title ID.")
 
 		self._AddParserUsePosition()
 

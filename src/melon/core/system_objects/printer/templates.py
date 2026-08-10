@@ -119,8 +119,8 @@ class Templates:
 		:type count: int
 		"""
 
-		Number = index
-		Progress = round(Number / count * 100, 2)
+		Number = index + 1
+		Progress = round(index / count * 100, 2)
 		NumberString = FastStyler(str(Number)).colorize.magenta
 		ProgressString = StringifyFloat(Progress)
 		ProgressString = FastStyler(ProgressString + "%").colorize.cyan
