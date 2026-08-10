@@ -214,6 +214,7 @@ class Directories:
 		"""
 
 		Directory: str | None = Zerotify(self.__DirectoriesDict.get(dir_type))
+		
 		DirectoryPath: Path = Path(Directory) if Directory else Path(f"{self.__SystemObjects.options.DEFAULT_OUTPUT_DIR}/{self.__ParserName}/{dir_type}")
 		if Directory in (None, "Output"): DirectoryPath.mkdir(parents = True, exist_ok = True)
 
@@ -484,7 +485,7 @@ class ParserSettings:
 		self.__Settings: dict = self.__ReadSettings()
 		self.__IsLoadedFromRepository = False
 
-		self.__Directories = Directories(self.__SystemObjects, self.__ParserName, self.__Settings)
+		self.__Directories = Directories(self.__SystemObjects, self.__ParserName, self.__Settings.get("directories") or {})
 		self.__Common: Common = Common(self.__Settings.get("common") or {})
 		self.__Filters = Filters(self.__Settings)
 		self.__Proxies: tuple[Proxy, ...] = self.__ParseProxies()

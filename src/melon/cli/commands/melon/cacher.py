@@ -77,7 +77,7 @@ class CommandProcessor(BaseCommandProcessor[Parameters]):
 		"""
 
 		for CurrentParser in parameters.required_parsers:
-			self.printer.emit(f"Caching titles for <b>{CurrentParser}</b>…")
+			self.printer.emit(f"Caching titles for <b>{CurrentParser.name}</b>…")
 			Cacher = utils.Cacher(CurrentParser.entry_point)
 	
 			Result = Cacher.cache_parser_output()
