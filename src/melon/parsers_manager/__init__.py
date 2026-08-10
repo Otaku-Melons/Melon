@@ -2,19 +2,43 @@ import io
 import shutil
 import subprocess
 from difflib import get_close_matches
+from enum import Enum
 from pathlib import Path
-from typing import TYPE_CHECKING, Sequence, cast
+from typing import TYPE_CHECKING, Sequence
 
+from deepmerge import always_merger
 from dulwich import errors, porcelain
 from dulwich.porcelain import clone
 
-from dublib.functions.filesystem import ListDir, ReadTextFile, WriteTextFile
+from dublib.functions.filesystem import (
+	ListDir,
+	ReadJSON,
+	ReadTextFile,
+	WriteJSON,
+	WriteTextFile,
+)
 from dublib.validators import Validator_URL
 
 from ..core import exceptions
+from ..core.base.parsers.components.settings import _BASE_SETTINGS
 
 if TYPE_CHECKING:
-	from ..core.system_objects import SystemObjects
+	from ..core.system_objects import Printer, SystemObjects
+
+#==========================================================================================#
+# >>>>> ПЕРЕЧИСЛЕНИЯ <<<<< #
+#==========================================================================================#
+
+class ConfigInstallationResult(Enum):
+	"""Результат установки конфигурации."""
+
+	Installed = 0
+	Overwtitted = 1
+	Skipped = 2
+
+#==========================================================================================#
+# >>>>> ВСПОМОГАТЕЛЬНЫЕ СТРУКТУРЫ ДАННЫХ <<<<< #
+#==========================================================================================#
 
 class Repositories:
 	"""Менеджер репозиториев."""
@@ -166,8 +190,22 @@ class Repositories:
 
 		WriteTextFile(self.__StorageFilePath, tuple(self.__Repositories.values()))
 
+#==========================================================================================#
+# >>>>> ОСНОВНОЙ КЛАСС <<<<< #
+#==========================================================================================#
+
 class ParsersManager:
 	"""Менеджер парсеров."""
+
+	#==========================================================================================#
+	# >>>>> СВОЙСТВА <<<<< #
+	#==========================================================================================#
+
+	@property
+	def printer(self) -> "Printer":
+		"""Оператор вывода."""
+
+		return self.__SystemObjects.printer
 
 	#==========================================================================================#
 	# >>>>> СПИСКИ ПАРСЕРОВ <<<<< #
@@ -213,20 +251,55 @@ class ParsersManager:
 		
 		return None
 
-	def __InstallRequirements(self, parser: str):
+	def __InstallConfig(self, parser: str, force_mode: bool = False) -> ConfigInstallationResult:
 		"""
 		Устанавливает зависимости парсера.
 
 		:param parser: Имя парсера.
 		:type parser: str
+		:param force_mode: Переключает режим перезаписи
+		:type force_mode: bool
+		:return: Результат установки конфигурации.
+		:rtype: ConfigInstallationResult
+		"""
+
+		Result: ConfigInstallationResult = ConfigInstallationResult.Skipped
+
+		Config: dict = _BASE_SETTINGS.copy()
+		ConfigPresetPath: Path = Path(f"parsers/{parser}/settings.json")
+		ConfigStoragePath: Path = Path(f"{self.__SystemObjects.options.CONFIGS_DIR}/{parser}")
+		ConfigStoragePath.mkdir(parents = not self.__SystemObjects.options.CONFIGS_DIR.is_overrrided, exist_ok = True)
+		ConfigTargetFile: Path = ConfigStoragePath / "settings.json"
+
+		if ConfigPresetPath.exists():
+			Buffer: dict = ReadJSON(ConfigPresetPath)
+			Config = always_merger.merge(Config, Buffer)
+
+		WriteJSON(ConfigTargetFile, Config)
+
+		return Result
+
+	def __InstallRequirements(self, parser: str) -> int:
+		"""
+		Устанавливает зависимости парсера.
+
+		:param parser: Имя парсера.
+		:type parser: str
+		:return: Количество установленных пакетов зависимостей.
+		:rtype: int
 		"""
 
 		RequirementsPath: Path = Path(f"parsers/{parser}/requirements.txt")
 
 		if not RequirementsPath.exists():
-			return
+			return 0
 
 		subprocess.run(("uv", "pip", "install", "-r", RequirementsPath.as_posix()), check = True)
+
+		Requirements: list[str] = ReadTextFile(RequirementsPath, split = True, strip = True)
+		Requirements = [Element for Element in Requirements if Element]
+
+		return len(Requirements)
 
 	def __IsParserValid(self, parser: str) -> bool:
 		"""
@@ -295,7 +368,7 @@ class ParsersManager:
 		URL: str | None = self.__Repositories.get(parser)
 
 		if not URL:
-			raise exceptions.system.ReposError(f"Repository for \"{parser}\" not found.")
+			raise exceptions.system.ReposError(f"Repository for parser \"{parser}\" not found.")
 
 		self.install_by_url(URL)
 
@@ -307,12 +380,14 @@ class ParsersManager:
 		:type url: str
 		"""
 
-		ParserName: str | None = self.__Repositories.get(url)
-
-		if not ParserName:
-			ParserName = self.__Repositories.add(url)
-
-		ParserName = cast(str, ParserName)
+		ParserName: str = url.split("/")[-1].split("?", maxsplit = 1)[0]
+		Repository: str | None = self.__Repositories.get(ParserName)
+		if not Repository: self.__Repositories.add(url)
 
 		clone(url, f"parsers/{ParserName}", errstream = io.BytesIO(), recurse_submodules = True)
-		self.__InstallRequirements(ParserName)
+		self.printer.emit("Git repository clonned.")
+
+		RequirementsCount: int = self.__InstallRequirements(ParserName)
+		if RequirementsCount: self.printer.emit(f"Installed {RequirementsCount} requirements.")
+
+		self.__InstallConfig(ParserName)
