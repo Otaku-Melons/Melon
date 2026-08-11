@@ -1,16 +1,12 @@
 from dataclasses import dataclass
 from typing import cast
 
-from dublib.cli.templates.bus import PrintError
 from dublib.cli.terminalyzer import Command, ParsedCommandData, ValidableTypes
 
 from ....core import exceptions
 from ....parsers_manager import ParsersManager
-from ..base_processor import (
-	BaseCommandProcessor,
-	PreparedData,
-	ProcessorOptions,
-)
+from ..base_processor import PreparedData, ProcessorOptions
+from ._base import CommandProcessorTemplate
 
 #==========================================================================================#
 # >>>>> ВСПОМОГАТЕЛЬНЫЕ СТРУКТУРЫ ДАННЫХ <<<<< #
@@ -28,7 +24,7 @@ class Parameters:
 # >>>>> ОСНОВНОЙ КЛАСС <<<<< #
 #==========================================================================================#
 
-class CommandProcessor(BaseCommandProcessor[Parameters]):
+class CommandProcessor(CommandProcessorTemplate[Parameters]):
 	"""Обработчик команды."""
 
 	#==========================================================================================#
@@ -93,12 +89,14 @@ class CommandProcessor(BaseCommandProcessor[Parameters]):
 			is_remove = IsRemove
 		)
 
-	def _Process(self, parameters: Parameters):
+	def _Process(self, parameters: Parameters) -> bool:
 		"""
 		Выполняет команду.
 
 		:param parameters: Параметры команды.
-		:type parameters: DataclassStub
+		:type parameters: Parameters
+		:return: Возвращает `False`, если команда требует прерывания выполнения.
+		:rtype: bool
 		"""
 
 		Manager = ParsersManager(self.system_objects)
@@ -108,4 +106,7 @@ class CommandProcessor(BaseCommandProcessor[Parameters]):
 			elif parameters.url: Manager.repositories.add(cast(str, parameters.url))
 
 		except exceptions.system.ReposError as ExceptionData:
-			PrintError(str(ExceptionData))
+			self.printer.error(str(ExceptionData))
+			return False
+
+		return True

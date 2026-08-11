@@ -8,7 +8,8 @@ from dublib.functions.filesystem import WriteJSON
 
 from .... import utils
 from ....core import exceptions
-from ..base_processor import BaseCommandProcessor, PreparedData, ProcessorOptions
+from ..base_processor import PreparedData, ProcessorOptions
+from ._base import CommandProcessorTemplate
 
 #==========================================================================================#
 # >>>>> ВСПОМОГАТЕЛЬНЫЕ СТРУКТУРЫ ДАННЫХ <<<<< #
@@ -27,7 +28,7 @@ class Parameters:
 # >>>>> ОСНОВНОЙ КЛАСС <<<<< #
 #==========================================================================================#
 
-class CommandProcessor(BaseCommandProcessor[Parameters]):
+class CommandProcessor(CommandProcessorTemplate[Parameters]):
 	"""Обработчик команды."""
 
 	#==========================================================================================#
@@ -99,19 +100,21 @@ class CommandProcessor(BaseCommandProcessor[Parameters]):
 			is_ignore_case = IgnoreCase
 		)
 
-	def _Process(self, parameters: Parameters):
+	def _Process(self, parameters: Parameters) -> bool:
 		"""
 		Выполняет команду.
 
 		:param parameters: Параметры команды.
 		:type parameters: Parameters
+		:return: Возвращает `False`, если команда требует прерывания выполнения.
+		:rtype: bool
 		"""
 
 		ScriptPath: Path = Path(f"{self.system_objects.options.CONFIGS_DIR}/classificator.ini")
 		
 		if not ScriptPath.exists():
 			self.printer.critical(f"Script file \"{ScriptPath}\" doesn't exists.")
-			return None
+			return False
 		
 		ClassificatorObject = utils.Classificator(ScriptPath)
 		ExecutableLines = ClassificatorObject.read_script()
@@ -122,13 +125,13 @@ class CommandProcessor(BaseCommandProcessor[Parameters]):
 		
 		if ScriptValidationErrors:
 			self.printer.critical("Script failure due to validation errors.")
-			return None
+			return False
 		
 		try:
 			Procedures = ClassificatorObject.parse_procedures(ExecutableLines)
 		except exceptions.utils.classificator.ScriptRuntimeError as ExecutionData:
 			self.printer.critical(str(ExecutionData))
-			return None
+			return False
 		
 		ClassificationResult = ClassificatorObject.classify(parameters.target, Procedures, ignore_case = parameters.is_ignore_case)
 		
@@ -140,3 +143,5 @@ class CommandProcessor(BaseCommandProcessor[Parameters]):
 		if parameters.file_to_write:
 			WriteJSON(parameters.file_to_write, ClassificationResult.to_dict())
 			self.printer.emit(f"Classification result dumped in file: \"{parameters.file_to_write}\".")
+
+		return True

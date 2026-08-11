@@ -4,7 +4,8 @@ from dublib.cli.terminalyzer import Command, ParsedCommandData, ValidableTypes
 
 from .... import utils
 from ....core.base.parsers.components.manifest import ContentTypes
-from ..base_processor import BaseCommandProcessor, PreparedData
+from ..base_processor import PreparedData
+from ._base import CommandProcessorTemplate
 
 #==========================================================================================#
 # >>>>> ВСПОМОГАТЕЛЬНЫЕ СТРУКТУРЫ ДАННЫХ <<<<< #
@@ -23,7 +24,7 @@ class Parameters:
 # >>>>> ОСНОВНОЙ КЛАСС <<<<< #
 #==========================================================================================#
 
-class CommandProcessor(BaseCommandProcessor[Parameters]):
+class CommandProcessor(CommandProcessorTemplate[Parameters]):
 	"""Обработчик команды."""
 
 	#==========================================================================================#
@@ -50,7 +51,7 @@ class CommandProcessor(BaseCommandProcessor[Parameters]):
 		:rtype: Command
 		"""
 
-		self._AddParserPositionForPXM()
+		self._AddParserPosition()
 
 		ComPos = command.create_position("DOMAIN", "Source site domain.", important = True)
 		ComPos.set_argument(ValidableTypes.Domain)
@@ -87,13 +88,17 @@ class CommandProcessor(BaseCommandProcessor[Parameters]):
 			content_types = ContentTypesValues
 		)
 
-	def _Process(self, parameters: Parameters):
+	def _Process(self, parameters: Parameters) -> bool:
 		"""
 		Выполняет команду.
 
 		:param parameters: Параметры команды.
 		:type parameters: Parameters
+		:return: Возвращает `False`, если команда требует прерывания выполнения.
+		:rtype: bool
 		"""
 
 		Developer = utils.DevelopmeptAssistant(self.system_objects)
 		Developer.create_parser(parameters.parser_name, parameters.domain, parameters.content_types, parameters.is_use_git)
+
+		return True

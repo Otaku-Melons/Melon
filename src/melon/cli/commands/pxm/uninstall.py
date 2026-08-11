@@ -4,7 +4,8 @@ from dublib.cli.terminalyzer import Command, ParsedCommandData
 
 from ....core import exceptions
 from ....parsers_manager import ParsersManager
-from ..base_processor import BaseCommandProcessor, PreparedData
+from ..base_processor import PreparedData
+from ._base import CommandProcessorTemplate
 
 #==========================================================================================#
 # >>>>> ВСПОМОГАТЕЛЬНЫЕ СТРУКТУРЫ ДАННЫХ <<<<< #
@@ -21,7 +22,7 @@ class Parameters:
 # >>>>> ОСНОВНОЙ КЛАСС <<<<< #
 #==========================================================================================#
 
-class CommandProcessor(BaseCommandProcessor[Parameters]):
+class CommandProcessor(CommandProcessorTemplate[Parameters]):
 	"""Обработчик команды."""
 
 	#==========================================================================================#
@@ -48,7 +49,7 @@ class CommandProcessor(BaseCommandProcessor[Parameters]):
 		:rtype: Command
 		"""
 
-		self._AddParserPositionForPXM()
+		self._AddParserPosition()
 
 		command.base.add_key("-c", description = "Clear temp directory and delete config.")
 		
@@ -74,12 +75,14 @@ class CommandProcessor(BaseCommandProcessor[Parameters]):
 			is_clear = IsClear
 		)
 
-	def _Process(self, parameters: Parameters):
+	def _Process(self, parameters: Parameters) -> bool:
 		"""
 		Выполняет команду.
 
 		:param parameters: Параметры команды.
 		:type parameters: Parameters
+		:return: Возвращает `False`, если команда требует прерывания выполнения.
+		:rtype: bool
 		"""
 
 		Installer = ParsersManager(self.system_objects)
@@ -89,3 +92,6 @@ class CommandProcessor(BaseCommandProcessor[Parameters]):
 			if parameters.is_clear: self.printer.emit("Temp files and config cleared.")
 		except exceptions.system.ParserNotFound:
 			self.printer.error(f"Parser <b>{parameters.parser}</b> not found.")
+			return False
+
+		return True

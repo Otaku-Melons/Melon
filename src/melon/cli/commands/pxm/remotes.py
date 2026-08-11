@@ -4,14 +4,10 @@ from dublib.cli.terminalyzer import Command, ParsedCommandData
 from dublib.cli.text_styler import FastStyler
 
 from ....parsers_manager import ParsersManager
-from ..base_processor import (
-	BaseCommandProcessor,
-	DataclassStub,
-	PreparedData,
-	ProcessorOptions,
-)
+from ..base_processor import DataclassStub, PreparedData, ProcessorOptions
+from ._base import CommandProcessorTemplate
 
-class CommandProcessor(BaseCommandProcessor[DataclassStub]):
+class CommandProcessor(CommandProcessorTemplate[DataclassStub]):
 	"""Обработчик команды."""
 
 	#==========================================================================================#
@@ -64,12 +60,14 @@ class CommandProcessor(BaseCommandProcessor[DataclassStub]):
 
 		return DataclassStub()
 
-	def _Process(self, parameters: DataclassStub):
+	def _Process(self, parameters: DataclassStub) -> bool:
 		"""
 		Выполняет команду.
 
 		:param parameters: Параметры команды.
 		:type parameters: DataclassStub
+		:return: Возвращает `False`, если команда требует прерывания выполнения.
+		:rtype: bool
 		"""
 
 		Installer = ParsersManager(self.system_objects)
@@ -95,3 +93,5 @@ class CommandProcessor(BaseCommandProcessor[DataclassStub]):
 		TableObject.sortby = FastStyler("PARSER").decorate.bold
 		TableString = str(TableObject).strip()
 		self.printer.emit(TableString)
+
+		return True

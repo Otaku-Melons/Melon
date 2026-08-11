@@ -1,11 +1,11 @@
-import sys
 from dataclasses import dataclass
 
 from dublib.cli.terminalyzer import Command, ParsedCommandData, ValidableTypes
 
 from ....core.base.formats.components.enums import By
 from ....core.builders.ranobe_builder import RanobeBuilder
-from ..base_processor import BaseCommandProcessor, PreparedData, T_SingleParserRequired
+from ..base_processor import PreparedData, T_SingleParserRequired
+from ._base import CommandProcessorTemplate
 
 #==========================================================================================#
 # >>>>> ВСПОМОГАТЕЛЬНЫЕ СТРУКТУРЫ ДАННЫХ <<<<< #
@@ -22,7 +22,7 @@ class Parameters(T_SingleParserRequired):
 # >>>>> ОСНОВНОЙ КЛАСС <<<<< #
 #==========================================================================================#
 
-class CommandProcessor(BaseCommandProcessor[Parameters]):
+class CommandProcessor(CommandProcessorTemplate[Parameters]):
 	"""Обработчик команды."""
 
 	#==========================================================================================#
@@ -52,7 +52,7 @@ class CommandProcessor(BaseCommandProcessor[Parameters]):
 		ComPos = command.create_position("FILE", "Filename of local JSON.", important = True)
 		ComPos.set_argument()
 
-		self._AddParserUsePosition()
+		self._AddParserPosition()
 
 		command.base.add_key("--branch", type = ValidableTypes.UnsignedInteger, description = "Branch ID to building.")
 
@@ -79,12 +79,14 @@ class CommandProcessor(BaseCommandProcessor[Parameters]):
 			branch_id = BranchID
 		)
 
-	def _Process(self, parameters: Parameters):
+	def _Process(self, parameters: Parameters) -> bool:
 		"""
 		Выполняет команду.
 
 		:param parameters: Параметры команды.
 		:type parameters: Parameters
+		:return: Возвращает `False`, если команда требует прерывания выполнения.
+		:rtype: bool
 		"""
 
 		TypingResult = parameters.required_parser.entry_point.get_content_type_by_file(parameters.filename)
@@ -96,7 +98,9 @@ class CommandProcessor(BaseCommandProcessor[Parameters]):
 			self.printer.emit(f"Loaded file: <i>{parameters.filename}</i>.")
 		else:
 			self.printer.error(f"Unable load file: <b>{parameters.filename}</b>.")
-			sys.exit(1)
+			return False
 	
 		Builder = RanobeBuilder(Parser, Title)
 		Builder.build(parameters.branch_id)
+
+		return True

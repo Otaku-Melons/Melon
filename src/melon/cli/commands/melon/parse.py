@@ -11,11 +11,11 @@ from .... import utils
 from ....core import exceptions
 from ....core.base.parsers.components.manifest import ContentTypes
 from ..base_processor import (
-	BaseCommandProcessor,
 	PreparedData,
 	T_ForceModeRequired,
 	T_SingleParserRequired,
 )
+from ._base import CommandProcessorTemplate
 
 if TYPE_CHECKING:
 	from ....core.base.entry_point import BaseEntryPoint
@@ -65,7 +65,7 @@ class ParsingSignals(Enum):
 # >>>>> ОСНОВНОЙ КЛАСС <<<<< #
 #==========================================================================================#
 
-class CommandProcessor(BaseCommandProcessor[Parameters]):
+class CommandProcessor(CommandProcessorTemplate[Parameters]):
 	"""Обработчик команды."""
 
 	#==========================================================================================#
@@ -279,7 +279,7 @@ class CommandProcessor(BaseCommandProcessor[Parameters]):
 		ComPos.add_flag("-last", description = "Parse last parsed title.")
 		ComPos.add_key("--id", type = ValidableTypes.UnsignedInteger, description = "Title ID.")
 
-		self._AddParserUsePosition()
+		self._AddParserPosition()
 
 		self._AddForceModeFlag()
 
@@ -338,12 +338,14 @@ class CommandProcessor(BaseCommandProcessor[Parameters]):
 			is_parse_local = ParseLocal
 		)
 
-	def _Process(self, parameters: Parameters):
+	def _Process(self, parameters: Parameters) -> bool:
 		"""
 		Выполняет команду.
 
 		:param parameters: Параметры команды.
 		:type parameters: Parameters
+		:return: Возвращает `False`, если команда требует прерывания выполнения.
+		:rtype: bool
 		"""
 
 		Slugs: tuple[str, ...] = self.__GetSlugsToParsing(parameters, parameters.required_parser.entry_point)
@@ -353,7 +355,9 @@ class CommandProcessor(BaseCommandProcessor[Parameters]):
 	
 		if not Slugs:
 			self.printer.error("No slugs for parsing.")
-			return
+			return False
 
 		Statistics = self.__ParseSlugs(parameters, parameters.required_parser.source_operator, tuple(Slugs))
 		self.printer.templates.parsing_summary(Statistics.parsed, Statistics.not_found, Statistics.errors)
+
+		return True

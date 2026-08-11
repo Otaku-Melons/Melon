@@ -1,4 +1,3 @@
-import sys
 from dataclasses import dataclass
 from typing import Literal, cast
 
@@ -6,7 +5,8 @@ from dublib.cli.terminalyzer import Command, ParsedCommandData, ValidableTypes
 
 from ....core.base.formats.components.enums import By
 from ....core.builders.manga_builder import MangaBuilder, MangaOutputFormats
-from ..base_processor import BaseCommandProcessor, PreparedData, T_SingleParserRequired
+from ..base_processor import PreparedData, T_SingleParserRequired
+from ._base import CommandProcessorTemplate
 
 #==========================================================================================#
 # >>>>> ВСПОМОГАТЕЛЬНЫЕ СТРУКТУРЫ ДАННЫХ <<<<< #
@@ -28,7 +28,7 @@ class Parameters(T_SingleParserRequired):
 # >>>>> ОСНОВНОЙ КЛАСС <<<<< #
 #==========================================================================================#
 
-class CommandProcessor(BaseCommandProcessor[Parameters]):
+class CommandProcessor(CommandProcessorTemplate[Parameters]):
 	"""Обработчик команды."""
 
 	#==========================================================================================#
@@ -58,7 +58,7 @@ class CommandProcessor(BaseCommandProcessor[Parameters]):
 		ComPos = command.create_position("FILE", "Filename of local JSON.", important = True)
 		ComPos.set_argument()
 
-		self._AddParserUsePosition()
+		self._AddParserPosition()
 
 		ComPos = command.create_position("TARGET", "Target for building. By default longest branch.")
 		ComPos.add_key("--branch", type = ValidableTypes.UnsignedInteger, description = "Branch ID.")
@@ -114,12 +114,14 @@ class CommandProcessor(BaseCommandProcessor[Parameters]):
 			is_sort_by_volumes = SortByVolumes
 		)
 
-	def _Process(self, parameters: Parameters):
+	def _Process(self, parameters: Parameters) -> bool:
 		"""
 		Выполняет команду.
 
 		:param parameters: Параметры команды.
 		:type parameters: Parameters
+		:return: Возвращает `False`, если команда требует прерывания выполнения.
+		:rtype: bool
 		"""
 
 		TypingResult = parameters.required_parser.entry_point.get_content_type_by_file(parameters.filename)
@@ -130,7 +132,7 @@ class CommandProcessor(BaseCommandProcessor[Parameters]):
 			self.printer.emit(f"Loaded file: <i>{parameters.filename}</i>.")
 		else:
 			self.printer.error(f"Unable load file: <b>{parameters.filename}</b>.")
-			sys.exit(1)
+			return False
 	
 		Builder = MangaBuilder(Parser, Title)
 		if parameters.output_format: Builder.select_output_format(MangaOutputFormats(parameters.output_format))
@@ -142,3 +144,5 @@ class CommandProcessor(BaseCommandProcessor[Parameters]):
 			case "branch": Builder.build_branch(parameters.target_id)
 			case "chapter": Builder.build_chapter(cast(int, parameters.target_id))
 			case _: Builder.build_branch()
+
+		return True

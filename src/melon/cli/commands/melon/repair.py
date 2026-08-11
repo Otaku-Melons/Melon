@@ -1,10 +1,10 @@
-import sys
 from dataclasses import dataclass
 
 from dublib.cli.terminalyzer import Command, ParsedCommandData, ValidableTypes
 
 from ....core.base.formats.components.enums import By
-from ..base_processor import BaseCommandProcessor, PreparedData, T_SingleParserRequired
+from ..base_processor import PreparedData, T_SingleParserRequired
+from ._base import CommandProcessorTemplate
 
 #==========================================================================================#
 # >>>>> ВСПОМОГАТЕЛЬНЫЕ СТРУКТУРЫ ДАННЫХ <<<<< #
@@ -22,7 +22,7 @@ class Parameters(T_SingleParserRequired):
 # >>>>> ОСНОВНОЙ КЛАСС <<<<< #
 #==========================================================================================#
 
-class CommandProcessor(BaseCommandProcessor[Parameters]):
+class CommandProcessor(CommandProcessorTemplate[Parameters]):
 	"""Обработчик команды."""
 
 	#==========================================================================================#
@@ -56,7 +56,7 @@ class CommandProcessor(BaseCommandProcessor[Parameters]):
 		ComPos.add_key("--branch", type = ValidableTypes.UnsignedInteger, description = "Branch ID.")
 		ComPos.add_key("--chapter", type = ValidableTypes.UnsignedInteger, description = "Chapter ID.")
 
-		self._AddParserUsePosition()
+		self._AddParserPosition()
 
 		self._AddMirrorKey()
 
@@ -88,17 +88,19 @@ class CommandProcessor(BaseCommandProcessor[Parameters]):
 			is_target_chapter = IsTargetChapter
 		)
 
-	def _Process(self, parameters: Parameters):
+	def _Process(self, parameters: Parameters) -> bool:
 		"""
 		Выполняет команду.
 
 		:param parameters: Параметры команды.
 		:type parameters: Parameters
+		:return: Возвращает `False`, если команда требует прерывания выполнения.
+		:rtype: bool
 		"""
 
 		if not parameters.is_target_chapter:
 			self.printer.error("For now only chapters supported as target to repairing.")
-			sys.exit(1)
+			return False
 	
 		TypingResult = parameters.required_parser.entry_point.get_content_type_by_file(parameters.filename)
 		Parser = parameters.required_parser.source_operator.launch_parser(TypingResult.content_type)
@@ -108,7 +110,7 @@ class CommandProcessor(BaseCommandProcessor[Parameters]):
 			self.printer.emit(f"Loaded file: <i>{parameters.filename}</i>.")
 		else:
 			self.printer.error(f"Unable load file: <b>{parameters.filename}</b>.")
-			sys.exit(1)
+			return False
 	
 		self.printer.emit(f"Repairing chapter <b>{parameters.target_id}</b>… ", end_line = False)
 	
@@ -117,3 +119,5 @@ class CommandProcessor(BaseCommandProcessor[Parameters]):
 	
 		if Parser.save(): self.printer.emit("Saved.")
 		else: self.printer.emit("No changes. Saving skipped.")
+
+		return True

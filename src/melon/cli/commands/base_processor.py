@@ -233,33 +233,6 @@ class BaseCommandProcessor(ABC, Generic[_PARAMS]):
 
 		self._Command.base.add_flag("-f", description = "Enable force mode.")
 
-	def _AddMirrorKey(self):
-		"""Добавляет ключ подключения зеркала."""
-
-		self._Command.base.add_key("--mirror", type = ValidableTypes.Domain, description = "Source mirror to requests.")
-
-	def _AddParserPositionForPXM(self):
-		"""Добавляет позицию имени парсера, используюмую **pxm**."""
-
-		ComPos = self._Command.create_position("PARSER", "Parser name.", important = True)
-		ComPos.set_argument()
-
-	def _AddParserUsePosition(self, multiple: bool = False):
-		"""
-		Добавляет позицию для имени парсера(ов).
-
-		:param multiple: Указывает, должна ли позиция поддерживать множественное указание парсеров.
-		:type multiple: bool
-		"""
-
-		if multiple:
-			ComPos = self._Command.create_position("PARSERS", "One or more parsers names separated by comma. By default all.")
-			ComPos.add_key("--use")
-
-		else:
-			ComPos = self._Command.create_position("PARSER", "Name of parser.", important = True)
-			ComPos.add_key("--use")
-
 	#==========================================================================================#
 	# >>>>> ПЕРЕОПРЕДЕЛЯЕМЫЕ МЕТОДЫ <<<<< #
 	#==========================================================================================#
@@ -314,12 +287,14 @@ class BaseCommandProcessor(ABC, Generic[_PARAMS]):
 		pass
 
 	@abstractmethod
-	def _Process(self, parameters: _PARAMS):
+	def _Process(self, parameters: _PARAMS) -> bool:
 		"""
 		Выполняет команду.
 
 		:param parameters: Параметры команды.
 		:type parameters: AnyDataclass
+		:return: Возвращает `True`, если выполнение успешно и прерывание не требуется.
+		:rtype: bool
 		"""
 
 		pass
@@ -364,6 +339,7 @@ class BaseCommandProcessor(ABC, Generic[_PARAMS]):
 		PreparedDataContainer = PreparedData(RequiredParsers, IsForceModeEnabled, Mirror)
 		
 		Parameters = self._ParseParameters(data, PreparedDataContainer)
-		self._Process(Parameters)
+		Status: bool = self._Process(Parameters)
 
+		if not Status: sys.exit(1)
 		if Timer: self.printer.emit(f"Done in {Timer.ends()}.")

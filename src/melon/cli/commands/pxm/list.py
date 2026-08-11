@@ -1,14 +1,10 @@
 from dublib.cli.terminalyzer import Command, ParsedCommandData
 
 from ....core.base.parsers.components.manifest import ContentTypes
-from ..base_processor import (
-	BaseCommandProcessor,
-	DataclassStub,
-	PreparedData,
-	ProcessorOptions,
-)
+from ..base_processor import DataclassStub, PreparedData, ProcessorOptions
+from ._base import CommandProcessorTemplate
 
-class CommandProcessor(BaseCommandProcessor[DataclassStub]):
+class CommandProcessor(CommandProcessorTemplate[DataclassStub]):
 	"""Обработчик команды."""
 
 	#==========================================================================================#
@@ -61,12 +57,14 @@ class CommandProcessor(BaseCommandProcessor[DataclassStub]):
 
 		return DataclassStub()
 
-	def _Process(self, parameters: DataclassStub):
+	def _Process(self, parameters: DataclassStub) -> bool:
 		"""
 		Выполняет команду.
 
 		:param parameters: Параметры команды.
 		:type parameters: DataclassStub
+		:return: Возвращает `False`, если команда требует прерывания выполнения.
+		:rtype: bool
 		"""
 
 		TableData: dict[str, list[str]] = {
@@ -95,3 +93,5 @@ class CommandProcessor(BaseCommandProcessor[DataclassStub]):
 			TableData["collect"].append(str(EntryPoint.source_operator.is_collector_implemented))
 	
 		self.printer.templates.parsers_table(TableData)
+
+		return True

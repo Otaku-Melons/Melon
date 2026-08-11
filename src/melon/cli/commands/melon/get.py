@@ -4,11 +4,11 @@ from pathlib import Path
 from dublib.cli.terminalyzer import Command, ParsedCommandData, ValidableTypes
 
 from ..base_processor import (
-	BaseCommandProcessor,
 	PreparedData,
 	T_ForceModeRequired,
 	T_SingleParserRequired,
 )
+from ._base import CommandProcessorTemplate
 
 #==========================================================================================#
 # >>>>> ВСПОМОГАТЕЛЬНЫЕ СТРУКТУРЫ ДАННЫХ <<<<< #
@@ -27,7 +27,7 @@ class Parameters(T_ForceModeRequired, T_SingleParserRequired):
 # >>>>> ОСНОВНОЙ КЛАСС <<<<< #
 #==========================================================================================#
 
-class CommandProcessor(BaseCommandProcessor[Parameters]):
+class CommandProcessor(CommandProcessorTemplate[Parameters]):
 	"""Обработчик команды."""
 
 	#==========================================================================================#
@@ -57,7 +57,7 @@ class CommandProcessor(BaseCommandProcessor[Parameters]):
 		ComPos = command.create_position("URL", "Link to image.", important = True)
 		ComPos.set_argument(ValidableTypes.URL)
 
-		self._AddParserUsePosition()
+		self._AddParserPosition()
 
 		ComPos = command.create_position("NAME", "Naming operation. By default save original.")
 		ComPos.add_key("--fullname", description = "Set full name with filename extension.")
@@ -96,12 +96,14 @@ class CommandProcessor(BaseCommandProcessor[Parameters]):
 			name = Name
 		)
 
-	def _Process(self, parameters: Parameters):
+	def _Process(self, parameters: Parameters) -> bool:
 		"""
 		Выполняет команду.
 
 		:param parameters: Параметры команды.
 		:type parameters: Parameters
+		:return: Возвращает `False`, если команда требует прерывания выполнения.
+		:rtype: bool
 		"""
 
 		Result = parameters.required_parser.source_operator.download_image(
@@ -121,4 +123,6 @@ class CommandProcessor(BaseCommandProcessor[Parameters]):
 		
 		if Result.path:
 			self.printer.emit(f"Image path: \"{Result.path}\".")
+
+		return True
 	

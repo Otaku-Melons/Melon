@@ -3,7 +3,8 @@ from dataclasses import dataclass
 from dublib.cli.terminalyzer import Command, ParsedCommandData
 
 from ....parsers_manager import ConfigInstallationResult, ParsersManager
-from ..base_processor import BaseCommandProcessor, PreparedData
+from ..base_processor import PreparedData
+from ._base import CommandProcessorTemplate
 
 #==========================================================================================#
 # >>>>> ВСПОМОГАТЕЛЬНЫЕ СТРУКТУРЫ ДАННЫХ <<<<< #
@@ -19,7 +20,7 @@ class Parameters:
 # >>>>> ОСНОВНОЙ КЛАСС <<<<< #
 #==========================================================================================#
 
-class CommandProcessor(BaseCommandProcessor[Parameters]):
+class CommandProcessor(CommandProcessorTemplate[Parameters]):
 	"""Обработчик команды."""
 
 	#==========================================================================================#
@@ -46,7 +47,7 @@ class CommandProcessor(BaseCommandProcessor[Parameters]):
 		:rtype: Command
 		"""
 
-		self._AddParserPositionForPXM()
+		self._AddParserPosition()
 		
 		return command
 
@@ -66,12 +67,14 @@ class CommandProcessor(BaseCommandProcessor[Parameters]):
 
 		return Parameters(parser = Parser)
 
-	def _Process(self, parameters: Parameters):
+	def _Process(self, parameters: Parameters) -> bool:
 		"""
 		Выполняет команду.
 
 		:param parameters: Параметры команды.
 		:type parameters: Parameters
+		:return: Возвращает `False`, если команда требует прерывания выполнения.
+		:rtype: bool
 		"""
 
 		Installer = ParsersManager(self.system_objects)
@@ -79,7 +82,7 @@ class CommandProcessor(BaseCommandProcessor[Parameters]):
 
 		if not RepositoryURL:
 			self.printer.error(f"Repository for parser \"{parameters.parser}\" not found.")
-			return
+			return False
 
 		self.printer.emit(f"Repository: <i>{RepositoryURL}</i>.")
 
@@ -96,3 +99,5 @@ class CommandProcessor(BaseCommandProcessor[Parameters]):
 			case ConfigInstallationResult.Installed: self.printer.emit("Configuration installed.")
 			case ConfigInstallationResult.AlreadyExists: self.printer.emit("Configuration already exists. Skipped.")
 			case ConfigInstallationResult.Overwtitten: self.printer.emit("Configuration overwritten.")
+
+		return True

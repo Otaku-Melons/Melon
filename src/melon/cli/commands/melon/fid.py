@@ -2,11 +2,8 @@ from dataclasses import dataclass
 
 from dublib.cli.terminalyzer import Command, ParsedCommandData
 
-from ..base_processor import (
-	BaseCommandProcessor,
-	PreparedData,
-	T_MultipleParsersRequired,
-)
+from ..base_processor import PreparedData, T_MultipleParsersRequired
+from ._base import CommandProcessorTemplate
 
 #==========================================================================================#
 # >>>>> ВСПОМОГАТЕЛЬНЫЕ СТРУКТУРЫ ДАННЫХ <<<<< #
@@ -23,7 +20,7 @@ class Parameters(T_MultipleParsersRequired):
 # >>>>> ОСНОВНОЙ КЛАСС <<<<< #
 #==========================================================================================#
 
-class CommandProcessor(BaseCommandProcessor[Parameters]):
+class CommandProcessor(CommandProcessorTemplate[Parameters]):
 	"""Обработчик команды."""
 
 	#==========================================================================================#
@@ -53,7 +50,7 @@ class CommandProcessor(BaseCommandProcessor[Parameters]):
 		ComPos = command.create_position("SLUG", "Title slug.")
 		ComPos.set_argument()
 
-		self._AddParserUsePosition(multiple = True)
+		self._AddParserPosition(multiple = True)
 
 		command.base.add_flag("-all", description = "Print all search results instead only first.")
 
@@ -80,12 +77,14 @@ class CommandProcessor(BaseCommandProcessor[Parameters]):
 			is_search_all = SearchAll
 		)
 
-	def _Process(self, parameters: Parameters):
+	def _Process(self, parameters: Parameters) -> bool:
 		"""
 		Выполняет команду.
 
 		:param parameters: Параметры команды.
 		:type parameters: Parameters
+		:return: Возвращает `False`, если команда требует прерывания выполнения.
+		:rtype: bool
 		"""
 
 		ResultsCount: int = 0
@@ -104,3 +103,5 @@ class CommandProcessor(BaseCommandProcessor[Parameters]):
 			self.printer.emit(f"Total ID found in cache: {ResultsCount}.")
 		else:
 			self.printer.emit("Tite with same slug not found in cache.")
+
+		return True

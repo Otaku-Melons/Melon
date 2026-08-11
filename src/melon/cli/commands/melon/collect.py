@@ -4,12 +4,8 @@ from dublib.cli.terminalyzer import Command, ParsedCommandData, ValidableTypes
 from dublib.cli.text_styler import GetStyledTextFromHTML
 
 from .... import utils
-from ..base_processor import (
-	BaseCommandProcessor,
-	PreparedData,
-	T_ForceModeRequired,
-	T_SingleParserRequired,
-)
+from ..base_processor import PreparedData, T_ForceModeRequired, T_SingleParserRequired
+from ._base import CommandProcessorTemplate
 
 #==========================================================================================#
 # >>>>> ВСПОМОГАТЕЛЬНЫЕ СТРУКТУРЫ ДАННЫХ <<<<< #
@@ -30,7 +26,7 @@ class Parameters(T_ForceModeRequired, T_SingleParserRequired):
 # >>>>> ОСНОВНОЙ КЛАСС <<<<< #
 #==========================================================================================#
 
-class CommandProcessor(BaseCommandProcessor[Parameters]):
+class CommandProcessor(CommandProcessorTemplate[Parameters]):
 	"""Обработчик команды."""
 
 	#==========================================================================================#
@@ -57,7 +53,7 @@ class CommandProcessor(BaseCommandProcessor[Parameters]):
 		:rtype: Command
 		"""
 
-		self._AddParserUsePosition()
+		self._AddParserPosition()
 		self._AddForceModeFlag()
 
 		command.base.add_flag("-local", description = "Scan local titles and put into collection.")
@@ -100,12 +96,14 @@ class CommandProcessor(BaseCommandProcessor[Parameters]):
 			pages = Pages
 		)
 
-	def _Process(self, parameters: Parameters):
+	def _Process(self, parameters: Parameters) -> bool:
 		"""
 		Выполняет команду.
 
 		:param parameters: Параметры команды.
 		:type parameters: Parameters
+		:return: Возвращает `False`, если команда требует прерывания выполнения.
+		:rtype: bool
 		"""
 
 		Collector = utils.Collector(parameters.required_parser.entry_point)
@@ -122,7 +120,7 @@ class CommandProcessor(BaseCommandProcessor[Parameters]):
 			AddedSlugs = Collector.add(CollectedSlugs)
 		else:
 			self.printer.critical("Collector method not implemented.")
-			return
+			return False
 	
 		Collector.save(sort = parameters.is_sorting_enabled)
 	
@@ -130,3 +128,5 @@ class CommandProcessor(BaseCommandProcessor[Parameters]):
 			self.printer.emit(f"Slugs collected: {AddedSlugs}.")
 		else:
 			self.printer.emit("No new slugs in collection.")
+
+		return True

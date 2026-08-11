@@ -41,6 +41,8 @@ class CommandsOrchestrator:
 			if file.name.endswith(".py")
 		]
 
+		if "_base" in CommandModulesNames: CommandModulesNames.remove("_base")
+
 		return tuple(CommandModulesNames)
 	
 	def __LoadProcessors(self):
