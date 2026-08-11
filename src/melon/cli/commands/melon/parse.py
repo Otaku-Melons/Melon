@@ -1,4 +1,5 @@
 import traceback
+from abc import ABC, abstractmethod
 from dataclasses import dataclass
 from enum import Enum
 from json import JSONDecodeError
@@ -18,7 +19,6 @@ from ..base_processor import (
 from ._base import CommandProcessorTemplate
 
 if TYPE_CHECKING:
-	from ....core.base.entry_point import BaseEntryPoint
 	from ....core.base.formats.base_format import BaseTitle
 	from ....core.base.parsers.base_parser import BaseParser
 	from ....core.base.source_operator import BaseSourceOperator
@@ -27,7 +27,262 @@ if TYPE_CHECKING:
 # >>>>> ВСПОМОГАТЕЛЬНЫЕ СТРУКТУРЫ ДАННЫХ <<<<< #
 #==========================================================================================#
 
-@dataclass
+class _BaseParserTarget(ABC):
+	"""Базовая цель для парсинга."""
+
+	#==========================================================================================#
+	# >>>>> ПЕРЕОПРЕДЕЛЯЕМЫЕ МЕТОДЫ <<<<< #
+	#==========================================================================================#
+
+	@property
+	def is_used(self) -> bool:
+		"""Состояние: используется ли этот тип цели."""
+
+		return self._IsUsed()
+
+	#==========================================================================================#
+	# >>>>> НАСЛЕДУЕМЫЕ МЕТОДЫ <<<<< #
+	#==========================================================================================#
+
+	@abstractmethod
+	def _GetSlugs(self) -> list[str]:
+		"""
+		Возвращает список алиасов для парсинга.
+
+		:param data: Данные обработанной команды.
+		:type data: ParsedCommandData
+		:return: Список алиасов.
+		:rtype: list[str]
+		"""
+
+		pass
+
+	@abstractmethod
+	def _IsUsed(self) -> bool:
+		"""
+		Проверяет, используется ли текущий тип цели.
+
+		:return: Возвращает `True`, если используется ли текущий тип цели.
+		:rtype: bool
+		"""
+
+		pass
+
+	#==========================================================================================#
+	# >>>>> ПУБЛИЧНЫЕ МЕТОДЫ <<<<< #
+	#==========================================================================================#
+
+	def __init__(self, source_operator: "BaseSourceOperator", data: ParsedCommandData):
+		"""
+		Базовая цель для парсинга.
+
+		:param source_operator: Оператор источника.
+		:type source_operator: BaseSourceOperator
+		:param data: Данные обработанной команды.
+		:type data: ParsedCommandData
+		"""
+
+		self._SourceOperator = source_operator
+		self._Data = data
+
+		self._Printer = self._SourceOperator.portals.printer
+
+	def get_slugs(self) -> list[str]:
+		"""
+		Возвращает список алиасов для парсинга.
+
+		:return: Список алиасов.
+		:rtype: list[str]
+		"""
+
+		return self._GetSlugs()
+
+class PasingTarget_Collection(_BaseParserTarget):
+	"""Цель для парсинга: коллекция."""
+
+	def _GetSlugs(self) -> list[str]:
+		"""
+		Возвращает список алиасов для парсинга.
+
+		:param data: Данные обработанной команды.
+		:type data: ParsedCommandData
+		:return: Список алиасов.
+		:rtype: list[str]
+		"""
+
+		Filename: str | None = self._Data.get_key_value("--collection", expected_type = str)
+		if Filename == ".": Filename = None
+		Collector = utils.Collector(self._SourceOperator.entry_point, Filename)
+		Slugs = list(Collector.load())
+		self._Printer.emit(f"Titles in collection: {len(Slugs)}.")
+
+		return Slugs
+
+	def _IsUsed(self) -> bool:
+		"""
+		Проверяет, используется ли текущий тип цели.
+
+		:return: Возвращает `True`, если используется ли текущий тип цели.
+		:rtype: bool
+		"""
+
+		return self._Data.check_key("--collection")
+
+class PasingTarget_ID(_BaseParserTarget):
+	"""Цель для парсинга: тайтл по ID."""
+
+	def _GetSlugs(self) -> list[str]:
+		"""
+		Возвращает список алиасов для парсинга.
+		
+		:return: Список алиасов.
+		:rtype: list[str]
+		"""
+
+		ID: int | None = self._Data.get_key_value("--id", expected_type = int)
+		if not ID: return []
+
+		SlugByID = self._SourceOperator.shared_data.journal.get_slug_by_id(ID)
+		if SlugByID: return [SlugByID]
+		self._Printer.warning(f"Title with ID {SlugByID} uncached.")
+
+		return []
+
+	def _IsUsed(self) -> bool:
+		"""
+		Проверяет, используется ли текущий тип цели.
+
+		:return: Возвращает `True`, если используется ли текущий тип цели.
+		:rtype: bool
+		"""
+
+		return self._Data.check_key("--id")
+
+class PasingTarget_Last(_BaseParserTarget):
+	"""Цель для парсинга: последний обработанный тайтл."""
+
+	def _GetSlugs(self) -> list[str]:
+		"""
+		Возвращает список алиасов для парсинга.
+		
+		:return: Список алиасов.
+		:rtype: list[str]
+		"""
+
+		Slugs: list[str] = []
+		LastParsedSlug = self._SourceOperator.shared_data.last_parsed_slug
+
+		if LastParsedSlug: Slugs.append(LastParsedSlug)
+		else: self._Printer.warning("Last slug undefined. Parse anything firstly.")
+
+		return Slugs
+
+	def _IsUsed(self) -> bool:
+		"""
+		Проверяет, используется ли текущий тип цели.
+
+		:return: Возвращает `True`, если используется ли текущий тип цели.
+		:rtype: bool
+		"""
+
+		return self._Data.check_flag("-last")
+
+class PasingTarget_Local(_BaseParserTarget):
+	"""Цель для парсинга: локальные тайтлы."""
+
+	def _GetSlugs(self) -> list[str]:
+		"""
+		Возвращает список алиасов для парсинга.
+		
+		:return: Список алиасов.
+		:rtype: list[str]
+		"""
+
+		Collector = utils.Collector(self._SourceOperator.entry_point)
+		SlugsCount = Collector.scan_local()
+		Slugs = list(Collector.slugs)
+		self._Printer.emit(f"Local titles to parsing: {SlugsCount}.")
+
+		return Slugs
+
+	def _IsUsed(self) -> bool:
+		"""
+		Проверяет, используется ли текущий тип цели.
+
+		:return: Возвращает `True`, если используется ли текущий тип цели.
+		:rtype: bool
+		"""
+
+		return self._Data.check_flag("-local")
+
+class PasingTarget_Slug(_BaseParserTarget):
+	"""Цель для парсинга: тайтл по алиасу."""
+
+	def _GetSlugs(self) -> list[str]:
+		"""
+		Возвращает список алиасов для парсинга.
+		
+		:return: Список алиасов.
+		:rtype: list[str]
+		"""
+
+		Slug: str = self._Data.get_important_position_value("TARGET", expected_type = str)
+		TargetSlug: str | None = self._SourceOperator.parse_slug_from_string(Slug)
+		if TargetSlug: return [TargetSlug]
+		else: self._Printer.warning("Unable to parse title slug from target.")
+
+		return []
+
+	def _IsUsed(self) -> bool:
+		"""
+		Проверяет, используется ли текущий тип цели.
+
+		:return: Возвращает `True`, если используется ли текущий тип цели.
+		:rtype: bool
+		"""
+
+		return not any((
+			self._Data.check_flag("-last"),
+			self._Data.check_flag("-local"),
+
+			self._Data.check_key("--collection"),
+			self._Data.check_key("--id"),
+			self._Data.check_key("--updates")
+		))
+
+class PasingTarget_Updates(_BaseParserTarget):
+	"""Цель для парсинга: обновления."""
+
+	def _GetSlugs(self) -> list[str]:
+		"""
+		Возвращает список алиасов для парсинга.
+		
+		:return: Список алиасов.
+		:rtype: list[str]
+		"""
+
+		Period: int = self._Data.get_key_value("--period", expected_type = int) or 24
+		self._Printer.emit("Collecting updates…")
+		Slugs = list(self._SourceOperator.collect_slugs(Period))
+		self._Printer.emit(f"Updates collected: {len(Slugs)}.")
+
+		return Slugs
+
+	def _IsUsed(self) -> bool:
+		"""
+		Проверяет, используется ли текущий тип цели.
+
+		:return: Возвращает `True`, если используется ли текущий тип цели.
+		:rtype: bool
+		"""
+
+		return self._Data.check_key("--updates")
+
+#==========================================================================================#
+# >>>>> ВСПОМОГАТЕЛЬНЫЕ СТРУКТУРЫ ДАННЫХ <<<<< #
+#==========================================================================================#
+
+@dataclass(frozen = True)
 class ParsingStatistics:
 	"""Статистика парсинга."""
 
@@ -39,19 +294,12 @@ class ParsingStatistics:
 class Parameters(T_ForceModeRequired, T_SingleParserRequired):
 	"""Параметры, требуемые обработчиком."""
 
-	target: str
+	target: _BaseParserTarget
 	parse_from: str | None
-	updates_period: int | None
-	parse_by_id: int | None
 
 	is_sorting_enabled: bool
 	is_amending_enabled: bool
 	is_download_images: bool
-
-	is_parse_last_title: bool
-	is_parse_collection: bool
-	is_parse_updates: bool
-	is_parse_local: bool
 
 class ParsingSignals(Enum):
 	"""Сигналы парсинга."""
@@ -72,62 +320,33 @@ class CommandProcessor(CommandProcessorTemplate[Parameters]):
 	# >>>>> ПРИВАТНЫЕ МЕТОДЫ <<<<< #
 	#==========================================================================================#
 
-	def __GetSlugsToParsing(self, parameters: Parameters, entry_point: "BaseEntryPoint") -> tuple[str, ...]:
+	def __GetParsingTarget(self, data: ParsedCommandData, prepared_data: PreparedData) -> _BaseParserTarget:
 		"""
-		Определяет последовательность алиасов тайтлов для парсинга.
+		Определяет цель для парсинга.
 
-		:param parameters: Параметры, требуемые обработчиком.
-		:type parameters: Parameters
-		:param entry_point: Точка входа в парсер.
-		:type entry_point: BaseEntryPoint
-		:return: Последовательность алиасов.
-		:rtype: tuple[str, ...]
+		:param data: Данные обработанной команды.
+		:type data: ParsedCommandData
+		:param prepared_data: Предподготолвенные данные.
+		:type prepared_data: PreparedData
+		:return: Цель для парсинга.
+		:rtype: _BaseParserTarget
 		"""
 
-		SourceOperator = entry_point.source_operator
-		Slugs: list[str] = []
-			
-		if parameters.is_parse_last_title:
-			LastParsedSlug = SourceOperator.shared_data.last_parsed_slug
-	
-			if LastParsedSlug:
-				Slugs.append(LastParsedSlug)
-			else:
-				self.printer.warning("Last slug undefined. Parse anything firstly.")
-	
-		elif parameters.is_parse_collection:
-			Collector = utils.Collector(entry_point)
-			Slugs = list(Collector.load())
-			self.printer.emit(f"Titles in collection: {len(Slugs)}.")
-	
-		elif parameters.is_parse_updates:
-			self.printer.emit("Collecting updates…")
-			Slugs = list(SourceOperator.collect_slugs(period = parameters.updates_period or 24))
-			self.printer.emit(f"Updates collected: {len(Slugs)}.")
-	
-		elif parameters.is_parse_local:
-			Collector = utils.Collector(entry_point)
-			SlugsCount = Collector.scan_local()
-			Slugs = list(Collector.slugs)
-			self.printer.emit(f"Local titles to parsing: {SlugsCount}.")
-	
-		elif parameters.parse_by_id:
-			SlugByID = SourceOperator.shared_data.journal.get_slug_by_id(parameters.parse_by_id)
-	
-			if SlugByID:
-				Slugs.append(SlugByID)
-			else:
-				self.printer.warning(f"Title with ID {SlugByID} uncached.")
-	
-		else:
-			TargetSlug = SourceOperator.parse_slug_from_string(parameters.target)
-	
-			if TargetSlug:
-				Slugs.append(TargetSlug)
-			else:
-				self.printer.warning("Unable to parse title slug from target.")
+		Parser = prepared_data.required_parsers[0]
+		TargetTypes: tuple[type[_BaseParserTarget], ...] = (
+			PasingTarget_Collection,
+			PasingTarget_ID,
+			PasingTarget_Last,
+			PasingTarget_Local,
+			PasingTarget_Slug,
+			PasingTarget_Updates
+		)
 
-		return tuple(Slugs)
+		for Type in TargetTypes:
+			Target = Type(Parser.source_operator, data)
+			if Target.is_used: return Target
+
+		raise exceptions.parsers.ParsingError("Unable determine parsing target.")
 
 	def __ParseSlugs(self, parameters: Parameters, source_operator: "BaseSourceOperator", slugs: tuple[str, ...]) -> ParsingStatistics:
 		"""
@@ -273,11 +492,11 @@ class CommandProcessor(CommandProcessorTemplate[Parameters]):
 
 		ComPos = command.create_position("TARGET", "Target for parsing.", important = True)
 		ComPos.set_argument(description = "Title slug.")
-		ComPos.add_flag("-collection", description = GetStyledTextFromHTML("Parse slugs from <i>collection.txt</i> file."))
 		ComPos.add_flag("-local", description = "Parse all locally saved titles.")
-		ComPos.add_flag("-updates", description = "Parse titles updated for last 24 hours. Use key \"--period\" to change it.")
 		ComPos.add_flag("-last", description = "Parse last parsed title.")
+		ComPos.add_key("--collection", description = GetStyledTextFromHTML("Name of collection file. Put . to default <i>collection</i>."))
 		ComPos.add_key("--id", type = ValidableTypes.UnsignedInteger, description = "Title ID.")
+		ComPos.add_key("--updates", type = ValidableTypes.UnsignedInteger, description = "Parse updates for period in hours.")
 
 		self._AddParserPosition()
 
@@ -289,7 +508,6 @@ class CommandProcessor(CommandProcessorTemplate[Parameters]):
 		
 		self._AddMirrorKey()
 
-		command.base.add_key("--period", type = ValidableTypes.UnsignedInteger, description = "Period in hours for parsing. Use with \"-updates\" flag.")
 		command.base.add_key("--from", description = "Skip titles before this slug.")
 
 		return command
@@ -306,36 +524,21 @@ class CommandProcessor(CommandProcessorTemplate[Parameters]):
 		:rtype: Parameters
 		"""
 
-		Target: str = data.get_important_position_value("TARGET", expected_type = str)
-	
+		Target: _BaseParserTarget = self.__GetParsingTarget(data, prepared_data)
 		ParseFrom: str | None = data.get_key_value("--from", expected_type = str)
 		IsSortingEnabled: bool = data.check_flag("-sort")
 		IsAmendingEnabled: bool = not data.check_flag("-no-amend")
-	
-		ParseLastTitle: bool = data.check_flag("-last")
-		ParseCollection: bool = data.check_flag("-collection")
-		ParseUpdates: bool = data.check_flag("-updates")
-		UpdatesPeriod: int | None = data.get_key_value("--period", expected_type = int)
-		ParseLocal: bool = data.check_flag("-local")
-		ParseByID: int | None = data.get_key_value("--id", expected_type = int)
-		DownloadImages: bool = not data.check_flag("-no-images")
+		IsDownloadImages: bool = not data.check_flag("-no-images")
 
 		return Parameters(
 			required_parser = prepared_data.required_parsers[0],
 			target = Target,
 			parse_from = ParseFrom,
-			updates_period = UpdatesPeriod,
-			parse_by_id = ParseByID,
 			
 			is_force_mode_enabled = prepared_data.is_force_mode_enabled,
 			is_sorting_enabled = IsSortingEnabled,
 			is_amending_enabled = IsAmendingEnabled,
-			is_download_images = DownloadImages,
-		
-			is_parse_last_title = ParseLastTitle,
-			is_parse_collection = ParseCollection,
-			is_parse_updates = ParseUpdates,
-			is_parse_local = ParseLocal
+			is_download_images = IsDownloadImages
 		)
 
 	def _Process(self, parameters: Parameters) -> bool:
@@ -348,7 +551,7 @@ class CommandProcessor(CommandProcessorTemplate[Parameters]):
 		:rtype: bool
 		"""
 
-		Slugs: tuple[str, ...] = self.__GetSlugsToParsing(parameters, parameters.required_parser.entry_point)
+		Slugs: tuple[str, ...] =  tuple(parameters.target.get_slugs())
 
 		if parameters.parse_from:
 			Slugs = self.__SkipSlugsBefore(Slugs, parameters.parse_from)

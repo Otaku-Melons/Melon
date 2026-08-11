@@ -1,5 +1,6 @@
 from typing import TYPE_CHECKING
 
+from dublib.cli.progress_indicator import ProgressIndicator
 from dublib.cli.templates.bus import GenerateMessage, MessagesTypes
 from dublib.cli.text_styler import GetStyledTextFromHTML
 
@@ -20,6 +21,12 @@ class Printer:
 	#==========================================================================================#
 	# >>>>> СВОЙСТВА <<<<< #
 	#==========================================================================================#
+
+	@property
+	def progress_indicator(self) -> ProgressIndicator:
+		"""Терминальный индикатор прогресса на основе OSC 9;4."""
+
+		return self.__ProgressIndicator
 
 	@property
 	def stages(self) -> Stages:
@@ -53,6 +60,7 @@ class Printer:
 		
 		self.__SystemObjects = system_objects
 
+		self.__ProgressIndicator = ProgressIndicator()
 		self.__Stages = Stages(self)
 		self.__Templates = Templates(self)
 

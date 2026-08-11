@@ -1,3 +1,4 @@
+import sys
 from typing import TYPE_CHECKING
 
 from prettytable import PLAIN_COLUMNS, PrettyTable
@@ -9,6 +10,14 @@ if TYPE_CHECKING:
 	from ....utils.cacher import CachingResult
 	from ....utils.classificator import ClassificationResult
 	from . import Printer
+
+def set_terminal_progress(state: int, progress: int = 0):
+	"""
+	Отправляет OSC 9;4 для отображения прогресса в панели задач / вкладке.
+	progress должен быть от 0 до 100.
+	"""
+	sys.stdout.write(f"\x1b]9;4;{state};{progress}\x07")
+	sys.stdout.flush()
 
 class Templates:
 	"""Расширенные шаблоны вывода."""
@@ -120,10 +129,13 @@ class Templates:
 		"""
 
 		Number = index + 1
+		if Number == 3: raise ValueError("123")
 		Progress = round(index / count * 100, 2)
 		NumberString = FastStyler(str(Number)).colorize.magenta
 		ProgressString = StringifyFloat(Progress)
 		ProgressString = FastStyler(ProgressString + "%").colorize.cyan
+
+		self.__Printer.progress_indicator.set_progress(Progress)
 		self.__Printer.emit(f"[{NumberString} / {count} | {ProgressString}] ", end_line = False, flush = True)
 
 	def parsing_summary(self, parsed: int, not_found: int, errors: int):
@@ -142,4 +154,6 @@ class Templates:
 		Parsed = FastStyler(str(parsed)).colorize.green if parsed else FastStyler(str(parsed)).colorize.red
 		NotFound = FastStyler(str(not_found)).colorize.yellow if not_found else FastStyler(str(not_found)).colorize.green
 		Errors = FastStyler(str(errors)).colorize.red if errors else FastStyler(str(errors)).colorize.green
+
+		self.__Printer.progress_indicator.end()
 		self.__Printer.emit(f"Parsed: {Parsed}. Not found: {NotFound}. Errors: {Errors}.")

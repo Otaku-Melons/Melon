@@ -1,3 +1,5 @@
+import atexit
+
 from dulwich import porcelain
 
 from ...core.system_objects.driver import Driver
@@ -57,3 +59,5 @@ class SystemObjects:
 		self.__Options = Options()
 		self.__Printer = Printer(self)
 		self.__Temper = Temper(self)
+
+		atexit.register(self.__Printer.progress_indicator.end)
