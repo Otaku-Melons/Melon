@@ -87,7 +87,7 @@ class CommandProcessor(CommandProcessorTemplate[Parameters]):
 		self.printer.emit(f"Repository: <i>{RepositoryURL}</i>.")
 
 		Installer.clone_parser(parameters.parser)
-		self.printer.emit(f"Parser clonned.")
+		self.printer.emit("Parser clonned.")
 
 		RequirementsCount: int = Installer.install_requirements(parameters.parser)
 		if RequirementsCount: self.printer.emit(f"Installed {RequirementsCount} requirements.")

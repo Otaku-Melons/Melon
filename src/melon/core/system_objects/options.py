@@ -88,11 +88,12 @@ class Options:
 	#==========================================================================================#
 
 	def __LoadEnviromentPathVariables(self):
-		"""Загружает опции на основе переменных сред, представляющих пути."""
+		"""Загружает опции на основе переменных сред, представляющих пути, и создаёт каталоги."""
 
 		for Name in self.__Paths.keys():
 			Value: str | None = os.environ.get(f"MELON_{Name}")
 			if Value: self.__Paths[Name] = PathOption(Value)
+			else: self.__Paths[Name].value.mkdir(exist_ok = True)
 
 	def __LoadEnviromentVariables(self):
 		"""Загружает и парсит переменные среды."""

@@ -1,9 +1,10 @@
 import re
-from collections import ChainMap
 from pathlib import Path
 from time import sleep
 from types import MappingProxyType
 from typing import TYPE_CHECKING, Any, Literal, cast
+
+from deepmerge import always_merger
 
 from dublib.functions.data import Zerotify
 from dublib.functions.filesystem import ReadJSON
@@ -452,16 +453,13 @@ class ParserSettings:
 		Settings: dict = _BASE_SETTINGS.copy()
 		ConfigsPaths: tuple[Path, Path] = (
 			Path(f"parsers/{self.__ParserName}/settings.json"),
-			Path(f"{self.__SystemObjects.options.CONFIGS_DIR}/{self.__ParserName}/settings.json")
+			Path(f"{self.__SystemObjects.options.CONFIGS_DIR}/{self.__ParserName}.json")
 		)
 
 		for ConfigPath in ConfigsPaths:
 			if ConfigPath.exists():
 				Buffer: dict = ReadJSON(ConfigPath)
-				Settings = {
-					Key: dict(ChainMap(Buffer.get(Key, {}), Settings.get(Key, {})))
-					for Key in set(Settings) | set(Buffer)
-				}
+				Settings = always_merger.merge(Settings, Buffer)
 
 		return Settings
 

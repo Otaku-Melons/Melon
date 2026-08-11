@@ -336,12 +336,12 @@ class ParsersManager:
 
 		return bool(Repository)
 		
-	def install_config(self, parser: str, force_mode: bool = False) -> ConfigInstallationResult:
+	def install_config(self, parser_name: str, force_mode: bool = False) -> ConfigInstallationResult:
 		"""
 		Устанавливает зависимости парсера.
 
-		:param parser: Имя парсера.
-		:type parser: str
+		:param parser_name: Имя парсера.
+		:type parser_name: str
 		:param force_mode: Переключает режим перезаписи
 		:type force_mode: bool
 		:return: Результат установки конфигурации.
@@ -350,11 +350,8 @@ class ParsersManager:
 
 		Config: dict = _BASE_SETTINGS.copy()
 
-		ConfigStoragePath: Path = Path(f"{self.__SystemObjects.options.CONFIGS_DIR}/{parser}")
-		ConfigStoragePath.mkdir(parents = not self.__SystemObjects.options.CONFIGS_DIR.is_overrrided, exist_ok = True)
-
-		ConfigPresetFilePath: Path = Path(f"parsers/{parser}/settings.json")
-		ConfigStorageFilePath: Path = ConfigStoragePath / "settings.json"
+		ConfigPresetFilePath: Path = Path(f"parsers/{parser_name}/settings.json")
+		ConfigStorageFilePath: Path = self.__SystemObjects.options.CONFIGS_DIR.value / f"{parser_name}.json"
 
 		if ConfigPresetFilePath.exists():
 			Buffer: dict = ReadJSON(ConfigPresetFilePath)
@@ -409,14 +406,15 @@ class ParsersManager:
 		if parser_name not in self.installed_parsers:
 			raise exceptions.system.ParserNotFound(parser_name)
 
-		DirectoriesToRemove = [Path(f"parsers/{parser_name}")]
+		ElementToRemove = [Path(f"parsers/{parser_name}")]
 
 		if clear:
-			DirectoriesToRemove += [
-				Path(f"{self.__SystemObjects.options.CONFIGS_DIR}/{parser_name}"),
+			ElementToRemove += [
+				Path(f"{self.__SystemObjects.options.CONFIGS_DIR}/{parser_name}.json"),
 				Path(f"{self.__SystemObjects.options.TEMP_DIR}/{parser_name}")
 			]
 
-		for Directory in DirectoriesToRemove:
-			if Directory.exists():
-				shutil.rmtree(Directory)
+		for Element in ElementToRemove:
+			if Element.exists():
+				if Element.is_dir(): shutil.rmtree(Element)
+				else: Element.unlink()
