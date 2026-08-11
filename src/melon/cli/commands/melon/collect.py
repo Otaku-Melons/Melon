@@ -15,6 +15,8 @@ from ._base import CommandProcessorTemplate
 class Parameters(T_ForceModeRequired, T_SingleParserRequired):
 	"""Параметры, требуемые обработчиком."""
 
+	file: str | None
+
 	is_collect_local: bool
 	is_sorting_enabled: bool
 
@@ -41,7 +43,7 @@ class CommandProcessor(CommandProcessorTemplate[Parameters]):
 		:rtype: str
 		"""
 
-		return GetStyledTextFromHTML("Collect titles slugs into file in parser's temporary directory.")
+		return "Collect titles slugs into file in parser's temporary directory."
 
 	def _GenerateCommand(self, command: Command) -> Command:
 		"""
@@ -54,6 +56,13 @@ class CommandProcessor(CommandProcessorTemplate[Parameters]):
 		"""
 
 		self._AddParserPosition()
+
+		ComPos = command.create_position(
+			name = "FILE",
+			description = GetStyledTextFromHTML("Collection filename without filetype. By default <i>collection</i>.")
+		)
+		ComPos.add_key("--file")
+
 		self._AddForceModeFlag()
 
 		command.base.add_flag("-local", description = "Scan local titles and put into collection.")
@@ -79,6 +88,8 @@ class CommandProcessor(CommandProcessorTemplate[Parameters]):
 		:rtype: Parameters
 		"""
 
+		File: str | None = data.get_position_value("FILE", expected_type = str)
+
 		CollectLocal: bool = data.check_flag("-local")
 		IsSortingEnabled: bool = not data.check_flag("-no-sort")
 	
@@ -89,6 +100,7 @@ class CommandProcessor(CommandProcessorTemplate[Parameters]):
 		return Parameters(
 			required_parser = prepared_data.required_parsers[0],
 			is_force_mode_enabled = prepared_data.is_force_mode_enabled,
+			file = File,
 			is_collect_local = CollectLocal,
 			is_sorting_enabled = IsSortingEnabled,
 			period = Period,
@@ -105,8 +117,8 @@ class CommandProcessor(CommandProcessorTemplate[Parameters]):
 		:return: Возвращает `False`, если команда требует прерывания выполнения.
 		:rtype: bool
 		"""
-
-		Collector = utils.Collector(parameters.required_parser.entry_point)
+		
+		Collector = utils.Collector(parameters.required_parser.entry_point, parameters.file)
 
 		if not parameters.is_force_mode_enabled:
 			Collector.load()

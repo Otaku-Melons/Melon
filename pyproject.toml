@@ -1,7 +1,7 @@
 [project]
 name = "melon"
 version = "1.0.0-rc.4"
-description = "Modular parsera management system."
+description = "Modular parsers management system."
 readme = "README.md"
 authors = [
     { name = "DUB1401", email = "vlad.milosta@outlook.com" }
@@ -27,7 +27,7 @@ melon = "melon:main"
 pxm = "melon:main"
 
 [build-system]
-requires = ["uv-build>=0.12.2,<0.13.0", "uv-dynamic-versioning"]
+requires = ["uv-build>=0.12.2,<0.13.0"]
 build-backend = "uv_build"
 
 [tool.mypy]
