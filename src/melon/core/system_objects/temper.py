@@ -190,7 +190,7 @@ class Temper:
 		self.__TempDirectory = self.__SystemObjects.options.TEMP_DIR.value
 		self.__TempDirectory.mkdir(exist_ok = True)
 
-	def clear_parser_temp(self, parser_name: str, whitelist: Sequence[str] | None = ("Collection.txt", "shared")):
+	def clear_parser_temp(self, parser_name: str, whitelist: Sequence[str] | None = ("collections", "shared")):
 		"""
 		Очищает временный каталог парсера. По умолчанию не трогает файлы и каталоги из белого списка.
 
@@ -214,6 +214,21 @@ class Temper:
 				os.remove(Descriptor.path)
 			elif Descriptor.is_dir():
 				shutil.rmtree(Descriptor.path)
+
+	def get_parser_collections_directory(self, parser_name: str) -> Path:
+		"""
+		Возвращает путь к каталогу коллекций парсера и автоматически создаёт его.
+
+		:param parser_name: Имя парсера.
+		:type parser_name: str
+		:return: Путь к каталогу коллекций парсера.
+		:rtype: Path
+		"""
+
+		ParserCollectionDirectory = self.get_parser_temp_directory(parser_name) / "collections"
+		ParserCollectionDirectory.mkdir(exist_ok = True)
+
+		return ParserCollectionDirectory
 
 	def get_parser_temp_directory(self, parser_name: str) -> Path:
 		"""

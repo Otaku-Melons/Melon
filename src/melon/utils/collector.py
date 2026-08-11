@@ -27,17 +27,22 @@ class Collector:
 	# >>>>> ПУБЛИЧНЫЕ МЕТОДЫ <<<<< #
 	#==========================================================================================#
 
-	def __init__(self, entry_point: "BaseEntryPoint"):
+	def __init__(self, entry_point: "BaseEntryPoint", filename: str | None = None):
 		"""
 		Сборщик алиасов.
 
 		:param entry_point: Точка входа в модуль парсера.
 		:type entry_point: BaseEntryPoint
+		:param filename: Имя файла коллекции без расширения. По умолчанию 
+		:type filename: str | None
 		"""
 
 		self.__EntryPoint = entry_point
+		self.__Filename: str = filename or "collection"
 
-		self.__CollectionPath = self.__EntryPoint.system_objects.temper.get_parser_temp_directory(self.__EntryPoint.parser_name) / "Collection.txt"
+		if not self.__Filename.endswith(".txt"): self.__Filename = f"{self.__Filename}.txt"
+
+		self.__CollectionPath = self.__EntryPoint.system_objects.temper.get_parser_collections_directory(self.__EntryPoint.parser_name) / self.__Filename
 		self.__Collection: list[str] = []
 
 	def add(self, slugs: str | Sequence[str]) -> int:
@@ -60,7 +65,7 @@ class Collector:
 
 	def load(self) -> tuple[str, ...]:
 		"""
-		Считывает файл _Collection.txt_ во временном каталоге парсера.
+		Считывает файл _collection.txt_ во временном каталоге парсера.
 
 		:return: Последовательность считанных алиасов.
 		:rtype: tuple[str, ...]

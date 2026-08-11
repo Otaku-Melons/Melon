@@ -45,7 +45,7 @@ class CommandProcessor(BaseCommandProcessor[Parameters]):
 		:rtype: str
 		"""
 
-		return GetStyledTextFromHTML("Collect titles slugs into <i>Collection.txt</i> file in parser's temporary directory.")
+		return GetStyledTextFromHTML("Collect titles slugs into file in parser's temporary directory.")
 
 	def _GenerateCommand(self, command: Command) -> Command:
 		"""
