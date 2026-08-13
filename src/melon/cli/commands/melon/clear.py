@@ -132,7 +132,7 @@ class CommandProcessor(CommandProcessorTemplate[Parameters]):
 
 			case ClearingRules.NotFound:
 				Collector = utils.Collector(SourceOperator)
-				self.printer.emit("Scanning local titles… ", end_line = False)
+				self.printer.emit("Scanning local titles… ", end_line = False, flush = True)
 				LocalTitles: dict[str, str] = Collector.scan_local()
 				self.printer.emit("Done.", end_line = False)
 				SlugsCount: int = len(LocalTitles)
@@ -143,7 +143,7 @@ class CommandProcessor(CommandProcessorTemplate[Parameters]):
 				Progress: float = 0.0
 
 				for Slug in Collector.slugs:
-					Progress = SlugIndex + 1 / SlugsCount
+					Progress = (SlugIndex + 1) / SlugsCount * 100.0
 					ProgressIndicator.set_progress(Progress)
 
 					IsTitleExists: bool | None = SourceOperator.is_title_exists(Slug)

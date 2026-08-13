@@ -71,6 +71,7 @@ class CommandProcessor(CommandProcessorTemplate[DataclassStub]):
 		"""
 
 		Installer = ParsersManager(self.system_objects)
+		InstalledParsers: tuple[str, ...] = Installer.installed_parsers
 
 		TableData: dict[str, list[str]] = {
 			"PARSER": [],
@@ -79,7 +80,8 @@ class CommandProcessor(CommandProcessorTemplate[DataclassStub]):
 	
 		for ParserName in Installer.repositories.availabel_parsers:
 			RepositoryURL: str = Installer.repositories.get(ParserName, exception = True)
-			TableData["PARSER"].append(ParserName)
+			Status = "✅" if ParserName in InstalledParsers else "❌"
+			TableData["PARSER"].append(f"{Status} {ParserName}")
 			TableData["REPOSITORY"].append(FastStyler(RepositoryURL).decorate.italic)
 
 		TableObject = PrettyTable()

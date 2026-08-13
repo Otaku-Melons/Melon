@@ -137,17 +137,17 @@ class Repositories:
 		return ParserName
 
 	@overload
-	def get(self, parser: str, exception: Literal[True]) -> str: ...
+	def get(self, parser_name: str, exception: Literal[True]) -> str: ...
 
 	@overload
-	def get(self, parser: str, exception: Literal[False] = False) -> str | None: ...
+	def get(self, parser_name: str, exception: Literal[False] = False) -> str | None: ...
 
-	def get(self, parser: str, exception: bool = False) -> str | None:
+	def get(self, parser_name: str, exception: bool = False) -> str | None:
 		"""
 		Получает репозиторий по имени парсера.
 
-		:param parser: Имя парсера.
-		:type parser: str
+		:param parser_name: Имя парсера.
+		:type parser_name: str
 		:param exception: Указывает, нужно ли выбрасывать исключение `KeyError` при неудаче.
 		:type exception: bool
 		:return: URL репозитория.
@@ -155,10 +155,10 @@ class Repositories:
 		:raises ReposError: Репозиторий не найден.
 		"""
 
-		RepositoryURL: str | None = self.__Repositories.get(parser)
+		RepositoryURL: str | None = self.__Repositories.get(parser_name)
 
 		if not RepositoryURL and exception:
-			raise exceptions.system.ReposError(f"Repository for parser \"{parser}\" not found.")
+			raise exceptions.system.ReposError(f"Repository for parser \"{parser_name}\" not found.")
 		
 		return RepositoryURL
 
@@ -460,3 +460,16 @@ class ParsersManager:
 				if Element.is_dir(): shutil.rmtree(Element)
 				else: Element.unlink()
 
+	def update_parser(self, parser_name: str, requirements: bool = True):
+		"""
+		Обновляет парсер.
+
+		:param parser_name: Имя парсера.
+		:type parser_name: str
+		:param requirements: Указывает, нужно ли установить зависимости после обновления.
+		:type requirements: bool, optional
+		"""
+
+		RepositoryURL: str = self.repositories.get(parser_name, exception = True)
+		porcelain.pull(f"parers/{parser_name}", RepositoryURL, force = True)
+		if requirements: self.install_requirements(parser_name)
