@@ -89,6 +89,8 @@ class CommandProcessor(CommandProcessorTemplate[Parameters]):
 		ComPos.add_flag(ClearingRules.All.value, description = "Delete all files.")
 		ComPos.add_flag(ClearingRules.NotFound.value, description = "Clear titles, that not found on server.")
 
+		self._AddMirrorKey()
+
 		return command
 
 	def _ParseParameters(self, data: ParsedCommandData, prepared_data: PreparedData) -> Parameters:
@@ -134,7 +136,7 @@ class CommandProcessor(CommandProcessorTemplate[Parameters]):
 				Collector = utils.Collector(SourceOperator)
 				self.printer.emit("Scanning local titles… ", end_line = False, flush = True)
 				LocalTitles: dict[str, str] = Collector.scan_local()
-				self.printer.emit("Done.", end_line = False)
+				self.printer.emit("Done.")
 				SlugsCount: int = len(LocalTitles)
 				self.printer.emit(f"Local titles found: {SlugsCount}.")
 				

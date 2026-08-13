@@ -201,7 +201,7 @@ class PasingTarget_Local(_BaseParserTarget):
 		Collector = utils.Collector(self._SourceOperator)
 		self._SourceOperator.portals.printer.emit("Scanning local titles… ", end_line = False, flush = True)
 		SlugsCount = len(Collector.scan_local())
-		self._SourceOperator.portals.printer.emit("Done.", end_line = False)
+		self._SourceOperator.portals.printer.emit("Done.")
 		Slugs = list(Collector.slugs)
 		self._Printer.emit(f"Local titles to parsing: {SlugsCount}.")
 
@@ -302,6 +302,7 @@ class Parameters(T_ForceModeRequired, T_SingleParserRequired):
 	is_sorting_enabled: bool
 	is_amending_enabled: bool
 	is_download_images: bool
+	is_cold_saving: bool
 
 class ParsingSignals(Enum):
 	"""Сигналы парсинга."""
@@ -405,8 +406,12 @@ class CommandProcessor(CommandProcessorTemplate[Parameters]):
 			if parameters.is_download_images: Parser.download_images(parameters.is_force_mode_enabled)
 			else: self.printer.emit("Images downloading skipped by flag.")
 	
-			if Parser.save(parameters.is_sorting_enabled): self.printer.emit("Saved.")
-			else: self.printer.emit("No changes. Saving skipped.")
+			if not Title.is_local_file_loaded and not parameters.is_cold_saving:
+				self.printer.emit("Cold saving disabled by flag. Skipped.")
+			else:
+				if Parser.save(parameters.is_sorting_enabled): self.printer.emit("Saved.")
+				else: self.printer.emit("No changes. Saving skipped.")
+				
 			ParsedCount += 1
 
 		return ParsingStatistics(ParsedCount, NotFoundCount, ErrorsCount)
@@ -507,7 +512,8 @@ class CommandProcessor(CommandProcessorTemplate[Parameters]):
 		command.base.add_flag("-no-amend", description = "Disable chapters content amending.")
 		command.base.add_flag("-no-images", description = "Disable covers and persons portraits downloading.")
 		command.base.add_flag("-sort", description = "Enable chapters sorting after parsing.")
-		
+		command.base.add_flag("-no-cold-save", description = "Disable saving if local file does't exists.")
+
 		self._AddMirrorKey()
 
 		command.base.add_key("--from", description = "Skip titles before this slug.")
@@ -526,21 +532,16 @@ class CommandProcessor(CommandProcessorTemplate[Parameters]):
 		:rtype: Parameters
 		"""
 
-		Target: _BaseParserTarget = self.__GetParsingTarget(data, prepared_data)
-		ParseFrom: str | None = data.get_key_value("--from", expected_type = str)
-		IsSortingEnabled: bool = data.check_flag("-sort")
-		IsAmendingEnabled: bool = not data.check_flag("-no-amend")
-		IsDownloadImages: bool = not data.check_flag("-no-images")
-
 		return Parameters(
 			required_parser = prepared_data.required_parsers[0],
-			target = Target,
-			parse_from = ParseFrom,
+			target = self.__GetParsingTarget(data, prepared_data),
+			parse_from = data.get_key_value("--from", expected_type = str),
 			
 			is_force_mode_enabled = prepared_data.is_force_mode_enabled,
-			is_sorting_enabled = IsSortingEnabled,
-			is_amending_enabled = IsAmendingEnabled,
-			is_download_images = IsDownloadImages
+			is_sorting_enabled = data.check_flag("-sort"),
+			is_amending_enabled = not data.check_flag("-no-amend"),
+			is_download_images = not data.check_flag("-no-images"),
+			is_cold_saving = not data.check_flag("-no-cold-save")
 		)
 
 	def _Process(self, parameters: Parameters) -> bool:

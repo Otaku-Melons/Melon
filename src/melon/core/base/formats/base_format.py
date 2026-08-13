@@ -684,6 +684,12 @@ class BaseTitle(ABC):
 		return sum(Branch.empty_chapters_count for Branch in self._Branches.values())
 
 	@property
+	def is_local_file_loaded(self) -> bool:
+		"""Состояние: считывались ли данные из локального файла."""
+
+		return self._IsLocalFileLoaded
+
+	@property
 	def path(self) -> Path:
 		"""Путь к файлу."""
 
@@ -884,6 +890,8 @@ class BaseTitle(ABC):
 				if not DataBuffer:
 					DataBuffer = self._SearchFileInDirectory(TitlesDirectory, str(identificator), By.ID) or {}
 
+		self._IsLocalFileLoaded = bool(DataBuffer)
+
 		return Zerotify(DataBuffer)
 
 	def _MergeBranch(self, branch: BaseBranch) -> int:
@@ -949,6 +957,12 @@ class BaseTitle(ABC):
 				pass
 
 		return None
+
+	def _TryUpdateJournal(self):
+		"""Обновляет кэш пары алиас-ID, если оба валидны."""
+
+		if all((self.id, self.slug)):
+			self._Parser.source_operator.shared_data.journal.update(cast(int, self.id), cast(str, self.slug))
 
 	#==========================================================================================#
 	# >>>>> НАСЛЕДУЕМЫЕ МЕТОДЫ ПРЕОБРАЗОВАНИЯ СЛОВАРНОЙ СТРУКТУРЫ <<<<< #
@@ -1122,6 +1136,8 @@ class BaseTitle(ABC):
 		self._Persons: list[Person] = []
 		self._Covers: list[ImageData] = []
 
+		self._IsLocalFileLoaded: bool = False
+
 		self._PostInitMethod()
 
 	def __getitem__(self, key: str) -> Any:
@@ -1244,9 +1260,6 @@ class BaseTitle(ABC):
 
 		if not IsLocalFileEqual:
 			WriteJSON(self.path, self._Data)
-
-		if all((self.id, self.slug)):
-			self._Parser.source_operator.shared_data.journal.update(cast(int, self.id), cast(str, self.slug))
 
 		return not IsLocalFileEqual
 
@@ -1466,6 +1479,7 @@ class BaseTitle(ABC):
 		"""
 
 		self._Data["id"] = id
+		self._TryUpdateJournal()
 
 	def set_content_language(self, language_code: str | None, load_preset: bool = True):
 		"""
