@@ -89,8 +89,7 @@ class CommandProcessor(CommandProcessorTemplate[Parameters]):
 		Installer.clone_parser(parameters.parser)
 		self.printer.emit("Parser clonned.")
 
-		RequirementsCount: int = Installer.install_requirements(parameters.parser)
-		if RequirementsCount: self.printer.emit(f"Installed {RequirementsCount} requirements.")
+		Installer.install_requirements(parameters.parser)
 
 		Result: ConfigInstallationResult = Installer.install_config(parameters.parser)
 		

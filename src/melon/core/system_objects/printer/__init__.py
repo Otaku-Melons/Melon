@@ -110,6 +110,16 @@ class Printer:
 
 		self.emit(text, MessagesTypes.Critical)
 
+	def debug(self, text: str):
+		"""
+		Обрабатывает вывод сообщения отладки.
+
+		:param text: Текст сообщения.
+		:type text: str
+		"""
+
+		self.emit(text, MessagesTypes.Debug)
+
 	def error(self, text: str):
 		"""
 		Обрабатывает вывод ошибки.
