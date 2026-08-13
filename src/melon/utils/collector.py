@@ -1,14 +1,38 @@
 import os
+from concurrent.futures import ThreadPoolExecutor
 from json import JSONDecodeError
 from typing import TYPE_CHECKING, Sequence
 
 from dublib.functions.data import ToSequence
 from dublib.functions.filesystem import ReadJSON, ReadTextFile, WriteTextFile
 
-from ..core import exceptions
-
 if TYPE_CHECKING:
 	from ..core.base.source_operator import BaseSourceOperator
+
+#==========================================================================================#
+# >>>>> ВСПОМОГАТЕЛЬНЫЕ ФУНКЦИИ <<<<< #
+#==========================================================================================#
+
+def _ReadLocalFile(entry: os.DirEntry) -> tuple[str, str] | None:
+	"""
+	Считывает локальный файл.
+
+	:param entry: Представление файла.
+	:type entry: os.DirEntry
+	:return: Кортеж из алиаса и имени файла или `None`.
+	:rtype: tuple[str, str] | None
+	"""
+	try:
+		Title = ReadJSON(entry.path) 
+		Slug = Title.get("slug")
+		if Slug: return (Slug, entry.name)
+	except (JSONDecodeError, FileNotFoundError): pass
+	
+	return None
+
+#==========================================================================================#
+# >>>>> ОСНОВНОЙ КЛАСС <<<<< #
+#==========================================================================================#
 
 class Collector:
 	"""Сборщик алиасов."""
@@ -105,26 +129,20 @@ class Collector:
 		
 		TitlesDirectoryPath = self.__SourceOperator.settings.directories.titles
 		LocalSlugs: dict[str, str] = {}
+		Entries: tuple[os.DirEntry, ...] = tuple(Entry for Entry in os.scandir(TitlesDirectoryPath) if Entry.is_file() and Entry.name.endswith(".json"))
 
-		for Entry in os.scandir(TitlesDirectoryPath):
-			if not Entry.is_file() or not Entry.name.endswith(".json"):
-				continue
+		if allow_filenames and not self.__SourceOperator.settings.common.use_id_as_filename:
+			for Entry in Entries:
+				LocalSlugs[Entry.name[:-5]] = Entry.name
 
-			Filename = Entry.name
-
-			if allow_filenames and not self.__SourceOperator.settings.common.use_id_as_filename:
-				LocalSlugs[Filename[:-5]] = Filename
-				continue
-
-			try:
-				Title = ReadJSON(TitlesDirectoryPath / Entry.name) 
-				Slug = Title.get("slug")
-
-				if Slug:
-					LocalSlugs[Slug] = Filename
-
-			except (JSONDecodeError, exceptions.parsers.UnsupportedFormat):
-				pass
+		else:
+			with ThreadPoolExecutor() as Executor:
+				Results = Executor.map(_ReadLocalFile, Entries)
+				
+				for Result in Results:
+					if Result:
+						Slug, Filename = Result
+						LocalSlugs[Slug] = Filename
 
 		self.add(tuple(LocalSlugs.keys()))
 
