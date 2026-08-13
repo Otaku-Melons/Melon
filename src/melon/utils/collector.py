@@ -93,25 +93,27 @@ class Collector:
 
 		WriteTextFile(self.__CollectionPath, CollectionToWrite)
 	
-	def scan_local(self, allow_filenames: bool = True) -> int:
+	def scan_local(self, allow_filenames: bool = True) -> dict[str, str]:
 		"""
 		Сканирует директорию тайтлов парсера и добавляет алиасы из неё в коллекцию.
 
 		:param allow_filenames: Разрешает считать названия файлов без расширения алиасами при активации соответствующего параметра в настройках парсера. Не требует чтения файла.
 		:type allow_filenames: bool
-		:return: Количество уникальных добавленыых алиасов.
-		:rtype: int
+		:return: Словарь, в котором ключ – алиас тайтла, а значение – имя его файла.
+		:rtype: dict[str ,str]
 		"""
 		
 		TitlesDirectoryPath = self.__SourceOperator.settings.directories.titles
-		LocalSlugs: list[str] = []
+		LocalSlugs: dict[str, str] = {}
 
 		for Entry in os.scandir(TitlesDirectoryPath):
 			if not Entry.is_file() or not Entry.name.endswith(".json"):
 				continue
 
+			Filename = Entry.name
+
 			if allow_filenames and not self.__SourceOperator.settings.common.use_id_as_filename:
-				LocalSlugs.append(Entry.name[:-5])
+				LocalSlugs[Filename[:-5]] = Filename
 				continue
 
 			try:
@@ -119,9 +121,11 @@ class Collector:
 				Slug = Title.get("slug")
 
 				if Slug:
-					LocalSlugs.append(Slug)
+					LocalSlugs[Slug] = Filename
 
 			except (JSONDecodeError, exceptions.parsers.UnsupportedFormat):
 				pass
 
-		return self.add(LocalSlugs)
+		self.add(tuple(LocalSlugs.keys()))
+
+		return LocalSlugs

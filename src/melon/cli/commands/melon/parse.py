@@ -199,7 +199,7 @@ class PasingTarget_Local(_BaseParserTarget):
 		"""
 
 		Collector = utils.Collector(self._SourceOperator)
-		SlugsCount = Collector.scan_local()
+		SlugsCount = len(Collector.scan_local())
 		Slugs = list(Collector.slugs)
 		self._Printer.emit(f"Local titles to parsing: {SlugsCount}.")
 

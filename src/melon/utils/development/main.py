@@ -38,6 +38,18 @@ class SourceOperator(BaseSourceOperator):
 
 		return super()._InitializeRequestor()
 
+	def _IsTitleExists(self, slug: str) -> bool | None:
+		"""
+		Проверяет, существует ли тайтл на сервере.
+
+		:param slug: Алиас тайтла.
+		:type slug: str
+		:return: Возвращает статус существования файла на сервере или `None` при невозможности проверки.
+		:rtype: bool | None
+		"""
+
+		return None
+
 	def _ParseSlugFromString(self, string: str) -> str | None:
 		"""
 		Парсит алиас тайтла из переданной строки. Может использоваться для обработки тайтлов по ссылкам.

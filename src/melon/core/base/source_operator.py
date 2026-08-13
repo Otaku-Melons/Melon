@@ -153,6 +153,18 @@ class BaseSourceOperator:
 		
 		return WebRequestorObject
 
+	def _IsTitleExists(self, slug: str) -> bool | None:
+		"""
+		Проверяет, существует ли тайтл на сервере.
+
+		:param slug: Алиас тайтла.
+		:type slug: str
+		:return: Возвращает статус существования файла на сервере или `None` при невозможности проверки.
+		:rtype: bool | None
+		"""
+
+		return None
+
 	def _ParseSlugFromString(self, string: str) -> str | None:
 		"""
 		Парсит алиас тайтла из переданной строки. Может использоваться для обработки тайтлов по ссылкам.
@@ -319,6 +331,18 @@ class BaseSourceOperator:
 
 		# To-Do: метод для определения типа контента по алиасу.
 		return self._Manifest.content_types[0]
+
+	def is_title_exists(self, slug: str) -> bool | None:
+		"""
+		Проверяет, существует ли тайтл на сервере.
+
+		:param slug: Алиас тайтла.
+		:type slug: str
+		:return: Возвращает статус существования файла на сервере или `None` при невозможности проверки.
+		:rtype: bool | None
+		"""
+
+		return self._IsTitleExists(slug)
 
 	def launch_parser(self, content_type: ContentTypes | None = None) -> "BaseParser":
 		"""

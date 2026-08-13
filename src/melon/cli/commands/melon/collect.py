@@ -126,7 +126,7 @@ class CommandProcessor(CommandProcessorTemplate[Parameters]):
 		AddedSlugs: int = 0
 	
 		if parameters.is_collect_local:
-			AddedSlugs = Collector.scan_local()
+			AddedSlugs = len(Collector.scan_local())
 		elif parameters.required_parser.source_operator.is_collector_implemented:
 			CollectedSlugs = parameters.required_parser.source_operator.collect_slugs(parameters.period, parameters.filters, parameters.pages)
 			AddedSlugs = Collector.add(CollectedSlugs)

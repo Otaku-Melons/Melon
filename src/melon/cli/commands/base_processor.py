@@ -51,7 +51,7 @@ class RequiredParser:
 	name: str
 	source_operator: "BaseSourceOperator"
 	manifest: "ParserManifest"
-	settinngs: "ParserSettings"
+	settings: "ParserSettings"
 
 @dataclass(frozen = True)
 class PreparedData:
