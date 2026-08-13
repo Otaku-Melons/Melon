@@ -112,7 +112,7 @@ class PasingTarget_Collection(_BaseParserTarget):
 
 		Filename: str | None = self._Data.get_key_value("--collection", expected_type = str)
 		if Filename == ".": Filename = None
-		Collector = utils.Collector(self._SourceOperator.entry_point, Filename)
+		Collector = utils.Collector(self._SourceOperator, Filename)
 		Slugs = list(Collector.load())
 		self._Printer.emit(f"Titles in collection: {len(Slugs)}.")
 
@@ -198,7 +198,7 @@ class PasingTarget_Local(_BaseParserTarget):
 		:rtype: list[str]
 		"""
 
-		Collector = utils.Collector(self._SourceOperator.entry_point)
+		Collector = utils.Collector(self._SourceOperator)
 		SlugsCount = Collector.scan_local()
 		Slugs = list(Collector.slugs)
 		self._Printer.emit(f"Local titles to parsing: {SlugsCount}.")

@@ -75,22 +75,22 @@ class CommandProcessor(CommandProcessorTemplate[DataclassStub]):
 			"collect": []
 		}
 	
-		for ParserName in self._SystemObjects.driver.parsers_names:
-			EntryPoint = self._SystemObjects.driver.get_entry_point(ParserName)
+		for ParserName in self._SystemObjects.parsers_manager.installed_parsers:
+			SourceOperator = self._SystemObjects.parsers_manager.launch_source_operator(ParserName)
 			TypesEmoji = {
 				ContentTypes.Manga: "m",
 				ContentTypes.Ranobe: "r"
 			}
 	
-			ParserVersion = EntryPoint.version or ""
-			ParserContentTypes: list[str] = [TypesEmoji[CurrentType] for CurrentType in EntryPoint.manifest.content_types]
-			ParserSite: str = "https://" + EntryPoint.manifest.domain
+			ParserVersion = SourceOperator.parser_version or ""
+			ParserContentTypes: list[str] = [TypesEmoji[CurrentType] for CurrentType in SourceOperator.manifest.content_types]
+			ParserSite: str = "https://" + SourceOperator.manifest.domain
 	
 			TableData["NAME"].append(ParserName)
 			TableData["VERSION"].append(ParserVersion)
 			TableData["TYPES"].append(", ".join(ParserContentTypes))
 			TableData["DOMAIN"].append(ParserSite)
-			TableData["collect"].append(str(EntryPoint.source_operator.is_collector_implemented))
+			TableData["collect"].append(str(SourceOperator.is_collector_implemented))
 	
 		self.printer.templates.parsers_table(TableData)
 

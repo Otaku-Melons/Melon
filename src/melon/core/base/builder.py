@@ -79,7 +79,7 @@ class BaseBuilder:
 		self._Temper = self._SystemObjects.temper
 		self._Printer = self._SystemObjects.printer
 
-		self._Portals = parser.source_operator.entry_point.portals
+		self._Portals = parser.source_operator.portals
 		self._ParserTempDirectory = self._Temper.get_parser_temp_directory(self._Parser.manifest.parser_name)
 		self._WordsDictionary = self._Parser.load_words_dictionary_preset(self._Title.content_language) if self._Title.content_language else None
 

@@ -66,7 +66,7 @@ class BaseParser(ABC):
 	def portals(self) -> "Portals":
 		"""Порталы вывода парсера."""
 
-		return self._SourceOperator.entry_point.portals
+		return self._SourceOperator.portals
 
 	@property
 	def requestor(self) -> "WebRequestor":

@@ -334,7 +334,7 @@ class ImagesDownloader:
 		:type result: ImageDownloadingResult
 		"""
 
-		Portals = self.__SourceOperator.entry_point.portals
+		Portals = self.__SourceOperator.portals
 
 		if result.is_downloaded:
 			if result.is_already_exists: Portals.printer.emit("Overwritten.")

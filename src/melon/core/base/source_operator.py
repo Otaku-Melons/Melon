@@ -1,11 +1,16 @@
 import importlib
+from dataclasses import dataclass
 from os import PathLike
 from typing import TYPE_CHECKING, Sequence
 
+from dulwich import errors, porcelain
+
+from dublib.functions.filesystem import ReadJSON
 from dublib.validators import Validator_Domain, Validator_URL
 from dublib.web_requestor import WebConfig, WebLibs, WebRequestor
 
 from ...core import exceptions
+from ...core.base.parsers.components import ParserSettings
 from ...core.base.parsers.components.images_downloader import (
 	ImageDownloadingResult,
 	ImagesDownloader,
@@ -14,11 +19,24 @@ from ...core.base.parsers.components.manifest import ContentTypes, ParserManifes
 
 if TYPE_CHECKING:
 	from ...core.base.parsers.base_parser import BaseParser
-	from ...core.base.parsers.components import ParserSettings
 	from ...core.system_objects import SystemObjects
 	from ...core.system_objects.printer import Portals
 	from ...core.system_objects.temper import SharedData
-	from .entry_point import BaseEntryPoint
+
+#==========================================================================================#
+# >>>>> ВСПОМОГАТЕЛЬНЫЕ СТРУКТУРЫ ДАННЫХ <<<<< #
+#==========================================================================================#
+
+@dataclass
+class FileTypingResult:
+	"""Результат определения типа файла тайтла."""
+
+	slug: str
+	content_type: ContentTypes
+
+#==========================================================================================#
+# >>>>> ОСНОВНОЙ КЛАСС <<<<< #
+#==========================================================================================#
 
 class BaseSourceOperator:
 	"""Базовый оператор источника."""
@@ -26,12 +44,6 @@ class BaseSourceOperator:
 	#==========================================================================================#
 	# >>>>> СВОЙСТВА <<<<< #
 	#==========================================================================================#
-
-	@property
-	def entry_point(self) -> "BaseEntryPoint":
-		"""Точка входа в модуль парсера."""
-
-		return self._EntryPoint
 
 	@property
 	def images_downloader(self) -> ImagesDownloader:
@@ -52,13 +64,39 @@ class BaseSourceOperator:
 		return self._Manifest
 
 	@property
+	def parser_name(self) -> str:
+		"""Имя парсера."""
+
+		return self._Manifest.parser_name
+
+	@property
+	def parser_version(self) -> str | None:
+		"""Версия парсера."""
+
+		try:
+			ParserTags = porcelain.tag_list(f"parsers/{self._Manifest.parser_name}")
+		except errors.NotGitRepository:
+			return None
+		
+		if ParserTags:
+			return ParserTags[-1].decode().lstrip("v")
+		
+		return None
+
+	@property
 	def portals(self) -> "Portals":
 		"""Порталы вывода парсера."""
 
-		return self._EntryPoint.portals
+		return self._Portals
 
 	@property
-	def settings(self) -> "ParserSettings":
+	def requestor(self) -> WebRequestor:
+		"""Менеджер запросов."""
+
+		return self._Requestor
+
+	@property
+	def settings(self) -> ParserSettings:
 		"""Настройки парсера."""
 
 		return self._Settings
@@ -67,19 +105,13 @@ class BaseSourceOperator:
 	def shared_data(self) -> "SharedData":
 		"""Разделяемые в контексте сессий одного парсера данные."""
 		
-		return self._EntryPoint.shared_data
+		return self._SharedData
 
 	@property
 	def system_objects(self) -> "SystemObjects":
 		"""Коллекция системных объектов."""
 
 		return self._SystemObjects
-
-	@property
-	def requestor(self) -> WebRequestor:
-		"""Менеджер запросов."""
-
-		return self._Requestor
 
 	#==========================================================================================#
 	# >>>>> ПЕРЕОПРЕДЕЛЯЕМЫЕ МЕТОДЫ <<<<< #
@@ -166,25 +198,28 @@ class BaseSourceOperator:
 	# >>>>> ПУБЛИЧНЫЕ МЕТОДЫ <<<<< #
 	#==========================================================================================#
 
-	def __init__(self, entry_point: "BaseEntryPoint"):
+	def __init__(self, system_objects: "SystemObjects", manifest: "ParserManifest"):
 		"""
 		Базовый оператор источника.
 
-		:param entry_point: Точка входа в парсер.
-		:type entry_point: BaseEntryPoint
+		:param system_objects: Коллекция системных объектов.
+		:type system_objects: SystemObjects
+		:param manifest: Манифест парсера.
+		:type manifest: ParserManifest
 		"""
 
-		self._EntryPoint = entry_point
+		self._SystemObjects = system_objects
+		self._Manifest = manifest
 
-		self._SystemObjects = entry_point.system_objects
+		self._Printer = self._SystemObjects.printer
 		self._Temper = self._SystemObjects.temper
-
-		self._Settings = entry_point.settings
-		self._Manifest = entry_point.manifest
-
+		
+		self._Settings = ParserSettings(self._SystemObjects, self._Manifest.parser_name)
 		self._Requestor = self._InitializeRequestor()
 		self._ImagesDownloader = ImagesDownloader(self)
-
+		self._Portals = self._SystemObjects.printer.get_parser_portals(self._Manifest.parser_name)
+		self._SharedData = self._SystemObjects.temper.load_parser_shared_data(self._Manifest.parser_name)
+		
 		self._PostInitMethod()
 
 	def collect_slugs(self, period: int | None = None, filters: str | None = None, pages: int | None = None) -> tuple[str, ...]:
@@ -251,6 +286,26 @@ class BaseSourceOperator:
 			path = ImageTargetPath,
 			error_message = None
 		)
+
+	def get_content_type_by_file(self, filename: str) -> FileTypingResult:
+		"""
+		Определяет тип контента по файлу.
+
+		:param filename: Имя файла с расширением или без него.
+		:type filename: str
+		:return: Результат определения типа файла тайтла.
+		:rtype: FileTypingResult
+		"""
+
+		if not filename.endswith(".json"):
+			filename += ".json"
+
+		FilePath = self.settings.directories.titles / filename
+		TitleData = ReadJSON(FilePath)
+		Type: str = TitleData["format"]
+		TypeName: str = Type.split("-")[1]
+		
+		return FileTypingResult(TitleData["slug"], ContentTypes(TypeName))
 
 	def get_content_type_by_slug(self, slug: str) -> ContentTypes:
 		"""

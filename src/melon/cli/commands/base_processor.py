@@ -9,7 +9,6 @@ from ... import utils
 from ...core import exceptions
 
 if TYPE_CHECKING:
-	from ...core.base.entry_point import BaseEntryPoint
 	from ...core.base.source_operator import (
 		BaseSourceOperator,
 		ParserManifest,
@@ -50,7 +49,6 @@ class RequiredParser:
 	"""Коллекция управляющих объектов трубемого парсера."""
 
 	name: str
-	entry_point: "BaseEntryPoint"
 	source_operator: "BaseSourceOperator"
 	manifest: "ParserManifest"
 	settinngs: "ParserSettings"
@@ -134,10 +132,9 @@ class BaseCommandProcessor(ABC, Generic[_PARAMS]):
 		:rtype: RequiredParser
 		"""
 
-		EntryPoint = self.system_objects.driver.get_entry_point(parser)
-		SourceOperator = EntryPoint.source_operator
+		SourceOperator = self.system_objects.parsers_manager.launch_source_operator(parser)
 
-		return RequiredParser(parser, EntryPoint, SourceOperator, SourceOperator.manifest, SourceOperator.settings)
+		return RequiredParser(parser, SourceOperator, SourceOperator.manifest, SourceOperator.settings)
 
 	def _IsMultipleParsersRequired(self, data: ParsedCommandData) -> bool:
 		"""
@@ -189,7 +186,7 @@ class BaseCommandProcessor(ABC, Generic[_PARAMS]):
 			return ()
 
 		Parsers: tuple[str, ...] = tuple(Element.strip() for Element in ParsersNames.split(","))
-		AllParsers: tuple[str, ...] = self._SystemObjects.driver.parsers_names
+		AllParsers: tuple[str, ...] = self._SystemObjects.parsers_manager.installed_parsers
 	
 		if not Parsers:
 				Parsers = AllParsers

@@ -8,7 +8,7 @@ from dublib.functions.filesystem import ReadJSON, ReadTextFile, WriteTextFile
 from ..core import exceptions
 
 if TYPE_CHECKING:
-	from ..core.base.entry_point import BaseEntryPoint
+	from ..core.base.source_operator import BaseSourceOperator
 
 class Collector:
 	"""Сборщик алиасов."""
@@ -27,22 +27,22 @@ class Collector:
 	# >>>>> ПУБЛИЧНЫЕ МЕТОДЫ <<<<< #
 	#==========================================================================================#
 
-	def __init__(self, entry_point: "BaseEntryPoint", filename: str | None = None):
+	def __init__(self, source_operator: "BaseSourceOperator", filename: str | None = None):
 		"""
 		Сборщик алиасов.
 
-		:param entry_point: Точка входа в модуль парсера.
-		:type entry_point: BaseEntryPoint
+		:param source_operator: Оператор источника.
+		:type source_operator: BaseSourceOperator
 		:param filename: Имя файла коллекции без расширения. По умолчанию 
 		:type filename: str | None
 		"""
 
-		self.__EntryPoint = entry_point
+		self.__SourceOperator = source_operator
 		self.__Filename: str = filename or "collection"
 
 		if not self.__Filename.endswith(".txt"): self.__Filename = f"{self.__Filename}.txt"
 
-		self.__CollectionPath = self.__EntryPoint.system_objects.temper.get_parser_collections_directory(self.__EntryPoint.parser_name) / self.__Filename
+		self.__CollectionPath = self.__SourceOperator.system_objects.temper.get_parser_collections_directory(self.__SourceOperator.parser_name) / self.__Filename
 		self.__Collection: list[str] = []
 
 	def add(self, slugs: str | Sequence[str]) -> int:
@@ -103,14 +103,14 @@ class Collector:
 		:rtype: int
 		"""
 		
-		TitlesDirectoryPath = self.__EntryPoint.settings.directories.titles
+		TitlesDirectoryPath = self.__SourceOperator.settings.directories.titles
 		LocalSlugs: list[str] = []
 
 		for Entry in os.scandir(TitlesDirectoryPath):
 			if not Entry.is_file() or not Entry.name.endswith(".json"):
 				continue
 
-			if allow_filenames and not self.__EntryPoint.settings.common.use_id_as_filename:
+			if allow_filenames and not self.__SourceOperator.settings.common.use_id_as_filename:
 				LocalSlugs.append(Entry.name[:-5])
 				continue
 

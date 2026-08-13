@@ -3,7 +3,7 @@ from prettytable import PLAIN_COLUMNS, PrettyTable
 from dublib.cli.terminalyzer import Command, ParsedCommandData
 from dublib.cli.text_styler import FastStyler
 
-from ....parsers_manager import ParsersManager
+from ....core.system_objects.parsers_manager import ParsersManager
 from ..base_processor import DataclassStub, PreparedData, ProcessorOptions
 from ._base import CommandProcessorTemplate
 

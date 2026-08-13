@@ -2,8 +2,8 @@ import atexit
 
 from dulwich import porcelain
 
-from ...core.system_objects.driver import Driver
 from ...core.system_objects.options import Options
+from ...core.system_objects.parsers_manager import ParsersManager
 from ...core.system_objects.printer import Printer
 from ...core.system_objects.temper import Temper
 
@@ -25,16 +25,16 @@ class SystemObjects:
 	#==========================================================================================#
 
 	@property
-	def driver(self) -> Driver:
-		"""Менеджер парсеров."""
-
-		return self.__Driver
-
-	@property
 	def options(self) -> Options:
 		"""Менеджер переменных среды парсера."""
 
 		return self.__Options
+
+	@property
+	def parsers_manager(self) -> ParsersManager:
+		"""Менеджер парсеров."""
+
+		return self.__ParsersManager
 
 	@property
 	def printer(self) -> Printer:
@@ -55,8 +55,8 @@ class SystemObjects:
 	def __init__(self):
 		"""Коллекция системных объектов."""
 
-		self.__Driver = Driver(self)
 		self.__Options = Options()
+		self.__ParsersManager = ParsersManager(self)
 		self.__Printer = Printer(self)
 		self.__Temper = Temper(self)
 
