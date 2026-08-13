@@ -118,7 +118,7 @@ class CommandProcessor(CommandProcessorTemplate[Parameters]):
 		:rtype: bool
 		"""
 		
-		Collector = utils.Collector(parameters.required_parser.entry_point, parameters.file)
+		Collector = utils.Collector(parameters.required_parser.source_operator, parameters.file)
 
 		if not parameters.is_force_mode_enabled:
 			Collector.load()

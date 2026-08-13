@@ -7,7 +7,7 @@ from dublib.functions.filesystem import ReadJSON
 from ..core import exceptions
 
 if TYPE_CHECKING:
-	from ..core.base.entry_point import BaseEntryPoint
+	from ..core.base.source_operator import BaseSourceOperator
 
 #==========================================================================================#
 # >>>>> ВСПОМОГАТЕЛЬНЫЕ СТРУКТУРЫ ДАННЫХ <<<<< #
@@ -29,15 +29,15 @@ class CachingResult:
 class Cacher:
 	"""Оператор кэширования пар ID-алиас."""
 
-	def __init__(self, entry_point: "BaseEntryPoint"):
+	def __init__(self, source_operator: "BaseSourceOperator"):
 		"""
 		Оператор кэширования пар ID-алиас.
 
-		:param entry_point: Точка входа в модуль парсера.
-		:type entry_point: BaseEntryPoint
+		:param source_operator: Оператор источника.
+		:type source_operator: BaseSourceOperator
 		"""
 
-		self.__EntryPoint = entry_point
+		self.__SourceOperator = source_operator
 
 	def cache_parser_output(self) -> CachingResult:
 		"""
@@ -52,7 +52,7 @@ class Cacher:
 		CachedFiles: int = 0
 		Errors: list[str] = []
 
-		TitlesDirectory = self.__EntryPoint.settings.directories.titles
+		TitlesDirectory = self.__SourceOperator.settings.directories.titles
 		Files: list[str] = []
 		SuffixCharactersCount: int = len(".json") * -1
 
@@ -78,11 +78,11 @@ class Cacher:
 					Errors.append(CurrentFile)
 					continue
 
-				if self.__EntryPoint.shared_data.journal.get_slug_by_id(DataID):
+				if self.__SourceOperator.shared_data.journal.get_slug_by_id(DataID):
 					FoundInCache += 1
 
 				else:
-					self.__EntryPoint.shared_data.journal.update(DataID, DataSlug)
+					self.__SourceOperator.shared_data.journal.update(DataID, DataSlug)
 					CachedFiles += 1
 
 		return CachingResult(TotalFiles, FoundInCache, CachedFiles, tuple(Errors))

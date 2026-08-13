@@ -81,7 +81,7 @@ class ParserManifest:
 		Version: str | None = self.__Data["melon_required_version"]
 
 		if Version == "$from_parent" and self.parent_name:
-			Version = self.__SystemObjects.driver.load_parser_manifest(self.parent_name).melon_required_version
+			Version = self.__SystemObjects.parsers_manager.load_parser_manifest(self.parent_name).melon_required_version
 		
 		return Version
 
@@ -113,7 +113,7 @@ class ParserManifest:
 			if self.__Data[Key] == "$from_parent" and not self.__Data["parent"]:
 				raise exceptions.system.BadManifest("Parent must be specified if using \"$from_parent\".")
 
-		if self.__Data["parent"] and self.__Data["parent"] not in self.__SystemObjects.driver.parsers_names:
+		if self.__Data["parent"] and self.__Data["parent"] not in self.__SystemObjects.parsers_manager.installed_parsers:
 			raise exceptions.system.BadManifest("Parent \"" + self.__Data["parent"] + "\" not found.")
 
 	#==========================================================================================#

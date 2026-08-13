@@ -90,7 +90,7 @@ class CommandProcessor(CommandProcessorTemplate[Parameters]):
 		ResultsCount: int = 0
 	
 		for CurrentParser in parameters.required_parsers:
-			ID = CurrentParser.entry_point.shared_data.journal.get_id_by_slug(parameters.slug)
+			ID = CurrentParser.source_operator.shared_data.journal.get_id_by_slug(parameters.slug)
 	
 			if ID:
 				ResultsCount += 1

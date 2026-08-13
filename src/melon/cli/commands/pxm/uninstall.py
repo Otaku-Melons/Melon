@@ -3,7 +3,7 @@ from dataclasses import dataclass
 from dublib.cli.terminalyzer import Command, ParsedCommandData
 
 from ....core import exceptions
-from ....parsers_manager import ParsersManager
+from ....core.system_objects.parsers_manager import ParsersManager
 from ..base_processor import PreparedData
 from ._base import CommandProcessorTemplate
 

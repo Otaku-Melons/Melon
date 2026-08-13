@@ -129,7 +129,6 @@ class Templates:
 		"""
 
 		Number = index + 1
-		if Number == 3: raise ValueError("123")
 		Progress = round(index / count * 100, 2)
 		NumberString = FastStyler(str(Number)).colorize.magenta
 		ProgressString = StringifyFloat(Progress)

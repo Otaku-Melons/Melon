@@ -89,7 +89,7 @@ class CommandProcessor(CommandProcessorTemplate[Parameters]):
 		:rtype: bool
 		"""
 
-		TypingResult = parameters.required_parser.entry_point.get_content_type_by_file(parameters.filename)
+		TypingResult = parameters.required_parser.source_operator.get_content_type_by_file(parameters.filename)
 		Parser = parameters.required_parser.source_operator.launch_parser(TypingResult.content_type)
 		
 		Title = Parser.init_empty_title(TypingResult.slug)

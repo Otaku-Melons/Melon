@@ -1,3 +1,4 @@
+import importlib
 import io
 import shutil
 import subprocess
@@ -20,11 +21,13 @@ from dublib.functions.filesystem import (
 )
 from dublib.validators import Validator_URL
 
-from ..core import exceptions
-from ..core.base.parsers.components.settings import _BASE_SETTINGS
+from ...core import exceptions
+from ..base.parsers.components import ParserManifest
+from ..base.parsers.components.settings import _BASE_SETTINGS
+from ..base.source_operator import BaseSourceOperator
 
 if TYPE_CHECKING:
-	from ..core.system_objects import Printer, SystemObjects
+	from . import Printer, SystemObjects
 
 #==========================================================================================#
 # >>>>> ПЕРЕЧИСЛЕНИЯ <<<<< #
@@ -392,6 +395,44 @@ class ParsersManager:
 
 		return len(Requirements)
 
+	def launch_source_operator(self, parser_name: str) -> "BaseSourceOperator":
+		"""
+		Инициализирует оператор источника для указанного парсера.
+
+		:param parser_name: Имя парсера.
+		:type parser_name: str
+		:return: Оператор источника.
+		:rtype: BaseSourceOperator
+		:raises FileNotFoundError: Файл точки входа в парсер не найден.
+		"""
+
+		ParserMainPath = Path(f"parsers/{parser_name}/__init__.py")
+
+		if not ParserMainPath.exists():
+			raise FileNotFoundError(ParserMainPath)
+
+		Module = importlib.import_module(f"parsers.{parser_name}")
+		ParserManifest = self.load_parser_manifest(parser_name)
+
+		return Module.SourceOperator(self.__SystemObjects, ParserManifest)
+	
+	def load_parser_manifest(self, parser_name: str) -> ParserManifest:
+		"""
+		Загружает манифест парсера.
+
+		:param parser_name: Имя парсера.
+		:type parser_name: str
+		:return: Манифест парсера.
+		:rtype: ParserManifest
+		:raises FileNotFoundError: Файл манифеста не найден.
+		"""
+
+		ManifestPath = Path(f"parsers/{parser_name}/manifest.json")
+		if not ManifestPath.exists():
+			raise FileNotFoundError(ManifestPath)
+		
+		return ParserManifest(self.__SystemObjects, parser_name)
+
 	def uninstall_parser(self, parser_name: str, clear: bool = False):
 		"""
 		Удаляет парсер.
@@ -418,3 +459,4 @@ class ParsersManager:
 			if Element.exists():
 				if Element.is_dir(): shutil.rmtree(Element)
 				else: Element.unlink()
+

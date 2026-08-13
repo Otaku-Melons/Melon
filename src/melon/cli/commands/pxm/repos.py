@@ -4,7 +4,7 @@ from typing import cast
 from dublib.cli.terminalyzer import Command, ParsedCommandData, ValidableTypes
 
 from ....core import exceptions
-from ....parsers_manager import ParsersManager
+from ....core.system_objects.parsers_manager import ParsersManager
 from ..base_processor import PreparedData, ProcessorOptions
 from ._base import CommandProcessorTemplate
 
