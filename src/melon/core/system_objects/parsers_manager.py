@@ -4,6 +4,7 @@ import shutil
 import subprocess
 from difflib import get_close_matches
 from enum import Enum
+from os import listdir
 from pathlib import Path
 from typing import TYPE_CHECKING, Literal, Sequence, overload
 from urllib.parse import urlparse
@@ -13,7 +14,6 @@ from dulwich import errors, porcelain
 from dulwich.porcelain import clone, default_bytes_err_stream
 
 from dublib.functions.filesystem import (
-	ListDir,
 	ReadJSON,
 	ReadTextFile,
 	WriteJSON,
@@ -246,9 +246,9 @@ class ParsersManager:
 
 	@property
 	def installed_parsers(self) -> tuple[str, ...]:
-		"""Список названий доступных парсеров."""
+		"""Список названий установленных парсеров."""
 
-		return tuple(ListDir("parsers"))
+		return tuple(listdir("parsers"))
 
 	@property
 	def repositories(self) -> Repositories:

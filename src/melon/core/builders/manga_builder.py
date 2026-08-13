@@ -10,7 +10,6 @@ import img2pdf
 
 from dublib.cli.text_styler import FastStyler
 from dublib.functions.data import StringifyFloat
-from dublib.functions.filesystem import ListDir
 
 from ...core import exceptions
 from ...core.base.builder import BaseBuilder
@@ -73,7 +72,7 @@ class _MCBF_Simple(_BaseChapterBuilder):
 
 		target_dir = target_dir / name
 		target_dir.mkdir(exist_ok = True)
-		Files = ListDir(temp_dir)
+		Files = os.listdir(temp_dir)
 
 		for File in Files:
 			os.replace(temp_dir / File, target_dir / File)
@@ -143,7 +142,7 @@ class _MCBF_PDF(_BaseChapterBuilder):
 		"""
 
 		FilePath = target_dir / f"{name}.pdf"
-		Images = ListDir(temp_dir)
+		Images = os.listdir(temp_dir)
 		Images.sort()
 
 		for Index in range(len(Images)):

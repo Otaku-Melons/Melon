@@ -199,7 +199,9 @@ class PasingTarget_Local(_BaseParserTarget):
 		"""
 
 		Collector = utils.Collector(self._SourceOperator)
+		self._SourceOperator.portals.printer.emit("Scanning local titles… ", end_line = False)
 		SlugsCount = len(Collector.scan_local())
+		self._SourceOperator.portals.printer.emit("Done.", end_line = False)
 		Slugs = list(Collector.slugs)
 		self._Printer.emit(f"Local titles to parsing: {SlugsCount}.")
 

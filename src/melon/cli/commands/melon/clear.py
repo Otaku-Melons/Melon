@@ -132,9 +132,12 @@ class CommandProcessor(CommandProcessorTemplate[Parameters]):
 
 			case ClearingRules.NotFound:
 				Collector = utils.Collector(SourceOperator)
+				self.printer.emit("Scanning local titles… ", end_line = False)
 				LocalTitles: dict[str, str] = Collector.scan_local()
+				self.printer.emit("Done.", end_line = False)
 				SlugsCount: int = len(LocalTitles)
 				self.printer.emit(f"Local titles found: {SlugsCount}.")
+				
 				SlugIndex: int = 0
 				FilesToRemove: list[str] = []
 				Progress: float = 0.0
