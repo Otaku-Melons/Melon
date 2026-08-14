@@ -1212,17 +1212,18 @@ class BaseTitle(ABC):
 
 		#---> Слияние размеров портретов персонажей.
 		#==========================================================================================#
-		PersonsData: list[dict] = DataBuffer["persons"]
+		PersonsData: list[dict] | None = DataBuffer.get("persons")
 
-		for PersonData in PersonsData:
-			PersonObject = self.find_person_by_name(PersonData["name"])
-			if not PersonObject: continue
+		if PersonsData:
+			for PersonData in PersonsData:
+				PersonObject = self.find_person_by_name(PersonData["name"])
+				if not PersonObject: continue
 
-			for CurrentImage in cast(list[dict], PersonData["images"]):
-				Link = CurrentImage["link"]
-				TargetImage = PersonObject.find_image_by_link(Link)
-				if TargetImage:
-					TargetImage.create_resolution(CurrentImage.get("width"), CurrentImage.get("height"))
+				for CurrentImage in cast(list[dict], PersonData["images"]):
+					Link = CurrentImage["link"]
+					TargetImage = PersonObject.find_image_by_link(Link)
+					if TargetImage:
+						TargetImage.create_resolution(CurrentImage.get("width"), CurrentImage.get("height"))
 			
 		#---> Слияние контента глав.
 		#==========================================================================================#
