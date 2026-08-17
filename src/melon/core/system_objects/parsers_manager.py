@@ -2,6 +2,7 @@ import importlib
 import io
 import shutil
 import subprocess
+import sys
 from difflib import get_close_matches
 from enum import Enum
 from os import listdir
@@ -11,7 +12,7 @@ from urllib.parse import urlparse
 
 from deepmerge import always_merger
 from dulwich import errors, porcelain
-from dulwich.porcelain import clone, default_bytes_err_stream
+from dulwich.porcelain import clone
 from dulwich.repo import Repo
 
 from dublib.functions.filesystem import (
@@ -334,7 +335,7 @@ class ParsersManager:
 		Repository = clone(
 			source = RepositoryURL,
 			target = f"parsers/{parser_name}",
-			errstream = io.BytesIO() if hide_output else default_bytes_err_stream,
+			errstream = io.BytesIO() if hide_output else sys.stdout.buffer,
 			recurse_submodules = True
 		)
 
@@ -461,7 +462,7 @@ class ParsersManager:
 				if Element.is_dir(): shutil.rmtree(Element)
 				else: Element.unlink()
 
-	def update_parser(self, parser_name: str, requirements: bool = True, force_mode: bool = False) -> bool:
+	def update_parser(self, parser_name: str, requirements: bool = True, force_mode: bool = False, hide_output: bool = True) -> bool:
 		"""
 		Обновляет парсер.
 
@@ -471,6 +472,8 @@ class ParsersManager:
 		:type requirements: bool
 		:param force_mode: Указывает, перезаписывать ли изменения в репозитории.
 		:type force_mode: bool
+		:param hide_output: Указывает, перехватывать ли вывод в терминал из библиотеки клонирования.
+		:type hide_output: bool
 		:return: Возвращает `True`, если состояние каталога парсера изменилось.
 		:rtype: bool
 		"""
@@ -479,7 +482,12 @@ class ParsersManager:
 		LocalRepo = Repo(f"parsers/{parser_name}")
 		HeadCommitHash = LocalRepo.head()
 
-		porcelain.pull(LocalRepo.path, RepositoryURL, force = force_mode)
+		porcelain.pull(
+			repo = LocalRepo.path,
+			remote_location = RepositoryURL,
+			outstream = io.BytesIO() if hide_output else sys.stdout.buffer,
+			force = force_mode
+		)
 
 		IsRepoChanged: bool = LocalRepo.head() != HeadCommitHash
 		if IsRepoChanged and requirements: self.install_requirements(parser_name)
