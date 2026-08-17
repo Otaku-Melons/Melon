@@ -115,8 +115,7 @@ class Templates:
 		TableObject.align = "l"
 		TableObject.sortby = FastStyler("NAME").decorate.bold
 		TableString = str(TableObject).strip()
-		Link = FastStyler("https://github.com/otaku-melons").decorate.underlined
-		self.__Printer.emit(TableString if TableString else f"Parsers not installed. See {Link} for more info.")
+		self.__Printer.emit(TableString if TableString else "Parsers not installed.")
 
 	def parsing_progress(self, index: int, count: int):
 		"""

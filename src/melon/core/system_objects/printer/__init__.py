@@ -118,7 +118,8 @@ class Printer:
 		:type text: str
 		"""
 
-		self.emit(text, MessagesTypes.Debug)
+		if self.__SystemObjects.options.DEBUG:
+			self.emit(text, MessagesTypes.Debug)
 
 	def error(self, text: str):
 		"""
