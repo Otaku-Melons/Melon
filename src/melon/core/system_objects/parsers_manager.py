@@ -281,6 +281,26 @@ class ParsersManager:
 		
 		return None
 
+	def __InstallRequirements(self, requirements_path: Path) -> int:
+		"""
+		Устанавливает зависимости.
+
+		:param requirements_path: Путь к файлу _requirements.txt_.
+		:type requirements_path: Path
+		:return: Количество установленных пакетов зависимостей.
+		:rtype: int
+		"""
+
+		if not requirements_path.exists():
+			return 0
+
+		subprocess.run(("uv", "pip", "install", "-r", requirements_path.as_posix()), check = True)
+
+		Requirements: list[str] = ReadTextFile(requirements_path, split = True, strip = True)
+		Requirements = [Element for Element in Requirements if Element]
+
+		return len(Requirements)
+
 	def __IsParserValid(self, parser: str) -> bool:
 		"""
 		Проверяет валидность парсера методом оценки файловой структуры.
@@ -297,6 +317,41 @@ class ParsersManager:
 			Path(f"parsers/{parser}/__init__.py").exists(),
 			Path(f"parsers/{parser}/manga.py").exists() or Path(f"parsers/{parser}/ranobe.py").exists()
 		))
+
+	def __PullGitRepository(self, repos_path: Path, remote_url: str, requirements: bool = True, force_mode: bool = False, hide_output: bool = True) -> bool:
+		"""
+		Обновляет Git репозиторий.
+
+		:param repos_path: Путь к репощиторию.
+		:type repos_path: Path
+		:param remote_url: URL удалённого репозитория Git.
+		:type remote_url: str
+		:param requirements: Указывает, нужно ли установить зависимости после обновления.
+		:type requirements: bool
+		:param force_mode: Указывает, перезаписывать ли изменения в репозитории.
+		:type force_mode: bool
+		:param hide_output: Указывает, скрывать ли вывод в терминал из библиотеки клонирования.
+		:type hide_output: bool
+		:return: Возвращает `True`, если состояние каталога парсера изменилось.
+		:rtype: bool
+		"""
+
+		LocalRepo = Repo(repos_path.as_posix())
+		HeadCommitHash = LocalRepo.head()
+
+		porcelain.pull(
+			repo = LocalRepo.path,
+			remote_location = remote_url,
+			outstream = io.BytesIO() if hide_output else sys.stdout.buffer,
+			force = force_mode
+		)
+
+		IsRepoChanged: bool = LocalRepo.head() != HeadCommitHash
+
+		if IsRepoChanged and requirements:
+			self.__InstallRequirements(repos_path)
+
+		return IsRepoChanged
 
 	#==========================================================================================#
 	# >>>>> ПУБЛИЧНЫЕ БАЗОВЫЕ МЕТОДЫ <<<<< #
@@ -320,7 +375,7 @@ class ParsersManager:
 
 		:param parser_name: Имя парсера.
 		:type parser_name: str
-		:param hide_output: Указывает, перехватывать ли вывод в терминал из библиотеки клонирования.
+		:param hide_output: Указывает, скрывать ли вывод в терминал из библиотеки клонирования.
 		:type hide_output: bool
 		:return: Возвращает `True`, если парсер успешно клонирован, и `False`, если репозиторий не найден.
 		:rtype: bool
@@ -384,18 +439,8 @@ class ParsersManager:
 		:return: Количество установленных пакетов зависимостей.
 		:rtype: int
 		"""
-
-		RequirementsPath: Path = Path(f"parsers/{parser_name}/requirements.txt")
-
-		if not RequirementsPath.exists():
-			return 0
-
-		subprocess.run(("uv", "pip", "install", "-r", RequirementsPath.as_posix()), check = True)
-
-		Requirements: list[str] = ReadTextFile(RequirementsPath, split = True, strip = True)
-		Requirements = [Element for Element in Requirements if Element]
-
-		return len(Requirements)
+ 
+		return self.__InstallRequirements(Path(f"parsers/{parser_name}/requirements.txt"))
 
 	def launch_source_operator(self, parser_name: str) -> "BaseSourceOperator":
 		"""
@@ -472,24 +517,38 @@ class ParsersManager:
 		:type requirements: bool
 		:param force_mode: Указывает, перезаписывать ли изменения в репозитории.
 		:type force_mode: bool
-		:param hide_output: Указывает, перехватывать ли вывод в терминал из библиотеки клонирования.
+		:param hide_output: Указывает, скрывать ли вывод в терминал из библиотеки клонирования.
 		:type hide_output: bool
 		:return: Возвращает `True`, если состояние каталога парсера изменилось.
 		:rtype: bool
 		"""
 
-		RepositoryURL: str = self.repositories.get(parser_name, exception = True)
-		LocalRepo = Repo(f"parsers/{parser_name}")
-		HeadCommitHash = LocalRepo.head()
-
-		porcelain.pull(
-			repo = LocalRepo.path,
-			remote_location = RepositoryURL,
-			outstream = io.BytesIO() if hide_output else sys.stdout.buffer,
-			force = force_mode
+		return self.__PullGitRepository(
+			repos_path = Path(f"parsers/{parser_name}"),
+			remote_url = self.repositories.get(parser_name, exception = True),
+			requirements = requirements,
+			force_mode = force_mode,
+			hide_output = hide_output
 		)
 
-		IsRepoChanged: bool = LocalRepo.head() != HeadCommitHash
-		if IsRepoChanged and requirements: self.install_requirements(parser_name)
+	def upgrade_melon(self, requirements: bool = True, force_mode: bool = False, hide_output: bool = True) -> bool:
+		"""
+		Обновляет Melon.
 
-		return IsRepoChanged
+		:param requirements: Указывает, нужно ли установить зависимости после обновления.
+		:type requirements: bool
+		:param force_mode: Указывает, перезаписывать ли изменения в репозитории.
+		:type force_mode: bool
+		:param hide_output: Указывает, скрывать ли вывод в терминал из библиотеки клонирования.
+		:type hide_output: bool
+		:return: Возвращает `True`, если состояние каталога парсера изменилось.
+		:rtype: bool
+		"""
+
+		return self.__PullGitRepository(
+			repos_path = Path("."),
+			remote_url = self.__SystemObjects.options.REPOS_URL.value,
+			requirements = requirements,
+			force_mode = force_mode,
+			hide_output = hide_output
+		)

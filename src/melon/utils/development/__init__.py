@@ -44,6 +44,7 @@ class DevelopmeptAssistant:
 		shutil.copy("Source/Utils/Development/README.md", path / "README.md")
 
 		Patcher = Patch(path / "README.md")
+		Patcher.replace("{MELON_REPOS_URL}", self.__SystemObjects.options.REPOS_URL.value)
 		Patcher.replace("{NAME}", parser_name)
 		Patcher.replace("{DOMAIN}", domain)
 		Patcher.replace("{SITE}", f"https://{domain}")

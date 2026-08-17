@@ -5,7 +5,7 @@ from pathlib import Path
 
 from dotenv import load_dotenv
 
-from dublib.validators import Validator_Bool
+from dublib.validators import Validator_Bool, Validator_URL
 
 #==========================================================================================#
 # >>>>> ВСПОМОГАТЕЛЬНЫЕ СТРУКТУРЫ ДАННЫХ <<<<< #
@@ -211,6 +211,13 @@ class Options:
 			Value: str | None = os.environ.get(f"MELON_{Name}")
 			if Value: self.__Bools[Name] = BoolOption(self.__StringToBool(Value))
 
+	def __LoadEnviromentLinkVariables(self):
+		"""Загружает опции на основе переменных сред, представляющих URL."""
+
+		for Name in self.__Links.keys():
+			Value: str | None = os.environ.get(f"MELON_{Name}")
+			if Value: self.__Links[Name] = LinkOption(Validator_URL.parse(Value))
+
 	def __LoadEnviromentPathVariables(self):
 		"""Загружает опции на основе переменных сред, представляющих пути, и создаёт каталоги."""
 
@@ -224,6 +231,7 @@ class Options:
 
 		load_dotenv()
 		self.__LoadEnviromentBoolVariables()
+		self.__LoadEnviromentLinkVariables()
 		self.__LoadEnviromentPathVariables()
 		
 	def __StringToBool(self, data: str) -> bool:
