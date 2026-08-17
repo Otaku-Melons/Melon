@@ -1,4 +1,3 @@
-import sys
 from typing import TYPE_CHECKING
 
 from prettytable import PLAIN_COLUMNS, PrettyTable
@@ -10,14 +9,6 @@ if TYPE_CHECKING:
 	from ....utils.cacher import CachingResult
 	from ....utils.classificator import ClassificationResult
 	from . import Printer
-
-def set_terminal_progress(state: int, progress: int = 0):
-	"""
-	Отправляет OSC 9;4 для отображения прогресса в панели задач / вкладке.
-	progress должен быть от 0 до 100.
-	"""
-	sys.stdout.write(f"\x1b]9;4;{state};{progress}\x07")
-	sys.stdout.flush()
 
 class Templates:
 	"""Расширенные шаблоны вывода."""
@@ -40,7 +31,7 @@ class Templates:
 		:type result: CachingResult
 		"""
 
-		self.__Printer.emit(f"Total: {result.total_files}. Found in cache: {result.found_in_cache}. Cached: {result.cached_files}.")
+		self.__Printer.emit(f"Total: {result.total_files}. Found in cache: {result.found_in_cache}. Cached: {result.cached}. Updated: {result.updated}.")
 
 		if result.errors:
 			self.__Printer.emit(FastStyler("Errors:").decorate.bold)
