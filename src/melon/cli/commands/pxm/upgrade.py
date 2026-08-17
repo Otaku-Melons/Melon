@@ -1,5 +1,7 @@
 from dataclasses import dataclass
 
+from dulwich.porcelain import DivergedBranches
+
 from dublib.cli.terminalyzer import Command, ParsedCommandData
 
 from ....core.system_objects.parsers_manager import ParsersManager
@@ -78,7 +80,13 @@ class CommandProcessor(CommandProcessorTemplate[Parameters]):
 		"""
 
 		Installer = ParsersManager(self.system_objects)
-		IsUpdated: bool = Installer.upgrade_melon(force_mode = parameters.is_force_mode_enabled)
+		IsUpdated: bool = False
+
+		try:
+			IsUpdated = Installer.upgrade_melon(force_mode = parameters.is_force_mode_enabled)
+		except DivergedBranches:
+			self.printer.error("Melon has local unpushed commits or branches diverged.")
+			return False
 
 		if IsUpdated: self.printer.emit("Upgraded.")
 		else: self.printer.emit("No changes.")
