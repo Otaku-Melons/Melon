@@ -12,6 +12,7 @@ from urllib.parse import urlparse
 from deepmerge import always_merger
 from dulwich import errors, porcelain
 from dulwich.porcelain import clone, default_bytes_err_stream
+from dulwich.repo import Repo
 
 from dublib.functions.filesystem import (
 	ReadJSON,
@@ -460,16 +461,27 @@ class ParsersManager:
 				if Element.is_dir(): shutil.rmtree(Element)
 				else: Element.unlink()
 
-	def update_parser(self, parser_name: str, requirements: bool = True):
+	def update_parser(self, parser_name: str, requirements: bool = True, force_mode: bool = False) -> bool:
 		"""
 		Обновляет парсер.
 
 		:param parser_name: Имя парсера.
 		:type parser_name: str
 		:param requirements: Указывает, нужно ли установить зависимости после обновления.
-		:type requirements: bool, optional
+		:type requirements: bool
+		:param force_mode: Указывает, перезаписывать ли изменения в репозитории.
+		:type force_mode: bool
+		:return: Возвращает `True`, если состояние каталога парсера изменилось.
+		:rtype: bool
 		"""
 
 		RepositoryURL: str = self.repositories.get(parser_name, exception = True)
-		porcelain.pull(f"parers/{parser_name}", RepositoryURL, force = True)
-		if requirements: self.install_requirements(parser_name)
+		LocalRepo = Repo(f"parsers/{parser_name}")
+		HeadCommitHash = LocalRepo.head()
+
+		porcelain.pull(LocalRepo.path, RepositoryURL, force = force_mode)
+
+		IsRepoChanged: bool = LocalRepo.head() != HeadCommitHash
+		if IsRepoChanged and requirements: self.install_requirements(parser_name)
+
+		return IsRepoChanged

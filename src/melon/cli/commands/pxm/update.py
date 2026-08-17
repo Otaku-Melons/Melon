@@ -3,7 +3,7 @@ from dataclasses import dataclass
 from dublib.cli.terminalyzer import Command, ParsedCommandData
 
 from ....core.system_objects.parsers_manager import ParsersManager
-from ..base_processor import PreparedData
+from ..base_processor import PreparedData, T_ForceModeRequired
 from ._base import CommandProcessorTemplate
 
 #==========================================================================================#
@@ -11,7 +11,7 @@ from ._base import CommandProcessorTemplate
 #==========================================================================================#
 
 @dataclass(frozen = True)
-class Parameters:
+class Parameters(T_ForceModeRequired):
 	"""Параметры, требуемые обработчиком."""
 
 	parser: str
@@ -48,6 +48,7 @@ class CommandProcessor(CommandProcessorTemplate[Parameters]):
 		"""
 
 		self._AddParserPosition()
+		self._AddForceModeFlag()
 		
 		return command
 
@@ -63,9 +64,10 @@ class CommandProcessor(CommandProcessorTemplate[Parameters]):
 		:rtype: Parameters
 		"""
 
-		Parser: str = data.get_important_position_value("PARSER", expected_type = str)
-
-		return Parameters(parser = Parser)
+		return Parameters(
+			parser = data.get_important_position_value("PARSER", expected_type = str),
+			is_force_mode_enabled = data.check_flag("-f")
+		)
 
 	def _Process(self, parameters: Parameters) -> bool:
 		"""
@@ -85,6 +87,9 @@ class CommandProcessor(CommandProcessorTemplate[Parameters]):
 			return False
 
 		self.printer.emit(f"Repository: <i>{RepositoryURL}</i>.")
-		Installer.update_parser(parameters.parser)
+		IsUpdated: bool = Installer.update_parser(parameters.parser, force_mode = parameters.is_force_mode_enabled)
+
+		if IsUpdated: self.printer.emit("Updated.")
+		else: self.printer.emit("No changes.")
 
 		return True
