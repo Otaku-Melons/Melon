@@ -74,7 +74,6 @@ class Cacher:
 		:rtype: CachingResult
 		"""
 
-		TotalFiles: int = 0
 		FoundInCache: int = 0
 		Cached: int = 0
 		Updated: int = 0

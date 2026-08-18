@@ -192,7 +192,7 @@ class Temper:
 
 	def clear_parser_temp(self, parser_name: str, whitelist: Sequence[str] | None = ("collections", "shared")):
 		"""
-		Очищает временный каталог парсера. По умолчанию не трогает файлы и каталоги из белого списка.
+		Очищает временный каталог парсера. По умолчанию не удаляет файлы и каталоги из белого списка.
 
 		:param parser_name: Имя парсера.
 		:type parser_name: str
@@ -214,6 +214,24 @@ class Temper:
 				os.remove(Descriptor.path)
 			elif Descriptor.is_dir():
 				shutil.rmtree(Descriptor.path)
+
+	def get_extension_temp_directory(self, parser_name: str, extension_name: str) -> Path:
+		"""
+		Возвращает путь ко временной директории расширения и автоматически создаёт её.
+
+		:param parser_name: Имя парсера.
+		:type parser_name: str
+		:param extension_name: Имя расширения.
+		:type extension_name: str
+		:return: Путь ко временной директории расширения.
+		:rtype: Path
+		"""
+
+		ParserTemp: Path = self.get_parser_temp_directory(parser_name)
+		ExtensionTemp: Path = ParserTemp / extension_name
+		ExtensionTemp.mkdir(exist_ok = True)
+
+		return ExtensionTemp
 
 	def get_parser_collections_directory(self, parser_name: str) -> Path:
 		"""

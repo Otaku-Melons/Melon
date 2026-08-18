@@ -41,12 +41,71 @@ _BASE_SETTINGS = MappingProxyType({
 		"image_min_size": 100
 	},
 	"proxies": [],
-	"custom": {}
+	"custom": {},
+	"extensions": {}
 })
 
 #==========================================================================================#
 # >>>>> ВНУТРЕННИЕ СТРУКТУРЫ ДАННЫХ КАТЕГОРИЙ <<<<< #
 #==========================================================================================#
+
+class BaseExtensionOptions:
+	"""Базовые настройки расширения."""
+
+	#==========================================================================================#
+	# >>>>> СВОЙСТВА <<<<< #
+	#==========================================================================================#
+
+	@property
+	def is_enabled(self) -> bool:
+		"""Состояние: включено ли расширение."""
+
+		return bool(self._Data["is_enabled"])
+
+	@property
+	def options(self) -> dict[str, Any]:
+		"""Копия словаря опций расширения."""
+
+		return self._Options.copy()
+
+	#==========================================================================================#
+	# >>>>> ПУБЛИЧНЫЕ МЕТОДЫ <<<<< #
+	#==========================================================================================#
+
+	def __init__(self, data: dict | None = None):
+		"""
+		Настройки расширения.
+
+		:param data: Словарь настроек расширения.
+		:type data: dict | None
+		"""
+
+		if data is None: data = {}
+		
+		self._Data: dict = {
+			"is_enabled": False,
+			"options": {}
+		} | data
+		self._Options: dict = self._Data["options"]
+
+	def get(self, option: str, exception: bool = False) -> Any:
+		"""
+		Возвращает значение опции расширения.
+
+		:param option: Имя опции.
+		:type option: str
+		:param exception: Указывает, выбрасывать ли исключение при отсутствии запрашиваемой опции.
+		:type exception: bool
+		:raises KeyError: Запрашиваемая опция не найдена.
+		:return: Значение опции или `None` при её отсутствии.
+		:rtype: Any
+		"""
+
+		if option not in self._Options:
+			if exception: raise KeyError(option)
+			else: return None
+
+		return self._Options[option]
 
 class TextFilters:
 	"""Фильтры текста."""
@@ -379,6 +438,33 @@ class Custom:
 
 		return self.__CustomSettings.get(key)
 
+class Extensions:
+	"""Настройки расширений."""
+
+	def __init__(self, settings: dict[str, Any]):
+		"""
+		Настройки расширений.
+
+		:param settings: Словарь настроек расширений.
+		:type settings: dict[str, Any]
+		"""
+
+		self.__ExtensionsSettings: dict[str, dict] = settings
+
+	def get[T: BaseExtensionOptions](self, extension_name: str, container: type[T]) -> T:
+		"""
+		Возвращает упакованные в контейнер опции расширения.
+
+		:param extension_name: Имя расширения.
+		:type extension_name: str
+		:param container: Тип-контейнер, принимающий `dict | None` и представляющий в дальнейшем интерфейсы доступа к опциям. Наследуется от `BaseExtensionOptions`.
+		:type container: type
+		:return: Контейнер с опциями расширения.
+		:rtype: BaseExtensionOptions
+		"""
+		
+		return container(self.__ExtensionsSettings.get(extension_name))
+
 #==========================================================================================#
 # >>>>> ОСНОВНОЙ КЛАСС <<<<< #
 #==========================================================================================#
@@ -412,6 +498,10 @@ class ParserSettings:
 		return self.__Directories
 
 	@property
+	def extensions(self) -> Extensions:
+		"""Настройки расширений."""
+
+		return self.__Extensions
 
 	@property
 	def filters(self) -> Filters:
@@ -497,3 +587,4 @@ class ParserSettings:
 		self.__Filters = Filters(self.__Settings)
 		self.__Proxies: tuple[Proxy, ...] = self.__ParseProxies()
 		self.__Custom: Custom = Custom(self.__Settings.get("custom", {}))
+		self.__Extensions: Extensions = Extensions(self.__Settings.get("extensions", {}))
