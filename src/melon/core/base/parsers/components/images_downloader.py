@@ -261,12 +261,13 @@ class ImagesDownloader:
 
 			if Response.ok and Response.content:
 				Resolution = self.get_image_resolution(Response.content)
+				MinImageSize: int = self.__SourceOperator.settings.filters.image.min_size
 				
-				if len(Response.content) > 1000:
+				if len(Response.content) > MinImageSize:
 					with open(ImagePath, "wb") as FileWriter: FileWriter.write(Response.content)
 					IsDownloaded = True
 
-				else: ErrorMessage = "Less than 1000 bytes in image."
+				else: ErrorMessage = f"Image is {MinImageSize} bytes or less."
 
 			else: ErrorMessage = f"Response code: {Response.status_code}."
 
