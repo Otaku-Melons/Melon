@@ -29,16 +29,21 @@ class Stages:
 		Text = f"Amended chapters count: {amended_chapter_count}."
 		self.__Printer.emit(Text)
 	
-	def chapter_amended(self, chapter: "BaseChapter"):
+	def chapter_amended(self, chapter: "BaseChapter", message: str | None = None):
 		"""
 		Шаблон сообщения: глава дополнена.
 
 		:param chapter: Данные главы.
 		:type chapter: BaseChapter
+		:param message: Дополнительное необязательное сообщение о получении главы.
+		:type message: str | None
 		"""
 
+		if message is None: message = ""
+		if message: message = " " + message.strip()
+
 		ChapterNote = "Paid chapter" if chapter.is_paid else "Chapter"
-		Text = f"{ChapterNote} {chapter.id} amended."
+		Text = f"{ChapterNote} {chapter.id} amended.{message}"
 		self.__Printer.emit(Text)
 
 	def chapter_repaired(self, chapter: "BaseChapter"):

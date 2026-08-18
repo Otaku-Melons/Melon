@@ -25,10 +25,10 @@ class BaseMangaParser(BaseParser):
 
 				if not CurrentChapter.slides:
 					ProgressIndex += 1
-					self._Amend(CurrentBranch, CurrentChapter)
+					Message: str | None = self._Amend(CurrentBranch, CurrentChapter)
 
 					if CurrentChapter.slides:
-						self.portals.printer.stages.chapter_amended(CurrentChapter)
+						self.portals.printer.stages.chapter_amended(CurrentChapter, Message)
 						AmendedChaptersCount += 1
 						sleep(self.settings.common.delay)
 
