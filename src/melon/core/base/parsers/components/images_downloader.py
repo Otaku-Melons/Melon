@@ -8,6 +8,8 @@ from typing import TYPE_CHECKING, cast
 from PIL import Image
 
 if TYPE_CHECKING:
+	from dublib.web_requestor import WebRequestor
+
 	from .....core.base.source_operator import BaseSourceOperator
 
 #==========================================================================================#
@@ -142,6 +144,22 @@ class ImagesDownloader:
 	"""Оператор загрузки изображений."""
 
 	#==========================================================================================#
+	# >>>>> СВОЙСТВА <<<<< #
+	#==========================================================================================#
+
+	@property
+	def is_custom_requestor_used(self) -> bool:
+		"""Состояние: используется ли кастомный оператор запросов."""
+
+		return bool(self.__CustomRequestor)
+
+	@property
+	def requestor(self) -> "WebRequestor":
+		"""Используемый оператор запросов."""
+
+		return self.__CustomRequestor or self.__Requestor
+
+	#==========================================================================================#
 	# >>>>> ПУБЛИЧНЫЕ МЕТОДЫ <<<<< #
 	#==========================================================================================#
 
@@ -159,6 +177,8 @@ class ImagesDownloader:
 		self.__Temper = self.__SystemObjects.temper
 		self.__ParserSettings = self.__SourceOperator.settings
 		self.__Requestor = self.__SourceOperator.requestor
+
+		self.__CustomRequestor: "WebRequestor | None" = None
 
 	def build_target_filename(self, url: str, filename: str | None = None, is_full_filename: bool = True) -> str:
 		"""
@@ -237,7 +257,7 @@ class ImagesDownloader:
 		#---> Скачивание файла.
 		#==========================================================================================#
 		if not IsAlreadyExists or force_mode:
-			Response = self.__Requestor.get(url)
+			Response = self.requestor.get(url)
 
 			if Response.ok and Response.content:
 				Resolution = self.get_image_resolution(Response.content)
@@ -349,6 +369,16 @@ class ImagesDownloader:
 		else:
 			if result.error_message: Portals.printer.error(result.error_message)
 			else: Portals.printer.error("Unknown error.")
+
+	def set_requestor(self, requestor: "WebRequestor | None"):
+		"""
+		Задаёт иной оператор запросов, подменяющий собой предоставляемый оператором источника.
+
+		:param requestor: Собственный оператор запросов или `None` для отключения подмены.
+		:type requestor: WebRequestor | None
+		"""
+
+		self.__CustomRequestor = requestor
 
 	def temp_image(self, url: str, filename: str | None = None, is_full_filename: bool = False, force_mode: bool = False) -> ImageDownloadingResult:
 		"""

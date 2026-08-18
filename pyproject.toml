@@ -1,6 +1,6 @@
 [project]
 name = "melon"
-version = "1.0.0-rc.4"
+version = "1.0.0-rc.5"
 description = "Modular parsers management system."
 readme = "README.md"
 authors = [
