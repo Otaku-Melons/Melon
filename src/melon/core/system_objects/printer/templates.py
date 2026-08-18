@@ -6,6 +6,9 @@ from dublib.cli.text_styler import FastStyler
 from dublib.functions.data import StringifyFloat
 
 if TYPE_CHECKING:
+	from ....core.base.parsers.components.images_downloader import (
+		ImageDownloadingResult,
+	)
 	from ....utils.cacher import CachingResult
 	from ....utils.classificator import ClassificationResult
 	from . import Printer
@@ -73,6 +76,23 @@ class Templates:
 		header = header.upper()
 		header = f"===== {header} ====="
 		self.__Printer.emit(header)
+
+	def image_downloading_result(self, result: "ImageDownloadingResult", show_path: bool = True):
+		"""
+		Шаблон вывода: результат скачивания изображения.
+
+		:param result: Результат скачивания изображения.
+		:type result: ImageDownloadingResult
+		:param show_path: Указывает, выводить ли путь к изображению.
+		:type show_path: bool
+		"""
+
+		if result.error_message: self.__Printer.error(result.error_message)
+		elif result.is_already_exists and not result.is_downloaded: self.__Printer.emit("Image already exists.")
+		elif result.is_already_exists and result.is_downloaded: self.__Printer.emit("Image overwritten.")
+		else: self.__Printer.emit("Done.")
+		
+		if show_path and result.path: self.__Printer.emit(f"Image path: \"{result.path}\".")
 
 	def parsers_table(self, columns: dict[str, list[str]]):
 		"""
