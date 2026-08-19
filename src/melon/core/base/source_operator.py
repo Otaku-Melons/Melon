@@ -5,6 +5,7 @@ from typing import TYPE_CHECKING, Sequence
 
 from dulwich import errors, porcelain
 
+from dublib.exceptions.web_requestor import TokenExpired
 from dublib.functions.filesystem import ReadJSON
 from dublib.validators import Validator_Domain, Validator_URL
 from dublib.web_requestor import WebConfig, WebLibs, WebRequestor
@@ -113,6 +114,27 @@ class BaseSourceOperator:
 
 		return self._SystemObjects
 
+	#==========================================================================================#
+	# >>>>> НАСЛЕДУЕМЫЕ МЕТОДЫ <<<<< #
+	#==========================================================================================#
+
+	def _SetBearerToken(self, requestor: WebRequestor, token: str | None):
+		"""
+		Устанавливает Bearer-токен в оператор запросов, обрабатывая исключение его истечения.
+
+		:param requestor: Оператор запросов.
+		:type requestor: WebRequestor
+		:param token: Bearer-токен со словом-идентификатором или без него.
+		:type token: str | None
+		"""
+
+		if not token: return
+
+		try:
+			requestor.config.headers.bearer.set_token(token)
+		except TokenExpired as ExceptionData:
+			self._Printer.error(f"Token expired: {ExceptionData}.")
+	
 	#==========================================================================================#
 	# >>>>> ПЕРЕОПРЕДЕЛЯЕМЫЕ МЕТОДЫ <<<<< #
 	#==========================================================================================#
