@@ -3,7 +3,6 @@ from dataclasses import dataclass
 from dublib.cli.terminalyzer import Command, ParsedCommandData
 
 from ....core.system_objects.parsers_manager import (
-	ConfigInstallationResult,
 	ConfigInstallationStrategies,
 	ParsersManager,
 )
@@ -40,7 +39,7 @@ class CommandProcessor(CommandProcessorTemplate[Parameters]):
 		:rtype: str
 		"""
 
-		return "Install parser."
+		return "Export and merge parser config."
 
 	def _GenerateCommand(self, command: Command) -> Command:
 		"""
@@ -69,12 +68,11 @@ class CommandProcessor(CommandProcessorTemplate[Parameters]):
 		:rtype: Parameters
 		"""
 
-		Parser: str = data.get_important_position_value("PARSER", expected_type = str)
 		Strategy: str | None = data.get_position_value("STRATEGY", expected_type = str)
 		if not Strategy: Strategy = "-s"
 
 		return Parameters(
-			parser = Parser,
+			parser = data.get_important_position_value("PARSER", expected_type = str),
 			config_strategy = ConfigInstallationStrategies(Strategy)
 		)
 
@@ -89,20 +87,7 @@ class CommandProcessor(CommandProcessorTemplate[Parameters]):
 		"""
 
 		Installer = ParsersManager(self.system_objects)
-		RepositoryURL: str | None = Installer.repositories.get(parameters.parser)
-
-		if not RepositoryURL:
-			self.printer.error(f"Repository for parser \"{parameters.parser}\" not found.")
-			return False
-
-		self.printer.emit(f"Repository: <i>{RepositoryURL}</i>.")
-
-		Installer.clone_parser(parameters.parser)
-		self.printer.emit("Parser clonned.")
-
-		Installer.install_requirements(parameters.parser)
-
-		Result: ConfigInstallationResult = Installer.install_config(parameters.parser, parameters.config_strategy)
+		Result = Installer.install_config(parameters.parser, parameters.config_strategy)
 		self.printer.templates.config_installation_result(Result)
-
+		
 		return True

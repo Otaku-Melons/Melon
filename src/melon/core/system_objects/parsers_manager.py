@@ -42,6 +42,14 @@ class ConfigInstallationResult(Enum):
 	Installed = 1
 	AlreadyExists = 2
 	Overwtitten = 3
+	Merged = 4
+
+class ConfigInstallationStrategies(Enum):
+	"""Стратегии установки конфигурации."""
+
+	Skip = "-s"
+	Overwrite = "-o"
+	Merge = "-m"
 
 #==========================================================================================#
 # >>>>> ВСПОМОГАТЕЛЬНЫЕ СТРУКТУРЫ ДАННЫХ <<<<< #
@@ -419,14 +427,14 @@ class ParsersManager:
 
 		return IsInstalled
 
-	def install_config(self, parser_name: str, force_mode: bool = False) -> ConfigInstallationResult:
+	def install_config(self, parser_name: str, conflict_strategy: ConfigInstallationStrategies = ConfigInstallationStrategies.Skip) -> ConfigInstallationResult:
 		"""
 		Устанавливает зависимости парсера.
 
 		:param parser_name: Имя парсера.
 		:type parser_name: str
-		:param force_mode: Переключает режим перезаписи
-		:type force_mode: bool
+		:param conflict_strategy: Стратегия установки конфигурации при конфликте.
+		:type conflict_strategy: ConfigInstallationStrategies
 		:return: Результат установки конфигурации.
 		:rtype: ConfigInstallationResult
 		:raises ParserNotFound: Парсер не найден.
@@ -446,11 +454,20 @@ class ParsersManager:
 			return ConfigInstallationResult.Missing
 
 		if ConfigStorageFilePath.exists():
-			if force_mode:
-				WriteJSON(ConfigStorageFilePath, Config)
-				return ConfigInstallationResult.Overwtitten
-			else:
-				return ConfigInstallationResult.AlreadyExists
+			
+			match conflict_strategy:
+				case ConfigInstallationStrategies.Skip:
+					return ConfigInstallationResult.AlreadyExists
+
+				case ConfigInstallationStrategies.Overwrite:
+					WriteJSON(ConfigStorageFilePath, Config)
+					return ConfigInstallationResult.Overwtitten
+
+				case ConfigInstallationStrategies.Merge:
+					CurrentConfig: dict = ReadJSON(ConfigStorageFilePath)
+					Config = always_merger.merge(Config, CurrentConfig)
+					WriteJSON(ConfigStorageFilePath, Config)
+					return ConfigInstallationResult.Merged
 
 		WriteJSON(ConfigStorageFilePath, Config)
 

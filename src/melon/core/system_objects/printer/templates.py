@@ -5,6 +5,8 @@ from prettytable import PLAIN_COLUMNS, PrettyTable
 from dublib.cli.text_styler import FastStyler
 from dublib.functions.data import StringifyFloat
 
+from ...system_objects.parsers_manager import ConfigInstallationResult
+
 if TYPE_CHECKING:
 	from ....core.base.parsers.components.images_downloader import (
 		ImageDownloadingResult,
@@ -64,6 +66,21 @@ class Templates:
 					return
 			
 			self.__Printer.emit(FastStyler(f"{Key}:").decorate.bold, ResultDict[Key])
+
+	def config_installation_result(self, result: ConfigInstallationResult):
+		"""
+		Шаблон сообщения: результат установки конфигурации.
+
+		:param result: Результат установки конфигурации.
+		:type result: ConfigInstallationResult
+		"""
+
+		match result:
+			case ConfigInstallationResult.Missing: self.__Printer.emit("Preset missing. Skipped.")
+			case ConfigInstallationResult.Installed: self.__Printer.emit("Config installed.")
+			case ConfigInstallationResult.AlreadyExists: self.__Printer.emit("Config already exists. Skipped.")
+			case ConfigInstallationResult.Overwtitten: self.__Printer.emit("Config overwritten.")
+			case ConfigInstallationResult.Merged: self.__Printer.emit("Config merged with preset.")
 
 	def header(self, header: str):
 		"""
