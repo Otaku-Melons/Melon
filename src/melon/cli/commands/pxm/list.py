@@ -1,7 +1,8 @@
 from dublib.cli.terminalyzer import Command, ParsedCommandData
 
 from ....core.base.parsers.components.manifest import ContentTypes
-from ..base_processor import DataclassStub, PreparedData, ProcessorOptions
+from ..base_processor import PreparedData, ProcessorOptions
+from ..base_processor.structs import DataclassStub
 from ._base import CommandProcessorTemplate
 
 class CommandProcessor(CommandProcessorTemplate[DataclassStub]):

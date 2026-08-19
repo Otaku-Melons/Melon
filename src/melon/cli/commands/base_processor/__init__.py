@@ -1,21 +1,16 @@
 import sys
 from abc import ABC, abstractmethod
-from dataclasses import dataclass
 from typing import TYPE_CHECKING, Any, ClassVar, Generic, Protocol, TypeVar
 
 from dublib.cli.terminalyzer import Command, ParsedCommandData
 
-from ... import utils
-from ...core import exceptions
+from .... import utils
+from ....core import exceptions
+from .structs import PreparedData, ProcessorOptions, RequiredParser
 
 if TYPE_CHECKING:
-	from ...core.base.source_operator import (
-		BaseSourceOperator,
-		ParserManifest,
-		ParserSettings,
-	)
-	from ...core.system_objects import SystemObjects
-	from ...core.system_objects.printer import Printer
+	from ....core.system_objects import SystemObjects
+	from ....core.system_objects.printer import Printer
 	
 #==========================================================================================#
 # >>>>> КОНСТРУКЦИИ АННОТАЦИЙ ТИПОВ <<<<< #
@@ -26,68 +21,13 @@ class AnyDataclass(Protocol):
 	
 	__dataclass_fields__: ClassVar[dict[str, Any]]
 
-_PARAMS = TypeVar("_PARAMS", bound = AnyDataclass)
-
-#==========================================================================================#
-# >>>>> ВСПОМОГАТЕЛЬНЫЕ СТРУКТУРЫ ДАННЫХ <<<<< #
-#==========================================================================================#
-
-@dataclass(frozen = True)
-class DataclassStub:
-	"""Заглушка для команд, не требующих параметров."""
-
-	pass
-
-@dataclass(frozen = True)
-class ProcessorOptions:
-	"""Контейнер настроек обработчика."""
-
-	use_timer: bool = True
-
-@dataclass(frozen = True)
-class RequiredParser:
-	"""Коллекция управляющих объектов трубемого парсера."""
-
-	name: str
-	source_operator: "BaseSourceOperator"
-	manifest: "ParserManifest"
-	settings: "ParserSettings"
-
-@dataclass(frozen = True)
-class PreparedData:
-	"""Предподготолвенные данные."""
-
-	required_parsers: tuple[RequiredParser, ...]
-	is_force_mode_enabled: bool
-	mirror: str | None
-
-#==========================================================================================#
-# >>>>> ШАБЛОНЫ ПАРАМЕТРОВ <<<<< #
-#==========================================================================================#
-
-@dataclass(frozen = True)
-class T_ForceModeRequired:
-	"""Шаблон: присутствует режим перезаписи."""
-
-	is_force_mode_enabled: bool
-
-@dataclass(frozen = True)
-class T_MultipleParsersRequired:
-	"""Шаблон: требуется несколько парсеров."""
-
-	required_parsers: tuple[RequiredParser, ...]
-
-@dataclass(frozen = True)
-class T_SingleParserRequired:
-	"""Шаблон: требуется один парсер."""
-
-	required_parser: RequiredParser
+PARAMS = TypeVar("PARAMS", bound = AnyDataclass)
 
 #==========================================================================================#
 # >>>>> ОСНОВНОЙ КЛАСС <<<<< #
 #==========================================================================================#
 
-class BaseCommandProcessor(ABC, Generic[_PARAMS]):
+class BaseCommandProcessor(ABC, Generic[PARAMS]):
 	"""Базовый обработчик команды."""
 
 	#==========================================================================================#
@@ -234,6 +174,25 @@ class BaseCommandProcessor(ABC, Generic[_PARAMS]):
 	# >>>>> ПЕРЕОПРЕДЕЛЯЕМЫЕ МЕТОДЫ <<<<< #
 	#==========================================================================================#
 
+	def _ProcessAndCatchExceptions(self, parameters: PARAMS) -> bool:
+		"""
+		Оборачивает метод `_Process()` для отлова исключений.
+		
+		:param parameters: Параметры команды.
+		:type parameters: AnyDataclass
+		:return: Возвращает `True`, если выполнение успешно и прерывание не требуется.
+		:rtype: bool
+		"""
+
+		try:
+			return self._Process(parameters)
+		except exceptions.system.ParserNotFound as ExceptionData:
+			self.printer.error(f"Parser <b>{ExceptionData}</b> not found.")
+			return False
+		except exceptions.system.ReposError as ExceptionData:
+			self.printer.error(str(ExceptionData))
+			return False
+
 	@abstractmethod
 	def _ExportCommandDescription(self) -> str:
 		"""
@@ -269,7 +228,7 @@ class BaseCommandProcessor(ABC, Generic[_PARAMS]):
 		return command
 
 	@abstractmethod
-	def _ParseParameters(self, data: ParsedCommandData, prepared_data: PreparedData) -> _PARAMS:
+	def _ParseParameters(self, data: ParsedCommandData, prepared_data: PreparedData) -> PARAMS:
 		"""
 		Парсит данные обработанной команды в структуру **dataclass**.
 
@@ -284,7 +243,7 @@ class BaseCommandProcessor(ABC, Generic[_PARAMS]):
 		pass
 
 	@abstractmethod
-	def _Process(self, parameters: _PARAMS) -> bool:
+	def _Process(self, parameters: PARAMS) -> bool:
 		"""
 		Выполняет команду.
 
@@ -336,7 +295,7 @@ class BaseCommandProcessor(ABC, Generic[_PARAMS]):
 		PreparedDataContainer = PreparedData(RequiredParsers, IsForceModeEnabled, Mirror)
 		
 		Parameters = self._ParseParameters(data, PreparedDataContainer)
-		Status: bool = self._Process(Parameters)
+		Status: bool = self._ProcessAndCatchExceptions(Parameters)
 
 		if not Status: sys.exit(1)
 		if Timer: self.printer.emit(f"Done in {Timer.ends()}.")

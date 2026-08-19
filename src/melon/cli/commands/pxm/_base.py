@@ -1,6 +1,6 @@
-from ..base_processor import _PARAMS, BaseCommandProcessor
+from ..base_processor import PARAMS, BaseCommandProcessor
 
-class CommandProcessorTemplate(BaseCommandProcessor[_PARAMS]):
+class CommandProcessorTemplate(BaseCommandProcessor[PARAMS]):
 	"""Контейнер шаблонов генерации команд."""
 	
 	#==========================================================================================#

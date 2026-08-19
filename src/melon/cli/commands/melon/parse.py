@@ -11,8 +11,8 @@ from dublib.cli.text_styler import GetStyledTextFromHTML
 from .... import utils
 from ....core import exceptions
 from ....core.base.parsers.components.manifest import ContentTypes
-from ..base_processor import (
-	PreparedData,
+from ..base_processor import PreparedData
+from ..base_processor.parameters_templates import (
 	T_ForceModeRequired,
 	T_SingleParserRequired,
 )

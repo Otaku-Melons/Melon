@@ -8,7 +8,8 @@ from dublib.cli.terminalyzer import Command, ParsedCommandData
 from dublib.functions.filesystem import ReadJSON, RemoveDirectoryContent
 
 from .... import utils
-from ..base_processor import PreparedData, T_SingleParserRequired
+from ..base_processor import PreparedData
+from ..base_processor.parameters_templates import T_SingleParserRequired
 from ._base import CommandProcessorTemplate
 
 #==========================================================================================#

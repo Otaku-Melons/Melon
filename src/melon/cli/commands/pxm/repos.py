@@ -3,7 +3,6 @@ from typing import cast
 
 from dublib.cli.terminalyzer import Command, ParsedCommandData, ValidableTypes
 
-from ....core import exceptions
 from ....core.system_objects.parsers_manager import ParsersManager
 from ..base_processor import PreparedData, ProcessorOptions
 from ._base import CommandProcessorTemplate
@@ -100,13 +99,7 @@ class CommandProcessor(CommandProcessorTemplate[Parameters]):
 		"""
 
 		Manager = ParsersManager(self.system_objects)
-
-		try:
-			if parameters.is_remove: Manager.repositories.remove(cast(str, parameters.parser_name))
-			elif parameters.url: Manager.repositories.add(cast(str, parameters.url))
-
-		except exceptions.system.ReposError as ExceptionData:
-			self.printer.error(str(ExceptionData))
-			return False
+		if parameters.is_remove: Manager.repositories.remove(cast(str, parameters.parser_name))
+		elif parameters.url: Manager.repositories.add(cast(str, parameters.url))
 
 		return True

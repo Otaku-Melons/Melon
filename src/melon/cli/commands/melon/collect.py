@@ -4,7 +4,11 @@ from dublib.cli.terminalyzer import Command, ParsedCommandData, ValidableTypes
 from dublib.cli.text_styler import GetStyledTextFromHTML
 
 from .... import utils
-from ..base_processor import PreparedData, T_ForceModeRequired, T_SingleParserRequired
+from ..base_processor import PreparedData
+from ..base_processor.parameters_templates import (
+	T_ForceModeRequired,
+	T_SingleParserRequired,
+)
 from ._base import CommandProcessorTemplate
 
 #==========================================================================================#

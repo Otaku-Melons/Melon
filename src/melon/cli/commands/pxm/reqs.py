@@ -2,7 +2,6 @@ from dataclasses import dataclass
 
 from dublib.cli.terminalyzer import Command, ParsedCommandData
 
-from ....core import exceptions
 from ....core.system_objects.parsers_manager import ParsersManager
 from ..base_processor import PreparedData
 from ._base import CommandProcessorTemplate
@@ -77,12 +76,7 @@ class CommandProcessor(CommandProcessorTemplate[Parameters]):
 		"""
 
 		Installer = ParsersManager(self.system_objects)
-		
-		try:
-			Result: int | None = Installer.install_requirements(parameters.parser)
-			if Result is None: self.printer.emit("No requirements found.")
-		except exceptions.system.ParserNotFound:
-			self.printer.error(f"Parser <b>{parameters.parser}</b> not found.")
-			return False
+		Result: int | None = Installer.install_requirements(parameters.parser)
+		if Result is None: self.printer.emit("No requirements found.")
 
 		return True
