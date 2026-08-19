@@ -261,7 +261,7 @@ class ParsersManager:
 	#==========================================================================================#
 	# >>>>> ПРИВАТНЫЕ МЕТОДЫ <<<<< #
 	#==========================================================================================#
-	
+
 	def __GetBestParserMatch(self, data: str, sequence: Sequence[str]) -> str | None:
 		"""
 		Возвращает лучшее совпадение имени парсера по отношению к переданной строке.
@@ -379,7 +379,10 @@ class ParsersManager:
 		:type hide_output: bool
 		:return: Возвращает `True`, если парсер успешно клонирован, и `False`, если репозиторий не найден.
 		:rtype: bool
+		:raises ParserNotFound: Парсер не найден.
 		"""
+
+		self.is_parser_installed(parser_name)
 
 		ParsersRootModulePath: Path = Path("parsers")
 		ParsersRootModulePath.mkdir(exist_ok = True)
@@ -396,6 +399,26 @@ class ParsersManager:
 
 		return bool(Repository)
 		
+	def is_parser_installed(self, parser_name: str, exception: bool = True) -> bool:
+		"""
+		Проверяет, установлен ли парсер.
+
+		:param parser_name: Имя парсера.
+		:type parser_name: str
+		:param exception: Указывает, следует ли выбрасывать исключение при отсутствии парсера.
+		:type exception: bool
+		:return: Возвращает `True`, если парсер установлен.
+		:rtype: bool
+		:raises ParserNotFound: Парсер не найден.
+		"""
+
+		IsInstalled: bool = parser_name in self.installed_parsers
+
+		if not IsInstalled and exception:
+			raise exceptions.system.ParserNotFound(parser_name)
+
+		return IsInstalled
+
 	def install_config(self, parser_name: str, force_mode: bool = False) -> ConfigInstallationResult:
 		"""
 		Устанавливает зависимости парсера.
@@ -406,7 +429,10 @@ class ParsersManager:
 		:type force_mode: bool
 		:return: Результат установки конфигурации.
 		:rtype: ConfigInstallationResult
+		:raises ParserNotFound: Парсер не найден.
 		"""
+		
+		self.is_parser_installed(parser_name)
 
 		Config: dict = _BASE_SETTINGS.copy()
 
@@ -430,17 +456,23 @@ class ParsersManager:
 
 		return ConfigInstallationResult.Installed
 
-	def install_requirements(self, parser_name: str) -> int:
+	def install_requirements(self, parser_name: str) -> int | None:
 		"""
 		Устанавливает зависимости парсера.
 
 		:param parser_name: Имя парсера.
 		:type parser_name: str
-		:return: Количество установленных пакетов зависимостей.
-		:rtype: int
+		:return: Количество установленных пакетов зависимостей или `None`, если файл зависимостей отсутствует.
+		:rtype: int | None
+		:raises ParserNotFound: Парсер не найден.
 		"""
+
+		self.is_parser_installed(parser_name)
+
+		RequirementsPath = Path(f"parsers/{parser_name}/requirements.txt")
+		if not RequirementsPath.exists(): return None
  
-		return self.__InstallRequirements(Path(f"parsers/{parser_name}/requirements.txt"))
+		return self.__InstallRequirements(RequirementsPath)
 
 	def launch_source_operator(self, parser_name: str) -> "BaseSourceOperator":
 		"""
@@ -451,7 +483,10 @@ class ParsersManager:
 		:return: Оператор источника.
 		:rtype: BaseSourceOperator
 		:raises FileNotFoundError: Файл точки входа в парсер не найден.
+		:raises ParserNotFound: Парсер не найден.
 		"""
+
+		self.is_parser_installed(parser_name)
 
 		ParserMainPath = Path(f"parsers/{parser_name}/__init__.py")
 
@@ -472,7 +507,10 @@ class ParsersManager:
 		:return: Манифест парсера.
 		:rtype: ParserManifest
 		:raises FileNotFoundError: Файл манифеста не найден.
+		:raises ParserNotFound: Парсер не найден.
 		"""
+
+		self.is_parser_installed(parser_name)
 
 		ManifestPath = Path(f"parsers/{parser_name}/manifest.json")
 		if not ManifestPath.exists():
@@ -491,9 +529,7 @@ class ParsersManager:
 		:raises ParserNotFound: Парсер не найден.
 		"""
 		
-		if parser_name not in self.installed_parsers:
-			raise exceptions.system.ParserNotFound(parser_name)
-
+		self.is_parser_installed(parser_name)
 		ElementToRemove = [Path(f"parsers/{parser_name}")]
 
 		if clear:
@@ -521,7 +557,10 @@ class ParsersManager:
 		:type hide_output: bool
 		:return: Возвращает `True`, если состояние каталога парсера изменилось.
 		:rtype: bool
+		:raises ParserNotFound: Парсер не найден.
 		"""
+
+		self.is_parser_installed(parser_name)
 
 		return self.__PullGitRepository(
 			repos_path = Path(f"parsers/{parser_name}"),
