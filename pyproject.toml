@@ -27,7 +27,7 @@ melon = "melon:main"
 pxm = "melon:main"
 
 [build-system]
-requires = ["uv-build>=0.12.2,<0.13.0"]
+requires = ["uv-build>=0.12.5,<0.13.0"]
 build-backend = "uv_build"
 
 [tool.mypy]

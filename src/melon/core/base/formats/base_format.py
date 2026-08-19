@@ -8,11 +8,9 @@ from typing import TYPE_CHECKING, Any, Sequence, cast
 
 import orjson
 
-from dublib.functions.data import (
-	InsertDictionaryAfterKey,
-	RemoveRecurringSubstrings,
-	Zerotify,
-)
+from dublib.functions.data import Zerotify
+from dublib.functions.data.dictionary import InsertAfterKey
+from dublib.functions.data.string import RemoveRecurringSubstrings
 from dublib.functions.filesystem import ReadJSON, WriteJSON
 from dublib.validators import Validator_Domain
 
@@ -500,7 +498,7 @@ class BaseChapter(ABC):
 
 		self._PreFormatter()
 
-		return InsertDictionaryAfterKey(self._Data.copy(), self.extra_data.to_dict(), "workers")
+		return InsertAfterKey(self._Data.copy(), self.extra_data.to_dict(), "workers")
 
 class BaseBranch(ABC):
 	"""Базовая ветвь."""
