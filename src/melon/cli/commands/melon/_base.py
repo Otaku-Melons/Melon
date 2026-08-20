@@ -12,7 +12,7 @@ class CommandProcessorTemplate(BaseCommandProcessor[PARAMS]):
 	def _AddMirrorKey(self):
 		"""Добавляет ключ подключения зеркала."""
 
-		self._Command.base.add_key("--mirror", type = ValidableTypes.Domain, description = "Source mirror to requests.")
+		self._Command.base.add_key("--mirror", value_type = ValidableTypes.Domain, description = "Source mirror to requests.")
 
 	def _AddParserPosition(self, multiple: bool = False):
 		"""

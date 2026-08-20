@@ -65,7 +65,7 @@ class CommandProcessor(CommandProcessorTemplate[Parameters]):
 
 		self._AddForceModeFlag()
 
-		command.base.add_key("--dir", type = ValidableTypes.ValidPath, description = "Output directory.")
+		command.base.add_key("--dir", value_type = ValidableTypes.ValidPath, description = "Output directory.")
 
 		return command
 

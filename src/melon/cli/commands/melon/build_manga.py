@@ -62,8 +62,8 @@ class CommandProcessor(CommandProcessorTemplate[Parameters]):
 		self._AddParserPosition()
 
 		ComPos = command.create_position("TARGET", "Target for building. By default longest branch.")
-		ComPos.add_key("--branch", type = ValidableTypes.UnsignedInteger, description = "Branch ID.")
-		ComPos.add_key("--chapter", type = ValidableTypes.UnsignedInteger, description = "Chapter ID.")
+		ComPos.add_key("--branch", value_type = ValidableTypes.UnsignedInteger, description = "Branch ID.")
+		ComPos.add_key("--chapter", value_type = ValidableTypes.UnsignedInteger, description = "Chapter ID.")
 
 		ComPos = command.create_position("FORMAT", "Format of output content. By default downloads images in folder.")
 		ComPos.add_flag("-cbz", description = "Make *.CBZ files.")

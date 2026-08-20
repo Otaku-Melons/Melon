@@ -115,27 +115,6 @@ class BaseSourceOperator:
 		return self._SystemObjects
 
 	#==========================================================================================#
-	# >>>>> НАСЛЕДУЕМЫЕ МЕТОДЫ <<<<< #
-	#==========================================================================================#
-
-	def _SetBearerToken(self, requestor: WebRequestor, token: str | None):
-		"""
-		Устанавливает Bearer-токен в оператор запросов, обрабатывая исключение его истечения.
-
-		:param requestor: Оператор запросов.
-		:type requestor: WebRequestor
-		:param token: Bearer-токен со словом-идентификатором или без него.
-		:type token: str | None
-		"""
-
-		if not token: return
-
-		try:
-			requestor.config.headers.bearer.set_token(token)
-		except TokenExpired as ExceptionData:
-			self._Printer.error(f"Token expired: {ExceptionData}.")
-	
-	#==========================================================================================#
 	# >>>>> ПЕРЕОПРЕДЕЛЯЕМЫЕ МЕТОДЫ <<<<< #
 	#==========================================================================================#
 
@@ -214,6 +193,15 @@ class BaseSourceOperator:
 
 		pass
 
+	def _SetAuthorizationMethod(self):
+		"""
+		Выполняется после `_InitializeRequestor()` и обёрнут для отлова исключений `TokenExpired`.
+
+		Используется для установки авторизации на основе заголовка _Authorization_.
+		"""
+
+		pass
+
 	def _TempImage(self, url: str, force_mode: bool = False) -> ImageDownloadingResult:
 		"""
 		Скачивает изображение по ссылке и сохраняет во временный каталог парсера.
@@ -249,7 +237,14 @@ class BaseSourceOperator:
 		self._Temper = self._SystemObjects.temper
 		
 		self._Settings = ParserSettings(self._SystemObjects, self._Manifest.parser_name)
+
 		self._Requestor = self._InitializeRequestor()
+
+		try:
+			self._SetAuthorizationMethod()
+		except TokenExpired as ExceptionData:
+			self._Printer.error(f"Token expired: {ExceptionData}.")
+
 		self._ImagesDownloader = ImagesDownloader(self)
 		self._Portals = self._SystemObjects.printer.get_parser_portals(self._Manifest.parser_name)
 		self._SharedData = self._SystemObjects.temper.load_parser_shared_data(self._Manifest.parser_name)

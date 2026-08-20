@@ -54,8 +54,8 @@ class CommandProcessor(CommandProcessorTemplate[Parameters]):
 		ComPos.set_argument()
 
 		ComPos = command.create_position("TARGET", "Target to repairing.", important = True)
-		ComPos.add_key("--branch", type = ValidableTypes.UnsignedInteger, description = "Branch ID.")
-		ComPos.add_key("--chapter", type = ValidableTypes.UnsignedInteger, description = "Chapter ID.")
+		ComPos.add_key("--branch", value_type = ValidableTypes.UnsignedInteger, description = "Branch ID.")
+		ComPos.add_key("--chapter", value_type = ValidableTypes.UnsignedInteger, description = "Chapter ID.")
 
 		self._AddParserPosition()
 
@@ -113,10 +113,9 @@ class CommandProcessor(CommandProcessorTemplate[Parameters]):
 			self.printer.error(f"Unable load file: <b>{parameters.filename}</b>.")
 			return False
 	
-		self.printer.emit(f"Repairing chapter <b>{parameters.target_id}</b>… ", end_line = False)
+		self.printer.emit(f"Repairing chapter <b>{parameters.target_id}</b>… ")
 	
-		if Parser.repair(parameters.target_id): self.printer.emit("Done.")
-		else: self.printer.warning("Chapter is empty. Repairing failure?")
+		if not Parser.repair(parameters.target_id): self.printer.warning("Chapter is empty. Repairing failure?")
 	
 		if Parser.save(): self.printer.emit("Saved.")
 		else: self.printer.emit("No changes. Saving skipped.")

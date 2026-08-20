@@ -55,7 +55,7 @@ class CommandProcessor(CommandProcessorTemplate[Parameters]):
 
 		self._AddParserPosition()
 
-		command.base.add_key("--branch", type = ValidableTypes.UnsignedInteger, description = "Branch ID to building.")
+		command.base.add_key("--branch", value_type = ValidableTypes.UnsignedInteger, description = "Branch ID to building.")
 
 		return command
 

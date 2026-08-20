@@ -61,7 +61,7 @@ class CommandProcessor(CommandProcessorTemplate[Parameters]):
 		"""
 
 		ComPos = command.create_position("OPERATION", "Operation with repositories.", important = True)
-		ComPos.add_key("--add", type = ValidableTypes.URL, description = "URL of parser Git repository.")
+		ComPos.add_key("--add", value_type = ValidableTypes.URL, description = "URL of parser Git repository.")
 		ComPos.add_key("--remove", description = "Parser name.")
 		
 		return command

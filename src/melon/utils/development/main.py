@@ -77,6 +77,15 @@ class SourceOperator(BaseSourceOperator):
 	
 			pass
 
+	def _SetAuthorizationMethod(self):
+		"""
+		Выполняется после `_InitializeRequestor()` и обёрнут для отлова исключений `TokenExpired`.
+
+		Используется для установки авторизации на основе заголовка _Authorization_.
+		"""
+
+		pass
+
 	def _TempImage(self, url: str, force_mode: bool = False) -> ImageDownloadingResult:
 		"""
 		Скачивает изображение по ссылке и сохраняет во временный каталог парсера.

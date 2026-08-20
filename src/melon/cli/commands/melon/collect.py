@@ -75,8 +75,8 @@ class CommandProcessor(CommandProcessorTemplate[Parameters]):
 		self._AddMirrorKey()
 
 		command.base.add_key("--filters", description = "Query string for filtering titles.")
-		command.base.add_key("--pages", type = ValidableTypes.UnsignedInteger, description = "Count of pages to collecting.")
-		command.base.add_key("--period", type = ValidableTypes.UnsignedInteger, description = "Period in hours for parsing updates.")
+		command.base.add_key("--pages", value_type = ValidableTypes.UnsignedInteger, description = "Count of pages to collecting.")
+		command.base.add_key("--period", value_type = ValidableTypes.UnsignedInteger, description = "Period in hours for parsing updates.")
 
 		return command
 

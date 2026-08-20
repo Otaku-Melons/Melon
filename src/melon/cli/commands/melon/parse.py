@@ -502,8 +502,8 @@ class CommandProcessor(CommandProcessorTemplate[Parameters]):
 		ComPos.add_flag("-local", description = "Parse all locally saved titles.")
 		ComPos.add_flag("-last", description = "Parse last parsed title.")
 		ComPos.add_key("--collection", description = GetStyledTextFromHTML("Name of collection file. Put . to default <i>collection</i>."))
-		ComPos.add_key("--id", type = ValidableTypes.UnsignedInteger, description = "Title ID.")
-		ComPos.add_key("--updates", type = ValidableTypes.UnsignedInteger, description = "Parse updates for period in hours.")
+		ComPos.add_key("--id", value_type = ValidableTypes.UnsignedInteger, description = "Title ID.")
+		ComPos.add_key("--updates", value_type = ValidableTypes.UnsignedInteger, description = "Parse updates for period in hours.")
 
 		self._AddParserPosition()
 
