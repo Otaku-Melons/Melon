@@ -84,7 +84,7 @@ class Portals:
 		if exception:
 			raise exceptions.parsers.ParsingError(text)
 
-	def unsupported_format(self, format: str | None = None, exception: bool = True):
+	def unsupported_format(self, title_format: str | None = None, exception: bool = True):
 		"""
 		Шаблон предупреждения: неподдерживаемый формат JSON.
 
@@ -95,7 +95,7 @@ class Portals:
 		:raises UnsupportedFormat: Выбрасывается при активации соответствующего аргумента.
 		"""
 
-		Format = f": \"{format}\"" if format else ""
+		Format = f": \"{title_format}\"" if title_format else ""
 		Text = f"Unsupported JSON format{Format}."
 
 		self.__Printer.error(Text)
@@ -122,7 +122,7 @@ class Portals:
 		self.__Printer.error(Text)
 
 		if exception:
-			raise exceptions.parsers.ChapterNotFound(id = chapter.id, slug = chapter.slug)
+			raise exceptions.parsers.ChapterNotFound(chapter.id, chapter.slug)
 
 	def title_not_found(self, title: "BaseTitle", exception: bool = True):
 		"""

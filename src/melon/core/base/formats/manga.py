@@ -223,12 +223,12 @@ class Manga(BaseTitle):
 	# >>>>> ПУБЛИЧНЫЕ МЕТОДЫ УСТАНОВКИ СВОЙСТВ <<<<< #
 	#==========================================================================================#
 
-	def set_type(self, type: Types | None):
+	def set_type(self, manga_type: Types | None):
 		"""
 		Задаёт тип манги.
 
-		:param type: Тип манги.
-		:type type: Types | None
+		:param manga_type: Тип манги.
+		:type manga_type: Types | None
 		"""
 
-		self._Data["type"] = type.value if type else None
+		self._Data["type"] = manga_type.value if manga_type else None

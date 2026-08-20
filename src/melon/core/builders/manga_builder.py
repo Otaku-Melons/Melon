@@ -311,15 +311,15 @@ class MangaBuilder(BaseBuilder):
 		ProgressString = self.__GetProgressString(1.0)
 		self._Printer.emit(f"{ProgressString}In branch <b>{BranchToBuild.id}</b> builded {BranchToBuild.chapters_count} chapters.")
 
-	def select_output_format(self, format: MangaOutputFormats):
+	def select_output_format(self, output_format: MangaOutputFormats):
 		"""
 		Выбирает формат для сборки манги.
 
-		:param format: Формат сборки или.
-		:type format: MangaOutputFormats
+		:param output_format: Формат сборки или.
+		:type output_format: MangaOutputFormats
 		"""
 
-		self.__OutputFormat = format
+		self.__OutputFormat = output_format
 
 	def switch_volumes_sorting(self, status: bool):
 		"""

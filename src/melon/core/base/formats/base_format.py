@@ -579,43 +579,43 @@ class BaseBranch(ABC):
 		
 		self._Chapters[chapter.id] = chapter
 
-	def get_chapter_by_id(self, id: int) -> BaseChapter:
+	def get_chapter_by_id(self, chapter_id: int) -> BaseChapter:
 		"""
 		Возвращает главу по её уникальному идентификатору.
 
-		:param id: ID главы.
+		:param chapter_id: ID главы.
 		:type id: int
 		:return: Глава.
 		:rtype: BaseChapter
 		:raises KeyError: Глава не найдена.
 		"""
 
-		return self._Chapters[id]
+		return self._Chapters[chapter_id]
 	
-	def has_chapter(self, id: int) -> bool:
+	def has_chapter(self, chapter_id: int) -> bool:
 		"""
 		Проверяет, содержится ли глава с таким ID в ветви.
 
-		:param id: ID главы.
+		:param chapter_id: ID главы.
 		:type id: int
 		:return: Возвращает `True`, если глава с таким ID присутствует.
 		:rtype: bool
 		"""
 
-		return id in self._Chapters
+		return chapter_id in self._Chapters
 	
-	def remove_chapter(self, id: int):
+	def remove_chapter(self, chapter_id: int):
 		"""
 		Удаляет главу из ветви.
 
-		:param id: ID главы.
+		:param chapter_id: ID главы.
 		:type id: int
 		:raises KeyError: Глава не найдена.
 		"""
 		
-		del self._Chapters[id]
+		del self._Chapters[chapter_id]
 
-	def replace_chapter_by_id(self, chapter: BaseChapter, id: int):
+	def replace_chapter_by_id(self, chapter: BaseChapter, chapter_id: int):
 		"""
 		Заменяет главу в ветви по её ID.
 
@@ -626,8 +626,8 @@ class BaseBranch(ABC):
 		:raises KeyError: Глава не найдена.
 		"""
 
-		self.get_chapter_by_id(id)
-		self._Chapters[id] = chapter
+		self.get_chapter_by_id(chapter_id)
+		self._Chapters[chapter_id] = chapter
 	
 	def reverse(self):
 		"""Инвертирует порядок глав в ветви."""
@@ -1482,7 +1482,7 @@ class BaseTitle(ABC):
 
 		self._Data["domain"] = domain
 
-	def set_id(self, id: int | None):
+	def set_id(self, title_id: int | None):
 		"""
 		Задаёт ID тайтла.
 
@@ -1490,7 +1490,7 @@ class BaseTitle(ABC):
 		:type id: int | None
 		"""
 
-		self._Data["id"] = id
+		self._Data["id"] = title_id
 		self._TryUpdateJournal()
 
 	def set_content_language(self, language_code: str | None, load_preset: bool = True):

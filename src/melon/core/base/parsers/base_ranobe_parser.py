@@ -63,7 +63,7 @@ class BaseRanobeParser(BaseParser):
 		SearchResult = self._Title.find_chapter_by_id(chapter_id)
 
 		if not SearchResult:
-			raise exceptions.parsers.ChapterNotFound(id = chapter_id)
+			raise exceptions.parsers.ChapterNotFound(chapter_id)
 
 		AmendedChapter = cast("Chapter", SearchResult.chapter)
 		AmendedChapter.clear()
