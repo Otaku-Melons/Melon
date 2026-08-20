@@ -48,7 +48,7 @@ class CommandProcessor(CommandProcessorTemplate[Parameters]):
 		:rtype: Command
 		"""
 		
-		ComPos = command.create_position("SLUG", "Title slug.")
+		ComPos = command.create_position("SLUG", "Title slug.", important = True)
 		ComPos.set_argument()
 
 		self._AddParserPosition(multiple = True)
