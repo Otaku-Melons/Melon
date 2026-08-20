@@ -326,7 +326,7 @@ class ParsersManager:
 			Path(f"parsers/{parser}/manga.py").exists() or Path(f"parsers/{parser}/ranobe.py").exists()
 		))
 
-	def __PullGitRepository(self, repos_path: Path, remote_url: str, requirements: bool = True, force_mode: bool = False, hide_output: bool = True) -> bool:
+	def __PullGitRepository(self, repos_path: Path, remote_url: str, force_mode: bool = False, hide_output: bool = True) -> bool:
 		"""
 		Обновляет Git репозиторий.
 
@@ -334,8 +334,6 @@ class ParsersManager:
 		:type repos_path: Path
 		:param remote_url: URL удалённого репозитория Git.
 		:type remote_url: str
-		:param requirements: Указывает, нужно ли установить зависимости после обновления.
-		:type requirements: bool
 		:param force_mode: Указывает, перезаписывать ли изменения в репозитории.
 		:type force_mode: bool
 		:param hide_output: Указывает, скрывать ли вывод в терминал из библиотеки клонирования.
@@ -354,12 +352,7 @@ class ParsersManager:
 			force = force_mode
 		)
 
-		IsRepoChanged: bool = LocalRepo.head() != HeadCommitHash
-
-		if IsRepoChanged and requirements:
-			self.__InstallRequirements(repos_path)
-
-		return IsRepoChanged
+		return LocalRepo.head() != HeadCommitHash
 
 	#==========================================================================================#
 	# >>>>> ПУБЛИЧНЫЕ БАЗОВЫЕ МЕТОДЫ <<<<< #
@@ -578,14 +571,19 @@ class ParsersManager:
 		"""
 
 		self.is_parser_installed(parser_name)
+		RepoPath = Path(f"parsers/{parser_name}")
 
-		return self.__PullGitRepository(
-			repos_path = Path(f"parsers/{parser_name}"),
+		IsRepoChanged: bool = self.__PullGitRepository(
+			repos_path = RepoPath,
 			remote_url = self.repositories.get(parser_name, exception = True),
-			requirements = requirements,
 			force_mode = force_mode,
 			hide_output = hide_output
 		)
+
+		if IsRepoChanged and requirements:
+			self.__InstallRequirements(RepoPath / "requirements.txt")
+
+		return IsRepoChanged
 
 	def upgrade_melon(self, requirements: bool = True, force_mode: bool = False, hide_output: bool = True) -> bool:
 		"""
@@ -601,10 +599,4 @@ class ParsersManager:
 		:rtype: bool
 		"""
 
-		return self.__PullGitRepository(
-			repos_path = Path("."),
-			remote_url = self.__SystemObjects.options.REPOS_URL.value,
-			requirements = requirements,
-			force_mode = force_mode,
-			hide_output = hide_output
-		)
+		raise NotImplementedError("Use \"git pull\" instead.")
