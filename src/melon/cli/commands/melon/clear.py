@@ -143,27 +143,26 @@ class CommandProcessor(CommandProcessorTemplate[Parameters]):
 		SlugsCount: int = len(LocalTitles)
 		self.printer.emit(f"Local titles found: {SlugsCount}.")
 		
-		SlugIndex: int = 0
+		Slugs = Collector.slugs
 		FilesToRemove: list[str] = []
 
-		for Slug in Collector.slugs:
-			Progress = (SlugIndex + 1) / SlugsCount * 100.0
+		for Index in range(len(Slugs)):
+			Slug = Slugs[Index]
+			Progress = (Index + 1) / SlugsCount * 100.0
 			ProgressIndicator.set_progress(Progress)
 
 			IsTitleExists: bool | None = SourceOperator.is_title_exists(Slug)
 
 			if IsTitleExists is None:
-				if SlugIndex: self.printer.error("Error occurred during the existence checking.")
-				else: self.printer.error("Parser doesn't provide existence checker method.")
-				return False
+				self.printer.warning(f"Unable correctly check \"{Slug}\" existing. Skipped.")
+				continue
 
 			if IsTitleExists is False:
 				File = LocalTitles[Slug]
 				self.printer.emit(f"File <i>{File}</i> marked for removing.")
 				FilesToRemove.append(File)
 
-			SlugIndex += 1
-			if SlugIndex != SlugsCount: ParserSettings.common.sleep_delay()
+			if Index + 1 != SlugsCount: ParserSettings.common.sleep_delay()
 
 		ProgressIndicator.end()
 		FilesRemoved: int = self.__RemoveFilesInDirectory(ParserSettings.directories.titles, FilesToRemove)
