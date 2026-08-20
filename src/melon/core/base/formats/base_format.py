@@ -1629,6 +1629,25 @@ class BaseTitle(ABC):
 		for CurrentPerson in persons:
 			self.add_person(CurrentPerson)
 
+	def set_slug(self, slug: str):
+		"""
+		Изменяет алиас тайтла. Если алиас используется в качестве имени описательного файла, последний будет переименован соответственно.
+
+		:param slug: Алиас тайтла.
+		:type slug: str
+		"""
+
+		if slug == self.slug:
+			return
+
+		if not self._Parser.settings.common.use_id_as_filename:
+			CurrentPath = self.path
+			if CurrentPath.exists():
+				NewPath = CurrentPath.with_stem(slug)
+				CurrentPath.rename(NewPath)
+
+		self._Data["slug"] = slug
+
 	def set_status(self, status: Statuses | None):
 		"""
 		Задаёт статус тайтла.
