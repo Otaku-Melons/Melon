@@ -823,9 +823,53 @@ class BaseTitle(ABC):
 		return tuple(self._Branches.values())
 	
 	#==========================================================================================#
-	# >>>>> НАСЛЕДУЕМЫЕ МЕТОДЫ <<<<< #
+	# >>>>> НАСЛЕДУЕМЫЕ МЕТОДЫ ЧТЕНИЯ ЛОКАЛЬНЫХ ФАЙЛОВ <<<<< #
 	#==========================================================================================#
 	
+	def _LoadDataByFilename(self, filename: str) -> dict | None:
+
+		Filename: str = filename if filename.endswith(".json") else f"{filename}.json"
+		FilePath = self._Parser.settings.directories.titles / Filename
+		if FilePath.exists(): return ReadJSON(FilePath)
+
+		return None
+
+	def _LoadDataByID(self, title_id: int) -> dict | None:
+
+		Journal = self._Parser.source_operator.shared_data.journal
+		TitlesDirectory = self._Parser.settings.directories.titles
+	
+		if not self._Parser.settings.common.use_id_as_filename:
+			Slug = Journal.get_slug_by_id(title_id)
+
+			if Slug:
+				FilePath = TitlesDirectory / f"{Slug}.json"
+				if FilePath.exists(): return ReadJSON(FilePath)
+
+		else:
+			FilePath = TitlesDirectory / f"{title_id}.json"
+			if FilePath.exists(): return ReadJSON(FilePath)
+
+		return self._SearchFileInDirectory(TitlesDirectory, title_id, By.ID) or {}
+
+	def _LoadDataBySlug(self, slug: str) -> dict | None:
+
+		Journal = self._Parser.source_operator.shared_data.journal
+		TitlesDirectory = self._Parser.settings.directories.titles
+
+		if self._Parser.settings.common.use_id_as_filename:
+			ID = Journal.get_id_by_slug(slug)
+
+			if ID:
+				FilePath = TitlesDirectory / f"{ID}.json"
+				if FilePath.exists(): return ReadJSON(FilePath)
+
+		else:
+			FilePath = TitlesDirectory / f"{slug}.json"
+			if FilePath.exists(): return ReadJSON(FilePath)
+		
+		return self._SearchFileInDirectory(TitlesDirectory, slug, By.Slug)
+
 	def _LoadData(self, identificator: int | str, selector_type: By = By.Slug) -> dict | None:
 		"""
 		Открывает локальный JSON файл и считывает его данные.
@@ -840,59 +884,54 @@ class BaseTitle(ABC):
 		:raises UnsupportedFormat: Неподдерживаемый формат JSON.
 		"""
 
-		DataBuffer: dict = {}
-		TitlesDirectory = self._Parser.settings.directories.titles
-		Journal = self._Parser.source_operator.shared_data.journal
-		FilePath: Path | None = None
+		DataBuffer: dict | None = None
 
 		match selector_type:
 
 			case By.Filename:
-
-				if type(identificator) is int:
-					raise ValueError("Filename must be str.")
+				if type(identificator) is not str: raise ValueError("Filename must be str.")
+				DataBuffer = self._LoadDataByFilename(identificator)
 				
-				identificator = cast(str, identificator)
-
-				Filename: str = identificator if identificator.endswith(".json") else f"{identificator}.json"
-				FilePath = TitlesDirectory / Filename
-
-				if FilePath.exists():
-					DataBuffer = ReadJSON(FilePath)
-
 			case By.Slug:
-				if self._Parser.settings.common.use_id_as_filename:
-					ID = Journal.get_id_by_slug(str(identificator))
-					if ID:
-						FilePath = TitlesDirectory / f"{ID}.json"
-						if FilePath.exists():
-							DataBuffer = ReadJSON(FilePath)
-				else:
-					FilePath = TitlesDirectory / f"{identificator}.json"
-					if FilePath.exists():
-						DataBuffer = ReadJSON(FilePath)
-				
-				if not DataBuffer:
-					DataBuffer = self._SearchFileInDirectory(TitlesDirectory, str(identificator), By.Slug) or {}
+				if type(identificator) is not str: raise ValueError("Slug must be str.")
+				DataBuffer = self._LoadDataBySlug(cast(str, identificator))
 
 			case By.ID:
-				if not self._Parser.settings.common.use_id_as_filename:
-					Slug = Journal.get_slug_by_id(int(identificator))
-					if Slug:
-						FilePath = TitlesDirectory / f"{Slug}.json"
-						if FilePath.exists():
-							DataBuffer = ReadJSON(FilePath)
-				else:
-					FilePath = TitlesDirectory / f"{identificator}.json"
-					if FilePath.exists():
-						DataBuffer = ReadJSON(FilePath)
-					
-				if not DataBuffer:
-					DataBuffer = self._SearchFileInDirectory(TitlesDirectory, str(identificator), By.ID) or {}
+				if type(identificator) is not int: raise ValueError("ID must be int.")
+				DataBuffer = self._LoadDataByID(identificator)
 
 		self._IsLocalFileLoaded = bool(DataBuffer)
 
 		return Zerotify(DataBuffer)
+
+	def _SearchFileInDirectory(self, directory: str | PathLike[str], identificator: int | str, identificator_type: By) -> dict | None:
+		"""
+		Находит файл JSON в директории по идентификатору определённого типа.
+
+		:param directory: Путь к каталогу файлов.
+		:type directory: str | PathLike[str]
+		:param identificator: Идентификатор: ID или алиас.
+		:type identificator: int | str
+		:param identificator_type: Тип идентификатора: `By.Slug` или `By.ID`.
+		:type identificator_type: By
+		:return: Содержимое файла или `None` при отсутствии оного или ошибке.
+		:rtype: dict | None
+		"""
+
+		for Element in os.scandir(directory):
+			if not Element.is_file() or not Element.name.endswith(".json"): continue
+
+			try: 
+				Data = ReadJSON(Element.path)
+				if Data.get(identificator_type.value) == identificator: return Data
+
+			except (json.JSONDecodeError, exceptions.parsers.UnsupportedFormat): pass
+
+		return None
+
+	#==========================================================================================#
+	# >>>>> НАСЛЕДУЕМЫЕ МЕТОДЫ <<<<< #
+	#==========================================================================================#
 
 	def _MergeBranch(self, branch: BaseBranch) -> int:
 		"""
@@ -929,34 +968,6 @@ class BaseTitle(ABC):
 		MemoryHasher = hashlib.sha256(orjson.dumps(self._Data))
 		
 		return LocalHasher.hexdigest() == MemoryHasher.hexdigest()
-
-	def _SearchFileInDirectory(self, directory: str | PathLike[str], identificator: str, type: By) -> dict | None:
-		"""
-		Находит файл JSON в директории по идентификатору определённого типа.
-
-		:param directory: Путь к каталогу файлов.
-		:type directory: str | PathLike[str]
-		:param identificator: Идентификатор: ID или алиас.
-		:type identificator: str
-		:param type: Тип идентификатора: `By.Slug` или `By.ID`.
-		:type type: By
-		:return: Содержимое файла или `None` при отсутствии оного или ошибке.
-		:rtype: dict | None
-		"""
-
-		for Element in os.scandir(directory):
-			if not Element.is_file() or not Element.name.endswith(".json"):
-				continue
-
-			try: 
-				Data = ReadJSON(Element.path)
-				if Data.get(type.value) == identificator:
-					return Data
-
-			except (json.JSONDecodeError, exceptions.parsers.UnsupportedFormat):
-				pass
-
-		return None
 
 	def _TryUpdateJournal(self):
 		"""Обновляет кэш пары алиас-ID, если оба валидны."""
