@@ -5,6 +5,7 @@ from typing import TYPE_CHECKING, Sequence
 
 from dulwich import errors, porcelain
 
+from dublib.exceptions.web_requestor import TokenExpired
 from dublib.functions.filesystem import ReadJSON
 from dublib.validators import Validator_Domain, Validator_URL
 from dublib.web_requestor import WebConfig, WebLibs, WebRequestor
@@ -192,6 +193,15 @@ class BaseSourceOperator:
 
 		pass
 
+	def _SetAuthorizationMethod(self):
+		"""
+		Выполняется после `_InitializeRequestor()` и обёрнут для отлова исключений `TokenExpired`.
+
+		Используется для установки авторизации на основе заголовка _Authorization_.
+		"""
+
+		pass
+
 	def _TempImage(self, url: str, force_mode: bool = False) -> ImageDownloadingResult:
 		"""
 		Скачивает изображение по ссылке и сохраняет во временный каталог парсера.
@@ -227,7 +237,14 @@ class BaseSourceOperator:
 		self._Temper = self._SystemObjects.temper
 		
 		self._Settings = ParserSettings(self._SystemObjects, self._Manifest.parser_name)
+
 		self._Requestor = self._InitializeRequestor()
+
+		try:
+			self._SetAuthorizationMethod()
+		except TokenExpired as ExceptionData:
+			self._Printer.error(f"Token expired: {ExceptionData}.")
+
 		self._ImagesDownloader = ImagesDownloader(self)
 		self._Portals = self._SystemObjects.printer.get_parser_portals(self._Manifest.parser_name)
 		self._SharedData = self._SystemObjects.temper.load_parser_shared_data(self._Manifest.parser_name)

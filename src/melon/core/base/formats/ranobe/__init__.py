@@ -105,15 +105,15 @@ class Chapter(BaseChapter):
 
 		for Element in elements: self.add_element(Element)
 
-	def set_type(self, type: ChaptersTypes | None):
+	def set_type(self, chapter_type: ChaptersTypes | None):
 		"""
 		Задаёт тип главы.
 
-		:param type: Тип главы.
-		:type type: ChaptersTypes | None
+		:param chapter_type: Тип главы.
+		:type chapter_type: ChaptersTypes | None
 		"""
 
-		self._Data["type"] = type.value if type else None
+		self._Data["type"] = chapter_type.value if chapter_type else None
 
 #==========================================================================================#
 # >>>>> ОСНОВНОЙ КЛАСС <<<<< #

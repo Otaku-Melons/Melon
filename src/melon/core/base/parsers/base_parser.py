@@ -148,7 +148,7 @@ class BaseParser(ABC):
 	#==========================================================================================#
 
 	@abstractmethod
-	def _Amend(self, branch: BaseBranch, chapter: Any):
+	def _Amend(self, branch: BaseBranch, chapter: Any) -> str | None:
 		"""
 		Дополняет главу дайными о контенте.
 
@@ -156,6 +156,8 @@ class BaseParser(ABC):
 		:type branch: BaseBranch
 		:param chapter: Глава.
 		:type chapter: BaseChapter
+		:return: Дополнительное необязательное сообщение о дополнении.
+		:rtype: str | None
 		"""
 
 		pass

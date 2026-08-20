@@ -24,11 +24,11 @@ class AuthorizationRequired(Exception):
 class ChapterNotFound(Exception):
 	"""Исключение: глава не найдена."""
 
-	def __init__(self, id: int | None = None, slug: str | None = None):
+	def __init__(self, chapter_id: int | None = None, slug: str | None = None):
 		"""
 		Исключение: глава не найдена.
 
-		:param id: ID главы.
+		:param chapter_id: ID главы.
 		:type id: int | None
 		:param slug: Алиас главы.
 		:type slug: str | None
@@ -36,8 +36,8 @@ class ChapterNotFound(Exception):
 
 		ChapterIdentificator = ""
 
-		if id:
-			ChapterIdentificator = f" {id}"
+		if chapter_id:
+			ChapterIdentificator = f" {chapter_id}"
 		elif slug:
 			ChapterIdentificator = f" \"{slug}\""
 
@@ -93,16 +93,16 @@ class UnsupportedContent(Exception):
 class UnsupportedFormat(Exception):
 	"""Исключение: неподдерживаемый формат JSON."""
 
-	def __init__(self, format: str | None = None):
+	def __init__(self, title_format: str | None = None):
 		"""
 		Исключение: неподдерживаемый формат JSON.
 
-		:param format: Название формата.
-		:type format: str | None
+		:param title_format: Название формата.
+		:type title_format: str | None
 		"""
 
-		format = f" \"{format}\"" if format else ""
-		super().__init__(f"Unsupported format{format}.") 
+		title_format = f" \"{title_format}\"" if title_format else ""
+		super().__init__(f"Unsupported format{title_format}.") 
 
 #==========================================================================================#
 # >>>>> ИСКЛЮЧЕНИЯ ПАРСЕРОВ РАНОБЭ <<<<< #

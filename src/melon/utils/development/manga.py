@@ -8,7 +8,7 @@ class Parser(BaseMangaParser):
 	# >>>>> ПЕРЕОПРЕДЕЛЯЕМЫЕ МЕТОДЫ <<<<< #
 	#==========================================================================================#
 
-	def _Amend(self, branch: BaseBranch, chapter: Chapter):
+	def _Amend(self, branch: BaseBranch, chapter: Chapter) -> str | None:
 		"""
 		Дополняет главу дайными о контенте.
 
@@ -16,6 +16,8 @@ class Parser(BaseMangaParser):
 		:type branch: BaseBranch
 		:param chapter: Глава.
 		:type chapter: Chapter
+		:return: Дополнительное необязательное сообщение о дополнении.
+		:rtype: str | None
 		"""
 
 		pass

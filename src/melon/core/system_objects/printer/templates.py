@@ -1,4 +1,3 @@
-import sys
 from typing import TYPE_CHECKING
 
 from prettytable import PLAIN_COLUMNS, PrettyTable
@@ -6,18 +5,15 @@ from prettytable import PLAIN_COLUMNS, PrettyTable
 from dublib.cli.text_styler import FastStyler
 from dublib.functions.data import StringifyFloat
 
+from ...system_objects.parsers_manager import ConfigInstallationResult
+
 if TYPE_CHECKING:
+	from ....core.base.parsers.components.images_downloader import (
+		ImageDownloadingResult,
+	)
 	from ....utils.cacher import CachingResult
 	from ....utils.classificator import ClassificationResult
 	from . import Printer
-
-def set_terminal_progress(state: int, progress: int = 0):
-	"""
-	Отправляет OSC 9;4 для отображения прогресса в панели задач / вкладке.
-	progress должен быть от 0 до 100.
-	"""
-	sys.stdout.write(f"\x1b]9;4;{state};{progress}\x07")
-	sys.stdout.flush()
 
 class Templates:
 	"""Расширенные шаблоны вывода."""
@@ -40,7 +36,7 @@ class Templates:
 		:type result: CachingResult
 		"""
 
-		self.__Printer.emit(f"Total: {result.total_files}. Found in cache: {result.found_in_cache}. Cached: {result.cached_files}.")
+		self.__Printer.emit(f"Total: {result.total_files}. Found in cache: {result.found_in_cache}. Cached: {result.cached}. Updated: {result.updated}.")
 
 		if result.errors:
 			self.__Printer.emit(FastStyler("Errors:").decorate.bold)
@@ -71,6 +67,21 @@ class Templates:
 			
 			self.__Printer.emit(FastStyler(f"{Key}:").decorate.bold, ResultDict[Key])
 
+	def config_installation_result(self, result: ConfigInstallationResult):
+		"""
+		Шаблон сообщения: результат установки конфигурации.
+
+		:param result: Результат установки конфигурации.
+		:type result: ConfigInstallationResult
+		"""
+
+		match result:
+			case ConfigInstallationResult.Missing: self.__Printer.emit("Preset missing. Skipped.")
+			case ConfigInstallationResult.Installed: self.__Printer.emit("Config installed.")
+			case ConfigInstallationResult.AlreadyExists: self.__Printer.emit("Config already exists. Skipped.")
+			case ConfigInstallationResult.Overwtitten: self.__Printer.emit("Config overwritten.")
+			case ConfigInstallationResult.Merged: self.__Printer.emit("Config merged with preset.")
+
 	def header(self, header: str):
 		"""
 		Шаблон сообщения: заголовок.
@@ -82,6 +93,23 @@ class Templates:
 		header = header.upper()
 		header = f"===== {header} ====="
 		self.__Printer.emit(header)
+
+	def image_downloading_result(self, result: "ImageDownloadingResult", show_path: bool = True):
+		"""
+		Шаблон вывода: результат скачивания изображения.
+
+		:param result: Результат скачивания изображения.
+		:type result: ImageDownloadingResult
+		:param show_path: Указывает, выводить ли путь к изображению.
+		:type show_path: bool
+		"""
+
+		if result.error_message: self.__Printer.error(result.error_message)
+		elif result.is_already_exists and not result.is_downloaded: self.__Printer.emit("Image already exists.")
+		elif result.is_already_exists and result.is_downloaded: self.__Printer.emit("Image overwritten.")
+		else: self.__Printer.emit("Done.")
+		
+		if show_path and result.path: self.__Printer.emit(f"Image path: \"{result.path}\".")
 
 	def parsers_table(self, columns: dict[str, list[str]]):
 		"""

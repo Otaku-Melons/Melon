@@ -25,10 +25,10 @@ class BaseMangaParser(BaseParser):
 
 				if not CurrentChapter.slides:
 					ProgressIndex += 1
-					self._Amend(CurrentBranch, CurrentChapter)
+					Message: str | None = self._Amend(CurrentBranch, CurrentChapter)
 
 					if CurrentChapter.slides:
-						self.portals.printer.stages.chapter_amended(CurrentChapter)
+						self.portals.printer.stages.chapter_amended(CurrentChapter, Message)
 						AmendedChaptersCount += 1
 						sleep(self.settings.common.delay)
 
@@ -63,7 +63,7 @@ class BaseMangaParser(BaseParser):
 		SearchResult = self._Title.find_chapter_by_id(chapter_id)
 
 		if not SearchResult:
-			raise exceptions.parsers.ChapterNotFound(id = chapter_id)
+			raise exceptions.parsers.ChapterNotFound(chapter_id)
 
 		AmendedChapter = cast("Chapter", SearchResult.chapter)
 		AmendedChapter.clear()

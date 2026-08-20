@@ -3,8 +3,8 @@ from pathlib import Path
 
 from dublib.cli.terminalyzer import Command, ParsedCommandData, ValidableTypes
 
-from ..base_processor import (
-	PreparedData,
+from ..base_processor import PreparedData
+from ..base_processor.parameters_templates import (
 	T_ForceModeRequired,
 	T_SingleParserRequired,
 )
@@ -65,7 +65,7 @@ class CommandProcessor(CommandProcessorTemplate[Parameters]):
 
 		self._AddForceModeFlag()
 
-		command.base.add_key("--dir", type = ValidableTypes.ValidPath, description = "Output directory.")
+		command.base.add_key("--dir", value_type = ValidableTypes.ValidPath, description = "Output directory.")
 
 		return command
 
@@ -106,6 +106,14 @@ class CommandProcessor(CommandProcessorTemplate[Parameters]):
 		:rtype: bool
 		"""
 
+		Filename: str = parameters.required_parser.source_operator.images_downloader.build_target_filename(
+			url = parameters.link,
+			filename = parameters.full_name or parameters.name,
+			is_full_filename = bool(parameters.full_name),
+		)
+
+		self.printer.emit(f"Downloading \"{Filename}\"… ", end_line = False)
+
 		Result = parameters.required_parser.source_operator.download_image(
 			url = parameters.link,
 			directory = parameters.directory,
@@ -114,15 +122,7 @@ class CommandProcessor(CommandProcessorTemplate[Parameters]):
 			force_mode = parameters.is_force_mode_enabled
 		)
 	
-		if Result.error_message:
-			self.printer.error(Result.error_message)
-		elif Result.is_already_exists and not Result.is_downloaded:
-			self.printer.emit("Image already exists.")
-		elif Result.is_already_exists and Result.is_downloaded:
-			self.printer.emit("Image overwritten.")
-		
-		if Result.path:
-			self.printer.emit(f"Image path: \"{Result.path}\".")
+		self.printer.templates.image_downloading_result(Result)
 
 		return True
 	

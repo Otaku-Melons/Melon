@@ -1,8 +1,8 @@
 from dublib.cli.terminalyzer import ValidableTypes
 
-from ..base_processor import _PARAMS, BaseCommandProcessor
+from ..base_processor import PARAMS, BaseCommandProcessor
 
-class CommandProcessorTemplate(BaseCommandProcessor[_PARAMS]):
+class CommandProcessorTemplate(BaseCommandProcessor[PARAMS]):
 	"""Контейнер шаблонов генерации команд."""
 	
 	#==========================================================================================#
@@ -12,7 +12,7 @@ class CommandProcessorTemplate(BaseCommandProcessor[_PARAMS]):
 	def _AddMirrorKey(self):
 		"""Добавляет ключ подключения зеркала."""
 
-		self._Command.base.add_key("--mirror", type = ValidableTypes.Domain, description = "Source mirror to requests.")
+		self._Command.base.add_key("--mirror", value_type = ValidableTypes.Domain, description = "Source mirror to requests.")
 
 	def _AddParserPosition(self, multiple: bool = False):
 		"""

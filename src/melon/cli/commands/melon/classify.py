@@ -70,7 +70,7 @@ class CommandProcessor(CommandProcessorTemplate[Parameters]):
 
 		ComPos = command.create_position("MODE", "Output mode. By default styled print to terminal.")
 		ComPos.add_flag("-j", aliases = ("--json",), description = "Prints JSON-string in terminal.")
-		ComPos.add_key("--file", type = ValidableTypes.Path, description = "Path to dump JSON file.")
+		ComPos.add_key("--file", value_type = ValidableTypes.Path, description = "Path to dump JSON file.")
 
 		command.base.add_flag("-i", aliases = ("--ignorecase",), description = "Ignore characters case in procedures searching.")
 

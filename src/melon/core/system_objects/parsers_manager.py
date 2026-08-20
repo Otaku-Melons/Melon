@@ -42,6 +42,14 @@ class ConfigInstallationResult(Enum):
 	Installed = 1
 	AlreadyExists = 2
 	Overwtitten = 3
+	Merged = 4
+
+class ConfigInstallationStrategies(Enum):
+	"""Стратегии установки конфигурации."""
+
+	Skip = "-s"
+	Overwrite = "-o"
+	Merge = "-m"
 
 #==========================================================================================#
 # >>>>> ВСПОМОГАТЕЛЬНЫЕ СТРУКТУРЫ ДАННЫХ <<<<< #
@@ -261,7 +269,7 @@ class ParsersManager:
 	#==========================================================================================#
 	# >>>>> ПРИВАТНЫЕ МЕТОДЫ <<<<< #
 	#==========================================================================================#
-	
+
 	def __GetBestParserMatch(self, data: str, sequence: Sequence[str]) -> str | None:
 		"""
 		Возвращает лучшее совпадение имени парсера по отношению к переданной строке.
@@ -379,7 +387,10 @@ class ParsersManager:
 		:type hide_output: bool
 		:return: Возвращает `True`, если парсер успешно клонирован, и `False`, если репозиторий не найден.
 		:rtype: bool
+		:raises ParserNotFound: Парсер не найден.
 		"""
+
+		self.is_parser_installed(parser_name)
 
 		ParsersRootModulePath: Path = Path("parsers")
 		ParsersRootModulePath.mkdir(exist_ok = True)
@@ -396,17 +407,40 @@ class ParsersManager:
 
 		return bool(Repository)
 		
-	def install_config(self, parser_name: str, force_mode: bool = False) -> ConfigInstallationResult:
+	def is_parser_installed(self, parser_name: str, exception: bool = True) -> bool:
+		"""
+		Проверяет, установлен ли парсер.
+
+		:param parser_name: Имя парсера.
+		:type parser_name: str
+		:param exception: Указывает, следует ли выбрасывать исключение при отсутствии парсера.
+		:type exception: bool
+		:return: Возвращает `True`, если парсер установлен.
+		:rtype: bool
+		:raises ParserNotFound: Парсер не найден.
+		"""
+
+		IsInstalled: bool = parser_name in self.installed_parsers
+
+		if not IsInstalled and exception:
+			raise exceptions.system.ParserNotFound(parser_name)
+
+		return IsInstalled
+
+	def install_config(self, parser_name: str, conflict_strategy: ConfigInstallationStrategies = ConfigInstallationStrategies.Skip) -> ConfigInstallationResult:
 		"""
 		Устанавливает зависимости парсера.
 
 		:param parser_name: Имя парсера.
 		:type parser_name: str
-		:param force_mode: Переключает режим перезаписи
-		:type force_mode: bool
+		:param conflict_strategy: Стратегия установки конфигурации при конфликте.
+		:type conflict_strategy: ConfigInstallationStrategies
 		:return: Результат установки конфигурации.
 		:rtype: ConfigInstallationResult
+		:raises ParserNotFound: Парсер не найден.
 		"""
+		
+		self.is_parser_installed(parser_name)
 
 		Config: dict = _BASE_SETTINGS.copy()
 
@@ -420,27 +454,42 @@ class ParsersManager:
 			return ConfigInstallationResult.Missing
 
 		if ConfigStorageFilePath.exists():
-			if force_mode:
-				WriteJSON(ConfigStorageFilePath, Config)
-				return ConfigInstallationResult.Overwtitten
-			else:
-				return ConfigInstallationResult.AlreadyExists
+			
+			match conflict_strategy:
+				case ConfigInstallationStrategies.Skip:
+					return ConfigInstallationResult.AlreadyExists
+
+				case ConfigInstallationStrategies.Overwrite:
+					WriteJSON(ConfigStorageFilePath, Config)
+					return ConfigInstallationResult.Overwtitten
+
+				case ConfigInstallationStrategies.Merge:
+					CurrentConfig: dict = ReadJSON(ConfigStorageFilePath)
+					Config = always_merger.merge(Config, CurrentConfig)
+					WriteJSON(ConfigStorageFilePath, Config)
+					return ConfigInstallationResult.Merged
 
 		WriteJSON(ConfigStorageFilePath, Config)
 
 		return ConfigInstallationResult.Installed
 
-	def install_requirements(self, parser_name: str) -> int:
+	def install_requirements(self, parser_name: str) -> int | None:
 		"""
 		Устанавливает зависимости парсера.
 
 		:param parser_name: Имя парсера.
 		:type parser_name: str
-		:return: Количество установленных пакетов зависимостей.
-		:rtype: int
+		:return: Количество установленных пакетов зависимостей или `None`, если файл зависимостей отсутствует.
+		:rtype: int | None
+		:raises ParserNotFound: Парсер не найден.
 		"""
+
+		self.is_parser_installed(parser_name)
+
+		RequirementsPath = Path(f"parsers/{parser_name}/requirements.txt")
+		if not RequirementsPath.exists(): return None
  
-		return self.__InstallRequirements(Path(f"parsers/{parser_name}/requirements.txt"))
+		return self.__InstallRequirements(RequirementsPath)
 
 	def launch_source_operator(self, parser_name: str) -> "BaseSourceOperator":
 		"""
@@ -451,7 +500,10 @@ class ParsersManager:
 		:return: Оператор источника.
 		:rtype: BaseSourceOperator
 		:raises FileNotFoundError: Файл точки входа в парсер не найден.
+		:raises ParserNotFound: Парсер не найден.
 		"""
+
+		self.is_parser_installed(parser_name)
 
 		ParserMainPath = Path(f"parsers/{parser_name}/__init__.py")
 
@@ -472,7 +524,10 @@ class ParsersManager:
 		:return: Манифест парсера.
 		:rtype: ParserManifest
 		:raises FileNotFoundError: Файл манифеста не найден.
+		:raises ParserNotFound: Парсер не найден.
 		"""
+
+		self.is_parser_installed(parser_name)
 
 		ManifestPath = Path(f"parsers/{parser_name}/manifest.json")
 		if not ManifestPath.exists():
@@ -491,9 +546,7 @@ class ParsersManager:
 		:raises ParserNotFound: Парсер не найден.
 		"""
 		
-		if parser_name not in self.installed_parsers:
-			raise exceptions.system.ParserNotFound(parser_name)
-
+		self.is_parser_installed(parser_name)
 		ElementToRemove = [Path(f"parsers/{parser_name}")]
 
 		if clear:
@@ -521,7 +574,10 @@ class ParsersManager:
 		:type hide_output: bool
 		:return: Возвращает `True`, если состояние каталога парсера изменилось.
 		:rtype: bool
+		:raises ParserNotFound: Парсер не найден.
 		"""
+
+		self.is_parser_installed(parser_name)
 
 		return self.__PullGitRepository(
 			repos_path = Path(f"parsers/{parser_name}"),

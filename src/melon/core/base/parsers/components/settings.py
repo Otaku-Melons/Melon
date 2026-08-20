@@ -37,15 +37,75 @@ _BASE_SETTINGS = MappingProxyType({
 		"image_min_height": None,
 		"image_min_width": None,
 		"image_max_height": None,
-		"image_max_width": None
+		"image_max_width": None,
+		"image_min_size": 100
 	},
 	"proxies": [],
-	"custom": {}
+	"custom": {},
+	"extensions": {}
 })
 
 #==========================================================================================#
 # >>>>> ВНУТРЕННИЕ СТРУКТУРЫ ДАННЫХ КАТЕГОРИЙ <<<<< #
 #==========================================================================================#
+
+class BaseExtensionOptions:
+	"""Базовые настройки расширения."""
+
+	#==========================================================================================#
+	# >>>>> СВОЙСТВА <<<<< #
+	#==========================================================================================#
+
+	@property
+	def is_enabled(self) -> bool:
+		"""Состояние: включено ли расширение."""
+
+		return bool(self._Data["is_enabled"])
+
+	@property
+	def options(self) -> dict[str, Any]:
+		"""Копия словаря опций расширения."""
+
+		return self._Options.copy()
+
+	#==========================================================================================#
+	# >>>>> ПУБЛИЧНЫЕ МЕТОДЫ <<<<< #
+	#==========================================================================================#
+
+	def __init__(self, data: dict | None = None):
+		"""
+		Настройки расширения.
+
+		:param data: Словарь настроек расширения.
+		:type data: dict | None
+		"""
+
+		if data is None: data = {}
+		
+		self._Data: dict = {
+			"is_enabled": False,
+			"options": {}
+		} | data
+		self._Options: dict = self._Data["options"]
+
+	def get(self, option: str, exception: bool = False) -> Any:
+		"""
+		Возвращает значение опции расширения.
+
+		:param option: Имя опции.
+		:type option: str
+		:param exception: Указывает, выбрасывать ли исключение при отсутствии запрашиваемой опции.
+		:type exception: bool
+		:raises KeyError: Запрашиваемая опция не найдена.
+		:return: Значение опции или `None` при её отсутствии.
+		:rtype: Any
+		"""
+
+		if option not in self._Options:
+			if exception: raise KeyError(option)
+			else: return None
+
+		return self._Options[option]
 
 class TextFilters:
 	"""Фильтры текста."""
@@ -113,6 +173,12 @@ class ImageFilters:
 		return self.__Data["image_min_height"]
 	
 	@property
+	def min_size(self) -> int:
+		"""Минимальный размер изображения в байтах."""
+
+		return self.__Data["image_min_size"] or 0
+
+	@property
 	def min_width(self) -> int | None:
 		"""Минимальная ширина изображения."""
 
@@ -142,13 +208,13 @@ class ImageFilters:
 		:type data: dict
 		"""
 
-		self.__Data = data
-
-		if "image_md5" not in self.__Data.keys() or type(self.__Data["image_md5"]) is not list: self.__Data["image_md5"] = []
-		Keys = ["image_min_height", "image_min_width", "image_max_height", "image_max_width"]
-
-		for Key in Keys:
-			if Key not in self.__Data.keys() or type(self.__Data[Key]) is not int: self.__Data[Key] = None
+		self.__Data = {
+			"image_min_height": None,
+			"image_min_width": None,
+			"image_max_height": None,
+			"image_max_width": None,
+			"image_min_size": 100
+		} | data
 
 	def check_sizes(self, width: int, height: int) -> bool:
 		"""
@@ -217,7 +283,7 @@ class Directories:
 		Directory: str | None = Zerotify(self.__DirectoriesDict.get(dir_type))
 		
 		DirectoryPath: Path = Path(Directory) if Directory else Path(f"{self.__SystemObjects.options.DEFAULT_OUTPUT_DIR}/{self.__ParserName}/{dir_type}")
-		if Directory in (None, "Output"): DirectoryPath.mkdir(parents = True, exist_ok = True)
+		if Directory in (None, "output"): DirectoryPath.mkdir(parents = True, exist_ok = True)
 
 		return DirectoryPath
 
@@ -335,11 +401,11 @@ class Custom:
 		"""
 		Собственные настройки парсера.
 
-		:param settings: Словарь настроек парсера.
+		:param settings: Словарь собственных настроек парсера.
 		:type settings: dict[str, Any]
 		"""
 
-		self.__CustomSettings: dict = settings.get("custom") or {}
+		self.__CustomSettings: dict = settings
 
 	def __getitem__(self, key: str) -> Any:
 		"""
@@ -372,6 +438,33 @@ class Custom:
 
 		return self.__CustomSettings.get(key)
 
+class Extensions:
+	"""Настройки расширений."""
+
+	def __init__(self, settings: dict[str, Any]):
+		"""
+		Настройки расширений.
+
+		:param settings: Словарь настроек расширений.
+		:type settings: dict[str, Any]
+		"""
+
+		self.__ExtensionsSettings: dict[str, dict] = settings
+
+	def get[T: BaseExtensionOptions](self, extension_name: str, container: type[T]) -> T:
+		"""
+		Возвращает упакованные в контейнер опции расширения.
+
+		:param extension_name: Имя расширения.
+		:type extension_name: str
+		:param container: Тип-контейнер, принимающий `dict | None` и представляющий в дальнейшем интерфейсы доступа к опциям. Наследуется от `BaseExtensionOptions`.
+		:type container: type
+		:return: Контейнер с опциями расширения.
+		:rtype: BaseExtensionOptions
+		"""
+		
+		return container(self.__ExtensionsSettings.get(extension_name))
+
 #==========================================================================================#
 # >>>>> ОСНОВНОЙ КЛАСС <<<<< #
 #==========================================================================================#
@@ -393,17 +486,23 @@ class ParserSettings:
 	#==========================================================================================#
 
 	@property
+	def common(self) -> Common:
+		"""Базовые настройки."""
+
+		return self.__Common
+
+	@property
 	def directories(self) -> Directories:
 		"""Пути к директориям."""
 
 		return self.__Directories
 
 	@property
-	def common(self) -> Common:
-		"""Базовые настройки."""
+	def extensions(self) -> Extensions:
+		"""Настройки расширений."""
 
-		return self.__Common
-	
+		return self.__Extensions
+
 	@property
 	def filters(self) -> Filters:
 		"""Фильтры контента."""
@@ -483,8 +582,9 @@ class ParserSettings:
 		self.__Settings: dict = self.__ReadSettings()
 		self.__IsLoadedFromRepository = False
 
-		self.__Directories = Directories(self.__SystemObjects, self.__ParserName, self.__Settings.get("directories") or {})
-		self.__Common: Common = Common(self.__Settings.get("common") or {})
+		self.__Directories = Directories(self.__SystemObjects, self.__ParserName, self.__Settings.get("directories", {}))
+		self.__Common: Common = Common(self.__Settings.get("common", {}))
 		self.__Filters = Filters(self.__Settings)
 		self.__Proxies: tuple[Proxy, ...] = self.__ParseProxies()
-		self.__Custom: Custom = Custom(self.__Settings)
+		self.__Custom: Custom = Custom(self.__Settings.get("custom", {}))
+		self.__Extensions: Extensions = Extensions(self.__Settings.get("extensions", {}))

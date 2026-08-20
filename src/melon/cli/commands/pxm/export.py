@@ -1,11 +1,12 @@
 from dataclasses import dataclass
 
-from dublib.cli.terminalyzer import Command, ParsedCommandData, ValidableTypes
+from dublib.cli.terminalyzer import Command, ParsedCommandData
 
-from ....core.base.formats.components.enums import By
-from ....core.builders.ranobe_builder import RanobeBuilder
+from ....core.system_objects.parsers_manager import (
+	ConfigInstallationStrategies,
+	ParsersManager,
+)
 from ..base_processor import PreparedData
-from ..base_processor.parameters_templates import T_SingleParserRequired
 from ._base import CommandProcessorTemplate
 
 #==========================================================================================#
@@ -13,11 +14,11 @@ from ._base import CommandProcessorTemplate
 #==========================================================================================#
 
 @dataclass(frozen = True)
-class Parameters(T_SingleParserRequired):
+class Parameters:
 	"""Параметры, требуемые обработчиком."""
 
-	filename: str
-	branch_id: int | None
+	parser: str
+	config_strategy: ConfigInstallationStrategies
 
 #==========================================================================================#
 # >>>>> ОСНОВНОЙ КЛАСС <<<<< #
@@ -38,7 +39,7 @@ class CommandProcessor(CommandProcessorTemplate[Parameters]):
 		:rtype: str
 		"""
 
-		return "Build read-ready ranobe content."
+		return "Export and merge parser config."
 
 	def _GenerateCommand(self, command: Command) -> Command:
 		"""
@@ -50,13 +51,9 @@ class CommandProcessor(CommandProcessorTemplate[Parameters]):
 		:rtype: Command
 		"""
 
-		ComPos = command.create_position("FILE", "Filename of local JSON.", important = True)
-		ComPos.set_argument()
-
 		self._AddParserPosition()
-
-		command.base.add_key("--branch", value_type = ValidableTypes.UnsignedInteger, description = "Branch ID to building.")
-
+		self._AddConfigConflictStrategyPosition()
+		
 		return command
 
 	def _ParseParameters(self, data: ParsedCommandData, prepared_data: PreparedData) -> Parameters:
@@ -66,18 +63,17 @@ class CommandProcessor(CommandProcessorTemplate[Parameters]):
 		:param data: Данные обработанной команды.
 		:type data: ParsedCommandData
 		:param prepared_data: Предподготолвенные данные.
-		:type prepared_data: PreparedData
+		:type prepared_data: PreparedDatas
 		:return: Структура **dataclass**.
 		:rtype: Parameters
 		"""
 
-		Filename: str = data.get_important_position_value("FILE", expected_type = str)
-		BranchID: int | None = data.get_key_value("--branch", expected_type = int)
+		Strategy: str | None = data.get_position_value("STRATEGY", expected_type = str)
+		if not Strategy: Strategy = "-s"
 
 		return Parameters(
-			filename = Filename,
-			required_parser = prepared_data.required_parsers[0],
-			branch_id = BranchID
+			parser = data.get_important_position_value("PARSER", expected_type = str),
+			config_strategy = ConfigInstallationStrategies(Strategy)
 		)
 
 	def _Process(self, parameters: Parameters) -> bool:
@@ -90,18 +86,8 @@ class CommandProcessor(CommandProcessorTemplate[Parameters]):
 		:rtype: bool
 		"""
 
-		TypingResult = parameters.required_parser.source_operator.get_content_type_by_file(parameters.filename)
-		Parser = parameters.required_parser.source_operator.launch_parser(TypingResult.content_type)
+		Installer = ParsersManager(self.system_objects)
+		Result = Installer.install_config(parameters.parser, parameters.config_strategy)
+		self.printer.templates.config_installation_result(Result)
 		
-		Title = Parser.init_empty_title(TypingResult.slug)
-	
-		if Title.load(parameters.filename, By.Filename):
-			self.printer.emit(f"Loaded file: <i>{parameters.filename}</i>.")
-		else:
-			self.printer.error(f"Unable load file: <b>{parameters.filename}</b>.")
-			return False
-	
-		Builder = RanobeBuilder(Parser, Title)
-		Builder.build(parameters.branch_id)
-
 		return True

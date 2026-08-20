@@ -5,7 +5,8 @@ from dulwich.porcelain import DivergedBranches
 from dublib.cli.terminalyzer import Command, ParsedCommandData
 
 from ....core.system_objects.parsers_manager import ParsersManager
-from ..base_processor import PreparedData, T_ForceModeRequired
+from ..base_processor import PreparedData
+from ..base_processor.parameters_templates import T_ForceModeRequired
 from ._base import CommandProcessorTemplate
 
 #==========================================================================================#

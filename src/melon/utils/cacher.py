@@ -1,10 +1,9 @@
 import os
 from dataclasses import dataclass
+from pathlib import Path
 from typing import TYPE_CHECKING
 
 from dublib.functions.filesystem import ReadJSON
-
-from ..core import exceptions
 
 if TYPE_CHECKING:
 	from ..core.base.source_operator import BaseSourceOperator
@@ -19,7 +18,8 @@ class CachingResult:
 
 	total_files: int
 	found_in_cache: int
-	cached_files: int
+	cached: int
+	updated: int
 	errors: tuple[str, ...]
 
 #==========================================================================================#
@@ -28,6 +28,33 @@ class CachingResult:
 
 class Cacher:
 	"""Оператор кэширования пар ID-алиас."""
+
+	#==========================================================================================#
+	# >>>>> ПРИВАТНЫЕ МЕТОДЫ <<<<< #
+	#==========================================================================================#
+
+	def __ScanJSON(self, directory: Path) -> tuple[str, ...]:
+		"""
+		Получает последовательность имён JSON файлов из директории.
+
+		:param directory: Путь к директории.
+		:type directory: Path
+		:return: Последовательность имён файлов без расширения.
+		:rtype: tuple[str, ...]
+		"""
+
+		Files: list[str] = []
+		SuffixCharactersCount: int = len(".json") * -1
+
+		for Element in os.scandir(directory):
+			if not Element.is_file() or not Element.name.endswith(".json"): continue
+			else: Files.append(Element.name[:SuffixCharactersCount])
+
+		return tuple(Files)
+
+	#==========================================================================================#
+	# >>>>> ПУБЛИЧНЫЕ МЕТОДЫ <<<<< #
+	#==========================================================================================#
 
 	def __init__(self, source_operator: "BaseSourceOperator"):
 		"""
@@ -47,27 +74,19 @@ class Cacher:
 		:rtype: CachingResult
 		"""
 
-		TotalFiles: int = 0
 		FoundInCache: int = 0
-		CachedFiles: int = 0
+		Cached: int = 0
+		Updated: int = 0
 		Errors: list[str] = []
 
-		TitlesDirectory = self.__SourceOperator.settings.directories.titles
-		Files: list[str] = []
-		SuffixCharactersCount: int = len(".json") * -1
-
-		for Element in os.scandir(TitlesDirectory):
-			if not Element.is_file() or not Element.name.endswith(".json"):
-				continue
-			else:
-				Files.append(Element.name[:SuffixCharactersCount])
-
-		TotalFiles = len(Files)
+		TitlesDirectory: Path = self.__SourceOperator.settings.directories.titles
+		Files: tuple[str, ...] = self.__ScanJSON(TitlesDirectory)
+		TotalFiles: int = len(Files)
 
 		for CurrentFile in Files:
 				try:
 					Data = ReadJSON(TitlesDirectory / f"{CurrentFile}.json")
-				except exceptions.parsers.UnsupportedFormat:
+				except Exception:
 					Errors.append(CurrentFile)
 					continue
 
@@ -78,11 +97,16 @@ class Cacher:
 					Errors.append(CurrentFile)
 					continue
 
-				if self.__SourceOperator.shared_data.journal.get_slug_by_id(DataID):
+				FoundSlug: str | None = self.__SourceOperator.shared_data.journal.get_slug_by_id(DataID)
+
+				if FoundSlug:
 					FoundInCache += 1
 
+					if FoundSlug != DataSlug:
+						self.__SourceOperator.shared_data.journal.update(DataID, DataSlug)
+						Updated += 1
 				else:
 					self.__SourceOperator.shared_data.journal.update(DataID, DataSlug)
-					CachedFiles += 1
+					Cached += 1
 
-		return CachingResult(TotalFiles, FoundInCache, CachedFiles, tuple(Errors))
+		return CachingResult(TotalFiles, FoundInCache, Cached, Updated, tuple(Errors))

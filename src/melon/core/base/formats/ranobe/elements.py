@@ -7,7 +7,7 @@ from typing import TYPE_CHECKING, Literal, cast
 import validators
 from bs4 import BeautifulSoup, Tag
 
-from dublib.functions.data import RemoveRecurringSubstrings
+from dublib.functions.data.string import RemoveRecurringSubstrings
 from dublib.polyglot import HTML
 
 from .....core import exceptions

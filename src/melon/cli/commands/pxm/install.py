@@ -4,6 +4,7 @@ from dublib.cli.terminalyzer import Command, ParsedCommandData
 
 from ....core.system_objects.parsers_manager import (
 	ConfigInstallationResult,
+	ConfigInstallationStrategies,
 	ParsersManager,
 )
 from ..base_processor import PreparedData
@@ -18,6 +19,7 @@ class Parameters:
 	"""Параметры, требуемые обработчиком."""
 
 	parser: str
+	config_strategy: ConfigInstallationStrategies
 
 #==========================================================================================#
 # >>>>> ОСНОВНОЙ КЛАСС <<<<< #
@@ -51,6 +53,7 @@ class CommandProcessor(CommandProcessorTemplate[Parameters]):
 		"""
 
 		self._AddParserPosition()
+		self._AddConfigConflictStrategyPosition()
 		
 		return command
 
@@ -67,8 +70,13 @@ class CommandProcessor(CommandProcessorTemplate[Parameters]):
 		"""
 
 		Parser: str = data.get_important_position_value("PARSER", expected_type = str)
+		Strategy: str | None = data.get_position_value("STRATEGY", expected_type = str)
+		if not Strategy: Strategy = "-s"
 
-		return Parameters(parser = Parser)
+		return Parameters(
+			parser = Parser,
+			config_strategy = ConfigInstallationStrategies(Strategy)
+		)
 
 	def _Process(self, parameters: Parameters) -> bool:
 		"""
@@ -94,12 +102,7 @@ class CommandProcessor(CommandProcessorTemplate[Parameters]):
 
 		Installer.install_requirements(parameters.parser)
 
-		Result: ConfigInstallationResult = Installer.install_config(parameters.parser)
-		
-		match Result:
-			case ConfigInstallationResult.Missing: self.printer.emit("Configuration missing. Skipped.")
-			case ConfigInstallationResult.Installed: self.printer.emit("Configuration installed.")
-			case ConfigInstallationResult.AlreadyExists: self.printer.emit("Configuration already exists. Skipped.")
-			case ConfigInstallationResult.Overwtitten: self.printer.emit("Configuration overwritten.")
+		Result: ConfigInstallationResult = Installer.install_config(parameters.parser, parameters.config_strategy)
+		self.printer.templates.config_installation_result(Result)
 
 		return True

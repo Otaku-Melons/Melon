@@ -2,7 +2,8 @@ from dataclasses import dataclass
 
 from dublib.cli.terminalyzer import Command, ParsedCommandData
 
-from ..base_processor import PreparedData, T_MultipleParsersRequired
+from ..base_processor import PreparedData
+from ..base_processor.parameters_templates import T_MultipleParsersRequired
 from ._base import CommandProcessorTemplate
 
 #==========================================================================================#
