@@ -130,7 +130,7 @@ class CommandProcessor(CommandProcessorTemplate[Parameters]):
 		AddedSlugs: int = 0
 	
 		if parameters.is_collect_local:
-			self.printer.emit("Scanning local titles… ", end_line = False, flush = True)
+			self.printer.templates.local_titles_scanning_start()
 			AddedSlugs = Collector.scan_local().unique_added
 
 		elif parameters.required_parser.source_operator.is_collector_implemented:

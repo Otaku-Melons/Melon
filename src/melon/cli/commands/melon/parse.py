@@ -3,7 +3,7 @@ from abc import ABC, abstractmethod
 from dataclasses import dataclass
 from enum import Enum
 from json import JSONDecodeError
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Sequence
 
 from dublib.cli.terminalyzer import Command, ParsedCommandData, ValidableTypes
 from dublib.cli.text_styler import GetStyledTextFromHTML
@@ -199,13 +199,11 @@ class PasingTarget_Local(_BaseParserTarget):
 		"""
 
 		Collector = utils.Collector(self._SourceOperator)
-		self._SourceOperator.portals.printer.emit("Scanning local titles… ", end_line = False, flush = True)
-		SlugsCount = len(Collector.scan_local())
-		self._SourceOperator.portals.printer.emit("Done.")
-		Slugs = list(Collector.slugs)
-		self._Printer.emit(f"Local titles to parsing: {SlugsCount}.")
+		self._SourceOperator.portals.printer.templates.local_titles_scanning_start()
+		ScanningResult = Collector.scan_local()
+		self._Printer.templates.local_titles_scanning_result(ScanningResult)
 
-		return Slugs
+		return list(ScanningResult.slugs)
 
 	def _IsUsed(self) -> bool:
 		"""
@@ -351,7 +349,7 @@ class CommandProcessor(CommandProcessorTemplate[Parameters]):
 
 		raise exceptions.parsers.ParsingError("Unable determine parsing target.")
 
-	def __ParseSlugs(self, parameters: Parameters, source_operator: "BaseSourceOperator", slugs: tuple[str, ...]) -> ParsingStatistics:
+	def __ParseSlugs(self, parameters: Parameters, source_operator: "BaseSourceOperator", slugs: Sequence[str], start_index: int) -> ParsingStatistics:
 		"""
 		Парсит набор алиасов тайтлов.
 
@@ -360,7 +358,9 @@ class CommandProcessor(CommandProcessorTemplate[Parameters]):
 		:param source_operator: Оператор источника.
 		:type source_operator: BaseSourceOperator
 		:param slugs: Последовательность алиасов.
-		:type slugs: tuple[str, ...]
+		:type slugs: Sequence[str]
+		:param start_index: Индекс алиаса для старта парсинга.
+		:type start_index: int
 		:return: Статистика парсинга.
 		:rtype: ParsingStatistics
 		"""
@@ -373,7 +373,7 @@ class CommandProcessor(CommandProcessorTemplate[Parameters]):
 		CurrentContentType: ContentTypes | None = None
 		Parser = source_operator.launch_parser()
 	
-		for Index in range(len(slugs)):
+		for Index in range(start_index, TotalCount):
 			Slug = slugs[Index]
 			source_operator.shared_data.set_last_parsed_slug(Slug)
 			
@@ -384,11 +384,6 @@ class CommandProcessor(CommandProcessorTemplate[Parameters]):
 	
 			Title = Parser.init_empty_title(Slug)
 			self.printer.stages.parsing_start(Title, Index, TotalCount)
-	
-			ChaptersLoaded = Title.chapters_count
-			if ChaptersLoaded:
-				BranchesCount = len(Title.branches)
-				self.printer.emit(f"Loaded {ChaptersLoaded} chapters on {BranchesCount} branches.")
 	
 			match self.__ParseAndCatchExceptions(parameters, Parser, Title):
 
@@ -451,27 +446,25 @@ class CommandProcessor(CommandProcessorTemplate[Parameters]):
 
 		return ParsingSignals.OK
 
-	def __SkipSlugsBefore(self, slugs: tuple[str, ...], starting_slug: str) -> tuple[str, ...]:
+	def __SkipSlugsBefore(self, slugs: tuple[str, ...], starting_slug: str) -> int:
 		"""
-		Пропускает алиасы из последовательности до указанного методом среза. Если целевой алиас не найден, возвращает всю последовательность.
+		Определяет стартовый индекс последовательности для парсинга.
 
 		:param slugs: Алиасы тайтлов для парсинга.
 		:type slugs: tuple[str, ...]
 		:param starting_slug: Алиас, с которого необходимо начать парсинг.
 		:type starting_slug: str
-		:return: Последовательность алиасов.
-		:rtype: tuple[str, ...]
+		:return: Индекс стартового алиаса или `-1`, если алиас не удалось найти.
+		:rtype: int
 		"""
 
 		if starting_slug not in slugs:
 			self.printer.warning("Starting slug not found in targets. Ignored.")
-			return slugs
+			return -1
 
 		self.printer.emit(f"Parsing started from title: \"{starting_slug}\".")
-		StartIndex = slugs.index(starting_slug)
-		slugs = slugs[StartIndex:]
 
-		return slugs
+		return slugs.index(starting_slug)
 
 	#==========================================================================================#
 	# >>>>> ПЕРЕОПРЕДЕЛЯЕМЫЕ МЕТОДЫ <<<<< #
@@ -554,16 +547,18 @@ class CommandProcessor(CommandProcessorTemplate[Parameters]):
 		:rtype: bool
 		"""
 
-		Slugs: tuple[str, ...] =  tuple(parameters.target.get_slugs())
+		Slugs: tuple[str, ...] =  tuple(sorted(parameters.target.get_slugs()))
+		StartIndex: int = 0
 
 		if parameters.parse_from:
-			Slugs = self.__SkipSlugsBefore(Slugs, parameters.parse_from)
+			TargetStartIndex: int = self.__SkipSlugsBefore(Slugs, parameters.parse_from)
+			if TargetStartIndex: StartIndex = TargetStartIndex
 	
 		if not Slugs:
 			self.printer.error("No slugs for parsing.")
 			return False
 
-		Statistics = self.__ParseSlugs(parameters, parameters.required_parser.source_operator, tuple(Slugs))
+		Statistics = self.__ParseSlugs(parameters, parameters.required_parser.source_operator, Slugs, StartIndex)
 		self.printer.templates.parsing_summary(Statistics.parsed, Statistics.not_found, Statistics.errors)
 
 		return True

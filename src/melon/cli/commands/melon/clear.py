@@ -137,10 +137,9 @@ class CommandProcessor(CommandProcessorTemplate[Parameters]):
 		ProgressIndicator = SourceOperator.portals.printer.progress_indicator
 
 		Collector = utils.Collector(SourceOperator)
-		self.printer.emit("Scanning local titles… ", end_line = False, flush = True)
+		self.printer.templates.local_titles_scanning_start()
 		ScanningResult = Collector.scan_local()
-		self.printer.emit(f"Local titles found: {ScanningResult.found}.")
-		
+		self.printer.templates.local_titles_scanning_result(ScanningResult)
 
 		FilesToRemove: list[str] = []
 

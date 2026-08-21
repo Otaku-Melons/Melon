@@ -13,6 +13,7 @@ if TYPE_CHECKING:
 	)
 	from ....utils.cacher import CachingResult
 	from ....utils.classificator import ClassificationResult
+	from ....utils.collector import LocalScanningResult
 	from . import Printer
 
 class Templates:
@@ -111,6 +112,21 @@ class Templates:
 		
 		if show_path and result.path: self.__Printer.emit(f"Image path: \"{result.path}\".")
 
+	def local_titles_scanning_result(self, result: "LocalScanningResult"):
+		"""
+		Шаблон вывода: результат сканирования локальных тайтлов.
+
+		:param result: Результат сканирования каталогов тайтла.
+		:type result: LocalScanningResult
+		"""
+
+		self.__Printer.emit(f"Local titles found: {result.found}.")
+
+	def local_titles_scanning_start(self):
+		"""Шаблон вывода: начато сканирование локальных тайтлов."""
+
+		self.__Printer.emit("Scanning local titles… ", flush = True)
+
 	def parsers_table(self, columns: dict[str, list[str]]):
 		"""
 		Шаблон вывода: таблица парсеров.
@@ -156,7 +172,7 @@ class Templates:
 		"""
 
 		Number = index + 1
-		Progress = round(index / count * 100, 2)
+		Progress = round(Number / count * 100, 2)
 		NumberString = FastStyler(str(Number)).colorize.magenta
 		ProgressString = StringifyFloat(Progress)
 		ProgressString = FastStyler(ProgressString + "%").colorize.cyan
