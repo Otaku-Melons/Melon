@@ -138,17 +138,17 @@ class CommandProcessor(CommandProcessorTemplate[Parameters]):
 
 		Collector = utils.Collector(SourceOperator)
 		self.printer.emit("Scanning local titles… ", end_line = False, flush = True)
-		LocalTitles: dict[str, str] = Collector.scan_local()
-		self.printer.emit("Done.")
-		SlugsCount: int = len(LocalTitles)
-		self.printer.emit(f"Local titles found: {SlugsCount}.")
+		ScanningResult = Collector.scan_local()
+		self.printer.emit(f"Local titles found: {ScanningResult.found}.")
 		
-		Slugs = Collector.slugs
+
 		FilesToRemove: list[str] = []
 
-		for Index in range(len(Slugs)):
-			Slug = Slugs[Index]
-			Progress = (Index + 1) / SlugsCount * 100.0
+		for Index in range(ScanningResult.found):
+			Slug = ScanningResult.slugs[Index]
+			Filename = ScanningResult.files[Index]
+
+			Progress = (Index + 1) / ScanningResult.found * 100.0
 			ProgressIndicator.set_progress(Progress)
 
 			IsTitleExists: bool | None = SourceOperator.is_title_exists(Slug)
@@ -158,11 +158,10 @@ class CommandProcessor(CommandProcessorTemplate[Parameters]):
 				continue
 
 			if IsTitleExists is False:
-				File = LocalTitles[Slug]
-				self.printer.emit(f"File <i>{File}</i> marked for removing.")
-				FilesToRemove.append(File)
+				self.printer.emit(f"File <i>{Filename}</i> marked for removing.")
+				FilesToRemove.append(Filename)
 
-			if Index + 1 != SlugsCount: ParserSettings.common.sleep_delay()
+			if Index + 1 != ScanningResult.found: ParserSettings.common.sleep_delay()
 
 		ProgressIndicator.end()
 		FilesRemoved: int = self.__RemoveFilesInDirectory(ParserSettings.directories.titles, FilesToRemove)

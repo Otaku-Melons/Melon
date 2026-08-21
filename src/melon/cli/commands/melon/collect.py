@@ -131,20 +131,19 @@ class CommandProcessor(CommandProcessorTemplate[Parameters]):
 	
 		if parameters.is_collect_local:
 			self.printer.emit("Scanning local titles… ", end_line = False, flush = True)
-			AddedSlugs = len(Collector.scan_local())
-			self.printer.emit("Done.")
+			AddedSlugs = Collector.scan_local().unique_added
+
 		elif parameters.required_parser.source_operator.is_collector_implemented:
 			CollectedSlugs = parameters.required_parser.source_operator.collect_slugs(parameters.period, parameters.filters, parameters.pages)
 			AddedSlugs = Collector.add(CollectedSlugs)
+
 		else:
 			self.printer.critical("Collector method not implemented.")
 			return False
 	
 		Collector.save(sort = parameters.is_sorting_enabled)
 	
-		if AddedSlugs:
-			self.printer.emit(f"Slugs collected: {AddedSlugs}.")
-		else:
-			self.printer.emit("No new slugs in collection.")
+		if AddedSlugs: self.printer.emit(f"Slugs collected: {AddedSlugs}.")
+		else: self.printer.emit("No new slugs in collection.")
 
 		return True

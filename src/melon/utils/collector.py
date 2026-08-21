@@ -1,5 +1,6 @@
 import os
 from concurrent.futures import ThreadPoolExecutor
+from dataclasses import dataclass
 from json import JSONDecodeError
 from typing import TYPE_CHECKING, Sequence
 
@@ -8,6 +9,19 @@ from dublib.functions.filesystem import ReadJSON, ReadTextFile, WriteTextFile
 
 if TYPE_CHECKING:
 	from ..core.base.source_operator import BaseSourceOperator
+
+#==========================================================================================#
+# >>>>> ВСПОМОГАТЕЛЬНЫЕ СТРУКТУРЫ ДАННЫХ <<<<< #
+#==========================================================================================#
+
+@dataclass(frozen = True)
+class LocalScanningResult:
+	"""Результат сканирования каталогов тайтла."""
+
+	found: int
+	unique_added: int
+	slugs: tuple[str, ...]
+	files: tuple[str, ...]
 
 #==========================================================================================#
 # >>>>> ВСПОМОГАТЕЛЬНЫЕ ФУНКЦИИ <<<<< #
@@ -22,6 +36,7 @@ def _ReadLocalFile(entry: os.DirEntry) -> tuple[str, str] | None:
 	:return: Кортеж из алиаса и имени файла или `None`.
 	:rtype: tuple[str, str] | None
 	"""
+
 	try:
 		Title = ReadJSON(entry.path) 
 		Slug = Title.get("slug")
@@ -117,14 +132,14 @@ class Collector:
 
 		WriteTextFile(self.__CollectionPath, CollectionToWrite)
 	
-	def scan_local(self, allow_filenames: bool = True) -> dict[str, str]:
+	def scan_local(self, allow_filenames: bool = True) -> LocalScanningResult:
 		"""
 		Сканирует директорию тайтлов парсера и добавляет алиасы из неё в коллекцию.
 
 		:param allow_filenames: Разрешает считать названия файлов без расширения алиасами при активации соответствующего параметра в настройках парсера. Не требует чтения файла.
 		:type allow_filenames: bool
-		:return: Словарь, в котором ключ – алиас тайтла, а значение – имя его файла.
-		:rtype: dict[str ,str]
+		:return: Контейнер результата сканирования.
+		:rtype: LocalScanningResult
 		"""
 		
 		TitlesDirectoryPath = self.__SourceOperator.settings.directories.titles
@@ -132,8 +147,8 @@ class Collector:
 		Entries: tuple[os.DirEntry, ...] = tuple(Entry for Entry in os.scandir(TitlesDirectoryPath) if Entry.is_file() and Entry.name.endswith(".json"))
 
 		if allow_filenames and not self.__SourceOperator.settings.common.use_id_as_filename:
-			for Entry in Entries:
-				LocalSlugs[Entry.name[:-5]] = Entry.name
+			for Entry in Entries: 
+				LocalSlugs[Entry.name[:-5]] = Entry.path
 
 		else:
 			with ThreadPoolExecutor() as Executor:
@@ -144,6 +159,12 @@ class Collector:
 						Slug, Filename = Result
 						LocalSlugs[Slug] = Filename
 
-		self.add(tuple(LocalSlugs.keys()))
+		Slugs: tuple[str, ...] = tuple(LocalSlugs.keys())
+		UniqueAdded: int = self.add(Slugs)
 
-		return LocalSlugs
+		return LocalScanningResult(
+			found = len(LocalSlugs.keys()),
+			unique_added = UniqueAdded,
+			slugs = Slugs,
+			files = tuple(LocalSlugs.values())
+		)
