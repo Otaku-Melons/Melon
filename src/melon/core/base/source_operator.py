@@ -144,13 +144,16 @@ class BaseSourceOperator:
 
 		Config = WebConfig()
 		Config.select_lib(WebLibs.requests)
-		Config.set_retries_count(self._Settings.common.retries)
+		Config.set_retries_count(self.settings.common.retries)
+		Config.set_delay(self.settings.common.delay)
+		Config.enable_proxy_protocol_switching(True)
+
 		Config.headers.generate_user_agent(("desktop",))
 		Config.headers.automatically_accept_client_hints(True)
-		Config.headers.add("referer", f"https://{self._Manifest.domain}/")
-		Config.enable_proxy_protocol_switching(True)
+		Config.headers.add("referer", f"https://{self.manifest.domain}/")
+		
 		WebRequestorObject = WebRequestor(Config)
-		WebRequestorObject.add_proxies(self._Settings.proxies)
+		WebRequestorObject.add_proxies(self.settings.proxies)
 		
 		return WebRequestorObject
 

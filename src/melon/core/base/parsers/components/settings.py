@@ -1,6 +1,5 @@
 import re
 from pathlib import Path
-from time import sleep
 from types import MappingProxyType
 from typing import TYPE_CHECKING, Any, Literal, cast
 
@@ -306,10 +305,6 @@ class Directories:
 class Common:
 	"""Базовые настройки."""
 
-	#==========================================================================================#
-	# >>>>> СВОЙСТВА <<<<< #
-	#==========================================================================================#
-
 	@property
 	def bad_image_stub(self) -> Path | None:
 		"""Путь к заглушке плохого изображения."""
@@ -348,10 +343,6 @@ class Common:
 
 		return self.__CommonSettings["use_id_as_filename"]
 
-	#==========================================================================================#
-	# >>>>> МЕТОДЫ <<<<< #
-	#==========================================================================================#
-
 	def __init__(self, settings: dict[str, Any]):
 		"""
 		Базовые настройки.
@@ -361,11 +352,6 @@ class Common:
 		"""
 
 		self.__CommonSettings: dict[str, Any] = cast(dict, _BASE_SETTINGS.copy().get("common")) | settings
-
-	def sleep_delay(self):
-		"""Приостанавливает исполнение на указанный в настройках интервал времени."""
-
-		sleep(self.delay)
 
 class Filters:
 	"""Фильтры контента."""

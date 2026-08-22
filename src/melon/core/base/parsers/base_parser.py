@@ -127,9 +127,6 @@ class BaseParser(ABC):
 
 			if Result.is_already_exists and not Result.is_downloaded:
 				continue
-			
-			if Index + 1 != ImagesCount:
-				self.settings.common.sleep_delay()
 
 		return Results
 

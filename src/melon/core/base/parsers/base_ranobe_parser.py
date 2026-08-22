@@ -1,4 +1,3 @@
-from time import sleep
 from typing import cast
 
 from dublib.functions.decorators import run_before_method
@@ -30,7 +29,6 @@ class BaseRanobeParser(BaseParser):
 					if CurrentChapter.paragraphs:
 						self.portals.printer.stages.chapter_amended(CurrentChapter, Message)
 						AmendedChaptersCount += 1
-						sleep(self.settings.common.delay)
 
 	def init_empty_title(self, slug: str) -> Ranobe:
 		"""

@@ -8,7 +8,7 @@ if TYPE_CHECKING:
 
 	from ....core.system_objects import SystemObjects
 	from ....core.system_objects.printer import Portals
-	from ..source_operator import BaseSourceOperator
+	from ..source_operator import BaseSourceOperator, ParserManifest, ParserSettings
 
 class BaseExtension[T: BaseExtensionOptions](ABC):
 	"""Базовое расширение."""
@@ -16,6 +16,12 @@ class BaseExtension[T: BaseExtensionOptions](ABC):
 	#==========================================================================================#
 	# >>>>> СВОЙСТВА <<<<< #
 	#==========================================================================================#
+
+	@property
+	def manifest(self) -> "ParserManifest":
+		"""Манифест парсера."""
+
+		return self._SourceOperator.manifest
 
 	@property
 	def name(self) -> str:
@@ -28,6 +34,12 @@ class BaseExtension[T: BaseExtensionOptions](ABC):
 		"""Настройки расширения."""
 
 		return self._Options
+
+	@property
+	def parser_settings(self) -> "ParserSettings":
+		"""Настройки парсера."""
+
+		return self._SourceOperator.settings
 
 	@property
 	def portals(self) -> "Portals":

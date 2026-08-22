@@ -1,4 +1,4 @@
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Literal, NoReturn, overload
 
 from dublib.web_requestor import WebResponse
 
@@ -61,6 +61,12 @@ class Portals:
 		if exception:
 			raise exceptions.parsers.AuthorizationRequired(text)
 
+	@overload
+	def request_error(self, response: WebResponse, text: str | None = None, exception: Literal[True] = True) -> NoReturn: ...
+
+	@overload
+	def request_error(self, response: WebResponse, text: str | None = None, exception: Literal[False] = False): ...
+
 	def request_error(self, response: WebResponse, text: str | None = None, exception: bool = True):
 		"""
 		Портал ошибки: неудачный запрос.
@@ -74,11 +80,9 @@ class Portals:
 		:raises ParsingError: Выбрасывается при активации соответствующего аргумента.
 		"""
 
-		if not text:
-			text = "Request error."
+		if not text: text = "Request error."
 
 		Text = f"{text} Response code: {response.status_code}."
-
 		self.__Printer.error(Text)
 
 		if exception:

@@ -249,6 +249,5 @@ class Collector:
 			if IsTitleExists is False: NotFoundDescriptors.append(Descriptor)
 
 			if callback: callback(Descriptor)
-			self.__SourceOperator.settings.common.sleep_delay()
 
 		return self.__BuldResultFormDescriptors(NotFoundDescriptors, add)

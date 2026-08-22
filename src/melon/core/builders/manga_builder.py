@@ -197,9 +197,6 @@ class MangaBuilder(BaseBuilder):
 				if not Result.path or not Result.path.exists():
 					raise exceptions.builders.BuildingError("Unable download slide.")
 
-				if FileIndex != SlidesCount:
-					self._ParserSettings.common.sleep_delay()
-
 			self.__RunChapterBuilder(chapter, TempDirPath)
 
 	def __GetProgressString(self, progress: float | None) -> str:
