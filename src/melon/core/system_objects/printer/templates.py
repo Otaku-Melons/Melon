@@ -13,7 +13,7 @@ if TYPE_CHECKING:
 	)
 	from ....utils.cacher import CachingResult
 	from ....utils.classificator import ClassificationResult
-	from ....utils.collector import LocalScanningResult
+	from ....utils.collector import CollectingResult
 	from . import Printer
 
 class Templates:
@@ -112,7 +112,7 @@ class Templates:
 		
 		if show_path and result.path: self.__Printer.emit(f"Image path: \"{result.path}\".")
 
-	def local_titles_scanning_result(self, result: "LocalScanningResult"):
+	def local_titles_scanning_result(self, result: "CollectingResult"):
 		"""
 		Шаблон вывода: результат сканирования локальных тайтлов.
 
@@ -120,7 +120,7 @@ class Templates:
 		:type result: LocalScanningResult
 		"""
 
-		self.__Printer.emit(f"Local titles found: {result.found}.")
+		self.__Printer.emit(f"Local titles found: {result.collected}.")
 
 	def local_titles_scanning_start(self):
 		"""Шаблон вывода: начато сканирование локальных тайтлов."""

@@ -1,11 +1,13 @@
 import os
-from concurrent.futures import ThreadPoolExecutor
 from dataclasses import dataclass
 from json import JSONDecodeError
-from typing import TYPE_CHECKING, Sequence
+from pathlib import Path
+from typing import TYPE_CHECKING, Callable, Sequence, cast
 
 from dublib.functions.data import ToSequence
 from dublib.functions.filesystem import ReadJSON, ReadTextFile, WriteTextFile
+
+from ..core.structs import TitleDescriptor
 
 if TYPE_CHECKING:
 	from ..core.base.source_operator import BaseSourceOperator
@@ -15,35 +17,20 @@ if TYPE_CHECKING:
 #==========================================================================================#
 
 @dataclass(frozen = True)
-class LocalScanningResult:
-	"""Результат сканирования каталогов тайтла."""
-
-	found: int
-	unique_added: int
-	slugs: tuple[str, ...]
-	files: tuple[str, ...]
-
-#==========================================================================================#
-# >>>>> ВСПОМОГАТЕЛЬНЫЕ ФУНКЦИИ <<<<< #
-#==========================================================================================#
-
-def _ReadLocalFile(entry: os.DirEntry) -> tuple[str, str] | None:
+class CollectingResult:
 	"""
-	Считывает локальный файл.
-
-	:param entry: Представление файла.
-	:type entry: os.DirEntry
-	:return: Кортеж из алиаса и имени файла или `None`.
-	:rtype: tuple[str, str] | None
-	"""
-
-	try:
-		Title = ReadJSON(entry.path) 
-		Slug = Title.get("slug")
-		if Slug: return (Slug, entry.name)
-	except (JSONDecodeError, FileNotFoundError): pass
+	Результат сборки тайтлов из каталога.
 	
-	return None
+	- **slugs** – последовательность собранных алиасов;
+	- **collected** – количество собранных алиасов;
+	- **added** – количество уникальных добавленных во внутреннюю коллекцию `Collector` алиасов;
+	- **descriptors** – последовательность дескрипторов тайтлов, из которых собраны алиасы.
+	"""
+
+	slugs: tuple[str, ...]
+	collected: int
+	added: int
+	descriptors: tuple[TitleDescriptor, ...]
 
 #==========================================================================================#
 # >>>>> ОСНОВНОЙ КЛАСС <<<<< #
@@ -61,6 +48,73 @@ class Collector:
 		"""Последовательность алиасов в коллекции."""
 
 		return tuple(self.__Collection)
+
+	#==========================================================================================#
+	# >>>>> ПРИВАТНЫЕ МЕТОДЫ <<<<< #
+	#==========================================================================================#
+
+	def __BuldResultFormDescriptors(self, descriptors: Sequence[TitleDescriptor], add: bool = True) -> CollectingResult:
+		
+		AddedSlugs: int = 0
+		Slugs = tuple(Descriptor.slug for Descriptor in descriptors if Descriptor.slug)
+		CollectedSlugs: int = len(Slugs)
+		if add: AddedSlugs = self.add(Slugs)
+
+		return CollectingResult(
+			slugs = Slugs,
+			collected = CollectedSlugs,
+			added = AddedSlugs,
+			descriptors = tuple(descriptors)
+		)
+
+	def __CollectDescriptors(self) -> tuple[TitleDescriptor, ...]:
+		"""
+		Строит последовательность дескрипторов локальных тайтлов.
+
+		:return: Последовательность дескрипторов локальных тайтлов.
+		:rtype: tuple[TitleDescriptor, ...]
+		"""
+
+		Directory: Path = self.__SourceOperator.settings.directories.titles
+		Descriptors: list[TitleDescriptor] = []
+
+		for Entry in os.scandir(Directory):
+			if Entry.is_file() and Entry.name.endswith(".json"):
+				Buffer = TitleDescriptor(self.__SourceOperator)
+				Buffer.set_filename(Entry.name)
+				Descriptors.append(Buffer)
+
+		return self.__SortDescriptors(Descriptors)
+
+	def __SortDescriptors(self, descriptors: Sequence[TitleDescriptor]) -> tuple[TitleDescriptor, ...]:
+		"""
+		Сортирует последовательность дескрипторов тайтлов по их алиасам (`None` в начале).
+
+		:param descriptors: Последовательность дескрипторов тайтлов.
+		:type descriptors: Sequence[TitleDescriptor]
+		:return: Отсортированная последовательность дескрипторов тайтлов.
+		:rtype: tuple[TitleDescriptor, ...]
+		"""
+		return tuple(sorted(descriptors, key = lambda Descriptor: (Descriptor.slug is not None, Descriptor.slug)))
+
+	def __TryGetSlugFromFile(self, descriptor: TitleDescriptor):
+		"""
+		Пытается получить алиас тайтла из ключа _slug_ JSON-файла.
+
+		:param descriptor: Дескриптор тайтла.
+		:type descriptor: TitleDescriptor
+		"""
+
+		if not all((not descriptor.slug, descriptor.path)):
+			return
+
+		try:
+			Title = ReadJSON(cast(Path, descriptor.path)) 
+			Slug = Title.get("slug")
+			if Slug: descriptor.set_slug(Slug)
+
+		except JSONDecodeError: descriptor.extra["is_broken"] = True
+		except FileNotFoundError: pass
 
 	#==========================================================================================#
 	# >>>>> ПУБЛИЧНЫЕ МЕТОДЫ <<<<< #
@@ -132,39 +186,69 @@ class Collector:
 
 		WriteTextFile(self.__CollectionPath, CollectionToWrite)
 	
-	def scan_local(self, allow_filenames: bool = True) -> LocalScanningResult:
-		"""
-		Сканирует директорию тайтлов парсера и добавляет алиасы из неё в коллекцию.
+	#==========================================================================================#
+	# >>>>> ПУБЛИЧНЫЕ МЕТОДЫ СБОРКИ ПО КРИТЕРИЯМ <<<<< #
+	#==========================================================================================#
 
-		:param allow_filenames: Разрешает считать названия файлов без расширения алиасами при активации соответствующего параметра в настройках парсера. Не требует чтения файла.
-		:type allow_filenames: bool
-		:return: Контейнер результата сканирования.
-		:rtype: LocalScanningResult
+	def collect_broken(self, add: bool = True) -> CollectingResult:
+		"""
+		Собирает из локальной директории тайтлов алиасы по правилу: повреждённые файлы.
+
+		Поскольку из сломанных файлов невозможно извлечь алиас, при использовании ID в качестве имён описательных файлов никогда ничего не добавляет во внутреннюю коллекцию.
+
+		:param add: Указывает, добавлять ли полученные алиасы во внутреннюю коллекцию.
+		:type add: bool
+		:return: Результат сборки тайтлов из каталога.
+		:rtype: CollectingResult
 		"""
 		
-		TitlesDirectoryPath = self.__SourceOperator.settings.directories.titles
-		LocalSlugs: dict[str, str] = {}
-		Entries: tuple[os.DirEntry, ...] = tuple(Entry for Entry in os.scandir(TitlesDirectoryPath) if Entry.is_file() and Entry.name.endswith(".json"))
+		Result = self.collect_local(add = False)
+		Descriptors: tuple[TitleDescriptor, ...] = tuple(Descriptor for Descriptor in Result.descriptors if Descriptor.extra.get("is_broken"))
 
-		if allow_filenames and not self.__SourceOperator.settings.common.use_id_as_filename:
-			for Entry in Entries: 
-				LocalSlugs[Entry.name[:-5]] = Entry.path
+		return self.__BuldResultFormDescriptors(Descriptors, add)
 
-		else:
-			with ThreadPoolExecutor() as Executor:
-				Results = Executor.map(_ReadLocalFile, Entries)
-				
-				for Result in Results:
-					if Result:
-						Slug, Filename = Result
-						LocalSlugs[Slug] = Filename
+	def collect_local(self, add: bool = True) -> CollectingResult:
+		"""
+		Собирает из локальной директории тайтлов алиасы по правилу: все файлы.
 
-		Slugs: tuple[str, ...] = tuple(LocalSlugs.keys())
-		UniqueAdded: int = self.add(Slugs)
+		:param add: Указывает, добавлять ли полученные алиасы во внутреннюю коллекцию.
+		:type add: bool
+		:return: Результат сборки тайтлов из каталога.
+		:rtype: CollectingResult
+		"""
+		
+		Descriptors: tuple[TitleDescriptor, ...] = self.__CollectDescriptors()
 
-		return LocalScanningResult(
-			found = len(LocalSlugs.keys()),
-			unique_added = UniqueAdded,
-			slugs = Slugs,
-			files = tuple(LocalSlugs.values())
-		)
+		if self.__SourceOperator.settings.common.use_id_as_filename:
+			for Descriptor in Descriptors:
+				self.__TryGetSlugFromFile(Descriptor)
+
+		return self.__BuldResultFormDescriptors(Descriptors, add)
+
+	def collect_not_found(self, add: bool = True, callback: Callable[[TitleDescriptor], None] | None = None) -> CollectingResult:
+		"""
+		Собирает из локальной директории тайтлов алиасы по правилу: не найденные на сервере тайтлы.
+
+		Для проверки использует метод оператора источника `is_title_exists()`.
+
+		:param add: Указывает, добавлять ли полученные алиасы во внутреннюю коллекцию.
+		:type add: bool
+		:param callback: Функция, принимающая проверенный дескриптор. В экстра-данных последнего появляется флаг _is_title_exists_ с результатом проверки существования.
+		:type callback: Callable[[TitleDescriptor], None] | None
+		:return: Результат сборки тайтлов из каталога.
+		:rtype: CollectingResult
+		"""
+
+		NotFoundDescriptors: list[TitleDescriptor] = []
+		
+		for Descriptor in self.collect_local(add = False).descriptors:
+			if not Descriptor.slug: continue
+
+			IsTitleExists: bool | None = self.__SourceOperator.is_title_exists(Descriptor.slug)
+			Descriptor.extra["is_title_exists"] = IsTitleExists
+			if IsTitleExists is False: NotFoundDescriptors.append(Descriptor)
+
+			if callback: callback(Descriptor)
+			self.__SourceOperator.settings.common.sleep_delay()
+
+		return self.__BuldResultFormDescriptors(NotFoundDescriptors, add)

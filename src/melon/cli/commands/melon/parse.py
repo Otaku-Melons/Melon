@@ -200,7 +200,7 @@ class PasingTarget_Local(_BaseParserTarget):
 
 		Collector = utils.Collector(self._SourceOperator)
 		self._SourceOperator.portals.printer.templates.local_titles_scanning_start()
-		ScanningResult = Collector.scan_local()
+		ScanningResult = Collector.collect_local()
 		self._Printer.templates.local_titles_scanning_result(ScanningResult)
 
 		return list(ScanningResult.slugs)

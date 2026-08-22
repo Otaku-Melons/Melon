@@ -1,16 +1,18 @@
-import os
 from dataclasses import dataclass
 from enum import Enum
-from json import JSONDecodeError
 from pathlib import Path
+from typing import TYPE_CHECKING, Sequence
 
 from dublib.cli.terminalyzer import Command, ParsedCommandData
-from dublib.functions.filesystem import ReadJSON, RemoveDirectoryContent
+from dublib.functions.filesystem import RemoveDirectoryContent
 
 from .... import utils
 from ..base_processor import PreparedData
 from ..base_processor.parameters_templates import T_SingleParserRequired
 from ._base import CommandProcessorTemplate
+
+if TYPE_CHECKING:
+	from ....core.structs import TitleDescriptor
 
 #==========================================================================================#
 # >>>>> ВСПОМОГАТЕЛЬНЫЕ СТРУКТУРЫ ДАННЫХ <<<<< #
@@ -40,7 +42,20 @@ class CommandProcessor(CommandProcessorTemplate[Parameters]):
 	# >>>>> ПРИВАТНЫЕ МЕТОДЫ <<<<< #
 	#==========================================================================================#
 
-	def __RemoveFilesInDirectory(self, directory: Path, files: list[str]) -> int:
+	def __Callback_NotFound(self, descriptor: "TitleDescriptor"):
+		"""
+		Callback-метод: вывод результата проверки существования тайтла.
+
+		:param descriptor: Дескриптор тайтла.
+		:type descriptor: TitleDescriptor
+		"""
+
+		IsTitleExists: bool | None = descriptor.extra.get("is_title_exists")
+		
+		if IsTitleExists is False:
+			self.printer.emit(f"Title <i>{descriptor.full_filename}</i> marked to remove.")
+
+	def __RemoveFilesInDirectory(self, directory: Path, files: Sequence[str]) -> int:
 		"""
 		Удаляет файлы из директории по списку.
 
@@ -92,31 +107,15 @@ class CommandProcessor(CommandProcessorTemplate[Parameters]):
 		:return: Возвращает `False`, если команда требует прерывания выполнения.
 		:rtype: bool
 		"""
-		
+
 		SourceOperator = parameters.required_parser.source_operator
-		ParserSettings = parameters.required_parser.settings
-		TitlesDirectoryPath = ParserSettings.directories.titles
-		ProgressIndicator = SourceOperator.portals.printer.progress_indicator
+		Collector = utils.Collector(SourceOperator)
+		self.printer.emit("Search broken files…", flush = True)
 
-		Files = tuple(Entry.name for Entry in os.scandir(TitlesDirectoryPath) if Entry.is_file() and Entry.name.endswith(".json"))
-		FilesCount: int = len(Files)
-		FileIndex: int = 1
-		FilesToRemove: list[str] = []
+		Result = Collector.collect_broken()
+		FilesToRemove: tuple[str, ...] = tuple(Descriptor.full_filename for Descriptor in Result.descriptors if Descriptor.full_filename)
+		RemovedFilesCount: int = self.__RemoveFilesInDirectory(SourceOperator.settings.directories.titles, FilesToRemove)
 
-		for File in Files:
-			Progress = (FileIndex + 1) / FilesCount * 100.0
-			ProgressIndicator.set_progress(Progress)
-
-			try:
-				ReadJSON(TitlesDirectoryPath / File)
-			except JSONDecodeError:
-				self.printer.emit(f"File <i>{File}</i> marked for removing.")
-				FilesToRemove.append(File)
-
-			FileIndex += 1
-
-		ProgressIndicator.end()
-		RemovedFilesCount: int = self.__RemoveFilesInDirectory(TitlesDirectoryPath, FilesToRemove)
 		if RemovedFilesCount: self.printer.emit(f"Removed {RemovedFilesCount} files.")
 		else: self.printer.emit("No broken files found.")
 		
@@ -133,38 +132,15 @@ class CommandProcessor(CommandProcessorTemplate[Parameters]):
 		"""
 		
 		SourceOperator = parameters.required_parser.source_operator
-		ParserSettings = parameters.required_parser.settings
-		ProgressIndicator = SourceOperator.portals.printer.progress_indicator
-
 		Collector = utils.Collector(SourceOperator)
-		self.printer.templates.local_titles_scanning_start()
-		ScanningResult = Collector.scan_local()
-		self.printer.templates.local_titles_scanning_result(ScanningResult)
+		self.printer.emit("Check titles existing…", flush = True)
 
-		FilesToRemove: list[str] = []
+		Result = Collector.collect_not_found(callback = self.__Callback_NotFound)
+		FilesToRemove: tuple[str, ...] = tuple(Descriptor.full_filename for Descriptor in Result.descriptors if Descriptor.full_filename)
+		RemovedFilesCount: int = self.__RemoveFilesInDirectory(SourceOperator.settings.directories.titles, FilesToRemove)
 
-		for Index in range(ScanningResult.found):
-			Slug = ScanningResult.slugs[Index]
-			Filename = ScanningResult.files[Index]
-
-			Progress = (Index + 1) / ScanningResult.found * 100.0
-			ProgressIndicator.set_progress(Progress)
-
-			IsTitleExists: bool | None = SourceOperator.is_title_exists(Slug)
-
-			if IsTitleExists is None:
-				self.printer.warning(f"Unable correctly check \"{Slug}\" existing. Skipped.")
-				continue
-
-			if IsTitleExists is False:
-				self.printer.emit(f"File <i>{Filename}</i> marked for removing.")
-				FilesToRemove.append(Filename)
-
-			if Index + 1 != ScanningResult.found: ParserSettings.common.sleep_delay()
-
-		ProgressIndicator.end()
-		FilesRemoved: int = self.__RemoveFilesInDirectory(ParserSettings.directories.titles, FilesToRemove)
-		self.printer.emit(f"Files removed: {FilesRemoved}.")
+		if RemovedFilesCount: self.printer.emit(f"Removed {RemovedFilesCount} files.")
+		else: self.printer.emit("No files to remove.")
 
 		return True
 
