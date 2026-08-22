@@ -1,7 +1,7 @@
 import re
 from pathlib import Path
 from types import MappingProxyType
-from typing import TYPE_CHECKING, Any, Literal, cast
+from typing import TYPE_CHECKING, Any, Literal
 
 from deepmerge import always_merger
 
@@ -351,7 +351,7 @@ class Common:
 		:type settings: dict
 		"""
 
-		self.__CommonSettings: dict[str, Any] = cast(dict, _BASE_SETTINGS.copy().get("common")) | settings
+		self.__CommonSettings: dict[str, Any] = settings
 
 class Filters:
 	"""Фильтры контента."""
@@ -459,15 +459,6 @@ class ParserSettings:
 	"""Настройки парсера."""
 
 	#==========================================================================================#
-	# >>>>> СВОЙСТВА <<<<< #
-	#==========================================================================================#
-
-	def is_loaded_from_repository(self) -> bool:
-		"""Состояние: загружены ли настройки из репозитория."""
-
-		return self.__IsLoadedFromRepository
-
-	#==========================================================================================#
 	# >>>>> КАТЕГОРИИ НАСТРОЕК <<<<< #
 	#==========================================================================================#
 
@@ -535,7 +526,7 @@ class ParserSettings:
 		:rtype: dict
 		"""
 
-		Settings: dict = _BASE_SETTINGS.copy()
+		Settings: dict = self.get_base_settings(self.__SystemObjects, self.__ParserName)
 		ConfigsPaths: tuple[Path, Path] = (
 			Path(f"parsers/{self.__ParserName}/settings.json"),
 			Path(f"{self.__SystemObjects.options.CONFIGS_DIR}/{self.__ParserName}.json")
@@ -566,7 +557,6 @@ class ParserSettings:
 		self.__ParserName: str = parser_name
 
 		self.__Settings: dict = self.__ReadSettings()
-		self.__IsLoadedFromRepository = False
 
 		self.__Directories = Directories(self.__SystemObjects, self.__ParserName, self.__Settings.get("directories", {}))
 		self.__Common: Common = Common(self.__Settings.get("common", {}))
@@ -574,3 +564,27 @@ class ParserSettings:
 		self.__Proxies: tuple[Proxy, ...] = self.__ParseProxies()
 		self.__Custom: Custom = Custom(self.__Settings.get("custom", {}))
 		self.__Extensions: Extensions = Extensions(self.__Settings.get("extensions", {}))
+
+	@staticmethod
+	def get_base_settings(system_objects: "SystemObjects", parser_name: str) -> dict:
+		"""
+		Возвращает словарь базовых настроек. Автоматически создаёт для каждого расширения секцию.
+
+		:param system_objects: Коллекция системных объектов.
+		:type system_objects: SystemObjects
+		:param parser_name: Имя парсера.
+		:type parser_name: str
+		:return: Словарь базовых настроек.
+		:rtype: dict
+		"""
+
+		BaseSetings: dict = _BASE_SETTINGS.copy()
+		Extensions: tuple[str, ...] = system_objects.parsers_manager.get_extensions_names(parser_name)
+
+		for ExtensionName in Extensions:
+			BaseSetings["extensions"][ExtensionName] = {
+				"is_enabled": False,
+				"options": {}
+			}
+
+		return BaseSetings

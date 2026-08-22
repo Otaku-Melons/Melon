@@ -12,7 +12,7 @@ from dublib.functions.filesystem import WriteJSON, WriteTextFile
 
 from ...core import exceptions
 from ...core.base.parsers.components.manifest import _BASE_MANIFEST, ContentTypes
-from ...core.base.parsers.components.settings import _BASE_SETTINGS
+from ...core.base.parsers.components.settings import ParserSettings
 
 if TYPE_CHECKING:
 	from ...core.system_objects import SystemObjects
@@ -88,7 +88,7 @@ class DevelopmeptAssistant:
 		:type path: Path
 		"""
 
-		WriteJSON(path / "manifest.json", _BASE_SETTINGS.copy())
+		WriteJSON(path / "settings.json", ParserSettings.get_base_settings(self.__SystemObjects, path.name))
 
 	#==========================================================================================#
 	# >>>>> ПУБЛИЧНЫЕ МЕТОДЫ <<<<< #

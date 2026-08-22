@@ -1,5 +1,6 @@
 import importlib
 import io
+import os
 import shutil
 import subprocess
 import sys
@@ -25,7 +26,7 @@ from dublib.validators import Validator_URL
 
 from ...core import exceptions
 from ..base.parsers.components import ParserManifest
-from ..base.parsers.components.settings import _BASE_SETTINGS
+from ..base.parsers.components.settings import ParserSettings
 from ..base.source_operator import BaseSourceOperator
 
 if TYPE_CHECKING:
@@ -400,6 +401,23 @@ class ParsersManager:
 
 		return bool(Repository)
 		
+	def get_extensions_names(self, parser_name: str) -> tuple[str, ...]:
+		"""
+		Получает последовательность имён расширений парсера.
+
+		:param parser_name: Имя парсера.
+		:type parser_name: str
+		:return: Последовательность имён расширений парсера. Отсортирована в алфавитном порядке.
+		:rtype: tuple[str, ...]
+		"""
+
+		self.is_parser_installed(parser_name)
+
+		ExtensionsDirectory: Path = Path(f"parsers/{parser_name}/extensions")
+		if not ExtensionsDirectory.exists(): return ()
+
+		return tuple(sorted(Entry.name for Entry in os.scandir(ExtensionsDirectory) if Entry.is_dir()))
+
 	def is_parser_installed(self, parser_name: str, exception: bool = True) -> bool:
 		"""
 		Проверяет, установлен ли парсер.
@@ -435,7 +453,7 @@ class ParsersManager:
 		
 		self.is_parser_installed(parser_name)
 
-		Config: dict = _BASE_SETTINGS.copy()
+		Config: dict = ParserSettings.get_base_settings(self.__SystemObjects, parser_name)
 
 		ConfigPresetFilePath: Path = Path(f"parsers/{parser_name}/settings.json")
 		ConfigStorageFilePath: Path = self.__SystemObjects.options.CONFIGS_DIR.value / f"{parser_name}.json"
