@@ -23,6 +23,7 @@ class ClearingRules(Enum):
 
 	All = "-all"
 	Broken = "-broken"
+	Collection = "--collection"
 	NotFound = "-not-found"
 
 @dataclass(frozen = True)
@@ -30,6 +31,7 @@ class Parameters(T_SingleParserRequired):
 	"""Параметры, требуемые обработчиком."""
 
 	rule: ClearingRules
+	collection_file: str | None
 
 #==========================================================================================#
 # >>>>> ОСНОВНОЙ КЛАСС <<<<< #
@@ -121,6 +123,47 @@ class CommandProcessor(CommandProcessorTemplate[Parameters]):
 		
 		return True
 
+	def __ClearCollection(self, parameters: Parameters) -> bool:
+		"""
+		Реализует стратегию очистки: по алиасам из коллекции.
+
+		:param parameters: Параметры команды.
+		:type parameters: Parameters
+		:return: Возвращает `False`, если команда требует прерывания выполнения.
+		:rtype: bool
+		"""
+
+		SourceOperator = parameters.required_parser.source_operator
+		Collector = utils.Collector(SourceOperator, parameters.collection_file)
+
+		if not Collector.is_collection_file_exists:
+			self.printer.error("Collection not found.")
+			return False
+
+		Slugs = Collector.load()
+		SlugsCount: int = len(Slugs)
+		self.printer.emit(f"Slugs in collection: {SlugsCount}.")
+		if not Slugs: return True
+
+		Filenames: list[str] = []
+
+		if SourceOperator.settings.common.use_id_as_filename:
+			for Slug in Slugs:
+				ID: int | None = SourceOperator.shared_data.journal.get_id_by_slug(Slug)
+
+				if ID is None:
+					self.printer.warning(f"ID for \"{Slug}\" missing in cache. Skipped.")
+					continue
+
+				Filenames.append(f"{ID}.json")
+
+		else: Filenames = [f"{Slug}.json" for Slug in Slugs]
+
+		RemovedFilesCount: int = self.__RemoveFilesInDirectory(SourceOperator.settings.directories.titles, Filenames)
+		if RemovedFilesCount: self.printer.emit(f"Removed {RemovedFilesCount} files.")
+		
+		return True
+
 	def __ClearNotFound(self, parameters: Parameters) -> bool:
 		"""
 		Реализует стратегию очистки: файлы, описывающие тайтлы, не найденные по алиасу на сервере.
@@ -174,6 +217,7 @@ class CommandProcessor(CommandProcessorTemplate[Parameters]):
 		ComPos.add_flag(ClearingRules.All.value, description = "Delete all files.")
 		ComPos.add_flag(ClearingRules.Broken.value, description = "Delete broken JSON files.")
 		ComPos.add_flag(ClearingRules.NotFound.value, description = "Delete files for titles that not found on server by slug.")
+		ComPos.add_key(ClearingRules.Collection.value, description = "Delete files from collection.")
 
 		self._AddMirrorKey()
 
@@ -191,11 +235,17 @@ class CommandProcessor(CommandProcessorTemplate[Parameters]):
 		:rtype: Parameters
 		"""
 
-		Rule: ClearingRules = ClearingRules(data.get_important_position_value("RULE", expected_type = str))
+		Parameter = data.get_important_position_named_parameter("RULE")
+		Rule: ClearingRules = ClearingRules(Parameter.name)
+		CollectionFile: str | None = None
 
+		if Rule is ClearingRules.Collection: 
+			CollectionFile = data.get_key_value(ClearingRules.Collection.value, expected_type = str)
+		
 		return Parameters(
 			required_parser = prepared_data.required_parsers[0],
-			rule = Rule
+			rule = Rule,
+			collection_file = CollectionFile
 		)
 
 	def _Process(self, parameters: Parameters) -> bool:
@@ -213,6 +263,7 @@ class CommandProcessor(CommandProcessorTemplate[Parameters]):
 		match parameters.rule:
 			case ClearingRules.All: Result = self.__ClearAll(parameters)
 			case ClearingRules.Broken: Result = self.__ClearBroken(parameters)
+			case ClearingRules.Collection: Result = self.__ClearCollection(parameters)
 			case ClearingRules.NotFound: Result = self.__ClearNotFound(parameters)
 
 		return Result

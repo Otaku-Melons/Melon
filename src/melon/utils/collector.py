@@ -44,6 +44,12 @@ class Collector:
 	#==========================================================================================#
 
 	@property
+	def is_collection_file_exists(self) -> bool:
+		"""Состояние: существует ли файл коллекции."""
+
+		return self.__CollectionPath.exists()
+
+	@property
 	def slugs(self) -> tuple[str, ...]:
 		"""Последовательность алиасов в коллекции."""
 
@@ -156,20 +162,22 @@ class Collector:
 
 		return len(UniqueSlugsSet)
 
-	def load(self) -> tuple[str, ...]:
+	def load(self, add: bool = True) -> list[str]:
 		"""
 		Считывает файл _collection.txt_ во временном каталоге парсера.
 
+		:param add: Указывает, добавлять ли полученные алиасы во внутреннюю коллекцию.
+		:type add: bool
 		:return: Последовательность считанных алиасов.
 		:rtype: tuple[str, ...]
 		"""
 
 		if self.__CollectionPath.exists():
 			CollectionSlugs: list[str] = ReadTextFile(self.__CollectionPath, split = True, strip = True)
-			self.add(CollectionSlugs)
-			return tuple(CollectionSlugs)
+			if add: self.add(CollectionSlugs)
+			return CollectionSlugs
 		
-		return ()
+		return []
 
 	def save(self, sort: bool = True):
 		"""
