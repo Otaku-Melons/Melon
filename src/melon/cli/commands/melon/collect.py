@@ -30,8 +30,6 @@ class Parameters(T_ForceModeRequired, T_SingleParserRequired):
 	file: str | None
 	collecting_target: CollectingTargets
 
-	is_sorting_enabled: bool
-
 	period: int | None
 	filters: str | None
 	pages: int | None
@@ -133,8 +131,6 @@ class CommandProcessor(CommandProcessorTemplate[Parameters]):
 
 		self._AddForceModeFlag()
 
-		command.base.add_flag("-no-sort", description = "Disable slugs sorting.")
-
 		self._AddMirrorKey()
 
 		command.base.add_key("--filters", description = "Query string for filtering titles.")
@@ -168,7 +164,6 @@ class CommandProcessor(CommandProcessorTemplate[Parameters]):
 			is_force_mode_enabled = prepared_data.is_force_mode_enabled,
 			file = File,
 			collecting_target = CollectingTargets(CollectingTarget),
-			is_sorting_enabled = not data.check_flag("-no-sort"),
 			period = Period,
 			filters = Filters,
 			pages = Pages
@@ -201,7 +196,7 @@ class CommandProcessor(CommandProcessorTemplate[Parameters]):
 			case CollectingTargets.Local: AddedSlugs = self.__CollectLocal(Collector, parameters)
 			case CollectingTargets.NotFound: AddedSlugs = self.__CollectNotFound(Collector, parameters)
 
-		Collector.save(sort = parameters.is_sorting_enabled)
+		Collector.save()
 	
 		if AddedSlugs: self.printer.emit(f"Unique slugs added: {AddedSlugs}.")
 		else: self.printer.emit("No new slugs in collection.")

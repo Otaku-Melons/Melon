@@ -113,7 +113,8 @@ class PasingTarget_Collection(_BaseParserTarget):
 		Filename: str | None = self._Data.get_key_value("--collection", expected_type = str)
 		if Filename == ".": Filename = None
 		Collector = utils.Collector(self._SourceOperator, Filename)
-		Slugs = list(Collector.load())
+		Collector.load()
+		Slugs = list(Collector.slugs)
 		self._Printer.emit(f"Titles in collection: {len(Slugs)}.")
 
 		return Slugs

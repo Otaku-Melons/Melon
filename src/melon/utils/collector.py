@@ -22,13 +22,11 @@ class CollectingResult:
 	Результат сборки тайтлов из каталога.
 	
 	- **slugs** – последовательность собранных алиасов;
-	- **collected** – количество собранных алиасов;
-	- **added** – количество уникальных добавленных во внутреннюю коллекцию `Collector` алиасов;
+	- **added** – количество уникальных добавленных в коллекцию алиасов;
 	- **descriptors** – последовательность дескрипторов тайтлов, из которых собраны алиасы.
 	"""
 
 	slugs: tuple[str, ...]
-	collected: int
 	added: int
 	descriptors: tuple[TitleDescriptor, ...]
 
@@ -47,11 +45,11 @@ class Collector:
 	def is_collection_file_exists(self) -> bool:
 		"""Состояние: существует ли файл коллекции."""
 
-		return self.__CollectionPath.exists()
+		return self.__CollectionFile.exists()
 
 	@property
 	def slugs(self) -> tuple[str, ...]:
-		"""Последовательность алиасов в коллекции."""
+		"""Последовательность алиасов коллекции."""
 
 		return tuple(self.__Collection)
 
@@ -59,17 +57,21 @@ class Collector:
 	# >>>>> ПРИВАТНЫЕ МЕТОДЫ <<<<< #
 	#==========================================================================================#
 
-	def __BuldResultFormDescriptors(self, descriptors: Sequence[TitleDescriptor], add: bool = True) -> CollectingResult:
-		
-		AddedSlugs: int = 0
+	def __BuldResultFormDescriptors(self, descriptors: Sequence[TitleDescriptor]) -> CollectingResult:
+		"""
+		Строит результат коллекционирования из дескрипторов тайтлов.
+
+		:param descriptors: Последовательность дескрипторов тайтлов.
+		:type descriptors: Sequence[TitleDescriptor]
+		:return: Результат сборки тайтлов из каталога.
+		:rtype: CollectingResult
+		"""
+
 		Slugs = tuple(Descriptor.slug for Descriptor in descriptors if Descriptor.slug)
-		CollectedSlugs: int = len(Slugs)
-		if add: AddedSlugs = self.add(Slugs)
 
 		return CollectingResult(
 			slugs = Slugs,
-			collected = CollectedSlugs,
-			added = AddedSlugs,
+			added = self.add(Slugs),
 			descriptors = tuple(descriptors)
 		)
 
@@ -107,6 +109,8 @@ class Collector:
 		"""
 		Пытается получить алиас тайтла из ключа _slug_ JSON-файла.
 
+		В экстра-данные дескрипторf тайтлf добавляет поле _is_broken_ при невозможности парсинга JSON.
+
 		:param descriptor: Дескриптор тайтла.
 		:type descriptor: TitleDescriptor
 		"""
@@ -128,11 +132,11 @@ class Collector:
 
 	def __init__(self, source_operator: "BaseSourceOperator", filename: str | None = None):
 		"""
-		Сборщик алиасов.
+		Сборщик алиасов. Все изменения синхронизируются с представляющим коллекцию файлом.
 
 		:param source_operator: Оператор источника.
 		:type source_operator: BaseSourceOperator
-		:param filename: Имя файла коллекции без расширения. По умолчанию 
+		:param filename: Имя файла коллекции без расширения. По умолчанию _collection_.
 		:type filename: str | None
 		"""
 
@@ -141,7 +145,7 @@ class Collector:
 
 		if not self.__Filename.endswith(".txt"): self.__Filename = f"{self.__Filename}.txt"
 
-		self.__CollectionPath = self.__SourceOperator.system_objects.temper.get_parser_collections_directory(self.__SourceOperator.parser_name) / self.__Filename
+		self.__CollectionFile = self.__SourceOperator.system_objects.temper.get_parser_collections_directory(self.__SourceOperator.parser_name) / self.__Filename
 		self.__Collection: list[str] = []
 
 	def add(self, slugs: str | Sequence[str]) -> int:
@@ -158,28 +162,33 @@ class Collector:
 		CollectionSet = set(self.__Collection)
 		UniqueSlugsSet = SlugsSet - CollectionSet
 		
-		self.__Collection = list(CollectionSet | SlugsSet)
+		self.__Collection = sorted(CollectionSet | SlugsSet)
 
 		return len(UniqueSlugsSet)
 
-	def load(self, add: bool = True) -> list[str]:
-		"""
-		Считывает файл _collection.txt_ во временном каталоге парсера.
+	def clear(self):
+		"""Очищает коллекцию и удаляет её файл."""
 
-		:param add: Указывает, добавлять ли полученные алиасы во внутреннюю коллекцию.
-		:type add: bool
-		:return: Последовательность считанных алиасов.
-		:rtype: tuple[str, ...]
+		self.__Collection.clear()
+
+		if self.is_collection_file_exists:
+			self.__CollectionFile.unlink()
+
+	def load(self) -> int:
+		"""
+		Считывает алиасы из файла коллекции.
+
+		:return: Количество уникальных добавленных во внутреннюю коллекцию алиасов.
+		:rtype: int
 		"""
 
-		if self.__CollectionPath.exists():
-			CollectionSlugs: list[str] = ReadTextFile(self.__CollectionPath, split = True, strip = True)
-			if add: self.add(CollectionSlugs)
-			return CollectionSlugs
+		if self.__CollectionFile.exists():
+			CollectionSlugs: list[str] = ReadTextFile(self.__CollectionFile, split = True, strip = True)
+			return self.add(CollectionSlugs)
 		
-		return []
+		return 0
 
-	def save(self, sort: bool = True):
+	def save(self):
 		"""
 		Сохраняет коллекцию в файл.
 
@@ -187,40 +196,31 @@ class Collector:
 		:type sort: bool
 		"""
 
-		CollectionToWrite: Sequence[str] = self.__Collection
-
-		if sort:
-			CollectionToWrite = tuple(sorted(self.__Collection))
-
-		WriteTextFile(self.__CollectionPath, CollectionToWrite)
+		WriteTextFile(self.__CollectionFile, self.__Collection)
 	
 	#==========================================================================================#
 	# >>>>> ПУБЛИЧНЫЕ МЕТОДЫ СБОРКИ ПО КРИТЕРИЯМ <<<<< #
 	#==========================================================================================#
 
-	def collect_broken(self, add: bool = True) -> CollectingResult:
+	def collect_broken(self) -> CollectingResult:
 		"""
 		Собирает из локальной директории тайтлов алиасы по правилу: повреждённые файлы.
 
-		Поскольку из сломанных файлов невозможно извлечь алиас, при использовании ID в качестве имён описательных файлов никогда ничего не добавляет во внутреннюю коллекцию.
+		Поскольку из повреждённых файлов невозможно извлечь алиас, при использовании ID в качестве имён описательных файлов никогда ничего не добавляет во внутреннюю коллекцию.
 
-		:param add: Указывает, добавлять ли полученные алиасы во внутреннюю коллекцию.
-		:type add: bool
 		:return: Результат сборки тайтлов из каталога.
 		:rtype: CollectingResult
 		"""
 		
-		Result = self.collect_local(add = False)
+		Result = self.collect_local()
 		Descriptors: tuple[TitleDescriptor, ...] = tuple(Descriptor for Descriptor in Result.descriptors if Descriptor.extra.get("is_broken"))
 
-		return self.__BuldResultFormDescriptors(Descriptors, add)
+		return self.__BuldResultFormDescriptors(Descriptors)
 
-	def collect_local(self, add: bool = True) -> CollectingResult:
+	def collect_local(self) -> CollectingResult:
 		"""
 		Собирает из локальной директории тайтлов алиасы по правилу: все файлы.
 
-		:param add: Указывает, добавлять ли полученные алиасы во внутреннюю коллекцию.
-		:type add: bool
 		:return: Результат сборки тайтлов из каталога.
 		:rtype: CollectingResult
 		"""
@@ -231,31 +231,45 @@ class Collector:
 			for Descriptor in Descriptors:
 				self.__TryGetSlugFromFile(Descriptor)
 
-		return self.__BuldResultFormDescriptors(Descriptors, add)
+		return self.__BuldResultFormDescriptors(Descriptors)
 
-	def collect_not_found(self, add: bool = True, callback: Callable[[TitleDescriptor], None] | None = None) -> CollectingResult:
+	def collect_not_found(self, autosave: bool = True, callback: Callable[[TitleDescriptor], None] | None = None) -> CollectingResult:
 		"""
 		Собирает из локальной директории тайтлов алиасы по правилу: не найденные на сервере тайтлы.
 
-		Для проверки использует метод оператора источника `is_title_exists()`.
+		Для проверки использует метод оператора источника `is_title_exists()`. Если алиас найден во внутренней коллекции, проверка будет пропущена.
 
-		:param add: Указывает, добавлять ли полученные алиасы во внутреннюю коллекцию.
-		:type add: bool
-		:param callback: Функция, принимающая проверенный дескриптор. В экстра-данных последнего появляется флаг _is_title_exists_ с результатом проверки существования.
+		В экстра-данные дескрипторов тайтлов добавляет поле _is_title_exists_ со статусом проверки существования.
+
+		:param autosave: Сохраняет файл коллекции после каждого изменения.
+		:type autosave: bool
+		:param callback: Функция, принимающая проверенный дескриптор.
 		:type callback: Callable[[TitleDescriptor], None] | None
 		:return: Результат сборки тайтлов из каталога.
 		:rtype: CollectingResult
 		"""
 
 		NotFoundDescriptors: list[TitleDescriptor] = []
-		
-		for Descriptor in self.collect_local(add = False).descriptors:
-			if not Descriptor.slug: continue
+		Added: int = 0
+
+		for Descriptor in self.collect_local().descriptors:
+			if not Descriptor.slug or  Descriptor.slug in self.__Collection: continue
 
 			IsTitleExists: bool | None = self.__SourceOperator.is_title_exists(Descriptor.slug)
 			Descriptor.extra["is_title_exists"] = IsTitleExists
-			if IsTitleExists is False: NotFoundDescriptors.append(Descriptor)
+
+			if IsTitleExists is False:
+				NotFoundDescriptors.append(Descriptor)
+				if autosave:
+					self.add(Descriptor.slug)
+					Added += 1
 
 			if callback: callback(Descriptor)
 
-		return self.__BuldResultFormDescriptors(NotFoundDescriptors, add)
+		Slugs = tuple(Descriptor.slug for Descriptor in NotFoundDescriptors if Descriptor.slug)
+		
+		return CollectingResult(
+			slugs = Slugs,
+			added = Added if autosave else self.add(Slugs),
+			descriptors = tuple(NotFoundDescriptors)
+		)

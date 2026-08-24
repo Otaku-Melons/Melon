@@ -140,8 +140,8 @@ class CommandProcessor(CommandProcessorTemplate[Parameters]):
 			self.printer.error("Collection not found.")
 			return False
 
-		Slugs = Collector.load()
-		SlugsCount: int = len(Slugs)
+		SlugsCount: int = Collector.load()
+		Slugs = Collector.slugs
 		self.printer.emit(f"Slugs in collection: {SlugsCount}.")
 		if not Slugs: return True
 

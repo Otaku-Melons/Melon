@@ -120,7 +120,7 @@ class Templates:
 		:type result: LocalScanningResult
 		"""
 
-		self.__Printer.emit(f"Local titles found: {result.collected}.")
+		self.__Printer.emit(f"Slugs from local files collected: {result.added}.")
 
 	def local_titles_scanning_start(self):
 		"""Шаблон вывода: начато сканирование локальных тайтлов."""
