@@ -186,9 +186,15 @@ class BaseCommandProcessor(ABC, Generic[PARAMS]):
 
 		try:
 			return self._Process(parameters)
+
+		except exceptions.system.ParserAlreadyExists as ExceptionData:
+			self.printer.error(f"Parser <b>{ExceptionData}</b> already exists.")
+			return False
+
 		except exceptions.system.ParserNotFound as ExceptionData:
 			self.printer.error(f"Parser <b>{ExceptionData}</b> not found.")
 			return False
+
 		except exceptions.system.RepositoryError as ExceptionData:
 			self.printer.error(str(ExceptionData))
 			return False

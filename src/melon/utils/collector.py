@@ -217,13 +217,13 @@ class Collector:
 		:rtype: CollectingResult
 		"""
 
-		Descriptors = self.__CollectDescriptors()
+		Descriptors: tuple[TitleDescriptor, ...] = self.__CollectDescriptors()
 
 		for Descriptor in Descriptors:
 			if not Descriptor.extra.get("is_broken"):
 				self.__TryGetSlugFromFile(Descriptor)
 
-		Descriptors: tuple[TitleDescriptor, ...] = tuple(Descriptor for Descriptor in Descriptors if Descriptor.extra.get("is_broken"))
+		Descriptors = tuple(Descriptor for Descriptor in Descriptors if Descriptor.extra.get("is_broken"))
 
 		return self.__BuldResultFormDescriptors(Descriptors)
 

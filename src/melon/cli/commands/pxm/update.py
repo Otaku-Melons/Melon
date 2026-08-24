@@ -80,13 +80,9 @@ class CommandProcessor(CommandProcessorTemplate[Parameters]):
 		"""
 
 		ParserOperator = self.system_objects.manager.parsers.get_operator(parameters.parser)
-		RepositoryURL: str | None = self.system_objects.manager.repositories.get(parameters.parser)
-
-		if not RepositoryURL:
-			self.printer.error(f"Repository for parser \"{parameters.parser}\" not found.")
-			return False
-
+		RepositoryURL: str = self.system_objects.manager.repositories.get(parameters.parser, exception = True)
 		self.printer.emit(f"Repository: <i>{RepositoryURL}</i>.")
+		
 		IsUpdated: bool = ParserOperator.update(force_mode = parameters.is_force_mode_enabled)
 
 		if IsUpdated: self.printer.emit("Updated.")

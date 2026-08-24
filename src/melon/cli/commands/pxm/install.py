@@ -85,14 +85,9 @@ class CommandProcessor(CommandProcessorTemplate[Parameters]):
 		"""
 
 		ParserOperator = self.system_objects.manager.parsers.get_operator(parameters.parser)
-		RepositoryURL: str | None = ParserOperator.repository
-
-		if not RepositoryURL:
-			self.printer.error(f"Repository for parser \"{parameters.parser}\" not found.")
-			return False
-
+		RepositoryURL: str = self.system_objects.manager.repositories.get(parameters.parser, exception = True)
+		
 		self.printer.emit(f"Repository: <i>{RepositoryURL}</i>.")
-
 		ParserOperator.install()
 		self.printer.emit("Parser installed.")
 
