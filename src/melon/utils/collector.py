@@ -92,6 +92,10 @@ class Collector:
 				Buffer.set_filename(Entry.name)
 				Descriptors.append(Buffer)
 
+		if self.__SourceOperator.settings.common.use_id_as_filename:
+			for Descriptor in Descriptors:
+				self.__TryGetSlugFromFile(Descriptor)
+
 		return self.__SortDescriptors(Descriptors)
 
 	def __SortDescriptors(self, descriptors: Sequence[TitleDescriptor]) -> tuple[TitleDescriptor, ...]:
@@ -109,7 +113,7 @@ class Collector:
 		"""
 		Пытается получить алиас тайтла из ключа _slug_ JSON-файла.
 
-		В экстра-данные дескрипторf тайтлf добавляет поле _is_broken_ при невозможности парсинга JSON.
+		В экстра-данные дескриптора тайтла добавляет поле _is_broken_ с соответствующим статусом.
 
 		:param descriptor: Дескриптор тайтла.
 		:type descriptor: TitleDescriptor
@@ -120,6 +124,7 @@ class Collector:
 
 		try:
 			Title = ReadJSON(cast(Path, descriptor.path)) 
+			descriptor.extra["is_broken"] = False
 			Slug = Title.get("slug")
 			if Slug: descriptor.set_slug(Slug)
 
@@ -211,9 +216,14 @@ class Collector:
 		:return: Результат сборки тайтлов из каталога.
 		:rtype: CollectingResult
 		"""
-		
-		Result = self.collect_local()
-		Descriptors: tuple[TitleDescriptor, ...] = tuple(Descriptor for Descriptor in Result.descriptors if Descriptor.extra.get("is_broken"))
+
+		Descriptors = self.__CollectDescriptors()
+
+		for Descriptor in Descriptors:
+			if not Descriptor.extra.get("is_broken"):
+				self.__TryGetSlugFromFile(Descriptor)
+
+		Descriptors: tuple[TitleDescriptor, ...] = tuple(Descriptor for Descriptor in Descriptors if Descriptor.extra.get("is_broken"))
 
 		return self.__BuldResultFormDescriptors(Descriptors)
 
@@ -224,14 +234,8 @@ class Collector:
 		:return: Результат сборки тайтлов из каталога.
 		:rtype: CollectingResult
 		"""
-		
-		Descriptors: tuple[TitleDescriptor, ...] = self.__CollectDescriptors()
 
-		if self.__SourceOperator.settings.common.use_id_as_filename:
-			for Descriptor in Descriptors:
-				self.__TryGetSlugFromFile(Descriptor)
-
-		return self.__BuldResultFormDescriptors(Descriptors)
+		return self.__BuldResultFormDescriptors(self.__CollectDescriptors())
 
 	def collect_not_found(self, autosave: bool = True, callback: Callable[[TitleDescriptor], None] | None = None) -> CollectingResult:
 		"""
@@ -252,8 +256,8 @@ class Collector:
 		NotFoundDescriptors: list[TitleDescriptor] = []
 		Added: int = 0
 
-		for Descriptor in self.collect_local().descriptors:
-			if not Descriptor.slug or  Descriptor.slug in self.__Collection: continue
+		for Descriptor in self.__CollectDescriptors():
+			if not Descriptor.slug or Descriptor.slug in self.__Collection: continue
 
 			IsTitleExists: bool | None = self.__SourceOperator.is_title_exists(Descriptor.slug)
 			Descriptor.extra["is_title_exists"] = IsTitleExists
