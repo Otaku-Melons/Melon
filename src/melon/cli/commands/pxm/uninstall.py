@@ -2,7 +2,6 @@ from dataclasses import dataclass
 
 from dublib.cli.terminalyzer import Command, ParsedCommandData
 
-from ....core.system_objects.parsers_manager import ParsersManager
 from ..base_processor import PreparedData
 from ._base import CommandProcessorTemplate
 
@@ -84,8 +83,8 @@ class CommandProcessor(CommandProcessorTemplate[Parameters]):
 		:rtype: bool
 		"""
 
-		Installer = ParsersManager(self.system_objects)
-		Installer.uninstall_parser(parameters.parser, parameters.is_clear)
+		ParserOperator = self.system_objects.manager.parsers.get_operator(parameters.parser)
+		ParserOperator.uninstall(parameters.is_clear)
 		if parameters.is_clear: self.printer.emit("Temp files and config cleared.")
 
 		return True

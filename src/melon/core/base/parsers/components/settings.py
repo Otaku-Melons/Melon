@@ -579,7 +579,7 @@ class ParserSettings:
 		"""
 
 		BaseSetings: dict = _BASE_SETTINGS.copy()
-		Extensions: tuple[str, ...] = system_objects.parsers_manager.get_extensions_names(parser_name)
+		Extensions: tuple[str, ...] = system_objects.manager.parsers.get_operator(parser_name).extensions_names
 
 		for ExtensionName in Extensions:
 			BaseSetings["extensions"][ExtensionName] = {

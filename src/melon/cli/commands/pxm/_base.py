@@ -7,7 +7,7 @@ class CommandProcessorTemplate(BaseCommandProcessor[PARAMS]):
 	# >>>>> НАСЛЕДУЕМЫЕ МЕТОДЫ ГЕНЕРАЦИИ КОМАНДЫ <<<<< #
 	#==========================================================================================#
 
-	def _AddConfigConflictStrategyPosition(self):
+	def _AddSettingsExportStrategyPosition(self):
 		"""Добавляет позицию стратегии слияния конфигурации."""
 
 		ComPos = self._Command.create_position("STRATEGY", "Strategy of config installation conflict resolution.")

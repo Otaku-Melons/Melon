@@ -2,11 +2,7 @@ from dataclasses import dataclass
 
 from dublib.cli.terminalyzer import Command, ParsedCommandData
 
-from ....core.system_objects.parsers_manager import (
-	ConfigInstallationResult,
-	ConfigInstallationStrategies,
-	ParsersManager,
-)
+from ....core.system_objects.manager.parsers import ExportStrategies
 from ..base_processor import PreparedData
 from ._base import CommandProcessorTemplate
 
@@ -19,7 +15,7 @@ class Parameters:
 	"""Параметры, требуемые обработчиком."""
 
 	parser: str
-	config_strategy: ConfigInstallationStrategies
+	config_strategy: ExportStrategies
 
 #==========================================================================================#
 # >>>>> ОСНОВНОЙ КЛАСС <<<<< #
@@ -53,7 +49,7 @@ class CommandProcessor(CommandProcessorTemplate[Parameters]):
 		"""
 
 		self._AddParserPosition()
-		self._AddConfigConflictStrategyPosition()
+		self._AddSettingsExportStrategyPosition()
 		
 		return command
 
@@ -75,7 +71,7 @@ class CommandProcessor(CommandProcessorTemplate[Parameters]):
 
 		return Parameters(
 			parser = Parser,
-			config_strategy = ConfigInstallationStrategies(Strategy)
+			config_strategy = ExportStrategies(Strategy)
 		)
 
 	def _Process(self, parameters: Parameters) -> bool:
@@ -88,8 +84,8 @@ class CommandProcessor(CommandProcessorTemplate[Parameters]):
 		:rtype: bool
 		"""
 
-		Installer = ParsersManager(self.system_objects)
-		RepositoryURL: str | None = Installer.repositories.get(parameters.parser)
+		ParserOperator = self.system_objects.manager.parsers.get_operator(parameters.parser)
+		RepositoryURL: str | None = ParserOperator.repository
 
 		if not RepositoryURL:
 			self.printer.error(f"Repository for parser \"{parameters.parser}\" not found.")
@@ -97,12 +93,12 @@ class CommandProcessor(CommandProcessorTemplate[Parameters]):
 
 		self.printer.emit(f"Repository: <i>{RepositoryURL}</i>.")
 
-		Installer.clone_parser(parameters.parser)
-		self.printer.emit("Parser clonned.")
+		ParserOperator.install()
+		self.printer.emit("Parser installed.")
 
-		Installer.install_requirements(parameters.parser)
+		self.system_objects.manager.packager.install_requirements(ParserOperator.requirements_path)
 
-		Result: ConfigInstallationResult = Installer.install_config(parameters.parser, parameters.config_strategy)
+		Result = ParserOperator.export_settings(parameters.config_strategy)
 		self.printer.templates.config_installation_result(Result)
 
 		return True

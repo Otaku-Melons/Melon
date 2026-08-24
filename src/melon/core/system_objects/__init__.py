@@ -2,8 +2,8 @@ import atexit
 
 from dulwich import porcelain
 
+from ...core.system_objects.manager import Manager
 from ...core.system_objects.options import Options
-from ...core.system_objects.parsers_manager import ParsersManager
 from ...core.system_objects.printer import Printer
 from ...core.system_objects.temper import Temper
 
@@ -31,10 +31,10 @@ class SystemObjects:
 		return self.__Options
 
 	@property
-	def parsers_manager(self) -> ParsersManager:
-		"""Менеджер парсеров."""
+	def manager(self) -> Manager:
+		"""Системный менеджер."""
 
-		return self.__ParsersManager
+		return self.__Manager
 
 	@property
 	def printer(self) -> Printer:
@@ -56,7 +56,7 @@ class SystemObjects:
 		"""Коллекция системных объектов."""
 
 		self.__Options = Options()
-		self.__ParsersManager = ParsersManager(self)
+		self.__Manager = Manager(self)
 		self.__Printer = Printer(self)
 		self.__Temper = Temper(self)
 

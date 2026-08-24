@@ -3,7 +3,6 @@ from typing import cast
 
 from dublib.cli.terminalyzer import Command, ParsedCommandData, ValidableTypes
 
-from ....core.system_objects.parsers_manager import ParsersManager
 from ..base_processor import PreparedData, ProcessorOptions
 from ._base import CommandProcessorTemplate
 
@@ -98,8 +97,7 @@ class CommandProcessor(CommandProcessorTemplate[Parameters]):
 		:rtype: bool
 		"""
 
-		Manager = ParsersManager(self.system_objects)
-		if parameters.is_remove: Manager.repositories.remove(cast(str, parameters.parser_name))
-		elif parameters.url: Manager.repositories.add(cast(str, parameters.url))
+		if parameters.is_remove: self.system_objects.manager.repositories.remove(cast(str, parameters.parser_name))
+		elif parameters.url: self.system_objects.manager.repositories.add(cast(str, parameters.url))
 
 		return True

@@ -2,10 +2,7 @@ from dataclasses import dataclass
 
 from dublib.cli.terminalyzer import Command, ParsedCommandData
 
-from ....core.system_objects.parsers_manager import (
-	ConfigInstallationStrategies,
-	ParsersManager,
-)
+from ....core.system_objects.manager.parsers import ExportStrategies
 from ..base_processor import PreparedData
 from ._base import CommandProcessorTemplate
 
@@ -18,7 +15,7 @@ class Parameters:
 	"""Параметры, требуемые обработчиком."""
 
 	parser: str
-	config_strategy: ConfigInstallationStrategies
+	config_strategy: ExportStrategies
 
 #==========================================================================================#
 # >>>>> ОСНОВНОЙ КЛАСС <<<<< #
@@ -52,7 +49,7 @@ class CommandProcessor(CommandProcessorTemplate[Parameters]):
 		"""
 
 		self._AddParserPosition()
-		self._AddConfigConflictStrategyPosition()
+		self._AddSettingsExportStrategyPosition()
 		
 		return command
 
@@ -73,7 +70,7 @@ class CommandProcessor(CommandProcessorTemplate[Parameters]):
 
 		return Parameters(
 			parser = data.get_important_position_value("PARSER", expected_type = str),
-			config_strategy = ConfigInstallationStrategies(Strategy)
+			config_strategy = ExportStrategies(Strategy)
 		)
 
 	def _Process(self, parameters: Parameters) -> bool:
@@ -86,8 +83,8 @@ class CommandProcessor(CommandProcessorTemplate[Parameters]):
 		:rtype: bool
 		"""
 
-		Installer = ParsersManager(self.system_objects)
-		Result = Installer.install_config(parameters.parser, parameters.config_strategy)
+		ParserOperator = self.system_objects.manager.parsers.get_operator(parameters.parser)
+		Result = ParserOperator.export_settings(parameters.config_strategy)
 		self.printer.templates.config_installation_result(Result)
 		
 		return True

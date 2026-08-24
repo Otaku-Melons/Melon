@@ -76,8 +76,8 @@ class CommandProcessor(CommandProcessorTemplate[DataclassStub]):
 			"collect": []
 		}
 	
-		for ParserName in self._SystemObjects.parsers_manager.installed_parsers:
-			SourceOperator = self._SystemObjects.parsers_manager.launch_source_operator(ParserName)
+		for ParserName in self._SystemObjects.manager.parsers.installed:
+			SourceOperator = self._SystemObjects.manager.parsers.get_operator(ParserName).launch()
 			TypesEmoji = {
 				ContentTypes.Manga: "m",
 				ContentTypes.Ranobe: "r"

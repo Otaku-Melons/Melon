@@ -72,7 +72,7 @@ class BaseCommandProcessor(ABC, Generic[PARAMS]):
 		:rtype: RequiredParser
 		"""
 
-		SourceOperator = self.system_objects.parsers_manager.launch_source_operator(parser)
+		SourceOperator = self.system_objects.manager.parsers.get_operator(parser).launch()
 
 		return RequiredParser(parser, SourceOperator, SourceOperator.manifest, SourceOperator.settings)
 
@@ -126,10 +126,10 @@ class BaseCommandProcessor(ABC, Generic[PARAMS]):
 			return ()
 
 		Parsers: tuple[str, ...] = tuple(Element.strip() for Element in ParsersNames.split(","))
-		AllParsers: tuple[str, ...] = self._SystemObjects.parsers_manager.installed_parsers
+		AllParsers: list[str] = self._SystemObjects.manager.parsers.installed
 	
 		if not Parsers:
-				Parsers = AllParsers
+				Parsers = tuple(AllParsers)
 		else:
 			for CurrentParser in Parsers:
 				if CurrentParser not in AllParsers:
@@ -189,7 +189,7 @@ class BaseCommandProcessor(ABC, Generic[PARAMS]):
 		except exceptions.system.ParserNotFound as ExceptionData:
 			self.printer.error(f"Parser <b>{ExceptionData}</b> not found.")
 			return False
-		except exceptions.system.ReposError as ExceptionData:
+		except exceptions.system.RepositoryError as ExceptionData:
 			self.printer.error(str(ExceptionData))
 			return False
 

@@ -3,7 +3,6 @@ from prettytable import PLAIN_COLUMNS, PrettyTable
 from dublib.cli.terminalyzer import Command, ParsedCommandData
 from dublib.cli.text_styler import FastStyler
 
-from ....core.system_objects.parsers_manager import ParsersManager
 from ..base_processor import PreparedData, ProcessorOptions
 from ..base_processor.structs import DataclassStub
 from ._base import CommandProcessorTemplate
@@ -71,16 +70,15 @@ class CommandProcessor(CommandProcessorTemplate[DataclassStub]):
 		:rtype: bool
 		"""
 
-		Installer = ParsersManager(self.system_objects)
-		InstalledParsers: tuple[str, ...] = Installer.installed_parsers
+		InstalledParsers: list[str] = self.system_objects.manager.parsers.installed
 
 		TableData: dict[str, list[str]] = {
 			"PARSER": [],
 			"REPOSITORY": []
 		}
 	
-		for ParserName in Installer.repositories.availabel_parsers:
-			RepositoryURL: str = Installer.repositories.get(ParserName, exception = True)
+		for ParserName in self.system_objects.manager.repositories.availabel_parsers:
+			RepositoryURL: str = self.system_objects.manager.repositories.get(ParserName, exception = True)
 			Status = "✅" if ParserName in InstalledParsers else "❌"
 			TableData["PARSER"].append(f"{Status} {ParserName}")
 			TableData["REPOSITORY"].append(FastStyler(RepositoryURL).decorate.italic)

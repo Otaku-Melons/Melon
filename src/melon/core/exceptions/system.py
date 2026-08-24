@@ -37,7 +37,7 @@ class ParserNotFound(Exception):
 
 		super().__init__(parser_name) 
 
-class ReposError(Exception):
+class RepositoryError(Exception):
 	"""Исключение: ошибка работы с репозиториями."""
 
 	def __init__(self, message: str):

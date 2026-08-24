@@ -2,7 +2,6 @@ from dataclasses import dataclass
 
 from dublib.cli.terminalyzer import Command, ParsedCommandData
 
-from ....core.system_objects.parsers_manager import ParsersManager
 from ..base_processor import PreparedData
 from ._base import CommandProcessorTemplate
 
@@ -75,8 +74,7 @@ class CommandProcessor(CommandProcessorTemplate[Parameters]):
 		:rtype: bool
 		"""
 
-		Installer = ParsersManager(self.system_objects)
-		Result: int | None = Installer.install_requirements(parameters.parser)
-		if Result is None: self.printer.emit("No requirements found.")
+		ParserOperator = self.system_objects.manager.parsers.get_operator(parameters.parser)
+		self.system_objects.manager.packager.install_requirements(ParserOperator.requirements_path)
 
 		return True

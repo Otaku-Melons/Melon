@@ -2,7 +2,6 @@ from dataclasses import dataclass
 
 from dublib.cli.terminalyzer import Command, ParsedCommandData
 
-from ....core.system_objects.parsers_manager import ParsersManager
 from ..base_processor import PreparedData
 from ..base_processor.parameters_templates import T_ForceModeRequired
 from ._base import CommandProcessorTemplate
@@ -80,15 +79,15 @@ class CommandProcessor(CommandProcessorTemplate[Parameters]):
 		:rtype: bool
 		"""
 
-		Installer = ParsersManager(self.system_objects)
-		RepositoryURL: str | None = Installer.repositories.get(parameters.parser)
+		ParserOperator = self.system_objects.manager.parsers.get_operator(parameters.parser)
+		RepositoryURL: str | None = self.system_objects.manager.repositories.get(parameters.parser)
 
 		if not RepositoryURL:
 			self.printer.error(f"Repository for parser \"{parameters.parser}\" not found.")
 			return False
 
 		self.printer.emit(f"Repository: <i>{RepositoryURL}</i>.")
-		IsUpdated: bool = Installer.update_parser(parameters.parser, force_mode = parameters.is_force_mode_enabled)
+		IsUpdated: bool = ParserOperator.update(force_mode = parameters.is_force_mode_enabled)
 
 		if IsUpdated: self.printer.emit("Updated.")
 		else: self.printer.emit("No changes.")
