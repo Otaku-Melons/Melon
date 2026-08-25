@@ -138,7 +138,7 @@ class CommandProcessor(CommandProcessorTemplate[Parameters]):
 		if parameters.is_output_json:
 			self.printer.emit(orjson.dumps(ClassificationResult.to_dict()).decode())
 		else:
-			self.printer.templates.classification_result(ClassificationResult)
+			self.printer.templates.classificator.result(ClassificationResult)
 		
 		if parameters.file_to_write:
 			WriteJSON(parameters.file_to_write, ClassificationResult.to_dict())

@@ -73,7 +73,7 @@ class CommandProcessor(CommandProcessorTemplate[Parameters]):
 		:rtype: int
 		"""
 
-		self.printer.templates.local_titles_scanning_start()
+		self.printer.templates.collector.start()
 
 		return collector.collect_local().added
 

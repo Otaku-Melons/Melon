@@ -93,6 +93,6 @@ class CommandProcessor(CommandProcessorTemplate[DataclassStub]):
 			TableData["DOMAIN"].append(ParserSite)
 			TableData["collect"].append(str(SourceOperator.is_collector_implemented))
 	
-		self.printer.templates.parsers_table(TableData)
+		self.printer.templates.manager.parsers_table(TableData)
 
 		return True

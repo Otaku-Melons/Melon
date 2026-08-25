@@ -1,4 +1,4 @@
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Literal
 
 from prettytable import PLAIN_COLUMNS, PrettyTable
 
@@ -8,20 +8,30 @@ from dublib.functions.data import StringifyFloat
 from ...system_objects.manager.parsers import ExportResults
 
 if TYPE_CHECKING:
+	from ....core.base.formats.base_format import BaseChapter, BaseTitle
 	from ....core.base.parsers.components.images_downloader import (
 		ImageDownloadingResult,
 	)
 	from ....utils.cacher import CachingResult
 	from ....utils.classificator import ClassificationResult
-	from ....utils.collector import CollectingResult
 	from . import Printer
 
-class Templates:
-	"""Расширенные шаблоны вывода."""
+#==========================================================================================#
+# >>>>> ВСПОМОГАТЕЛЬНЫЕ СТРУКТУРЫ ДАННЫХ <<<<< #
+#==========================================================================================#
+
+class _BaseTemplatesSection:
+	"""Базовая секция шаблонов."""
+
+	@property
+	def printer(self) -> "Printer":
+		"""Оператор вывода."""
+
+		return self.__Printer
 
 	def __init__(self, printer: "Printer"):
 		"""
-		Расширенные шаблоны вывода.
+		Базовая секция шаблонов.
 
 		:param printer: Оператор вывода.
 		:type printer: Printer
@@ -29,26 +39,32 @@ class Templates:
 
 		self.__Printer = printer
 
-	def caching_summary(self, result: "CachingResult"):
+class CacherTemplates(_BaseTemplatesSection):
+	"""Расширенные шаблоны вывода: оператор кэширования пар ID-алиас."""
+
+	def result(self, result: "CachingResult"):
 		"""
-		Шаблон вывода: результат кэширования пар ID-алиас тайтлов.
+		Шаблон вывода: оператор кэширования пар ID-алиас.
 
 		:param result: Результат кэширования.
 		:type result: CachingResult
 		"""
 
-		self.__Printer.emit(f"Total: {result.total_files}. Found in cache: {result.found_in_cache}. Cached: {result.cached}. Updated: {result.updated}.")
+		self.printer.emit(f"Total: {result.total_files}. Found in cache: {result.found_in_cache}. Cached: {result.cached}. Updated: {result.updated}.")
 
 		if result.errors:
-			self.__Printer.emit(FastStyler("Errors:").decorate.bold)
+			self.printer.emit(FastStyler("Errors:").decorate.bold)
 			for Error in result.errors:
-				self.__Printer.emit(" - " + FastStyler(Error + ".json").colorize.red)
+				self.printer.emit(" - " + FastStyler(Error + ".json").colorize.red)
 
-	def classification_result(self, result: "ClassificationResult"):
+class ClassificatorTemplates(_BaseTemplatesSection):
+	"""Расширенные шаблоны вывода: оператор обработки классификаторов."""
+
+	def result(self, result: "ClassificationResult"):
 		"""
-		Шаблон вывода: результат обработки классификатора.
+		Шаблон вывода: оператор обработки классификаторов.
 
-		:param result: Контейнер результата классификации.
+		:param result: Результат обработки классификатора.
 		:type result: ClassificationResult
 		"""
 
@@ -68,34 +84,28 @@ class Templates:
 			
 			self.__Printer.emit(FastStyler(f"{Key}:").decorate.bold, ResultDict[Key])
 
-	def config_installation_result(self, result: ExportResults):
+class CollectorTemplates(_BaseTemplatesSection):
+	"""Расширенные шаблоны вывода: сборщик алиасов."""
+
+	def collected(self, count: int):
 		"""
-		Шаблон сообщения: результат установки конфигурации.
+		Шаблон сообщения: коллекция собрана.
 
-		:param result: Результат установки конфигурации.
-		:type result: ExportResults
-		"""
-
-		match result:
-			case ExportResults.Missing: self.__Printer.emit("Preset missing. Skipped.")
-			case ExportResults.Installed: self.__Printer.emit("Config installed.")
-			case ExportResults.AlreadyExists: self.__Printer.emit("Config already exists. Skipped.")
-			case ExportResults.Overwtitten: self.__Printer.emit("Config overwritten.")
-			case ExportResults.Merged: self.__Printer.emit("Config merged with preset.")
-
-	def header(self, header: str):
-		"""
-		Шаблон сообщения: заголовок.
-
-		:param header: Текст заголовка.
-		:type header: str
+		:param count: Количество добавленных в коллекцию тайтлов.
+		:type count: int
 		"""
 
-		header = header.upper()
-		header = f"===== {header} ====="
-		self.__Printer.emit(header)
+		self.__Printer.emit(f"Slugs collected: {count}.")
 
-	def image_downloading_result(self, result: "ImageDownloadingResult", show_path: bool = True):
+	def start(self):
+		"""Шаблон вывода: начато сканирование локальных тайтлов."""
+
+		self.__Printer.emit("Collecting titles… ", flush = True)
+
+class ImagesTemplates(_BaseTemplatesSection):
+	"""Расширенные шаблоны вывода: обработка изображений."""
+
+	def downloaded(self, result: "ImageDownloadingResult", show_path: bool = True):
 		"""
 		Шаблон вывода: результат скачивания изображения.
 
@@ -112,20 +122,38 @@ class Templates:
 		
 		if show_path and result.path: self.__Printer.emit(f"Image path: \"{result.path}\".")
 
-	def local_titles_scanning_result(self, result: "CollectingResult"):
+	def start_downloading(self, filename: str, image_type: Literal["cover", "person", "slide"] | None = None, end_line: bool = False):
 		"""
-		Шаблон вывода: результат сканирования локальных тайтлов.
+		Шаблон вывода: скачивание изображения начато.
 
-		:param result: Результат сканирования каталогов тайтла.
-		:type result: LocalScanningResult
+		:param filename: Имя файла.
+		:type filename: str
+		:param image_type: Тип изображения.
+		:type image_type: Literal["cover", "person", "slide"] | None
+		:param end_line: bool
+		:type end_line: Указывает, нужно ли добавить в конец строки символ новой строки.
 		"""
 
-		self.__Printer.emit(f"Slugs from local files collected: {result.added}.")
+		ImageType: str = "" if image_type is None else f" {image_type}"
+		self.printer.emit(f"Downloading{ImageType} \"{filename}\"… ", end_line = end_line)
 
-	def local_titles_scanning_start(self):
-		"""Шаблон вывода: начато сканирование локальных тайтлов."""
+class ManagerTemplates(_BaseTemplatesSection):
+	"""Расширенные шаблоны вывода: системный менеджер."""
 
-		self.__Printer.emit("Scanning local titles… ", flush = True)
+	def exported(self, result: ExportResults):
+		"""
+		Шаблон вывода: результат экспорта настроек.
+
+		:param result: Результат экспорта настроек.
+		:type result: ExportResults
+		"""
+
+		match result:
+			case ExportResults.Missing: self.__Printer.emit("Preset missing. Skipped.")
+			case ExportResults.Installed: self.__Printer.emit("Config installed.")
+			case ExportResults.AlreadyExists: self.__Printer.emit("Config already exists. Skipped.")
+			case ExportResults.Overwtitten: self.__Printer.emit("Config overwritten.")
+			case ExportResults.Merged: self.__Printer.emit("Config merged with preset.")
 
 	def parsers_table(self, columns: dict[str, list[str]]):
 		"""
@@ -161,7 +189,50 @@ class Templates:
 		TableString = str(TableObject).strip()
 		self.__Printer.emit(TableString if TableString else "Parsers not installed.")
 
-	def parsing_progress(self, index: int, count: int):
+class ParsingTemplates(_BaseTemplatesSection):
+	"""Расширенные шаблоны вывода: процесс парсинга."""
+
+	def amending_end(self, amended_chapter_count: int):
+		"""
+		Шаблон сообщения: дополнение глав завершено.
+
+		:param amended_chapter_count: Количество дополненных глав.
+		:type amended_chapter_count: int
+		"""
+
+		Text = f"Amended chapters count: {amended_chapter_count}."
+		self.__Printer.emit(Text)
+	
+	def chapter_amended(self, chapter: "BaseChapter", message: str | None = None):
+		"""
+		Шаблон сообщения: глава дополнена.
+
+		:param chapter: Данные главы.
+		:type chapter: BaseChapter
+		:param message: Дополнительное необязательное сообщение о получении главы.
+		:type message: str | None
+		"""
+
+		if message is None: message = ""
+		if message: message = " " + message.strip()
+
+		ChapterNote = "Paid chapter" if chapter.is_paid else "Chapter"
+		Text = f"{ChapterNote} {chapter.id} amended.{message}"
+		self.__Printer.emit(Text)
+
+	def chapter_repaired(self, chapter: "BaseChapter"):
+		"""
+		Шаблон сообщения: глава восстановлена.
+
+		:param chapter: Данные главы.
+		:type chapter: BaseChapter
+		"""
+
+		ChapterNote = "Paid chapter" if chapter.is_paid else "Chapter"
+		Text = f"{ChapterNote} {chapter.id} repaired."
+		self.__Printer.emit(Text)
+
+	def progress(self, index: int, count: int):
 		"""
 		Шаблон вывода: прогресс парсинга тайтлов.
 
@@ -180,7 +251,26 @@ class Templates:
 		self.__Printer.progress_indicator.set_progress(Progress)
 		self.__Printer.emit(f"[{NumberString} / {count} | {ProgressString}] ", end_line = False, flush = True)
 
-	def parsing_summary(self, parsed: int, not_found: int, errors: int):
+	def start(self, title: "BaseTitle", index: int, titles_count: int):
+		"""
+		Шаблон сообщения: парсинг начат.
+
+		:param title: Данные тайтла.
+		:type title: BaseTitle
+		:param index: Индекс текущей операции парсинга.
+		:type index: int
+		:param titles_count: Количество тайтлов.
+		:type titles_count: int
+		"""
+
+		NoteID = f" (ID: {title.id})" if title.id else ""
+
+		if titles_count > 1:
+			self.progress(index, titles_count)
+
+		self.__Printer.emit(f"Parsing <b>{title.slug}</b>{NoteID}…")
+
+	def summary(self, parsed: int, not_found: int, errors: int):
 		"""
 		Шаблон вывода: результат парсинга.
 
@@ -192,10 +282,70 @@ class Templates:
 		:type errors: int
 		"""
 
-		self.header("SUMMARY")
+		self.__Printer.emit("===== SUMMARY =====")
 		Parsed = FastStyler(str(parsed)).colorize.green if parsed else FastStyler(str(parsed)).colorize.red
 		NotFound = FastStyler(str(not_found)).colorize.yellow if not_found else FastStyler(str(not_found)).colorize.green
 		Errors = FastStyler(str(errors)).colorize.red if errors else FastStyler(str(errors)).colorize.green
 
 		self.__Printer.progress_indicator.end()
 		self.__Printer.emit(f"Parsed: {Parsed}. Not found: {NotFound}. Errors: {Errors}.")
+
+#==========================================================================================#
+# >>>>> ОСНОВНОЙ КЛАСС <<<<< #
+#==========================================================================================#
+
+class Templates:
+	"""Расширенные шаблоны вывода."""
+	
+	@property
+	def cacher(self) -> CacherTemplates:
+		"""Расширенные шаблоны вывода: оператор кэширования пар ID-алиас."""
+
+		return self.__Cacher
+
+	@property
+	def classificator(self) -> ClassificatorTemplates:
+		"""Расширенные шаблоны вывода: оператор обработки классификаторов."""
+
+		return self.__Classificator
+
+	@property
+	def collector(self) -> CollectorTemplates:
+		"""Расширенные шаблоны вывода: сборщик алиасов."""
+
+		return self.__Collector
+
+	@property
+	def images(self) -> ImagesTemplates:
+		"""Расширенные шаблоны вывода: обработка изображений."""
+
+		return self.__Images
+	
+	@property
+	def manager(self) -> ManagerTemplates:
+		"""Расширенные шаблоны вывода: системный менеджер."""
+
+		return self.__Manager
+	
+	@property
+	def parsing(self) -> ParsingTemplates:
+		"""Расширенные шаблоны вывода: процесс парсинга."""
+
+		return self.__Parsing
+
+	def __init__(self, printer: "Printer"):
+		"""
+		Расширенные шаблоны вывода.
+
+		:param printer: Оператор вывода.
+		:type printer: Printer
+		"""
+
+		self.__Printer = printer
+
+		self.__Cacher = CacherTemplates(self.__Printer)
+		self.__Classificator = ClassificatorTemplates(self.__Printer)
+		self.__Collector = CollectorTemplates(self.__Printer)
+		self.__Images = ImagesTemplates(self.__Printer)
+		self.__Manager = ManagerTemplates(self.__Printer)
+		self.__Parsing = ParsingTemplates(self.__Printer)

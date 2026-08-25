@@ -122,7 +122,7 @@ class CommandProcessor(CommandProcessorTemplate[Parameters]):
 			force_mode = parameters.is_force_mode_enabled
 		)
 	
-		self.printer.templates.image_downloading_result(Result)
+		self.printer.templates.images.downloaded(Result)
 
 		return True
 	

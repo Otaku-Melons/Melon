@@ -94,6 +94,6 @@ class CommandProcessor(CommandProcessorTemplate[Parameters]):
 		self.system_objects.manager.packager.install_requirements(ParserOperator.requirements_path)
 
 		Result = ParserOperator.export_settings(parameters.config_strategy)
-		self.printer.templates.config_installation_result(Result)
+		self.printer.templates.manager.exported(Result)
 
 		return True

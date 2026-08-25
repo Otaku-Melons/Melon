@@ -28,8 +28,8 @@ if TYPE_CHECKING:
 class _ImagesTypes(Enum):
 	"""Типы скачиваемых изображений."""
 
-	Cover = "covers"
-	Person = "persons"
+	Cover = "cover"
+	Person = "person"
 
 #==========================================================================================#
 # >>>>> ОСНОВНОЙ КЛАСС <<<<< #
@@ -114,9 +114,7 @@ class BaseParser(ABC):
 		for Index in range(ImagesCount):
 			CurrentImageData = images_data[Index]
 
-			Type = image_type.name.lower()
-			self.portals.printer.emit(f"Downloading {Type} \"{CurrentImageData.filename}\"… ", end_line = False)
-			
+			self.portals.printer.templates.images.start_downloading(CurrentImageData.filename, image_type.value)
 			Result = self._SourceOperator.images_downloader.download_image(CurrentImageData.link, ImageDirecory, force_mode = force_mode)
 			Results.append(Result)
 			

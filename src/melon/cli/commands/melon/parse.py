@@ -200,9 +200,9 @@ class PasingTarget_Local(_BaseParserTarget):
 		"""
 
 		Collector = utils.Collector(self._SourceOperator)
-		self._SourceOperator.portals.printer.templates.local_titles_scanning_start()
+		self._SourceOperator.portals.printer.templates.collector.start()
 		ScanningResult = Collector.collect_local()
-		self._Printer.templates.local_titles_scanning_result(ScanningResult)
+		self._Printer.templates.collector.collected(ScanningResult.added)
 
 		return list(ScanningResult.slugs)
 
@@ -384,7 +384,7 @@ class CommandProcessor(CommandProcessorTemplate[Parameters]):
 				Parser = source_operator.launch_parser(ContentType)
 	
 			Title = Parser.init_empty_title(Slug)
-			self.printer.stages.parsing_start(Title, Index, TotalCount)
+			self.printer.templates.parsing.start(Title, Index, TotalCount)
 	
 			match self.__ParseAndCatchExceptions(parameters, Parser, Title):
 
@@ -560,6 +560,6 @@ class CommandProcessor(CommandProcessorTemplate[Parameters]):
 			return False
 
 		Statistics = self.__ParseSlugs(parameters, parameters.required_parser.source_operator, Slugs, StartIndex)
-		self.printer.templates.parsing_summary(Statistics.parsed, Statistics.not_found, Statistics.errors)
+		self.printer.templates.parsing.summary(Statistics.parsed, Statistics.not_found, Statistics.errors)
 
 		return True

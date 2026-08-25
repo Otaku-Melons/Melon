@@ -27,8 +27,10 @@ class BaseMangaParser(BaseParser):
 					Message: str | None = self._Amend(CurrentBranch, CurrentChapter)
 
 					if CurrentChapter.slides:
-						self.portals.printer.stages.chapter_amended(CurrentChapter, Message)
+						self.portals.printer.templates.parsing.chapter_amended(CurrentChapter, Message)
 						AmendedChaptersCount += 1
+
+		self.portals.printer.templates.parsing.amending_end(AmendedChaptersCount)
 
 	def init_empty_title(self, slug: str) -> Manga:
 		"""

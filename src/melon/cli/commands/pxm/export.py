@@ -85,6 +85,6 @@ class CommandProcessor(CommandProcessorTemplate[Parameters]):
 
 		ParserOperator = self.system_objects.manager.parsers.get_operator(parameters.parser)
 		Result = ParserOperator.export_settings(parameters.config_strategy)
-		self.printer.templates.config_installation_result(Result)
+		self.printer.templates.manager.exported(Result)
 		
 		return True

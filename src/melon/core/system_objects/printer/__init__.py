@@ -5,7 +5,6 @@ from dublib.cli.templates.bus import GenerateMessage, MessagesTypes
 from dublib.cli.text_styler import GetStyledTextFromHTML
 
 from .portals import Portals
-from .stages import Stages
 from .templates import Templates
 
 if TYPE_CHECKING:
@@ -27,12 +26,6 @@ class Printer:
 		"""Терминальный индикатор прогресса на основе OSC 9;4."""
 
 		return self.__ProgressIndicator
-
-	@property
-	def stages(self) -> Stages:
-		"""Сообщения этапов выполнения."""
-
-		return self.__Stages
 
 	@property
 	def system_objects(self) -> "SystemObjects":
@@ -61,7 +54,6 @@ class Printer:
 		self.__SystemObjects = system_objects
 
 		self.__ProgressIndicator = ProgressIndicator()
-		self.__Stages = Stages(self)
 		self.__Templates = Templates(self)
 
 	def emit(self, text: str, message_type: MessagesTypes | None = None, end_line: bool = True, flush: bool = False, parse_html: bool = True):

@@ -81,6 +81,6 @@ class CommandProcessor(CommandProcessorTemplate[Parameters]):
 			Cacher = utils.Cacher(CurrentParser.source_operator)
 	
 			Result = Cacher.cache_parser_output()
-			self.printer.templates.caching_summary(Result)
+			self.printer.templates.cacher.result(Result)
 
 		return True
