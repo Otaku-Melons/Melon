@@ -1,3 +1,5 @@
+import shutil
+import subprocess
 from typing import TYPE_CHECKING
 
 from .packager import Packager
@@ -47,3 +49,14 @@ class Manager:
 		self.__Packager = Packager(self)
 		self.__Parsers = Parsers(self)
 		self.__Repositories = Repositories(self)
+
+	def upgrade(self):
+		"""Устанавливает пакет Melon из удалённого репозитория."""
+
+		TempMelonDirectory = self.system_objects.options.TEMP_DIR.value / ".melon"
+		TempMelonDirectory.mkdir(exist_ok = True)
+
+		self.packager.clone(TempMelonDirectory, self.system_objects.options.REPOS_URL.value)
+		subprocess.run(("uv", "pip", "install", "melon"), check = True)
+		
+		shutil.rmtree(TempMelonDirectory)
