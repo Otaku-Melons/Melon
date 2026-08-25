@@ -85,6 +85,9 @@ class Portals:
 		Text = f"{text} Response code: {response.status_code}."
 		self.__Printer.error(Text)
 
+		if self.printer.system_objects.options.DEBUG and response.json:
+			self.printer.debug(str(response.json))
+
 		if exception:
 			raise exceptions.parsers.ParsingError(text)
 
