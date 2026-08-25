@@ -155,7 +155,7 @@ class Collector:
 
 	def add(self, slugs: str | Sequence[str]) -> int:
 		"""
-		Добавляет один или несколько алиасов в коллекцию.
+		Добавляет один или несколько алиасов в коллекцию и сохраняет её в файл.
 
 		:param slugs: Добавляемые алиасы.
 		:type slugs: str | Sequence[str]
@@ -168,6 +168,7 @@ class Collector:
 		UniqueSlugsSet = SlugsSet - CollectionSet
 		
 		self.__Collection = sorted(CollectionSet | SlugsSet)
+		self.save()
 
 		return len(UniqueSlugsSet)
 
