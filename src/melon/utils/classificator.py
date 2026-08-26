@@ -30,7 +30,7 @@ class ClassificationResult:
 	name: str | None = None
 	type: ClassificatorsTypes | None = None
 	delete: bool | None = None
-	rename: str | None = None
+	is_renamed: bool = False
 
 	def to_dict(self) -> dict:
 		"""
@@ -46,7 +46,7 @@ class ClassificationResult:
 			"name": self.name,
 			"type": self.type.value if self.type else None,
 			"delete": self.delete,
-			"rename": self.rename
+			"is_renamed": self.is_renamed
 		}
 
 @dataclass(frozen = True)
@@ -354,14 +354,17 @@ class Classificator:
 		
 		TargetProcedure: Procedure | None = ProceduresCache.get(target.lower() if ignore_case else target)
 
+		
+
 		if TargetProcedure:
+			NewName: str | None = TargetProcedure.rename if TargetProcedure.rename != target else None
 			return ClassificationResult(
 				input = target,
 				is_procedure_found = True,
-				name = TargetProcedure.name,
+				name = NewName or TargetProcedure.name,
 				type = TargetProcedure.type,
 				delete = TargetProcedure.delete,
-				rename = TargetProcedure.rename if TargetProcedure.rename != target else None
+				is_renamed = bool(NewName)
 			)
 		
 		return ClassificationResult(input = target, is_procedure_found = False)
