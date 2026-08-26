@@ -112,7 +112,7 @@ class CommandProcessor(CommandProcessorTemplate[Parameters]):
 			is_full_filename = bool(parameters.full_name),
 		)
 
-		self.printer.emit(f"Downloading \"{Filename}\"… ", end_line = False)
+		self.printer.templates.images.start_downloading(Filename)
 
 		Result = parameters.required_parser.source_operator.download_image(
 			url = parameters.link,

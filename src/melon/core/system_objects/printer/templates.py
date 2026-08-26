@@ -105,7 +105,7 @@ class CollectorTemplates(_BaseTemplatesSection):
 class ImagesTemplates(_BaseTemplatesSection):
 	"""Расширенные шаблоны вывода: обработка изображений."""
 
-	def downloaded(self, result: "ImageDownloadingResult", show_path: bool = True):
+	def downloaded(self, result: "ImageDownloadingResult", show_path: bool = True, done: bool = False):
 		"""
 		Шаблон вывода: результат скачивания изображения.
 
@@ -113,14 +113,19 @@ class ImagesTemplates(_BaseTemplatesSection):
 		:type result: ImageDownloadingResult
 		:param show_path: Указывает, выводить ли путь к изображению.
 		:type show_path: bool
+		:param done: Указывает, выводить ли сообщение в случае успешного холодного скачивания.
+		:type done: bool
 		"""
 
-		if result.error_message: self.printer.error(result.error_message)
+		if result.error_message:
+			self.printer.error(result.error_message)
+			return
+
 		elif result.is_already_exists and not result.is_downloaded: self.printer.emit("Image already exists.")
 		elif result.is_already_exists and result.is_downloaded: self.printer.emit("Image overwritten.")
-		else: self.printer.emit("Done.")
+		elif done: self.printer.emit("Done.")
 		
-		if show_path and result.path: self.printer.emit(f"Image path: \"{result.path}\".")
+		if show_path: self.printer.emit(f"Image path: \"{result.path}\".")
 
 	def start_downloading(self, filename: str, image_type: Literal["cover", "person", "slide"] | None = None, end_line: bool = False):
 		"""
