@@ -1,7 +1,6 @@
 from abc import ABC, abstractmethod
-from enum import Enum
 from pathlib import Path
-from typing import TYPE_CHECKING, Any, Sequence, cast
+from typing import TYPE_CHECKING, Any, Literal, Sequence, cast
 
 from dublib.functions.decorators import run_before_method
 
@@ -20,20 +19,6 @@ if TYPE_CHECKING:
 	from ....core.base.parsers.components import ParserManifest, ParserSettings
 	from ....core.base.source_operator import BaseSourceOperator
 	from ....core.system_objects.printer import Portals
-
-#==========================================================================================#
-# >>>>> ПЕРЕЧИСЛЕНИЯ <<<<< #
-#==========================================================================================#
-
-class _ImagesTypes(Enum):
-	"""Типы скачиваемых изображений."""
-
-	Cover = "cover"
-	Person = "person"
-
-#==========================================================================================#
-# >>>>> ОСНОВНОЙ КЛАСС <<<<< #
-#==========================================================================================#
 
 class BaseParser(ABC):
 	"""Базовый парсер."""
@@ -103,10 +88,22 @@ class BaseParser(ABC):
 	#==========================================================================================#
 
 	@run_before_method("_RequireTitle")
-	def _DownloadImages(self, images_data: Sequence[ImageData], image_type: _ImagesTypes, force_mode: bool) -> list[ImageDownloadingResult]:
+	def _DownloadImages(self, images_data: Sequence[ImageData], image_type: Literal["cover", "person"], force_mode: bool) -> list[ImageDownloadingResult]:
+		"""
+		Скачивает изображения тайтла определённого типа.
+
+		:param images_data: Данные изображений.
+		:type images_data: Sequence[ImageData]
+		:param image_type: Тип изображения.
+		:type image_type: Literal["cover", "person"]
+		:param force_mode: Указывает, перезаписывать ли существующие файлы изображений.
+		:type force_mode: bool
+		:return: Список результатов скачивания изображений.
+		:rtype: list[ImageDownloadingResult]
+		"""
 
 		self._Title = cast(BaseTitle, self._Title)
-		ImageDirecory: Path = self.settings.directories.images / self._Title.used_filename / image_type.value
+		ImageDirecory: Path = self.settings.directories.images / self._Title.used_filename / image_type
 		ImageDirecory.mkdir(parents = True, exist_ok = True)
 		Results: list = []
 		ImagesCount: int = len(images_data)
@@ -114,7 +111,7 @@ class BaseParser(ABC):
 		for Index in range(ImagesCount):
 			CurrentImageData = images_data[Index]
 
-			self.portals.printer.templates.images.start_downloading(CurrentImageData.filename, image_type.value)
+			self.portals.printer.templates.images.start_downloading(CurrentImageData.filename, image_type)
 			Result = self._SourceOperator.images_downloader.download_image(CurrentImageData.link, ImageDirecory, force_mode = force_mode)
 			Results.append(Result)
 			
@@ -211,13 +208,13 @@ class BaseParser(ABC):
 
 		self._Title = cast(BaseTitle, self._Title)
 		
-		Results = self._DownloadImages(self._Title.covers, _ImagesTypes.Cover, force_mode)
+		Results = self._DownloadImages(self._Title.covers, "cover", force_mode)
 
 		PersonsImages: list[ImageData] = []
 		for CurrentPerson in self._Title.perons:
 			PersonsImages += list(CurrentPerson.images)
 
-		Results += self._DownloadImages(PersonsImages, _ImagesTypes.Person, force_mode)
+		Results += self._DownloadImages(PersonsImages, "person", force_mode)
 
 		return tuple(Results)
 
