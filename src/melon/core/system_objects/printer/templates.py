@@ -27,7 +27,7 @@ class _BaseTemplatesSection:
 	def printer(self) -> "Printer":
 		"""Оператор вывода."""
 
-		return self.__Printer
+		return self._Printer
 
 	def __init__(self, printer: "Printer"):
 		"""
@@ -37,7 +37,7 @@ class _BaseTemplatesSection:
 		:type printer: Printer
 		"""
 
-		self.__Printer = printer
+		self._Printer = printer
 
 class CacherTemplates(_BaseTemplatesSection):
 	"""Расширенные шаблоны вывода: оператор кэширования пар ID-алиас."""
@@ -74,15 +74,15 @@ class ClassificatorTemplates(_BaseTemplatesSection):
 
 			if Key == "is_procedure_found":
 				if result.is_procedure_found:
-					self.__Printer.emit(FastStyler("is_procedure_found: ").decorate.bold, end_line = False)
-					self.__Printer.emit(FastStyler("True").colorize.green)
+					self.printer.emit(FastStyler("is_procedure_found: ").decorate.bold, end_line = False)
+					self.printer.emit(FastStyler("True").colorize.green)
 					continue
 				else:
-					self.__Printer.emit(FastStyler("is_procedure_found:").decorate.bold, end_line = False)
-					self.__Printer.emit(FastStyler("False").colorize.red)
+					self.printer.emit(FastStyler("is_procedure_found:").decorate.bold, end_line = False)
+					self.printer.emit(FastStyler("False").colorize.red)
 					return
 			
-			self.__Printer.emit(FastStyler(f"{Key}:").decorate.bold, ResultDict[Key])
+			self.printer.emit(FastStyler(f"{Key}:").decorate.bold, ResultDict[Key])
 
 class CollectorTemplates(_BaseTemplatesSection):
 	"""Расширенные шаблоны вывода: сборщик алиасов."""
@@ -95,12 +95,12 @@ class CollectorTemplates(_BaseTemplatesSection):
 		:type count: int
 		"""
 
-		self.__Printer.emit(f"Slugs collected: {count}.")
+		self.printer.emit(f"Slugs collected: {count}.")
 
 	def start(self):
 		"""Шаблон вывода: начато сканирование локальных тайтлов."""
 
-		self.__Printer.emit("Collecting titles… ", flush = True)
+		self.printer.emit("Collecting titles… ", flush = True)
 
 class ImagesTemplates(_BaseTemplatesSection):
 	"""Расширенные шаблоны вывода: обработка изображений."""
@@ -115,12 +115,12 @@ class ImagesTemplates(_BaseTemplatesSection):
 		:type show_path: bool
 		"""
 
-		if result.error_message: self.__Printer.error(result.error_message)
-		elif result.is_already_exists and not result.is_downloaded: self.__Printer.emit("Image already exists.")
-		elif result.is_already_exists and result.is_downloaded: self.__Printer.emit("Image overwritten.")
-		else: self.__Printer.emit("Done.")
+		if result.error_message: self.printer.error(result.error_message)
+		elif result.is_already_exists and not result.is_downloaded: self.printer.emit("Image already exists.")
+		elif result.is_already_exists and result.is_downloaded: self.printer.emit("Image overwritten.")
+		else: self.printer.emit("Done.")
 		
-		if show_path and result.path: self.__Printer.emit(f"Image path: \"{result.path}\".")
+		if show_path and result.path: self.printer.emit(f"Image path: \"{result.path}\".")
 
 	def start_downloading(self, filename: str, image_type: Literal["cover", "person", "slide"] | None = None, end_line: bool = False):
 		"""
@@ -149,11 +149,11 @@ class ManagerTemplates(_BaseTemplatesSection):
 		"""
 
 		match result:
-			case ExportResults.Missing: self.__Printer.emit("Preset missing. Skipped.")
-			case ExportResults.Installed: self.__Printer.emit("Config installed.")
-			case ExportResults.AlreadyExists: self.__Printer.emit("Config already exists. Skipped.")
-			case ExportResults.Overwtitten: self.__Printer.emit("Config overwritten.")
-			case ExportResults.Merged: self.__Printer.emit("Config merged with preset.")
+			case ExportResults.Missing: self.printer.emit("Preset missing. Skipped.")
+			case ExportResults.Installed: self.printer.emit("Config installed.")
+			case ExportResults.AlreadyExists: self.printer.emit("Config already exists. Skipped.")
+			case ExportResults.Overwtitten: self.printer.emit("Config overwritten.")
+			case ExportResults.Merged: self.printer.emit("Config merged with preset.")
 
 	def parsers_table(self, columns: dict[str, list[str]]):
 		"""
@@ -187,7 +187,7 @@ class ManagerTemplates(_BaseTemplatesSection):
 		TableObject.align = "l"
 		TableObject.sortby = FastStyler("NAME").decorate.bold
 		TableString = str(TableObject).strip()
-		self.__Printer.emit(TableString if TableString else "Parsers not installed.")
+		self.printer.emit(TableString if TableString else "Parsers not installed.")
 
 class ParsingTemplates(_BaseTemplatesSection):
 	"""Расширенные шаблоны вывода: процесс парсинга."""
@@ -201,7 +201,7 @@ class ParsingTemplates(_BaseTemplatesSection):
 		"""
 
 		Text = f"Amended chapters count: {amended_chapter_count}."
-		self.__Printer.emit(Text)
+		self.printer.emit(Text)
 	
 	def chapter_amended(self, chapter: "BaseChapter", message: str | None = None):
 		"""
@@ -218,7 +218,7 @@ class ParsingTemplates(_BaseTemplatesSection):
 
 		ChapterNote = "Paid chapter" if chapter.is_paid else "Chapter"
 		Text = f"{ChapterNote} {chapter.id} amended.{message}"
-		self.__Printer.emit(Text)
+		self.printer.emit(Text)
 
 	def chapter_repaired(self, chapter: "BaseChapter"):
 		"""
@@ -230,7 +230,7 @@ class ParsingTemplates(_BaseTemplatesSection):
 
 		ChapterNote = "Paid chapter" if chapter.is_paid else "Chapter"
 		Text = f"{ChapterNote} {chapter.id} repaired."
-		self.__Printer.emit(Text)
+		self.printer.emit(Text)
 
 	def progress(self, index: int, count: int):
 		"""
@@ -248,8 +248,8 @@ class ParsingTemplates(_BaseTemplatesSection):
 		ProgressString = StringifyFloat(Progress)
 		ProgressString = FastStyler(ProgressString + "%").colorize.cyan
 
-		self.__Printer.progress_indicator.set_progress(Progress)
-		self.__Printer.emit(f"[{NumberString} / {count} | {ProgressString}] ", end_line = False, flush = True)
+		self.printer.progress_indicator.set_progress(Progress)
+		self.printer.emit(f"[{NumberString} / {count} | {ProgressString}] ", end_line = False, flush = True)
 
 	def start(self, title: "BaseTitle", index: int, titles_count: int):
 		"""
@@ -268,7 +268,7 @@ class ParsingTemplates(_BaseTemplatesSection):
 		if titles_count > 1:
 			self.progress(index, titles_count)
 
-		self.__Printer.emit(f"Parsing <b>{title.slug}</b>{NoteID}…")
+		self.printer.emit(f"Parsing <b>{title.slug}</b>{NoteID}…")
 
 	def summary(self, parsed: int, not_found: int, errors: int):
 		"""
@@ -282,13 +282,13 @@ class ParsingTemplates(_BaseTemplatesSection):
 		:type errors: int
 		"""
 
-		self.__Printer.emit("===== SUMMARY =====")
+		self.printer.emit("===== SUMMARY =====")
 		Parsed = FastStyler(str(parsed)).colorize.green if parsed else FastStyler(str(parsed)).colorize.red
 		NotFound = FastStyler(str(not_found)).colorize.yellow if not_found else FastStyler(str(not_found)).colorize.green
 		Errors = FastStyler(str(errors)).colorize.red if errors else FastStyler(str(errors)).colorize.green
 
-		self.__Printer.progress_indicator.end()
-		self.__Printer.emit(f"Parsed: {Parsed}. Not found: {NotFound}. Errors: {Errors}.")
+		self.printer.progress_indicator.end()
+		self.printer.emit(f"Parsed: {Parsed}. Not found: {NotFound}. Errors: {Errors}.")
 
 #==========================================================================================#
 # >>>>> ОСНОВНОЙ КЛАСС <<<<< #
