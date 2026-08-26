@@ -1,4 +1,3 @@
-import shutil
 from dataclasses import dataclass
 from io import BytesIO
 from os import PathLike
@@ -27,7 +26,6 @@ class ImageDownloadingResult:
 
 	is_already_exists: bool
 	is_downloaded: bool
-	is_replaced_by_stub: bool
 	resolution: ImageResolution | None
 	path: Path | None
 	error_message: str | None
@@ -249,7 +247,6 @@ class ImagesDownloader:
 		ImagePath = ImageDirectory / ImageFilename
 
 		IsAlreadyExists: bool = ImagePath.exists()
-		IsReplacedByStub: bool = False
 		Resolution: ImageResolution | None = None
 		IsDownloaded: bool = False
 		ErrorMessage: str | None = None
@@ -271,13 +268,7 @@ class ImagesDownloader:
 
 			else: ErrorMessage = f"Response code: {Response.status_code}."
 
-		#---> Замена изображения заглушкой.
-		#==========================================================================================#
-		if all((not IsDownloaded, not IsAlreadyExists)) and self.__ParserSettings.common.bad_image_stub:
-			shutil.copy2(self.__ParserSettings.common.bad_image_stub, ImagePath)
-			IsReplacedByStub = True
-
-		return ImageDownloadingResult(IsAlreadyExists, IsDownloaded, IsReplacedByStub, Resolution, ImagePath, ErrorMessage)
+		return ImageDownloadingResult(IsAlreadyExists, IsDownloaded, Resolution, ImagePath, ErrorMessage)
 
 	def get_image_resolution(self, data: bytes) -> ImageResolution | None:
 		"""
@@ -363,9 +354,6 @@ class ImagesDownloader:
 
 		elif result.is_already_exists:
 			Portals.printer.emit("Already exists.")
-
-		elif result.is_replaced_by_stub:
-			Portals.printer.emit("Replaced by stub.")
 
 		else:
 			if result.error_message: Portals.printer.error(result.error_message)

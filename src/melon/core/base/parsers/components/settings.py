@@ -23,7 +23,6 @@ _BASE_SETTINGS = MappingProxyType({
 		"titles": None
 	},
 	"common": {
-		"bad_image_stub": None,
 		"pretty": True,
 		"use_id_as_filename": False,
 		"sizing_images": True,
@@ -305,14 +304,6 @@ class Directories:
 class Common:
 	"""Базовые настройки."""
 
-	@property
-	def bad_image_stub(self) -> Path | None:
-		"""Путь к заглушке плохого изображения."""
-
-		StubPath: Path | None = Path(self.__CommonSettings["bad_image_stub"]) if self.__CommonSettings["bad_image_stub"] else None
-
-		return StubPath
-	
 	@property
 	def delay(self) -> float:
 		"""Интервал ожидания между последовательными запросами."""

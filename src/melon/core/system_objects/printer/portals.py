@@ -190,4 +190,4 @@ class Portals:
 	def covers_unstubbed(self):
 		"""Портал сообщения: обложки отфильтрованы, так как являются заглушками."""
 
-		self.__Printer.emit("Stubs detected. Covers downloading skipped.")
+		self.__Printer.emit("Stubs detected. Covers data cleared and downloading skipped.")

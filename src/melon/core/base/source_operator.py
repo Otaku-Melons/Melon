@@ -295,7 +295,6 @@ class BaseSourceOperator:
 			return ImageDownloadingResult(
 				is_already_exists = True,
 				is_downloaded = False,
-				is_replaced_by_stub = False,
 				resolution = None,
 				path = ImageTargetPath,
 				error_message = None
@@ -313,7 +312,6 @@ class BaseSourceOperator:
 		return ImageDownloadingResult(
 			is_already_exists = False,
 			is_downloaded = True,
-			is_replaced_by_stub = Result.is_replaced_by_stub,
 			resolution = Result.resolution,
 			path = ImageTargetPath,
 			error_message = None
