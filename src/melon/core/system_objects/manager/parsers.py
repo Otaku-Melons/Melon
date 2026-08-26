@@ -170,6 +170,15 @@ class ParserOperator:
 			remote = self.__Parsers.manager.repositories.get(self.__Name, exception = True)
 		)
 
+		self.install_requirements()
+
+	def install_requirements(self):
+		"""Устанавливает зависимости, если существует файл _requirements.txt_."""
+
+		RequirementsFile = self.path / "requirements.txt"
+		if RequirementsFile.exists():
+			self.__Parsers.manager.packager.install_requirements(RequirementsFile)
+
 	@run_before_method("_RequireInstallation")
 	def launch(self) -> "BaseSourceOperator":
 		"""
@@ -251,8 +260,7 @@ class ParserOperator:
 			force_mode = force_mode
 		)
 
-		if IsStateChanged and requirements:
-			self.__Parsers.manager.packager.install_requirements(self.path / "requirements.txt")
+		if IsStateChanged and requirements: self.install_requirements()
 
 		return IsStateChanged
 
