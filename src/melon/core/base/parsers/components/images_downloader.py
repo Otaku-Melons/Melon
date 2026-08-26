@@ -1,3 +1,4 @@
+import shutil
 from dataclasses import dataclass
 from io import BytesIO
 from os import PathLike
@@ -333,12 +334,10 @@ class ImagesDownloader:
 		if not ImageOriginalPath.exists():
 			raise FileNotFoundError(ImageOriginalPath)
 
-		if ImageTargetPath.exists():
-			if force_mode:
-				ImageTargetPath.unlink()
-				ImageOriginalPath.replace(ImageTargetPath)
-		else:
-			ImageOriginalPath.replace(ImageTargetPath)
+		if ImageTargetPath.exists() and force_mode:
+			ImageTargetPath.unlink()
+
+		shutil.move(ImageOriginalPath, ImageTargetPath)
 
 		if ImageOriginalPath.exists():
 			ImageOriginalPath.unlink()
