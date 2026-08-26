@@ -127,7 +127,7 @@ class ImagesTemplates(_BaseTemplatesSection):
 		
 		if show_path: self.printer.emit(f"Image path: \"{result.path}\".")
 
-	def start_downloading(self, filename: str, image_type: Literal["cover", "person", "slide"] | None = None, end_line: bool = False):
+	def start_downloading(self, filename: str, image_type: Literal["cover", "person", "slide"] | None = None, end_line: bool = True):
 		"""
 		Шаблон вывода: скачивание изображения начато.
 

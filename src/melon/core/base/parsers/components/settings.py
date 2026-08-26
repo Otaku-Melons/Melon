@@ -25,9 +25,13 @@ _BASE_SETTINGS = MappingProxyType({
 	"common": {
 		"pretty": True,
 		"use_id_as_filename": False,
-		"sizing_images": True,
+		"sizing_images": True
+	},
+	"network": {
+		"delay": 1.0,
 		"retries": 1,
-		"delay": 1.0
+		"proxies": [],
+		"images_mirrors": {}
 	},
 	"filters": {
 		"text_regexs": [],
@@ -38,7 +42,6 @@ _BASE_SETTINGS = MappingProxyType({
 		"image_max_width": None,
 		"image_min_size": 100
 	},
-	"proxies": [],
 	"custom": {},
 	"extensions": {}
 })
@@ -305,22 +308,10 @@ class Common:
 	"""Базовые настройки."""
 
 	@property
-	def delay(self) -> float:
-		"""Интервал ожидания между последовательными запросами."""
-
-		return self.__CommonSettings["delay"]
-
-	@property
 	def pretty(self) -> bool:
 		"""Состояние: включено ли улучшение качества контента."""
 
 		return self.__CommonSettings["pretty"]
-	
-	@property
-	def retries(self) -> int:
-		"""Количество повторов запроса при неудачном выполнении."""
-
-		return self.__CommonSettings["retries"]
 	
 	@property
 	def sizing_images(self) -> bool:
@@ -343,6 +334,72 @@ class Common:
 		"""
 
 		self.__CommonSettings: dict[str, Any] = settings
+
+class Network:
+	"""Настройки сетевых подключений."""
+
+	#==========================================================================================#
+	# >>>>> СВОЙСТВА <<<<< #
+	#==========================================================================================#
+
+	@property
+	def delay(self) -> float:
+		"""Интервал ожидания между последовательными запросами."""
+
+		return self.__NetworkSettings["delay"]
+	
+	@property
+	def images_mirrors(self) -> dict[str, str]:
+		"""Словарь заменяемых доменов, используемый при скачивании изображений."""
+
+		return self.__NetworkSettings["images_mirrors"]
+
+	@property
+	def proxies(self) -> tuple[Proxy, ...]:
+		"""Набор прокси."""
+
+		return self.__Proxies
+
+	@property
+	def retries(self) -> int:
+		"""Количество повторов запроса при неудачном выполнении."""
+
+		return self.__NetworkSettings["retries"]
+
+	#==========================================================================================#
+	# >>>>> ПРИВАТНЫЕ МЕТОДЫ <<<<< #
+	#==========================================================================================#
+
+	def __ParseProxies(self) -> tuple[Proxy, ...]:
+		"""
+		Парсит строковые представления прокси.
+
+		:return: Набор объектов данных прокси.
+		:rtype: tuple[Proxy, ...]
+		"""
+
+		Proxies = []
+
+		for String in self.__NetworkSettings["proxies"]:
+			Proxies.append(Proxy().parse(String))
+			
+		return tuple(Proxies)
+
+	#==========================================================================================#
+	# >>>>> ПУБЛИЧНЫЕ МЕТОДЫ <<<<< #
+	#==========================================================================================#
+
+	def __init__(self, settings: dict[str, Any]):
+		"""
+		Настройки сетевых подключений.
+
+		:param settings: Словарь базовых настроек.
+		:type settings: dict
+		"""
+
+		self.__NetworkSettings: dict[str, Any] = settings
+
+		self.__Proxies: tuple[Proxy, ...] = self.__ParseProxies()
 
 class Filters:
 	"""Фильтры контента."""
@@ -460,6 +517,12 @@ class ParserSettings:
 		return self.__Common
 
 	@property
+	def custom(self) -> Custom:
+		"""Собственные настройки парсера."""
+
+		return self.__Custom
+	
+	@property
 	def directories(self) -> Directories:
 		"""Пути к директориям."""
 
@@ -478,36 +541,14 @@ class ParserSettings:
 		return self.__Filters
 
 	@property
-	def custom(self) -> Custom:
-		"""Собственные настройки парсера."""
+	def network(self) -> Network:
+		"""Настройки сетевых подключений."""
 
-		return self.__Custom
-	
-	@property
-	def proxies(self) -> tuple[Proxy, ...]:
-		"""Набор прокси."""
-
-		return self.__Proxies
+		return self.__Network
 
 	#==========================================================================================#
 	# >>>>> ПРИВАТНЫЕ МЕТОДЫ <<<<< #
 	#==========================================================================================#
-
-	def __ParseProxies(self) -> tuple[Proxy, ...]:
-		"""
-		Парсит строковые представления прокси.
-
-		:return: Набор объектов данных прокси.
-		:rtype: tuple[Proxy, ...]
-		"""
-
-		Proxies = []
-
-		if "proxies" in self.__Settings:
-			for String in self.__Settings["proxies"]:
-				Proxies.append(Proxy().parse(String))
-			
-		return tuple(Proxies)
 
 	def __ReadSettings(self) -> dict:
 		"""
@@ -551,8 +592,8 @@ class ParserSettings:
 
 		self.__Directories = Directories(self.__SystemObjects, self.__ParserName, self.__Settings.get("directories", {}))
 		self.__Common: Common = Common(self.__Settings.get("common", {}))
+		self.__Network: Network = Network(self.__Settings.get("network", {}))
 		self.__Filters = Filters(self.__Settings)
-		self.__Proxies: tuple[Proxy, ...] = self.__ParseProxies()
 		self.__Custom: Custom = Custom(self.__Settings.get("custom", {}))
 		self.__Extensions: Extensions = Extensions(self.__Settings.get("extensions", {}))
 

@@ -3,6 +3,7 @@ from io import BytesIO
 from os import PathLike
 from pathlib import Path
 from typing import TYPE_CHECKING, cast
+from urllib.parse import urlparse, urlunparse
 
 from PIL import Image
 
@@ -251,6 +252,12 @@ class ImagesDownloader:
 		IsDownloaded: bool = False
 		ErrorMessage: str | None = None
 
+		#---> Подстановка доменов зеркал.
+		#==========================================================================================#
+		ImagesMirrors: dict[str, str] = self.__SourceOperator.settings.network.images_mirrors
+		if ImagesMirrors:
+			url = self.replace_url_domain(url, ImagesMirrors)
+
 		#---> Скачивание файла.
 		#==========================================================================================#
 		if not IsAlreadyExists or force_mode:
@@ -358,6 +365,29 @@ class ImagesDownloader:
 		else:
 			if result.error_message: Portals.printer.error(result.error_message)
 			else: Portals.printer.error("Unknown error.")
+
+	def replace_url_domain(self, url: str, rules: dict[str, str] | None = None) -> str:
+		"""
+		Заменяет домен в ссылке по набору правил.
+
+		:param url: Ссылка.
+		:type url: str
+		:param rules: Словарь правил, где ключ – заменяемый домен, а значение – подставляемый.
+		:type rules: dict[str, str] | None
+		:return: Изменённая ссылка или оригинальная, если правила не сработали.
+		:rtype: str
+		"""
+
+		if rules is None:
+			rules = self.__SourceOperator.settings.network.images_mirrors
+
+		ParsedURL = urlparse(url)
+		Domain: str = ParsedURL.netloc
+
+		if Domain in rules:
+			ParsedURL = ParsedURL._replace(netloc = rules[Domain])
+
+		return urlunparse(ParsedURL)
 
 	def set_requestor(self, requestor: "WebRequestor | None"):
 		"""
