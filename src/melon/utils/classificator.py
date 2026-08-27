@@ -44,7 +44,7 @@ class ClassificationResult:
 			"input": self.input,
 			"is_procedure_found": self.is_procedure_found,
 			"name": self.name,
-			"type": self.type.value if self.type else None,
+			"type": self.type.name.lower() if self.type else None,
 			"delete": self.delete,
 			"is_renamed": self.is_renamed
 		}

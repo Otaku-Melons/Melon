@@ -111,14 +111,14 @@ class BaseParser(ABC):
 		for Index in range(ImagesCount):
 			CurrentImageData = images_data[Index]
 
-			self.portals.printer.templates.images.start_downloading(CurrentImageData.filename, image_type)
+			Future = self.portals.printer.templates.images.start_downloading(CurrentImageData.filename, image_type)
 			Result = self._SourceOperator.images_downloader.download_image(CurrentImageData.link, ImageDirecory, force_mode = force_mode)
 			Results.append(Result)
 			
 			if Result.resolution:
 				CurrentImageData.set_resolution(Result.resolution)
 
-			self._SourceOperator.images_downloader.print_result(Result)
+			Future.result(Result)
 
 			if Result.is_already_exists and not Result.is_downloaded:
 				continue

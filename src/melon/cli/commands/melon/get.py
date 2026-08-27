@@ -112,7 +112,7 @@ class CommandProcessor(CommandProcessorTemplate[Parameters]):
 			is_full_filename = bool(parameters.full_name),
 		)
 
-		self.printer.templates.images.start_downloading(Filename)
+		Future = self.printer.templates.images.start_downloading(Filename)
 
 		Result = parameters.required_parser.source_operator.download_image(
 			url = parameters.link,
@@ -122,7 +122,7 @@ class CommandProcessor(CommandProcessorTemplate[Parameters]):
 			force_mode = parameters.is_force_mode_enabled
 		)
 	
-		self.printer.templates.images.downloaded(Result)
+		Future.result(Result)
 
 		return True
 	

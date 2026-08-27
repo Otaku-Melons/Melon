@@ -339,32 +339,8 @@ class ImagesDownloader:
 
 		shutil.move(ImageOriginalPath, ImageTargetPath)
 
-		if ImageOriginalPath.exists():
-			ImageOriginalPath.unlink()
-
 		return ImageTargetPath
 	
-	def print_result(self, result: ImageDownloadingResult):
-		"""
-		Выводит в терминал текстовое представление результата скачивания изображения.
-
-		:param result: Результат скачивания изображения.
-		:type result: ImageDownloadingResult
-		"""
-
-		Portals = self.__SourceOperator.portals
-
-		if result.is_downloaded:
-			if result.is_already_exists: Portals.printer.emit("Overwritten.")
-			else: Portals.printer.emit("Done.")
-
-		elif result.is_already_exists:
-			Portals.printer.emit("Already exists.")
-
-		else:
-			if result.error_message: Portals.printer.error(result.error_message)
-			else: Portals.printer.error("Unknown error.")
-
 	def replace_url_domain(self, url: str, rules: dict[str, str] | None = None) -> str:
 		"""
 		Заменяет домен в ссылке по набору правил.
