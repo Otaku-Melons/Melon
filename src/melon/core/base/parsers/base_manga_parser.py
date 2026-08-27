@@ -1,4 +1,4 @@
-from typing import cast
+from typing import TYPE_CHECKING, cast
 
 from dublib.functions.decorators import run_before_method
 
@@ -6,7 +6,10 @@ from ....core import exceptions
 from ....core.base.formats.manga import Chapter, Manga
 from .base_parser import BaseParser
 
-class BaseMangaParser(BaseParser):
+if TYPE_CHECKING:
+	from ..source_operator import BaseSourceOperator
+
+class BaseMangaParser[SO: "BaseSourceOperator"](BaseParser[SO]):
 	"""Базовый парсер манги."""
 	
 	@run_before_method("_RequireTitle")

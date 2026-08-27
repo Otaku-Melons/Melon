@@ -20,7 +20,7 @@ class ImageDownloadingFuture(_BaseTemplatesSection):
 
 		self.__Timer = Timer(start = True)
 
-	def result(self, result: "ImageDownloadingResult", show_path: bool = True):
+	def result(self, result: "ImageDownloadingResult", show_path: bool = False):
 		"""
 		Шаблон вывода: результат скачивания изображения.
 

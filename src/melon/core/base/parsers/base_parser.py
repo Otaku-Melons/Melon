@@ -20,7 +20,7 @@ if TYPE_CHECKING:
 	from ....core.base.source_operator import BaseSourceOperator
 	from ....core.system_objects.printer import Portals
 
-class BaseParser(ABC):
+class BaseParser[SO: "BaseSourceOperator"](ABC):
 	"""Базовый парсер."""
 
 	_Title: BaseTitle | None
@@ -66,7 +66,7 @@ class BaseParser(ABC):
 		return self._SourceOperator.settings
 	
 	@property
-	def source_operator(self) -> "BaseSourceOperator":
+	def source_operator(self) -> SO:
 		"""Оператор источника."""
 
 		return self._SourceOperator
@@ -174,7 +174,7 @@ class BaseParser(ABC):
 	# >>>>> ПУБЛИЧНЫЕ МЕТОДЫ <<<<< #
 	#==========================================================================================#
 
-	def __init__(self, source_operator: "BaseSourceOperator"):
+	def __init__(self, source_operator: SO):
 		"""
 		Базовый парсер.
 
