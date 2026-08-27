@@ -8,8 +8,9 @@ from .base_parser import BaseParser
 
 if TYPE_CHECKING:
 	from ..source_operator import BaseSourceOperator
+	from .components.settings import CustomSettingsTemplate
 
-class BaseMangaParser[SO: "BaseSourceOperator"](BaseParser[SO]):
+class BaseMangaParser[SO: "BaseSourceOperator", CSM: "CustomSettingsTemplate"](BaseParser[SO, CSM]):
 	"""Базовый парсер манги."""
 	
 	@run_before_method("_RequireTitle")

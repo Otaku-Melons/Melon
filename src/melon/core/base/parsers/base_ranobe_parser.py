@@ -8,8 +8,9 @@ from .base_parser import BaseParser
 
 if TYPE_CHECKING:
 	from ..source_operator import BaseSourceOperator
+	from .components.settings import CustomSettingsTemplate
 
-class BaseRanobeParser[SO: "BaseSourceOperator"](BaseParser[SO]):
+class BaseRanobeParser[SO: "BaseSourceOperator", CSM: "CustomSettingsTemplate"](BaseParser[SO, CSM]):
 	"""Базовый парсер ранобэ."""
 	
 	@run_before_method("_RequireTitle")

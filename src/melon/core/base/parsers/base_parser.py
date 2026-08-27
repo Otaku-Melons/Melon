@@ -16,11 +16,15 @@ from .components.words_dictionary import WordsDictionary, presets
 if TYPE_CHECKING:
 	from dublib.web_requestor import WebRequestor
 
-	from ....core.base.parsers.components import ParserManifest, ParserSettings
+	from ....core.base.parsers.components import ParserManifest
+	from ....core.base.parsers.components.settings import (
+		CustomSettingsTemplate,
+		ParserSettings,
+	)
 	from ....core.base.source_operator import BaseSourceOperator
 	from ....core.system_objects.printer import Portals
 
-class BaseParser[SO: "BaseSourceOperator"](ABC):
+class BaseParser[SO: "BaseSourceOperator", CSM: "CustomSettingsTemplate"](ABC):
 	"""Базовый парсер."""
 
 	_Title: BaseTitle | None
@@ -60,7 +64,7 @@ class BaseParser[SO: "BaseSourceOperator"](ABC):
 		return self._SourceOperator.requestor
 
 	@property
-	def settings(self) -> "ParserSettings":
+	def settings(self) -> "ParserSettings[CSM]":
 		"""Настройки парсера."""
 
 		return self._SourceOperator.settings
