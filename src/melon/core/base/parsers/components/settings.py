@@ -1,9 +1,10 @@
 import re
 from pathlib import Path
 from types import MappingProxyType
-from typing import TYPE_CHECKING, Any, Literal
+from typing import TYPE_CHECKING, Any, Literal, cast
 
 from deepmerge import always_merger
+from pydantic.dataclasses import dataclass
 
 from dublib.functions.data import Zerotify
 from dublib.functions.filesystem import ReadJSON
@@ -49,6 +50,12 @@ _BASE_SETTINGS = MappingProxyType({
 #==========================================================================================#
 # >>>>> ВНУТРЕННИЕ СТРУКТУРЫ ДАННЫХ КАТЕГОРИЙ <<<<< #
 #==========================================================================================#
+
+@dataclass(frozen = True)
+class CustomSettingsTemplate:
+	"""Шаблон модели собственных настроек парсера."""
+
+	pass
 
 class BaseExtensionOptions:
 	"""Базовые настройки расширения."""
@@ -503,7 +510,7 @@ class Extensions:
 # >>>>> ОСНОВНОЙ КЛАСС <<<<< #
 #==========================================================================================#
 
-class ParserSettings:
+class ParserSettings[T: CustomSettingsTemplate]:
 	"""Настройки парсера."""
 
 	#==========================================================================================#
@@ -517,8 +524,11 @@ class ParserSettings:
 		return self.__Common
 
 	@property
-	def custom(self) -> Custom:
+	def custom(self) -> T:
 		"""Собственные настройки парсера."""
+
+		if self.__Custom is None:
+			raise ValueError("Custom settings required, but unparsed.")
 
 		return self.__Custom
 	
@@ -594,8 +604,9 @@ class ParserSettings:
 		self.__Common: Common = Common(self.__Settings.get("common", {}))
 		self.__Network: Network = Network(self.__Settings.get("network", {}))
 		self.__Filters = Filters(self.__Settings)
-		self.__Custom: Custom = Custom(self.__Settings.get("custom", {}))
 		self.__Extensions: Extensions = Extensions(self.__Settings.get("extensions", {}))
+
+		self.__Custom: T | None = None
 
 	@staticmethod
 	def get_base_settings(system_objects: "SystemObjects", parser_name: str) -> dict:
@@ -620,3 +631,13 @@ class ParserSettings:
 			}
 
 		return BaseSetings
+
+	def parse_custom_settings(self, model: type[T]):
+		"""
+		Парсит кастомные настройки и подставляет их в структуру параметров.
+
+		:param model: Модель кастомных настроек, представленная замороженным классом данных [pydantic](https://github.com/pydantic/pydantic), унаследованным от `CustomSettingsTemplate`.
+		:type model: type[T]
+		"""
+
+		self.__Custom = cast(T, model(**self.__Settings.get("custom", {})))

@@ -1,4 +1,5 @@
 import importlib
+from abc import ABC, abstractmethod
 from dataclasses import dataclass
 from os import PathLike
 from typing import TYPE_CHECKING, Sequence
@@ -11,12 +12,15 @@ from dublib.validators import Validator_Domain, Validator_URL
 from dublib.web_requestor import WebConfig, WebLibs, WebRequestor
 
 from ...core import exceptions
-from ...core.base.parsers.components import ParserSettings
 from ...core.base.parsers.components.images_downloader import (
 	ImageDownloadingResult,
 	ImagesDownloader,
 )
 from ...core.base.parsers.components.manifest import ContentTypes, ParserManifest
+from ...core.base.parsers.components.settings import (
+	CustomSettingsTemplate,
+	ParserSettings,
+)
 
 if TYPE_CHECKING:
 	from ...core.base.parsers.base_parser import BaseParser
@@ -39,7 +43,7 @@ class FileTypingResult:
 # >>>>> ОСНОВНОЙ КЛАСС <<<<< #
 #==========================================================================================#
 
-class BaseSourceOperator:
+class BaseSourceOperator[CSM: CustomSettingsTemplate](ABC):
 	"""Базовый оператор источника."""
 
 	#==========================================================================================#
@@ -97,7 +101,7 @@ class BaseSourceOperator:
 		return self._Requestor
 
 	@property
-	def settings(self) -> ParserSettings:
+	def settings(self) -> ParserSettings[CSM]:
 		"""Настройки парсера."""
 
 		return self._Settings
@@ -196,6 +200,11 @@ class BaseSourceOperator:
 
 		pass
 
+	@abstractmethod
+	def _ReturnCustomSettingsModel(self) -> type[CSM]:
+
+		pass
+
 	def _SetAuthorizationMethod(self):
 		"""
 		Выполняется после `_InitializeRequestor()` и обёрнут для отлова исключений `TokenExpired`.
@@ -239,7 +248,8 @@ class BaseSourceOperator:
 		self._Printer = self._SystemObjects.printer
 		self._Temper = self._SystemObjects.temper
 		
-		self._Settings = ParserSettings(self._SystemObjects, self._Manifest.parser_name)
+		self._Settings: ParserSettings[CSM] = ParserSettings(self._SystemObjects, self._Manifest.parser_name)
+		self._Settings.parse_custom_settings(self._ReturnCustomSettingsModel())
 
 		self._Requestor = self._InitializeRequestor()
 
