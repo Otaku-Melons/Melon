@@ -1,9 +1,11 @@
 from dataclasses import dataclass
 
+import orjson
+
 from dublib.cli.terminalyzer import Command, ParsedCommandData
 
 from ..base_processor import PreparedData
-from ..base_processor.parameters_templates import T_MultipleParsersRequired
+from ..base_processor.parameters_templates import T_SingleParserRequired
 from ._base import CommandProcessorTemplate
 
 #==========================================================================================#
@@ -11,11 +13,11 @@ from ._base import CommandProcessorTemplate
 #==========================================================================================#
 
 @dataclass(frozen = True)
-class Parameters(T_MultipleParsersRequired):
+class Parameters(T_SingleParserRequired):
 	"""Параметры, требуемые обработчиком."""
 
 	slug: str
-	is_search_all: bool
+	is_json_output: bool
 
 #==========================================================================================#
 # >>>>> ОСНОВНОЙ КЛАСС <<<<< #
@@ -23,6 +25,31 @@ class Parameters(T_MultipleParsersRequired):
 
 class CommandProcessor(CommandProcessorTemplate[Parameters]):
 	"""Обработчик команды."""
+
+	#==========================================================================================#
+	# >>>>> ПРИВАТНЫЕ МЕТОДЫ <<<<< #
+	#==========================================================================================#
+
+	def __PrintResult(self, parameters: Parameters, title_id: int | None):
+		"""
+		Выводит результат поиска ID.
+
+		:param parameters: Параметры команды.
+		:type parameters: Parameters
+		:param title_id: Результат поиска.
+		:type title_id: int | None
+		"""
+
+		if parameters.is_json_output:
+			OutputDictionary: dict[str, int | str | None] = {
+				"parser": parameters.required_parser.name,
+				"slug": parameters.slug,
+				"id": title_id
+			}
+			self.printer.emit(orjson.dumps(OutputDictionary).decode())
+
+		else:
+			self.printer.emit(f"Found ID {title_id} for parser \"{parameters.required_parser.name}\".")
 
 	#==========================================================================================#
 	# >>>>> ПЕРЕОПРЕДЕЛЯЕМЫЕ МЕТОДЫ <<<<< #
@@ -51,9 +78,9 @@ class CommandProcessor(CommandProcessorTemplate[Parameters]):
 		ComPos = command.create_position("SLUG", "Title slug.", important = True)
 		ComPos.set_argument()
 
-		self._AddParserPosition(multiple = True)
+		self._AddParserPosition()
 
-		command.base.add_flag("-all", description = "Print all search results instead only first.")
+		command.base.add_flag("-j", description = "Print result in JSON format.")
 
 		return command
 
@@ -69,13 +96,10 @@ class CommandProcessor(CommandProcessorTemplate[Parameters]):
 		:rtype: Parameters
 		"""
 
-		Slug: str = data.get_important_position_value("SLUG", expected_type = str)
-		SearchAll: bool = data.check_flag("-all")
-
 		return Parameters(
-			required_parsers =prepared_data.required_parsers,
-			slug = Slug,
-			is_search_all = SearchAll
+			required_parser = prepared_data.required_parsers[0],
+			slug = data.get_important_position_value("SLUG", expected_type = str),
+			is_json_output = data.check_flag("-j")
 		)
 
 	def _Process(self, parameters: Parameters) -> bool:
@@ -88,21 +112,7 @@ class CommandProcessor(CommandProcessorTemplate[Parameters]):
 		:rtype: bool
 		"""
 
-		ResultsCount: int = 0
-	
-		for CurrentParser in parameters.required_parsers:
-			ID = CurrentParser.source_operator.shared_data.journal.get_id_by_slug(parameters.slug)
-	
-			if ID:
-				ResultsCount += 1
-				self.printer.emit(f"Found ID {ID} for parser \"{CurrentParser}\".")
-	
-				if not parameters.is_search_all:
-					break
-	
-		if ResultsCount:
-			self.printer.emit(f"Total ID found in cache: {ResultsCount}.")
-		else:
-			self.printer.emit("Tite with same slug not found in cache.")
+		ID = parameters.required_parser.source_operator.shared_data.journal.get_id_by_slug(parameters.slug)
+		self.__PrintResult(parameters, ID)
 
-		return True
+		return False if parameters.is_json_output else True
