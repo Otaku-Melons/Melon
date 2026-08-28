@@ -190,6 +190,7 @@ class Collector:
 
 		if self.__CollectionFile.exists():
 			CollectionSlugs: list[str] = ReadTextFile(self.__CollectionFile, split = True, strip = True)
+			CollectionSlugs = [Slug for Item in CollectionSlugs if (Slug := Item.strip())]
 			return self.add(CollectionSlugs)
 		
 		return 0
