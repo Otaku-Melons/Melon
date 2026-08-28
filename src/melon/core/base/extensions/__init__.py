@@ -6,11 +6,15 @@ from ...base.parsers.components.settings import BaseExtensionOptions
 if TYPE_CHECKING:
 	from pathlib import Path
 
+	from ....core.base.parsers.components.settings import (
+		CustomSettingsTemplate,
+		ParserSettings,
+	)
 	from ....core.system_objects import SystemObjects
 	from ....core.system_objects.printer import Portals
-	from ..source_operator import BaseSourceOperator, ParserManifest, ParserSettings
+	from ..source_operator import BaseSourceOperator, ParserManifest
 
-class BaseExtension[T: BaseExtensionOptions](ABC):
+class BaseExtension[SO: "BaseSourceOperator", CSM: "CustomSettingsTemplate", EO: BaseExtensionOptions](ABC):
 	"""Базовое расширение."""
 
 	#==========================================================================================#
@@ -30,13 +34,13 @@ class BaseExtension[T: BaseExtensionOptions](ABC):
 		return self._Name
 
 	@property
-	def options(self) -> T:
+	def options(self) -> EO:
 		"""Настройки расширения."""
 
 		return self._Options
 
 	@property
-	def parser_settings(self) -> "ParserSettings":
+	def parser_settings(self) -> "ParserSettings[CSM]":
 		"""Настройки парсера."""
 
 		return self._SourceOperator.settings
@@ -48,7 +52,7 @@ class BaseExtension[T: BaseExtensionOptions](ABC):
 		return self._SourceOperator.portals
 
 	@property
-	def source_operator(self) -> "BaseSourceOperator":
+	def source_operator(self) -> SO:
 		"""Оператор источника."""
 
 		return self._SourceOperator
@@ -75,7 +79,7 @@ class BaseExtension[T: BaseExtensionOptions](ABC):
 		pass
 
 	@abstractmethod
-	def _ReturnOptionsType(self) -> type[T]:
+	def _ReturnOptionsType(self) -> type[EO]:
 		"""
 		Возвращает тип контейнера опций.
 
@@ -89,7 +93,7 @@ class BaseExtension[T: BaseExtensionOptions](ABC):
 	# >>>>> ПУБЛИЧНЫЕ МЕТОДЫ <<<<< #
 	#==========================================================================================#
 
-	def __init__(self, source_operator: "BaseSourceOperator"):
+	def __init__(self, source_operator: SO):
 		"""
 		Базовое расширение.
 
@@ -100,10 +104,10 @@ class BaseExtension[T: BaseExtensionOptions](ABC):
 		:raises FileNotFoundError: Каталог расширения не найден.
 		"""
 
-		self._SourceOperator: "BaseSourceOperator" = source_operator
+		self._SourceOperator: SO = source_operator
 		self._Name: str = self.__module__.split(".")[-1]
 		
-		self._Options: T = self.source_operator.settings.extensions.get(self._Name, self._ReturnOptionsType())
+		self._Options: EO = self.parser_settings.extensions.get(self._Name, self._ReturnOptionsType())
 		self._TempDirectory: "Path" = self._SourceOperator.system_objects.temper.get_extension_temp_directory(self._SourceOperator.parser_name, self._Name)
 
 		self._PostInitMethod()
