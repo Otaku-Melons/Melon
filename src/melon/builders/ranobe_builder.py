@@ -5,11 +5,11 @@ from typing import TYPE_CHECKING, cast
 from bs4 import BeautifulSoup
 from ebooklib import epub
 
-from ...core import exceptions
-from ...core.base.builder import BaseBuilder
+from ..core import exceptions
+from ..core.base.builder import BaseBuilder
 
 if TYPE_CHECKING:
-	from ...core.base.formats.ranobe import BaseBranch, Chapter
+	from ..core.base.formats.ranobe import BaseBranch, Chapter
 
 #==========================================================================================#
 # >>>>> ВСПОМОГАТЕЛЬНЫЕ СТРУКТУРЫ ДАННЫХ <<<<< #

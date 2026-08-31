@@ -12,7 +12,7 @@ from ..base_processor.parameters_templates import T_SingleParserRequired
 from ..melon._base import CommandProcessorTemplate
 
 if TYPE_CHECKING:
-	from ....core.structs import TitleDescriptor
+	from ....core.base.structs.title import TitleDescriptor
 
 #==========================================================================================#
 # >>>>> ВСПОМОГАТЕЛЬНЫЕ СТРУКТУРЫ ДАННЫХ <<<<< #

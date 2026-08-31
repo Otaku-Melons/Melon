@@ -1,12 +1,12 @@
 from dataclasses import dataclass
+from pathlib import Path
 
 from dublib.cli.terminalyzer import Command, ParsedCommandData, ValidableTypes
 
-from ....builders.ranobe_builder import RanobeBuilder
-from ....core.base.formats.components.enums import By
+from .... import utils
 from ..base_processor import PreparedData
 from ..base_processor.parameters_templates import T_SingleParserRequired
-from ._base import CommandProcessorTemplate
+from ..melon._base import CommandProcessorTemplate
 
 #==========================================================================================#
 # >>>>> ВСПОМОГАТЕЛЬНЫЕ СТРУКТУРЫ ДАННЫХ <<<<< #
@@ -16,8 +16,8 @@ from ._base import CommandProcessorTemplate
 class Parameters(T_SingleParserRequired):
 	"""Параметры, требуемые обработчиком."""
 
-	filename: str
-	branch_id: int | None
+	image: Path
+	signature_version: utils.unstubber.SignaturesVersions
 
 #==========================================================================================#
 # >>>>> ОСНОВНОЙ КЛАСС <<<<< #
@@ -38,7 +38,7 @@ class CommandProcessor(CommandProcessorTemplate[Parameters]):
 		:rtype: str
 		"""
 
-		return "Build read-ready ranobe content."
+		return "Generate image signature."
 
 	def _GenerateCommand(self, command: Command) -> Command:
 		"""
@@ -50,12 +50,14 @@ class CommandProcessor(CommandProcessorTemplate[Parameters]):
 		:rtype: Command
 		"""
 
-		ComPos = command.create_position("FILE", "Filename of local JSON.", important = True)
-		ComPos.set_argument()
+		ComPos = command.create_position("IMAGE", "Path to image.", important = True)
+		ComPos.set_argument(ValidableTypes.ValidPath)
 
-		self._AddParserPosition()
+		ComPos = command.create_position("VERSION", "Signature version.", important = True)
+		ComPos.add_flag("-v1", description = "Based on image sizes and pixels SHA256 hash: exact match.")
+		ComPos.add_flag("-v2", description = "Based on perceptual hash: approximate match.")
 
-		command.base.add_key("--branch", value_type = ValidableTypes.UnsignedInteger, description = "Branch ID to building.")
+		command.base.add_key("--export", description = "Exports signature in parser config.")
 
 		return command
 
@@ -71,13 +73,14 @@ class CommandProcessor(CommandProcessorTemplate[Parameters]):
 		:rtype: Parameters
 		"""
 
-		Filename: str = data.get_important_position_value("FILE", expected_type = str)
-		BranchID: int | None = data.get_key_value("--branch", expected_type = int)
+		VersionKey: str = data.get_important_position_value("VERSION", expected_type = str)
+		VersionKey = VersionKey.lstrip("-")
+		Version = utils.unstubber.SignaturesVersions[VersionKey]
 
 		return Parameters(
-			filename = Filename,
 			required_parser = prepared_data.required_parsers[0],
-			branch_id = BranchID
+			image = data.get_important_position_value("IMAGE", expected_type = Path),
+			signature_version = Version
 		)
 
 	def _Process(self, parameters: Parameters) -> bool:
@@ -90,18 +93,9 @@ class CommandProcessor(CommandProcessorTemplate[Parameters]):
 		:rtype: bool
 		"""
 
-		TypingResult = parameters.required_parser.source_operator.get_content_type_by_file(parameters.filename)
-		Parser = parameters.required_parser.source_operator.launch_parser(TypingResult.content_type)
-		
-		Title = Parser.init_empty_title(TypingResult.slug)
-	
-		if Title.load(parameters.filename, By.Filename):
-			self.printer.emit(f"Loaded file: <i>{parameters.filename}</i>.")
-		else:
-			self.printer.error(f"Unable load file: <b>{parameters.filename}</b>.")
-			return False
-	
-		Builder = RanobeBuilder(Parser, Title)
-		Builder.build(parameters.branch_id)
+		Unstubber = utils.Unstubber()
+		Signature: str = Unstubber.generate_signature(parameters.image, parameters.signature_version)
 
-		return True
+		self.printer.emit(f"Signature: {Signature}")
+
+		return False

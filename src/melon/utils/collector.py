@@ -7,7 +7,7 @@ from typing import TYPE_CHECKING, Callable, Sequence, cast
 from dublib.functions.data import ToSequence
 from dublib.functions.filesystem import ReadJSON, ReadTextFile, WriteTextFile
 
-from ..core.structs import TitleDescriptor
+from ..core.base.structs.title import TitleDescriptor
 
 if TYPE_CHECKING:
 	from ..core.base.source_operator import BaseSourceOperator

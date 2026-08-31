@@ -7,10 +7,10 @@ from dublib.functions.decorators import run_before_method
 from ....core import exceptions
 from ....core.base.formats.base_format import BaseBranch, BaseTitle
 from ....core.base.parsers.components.images_downloader import (
-	ImageData,
 	ImageDownloadingResult,
 	ImagesDownloader,
 )
+from ..structs.image import ImageData
 from .components.words_dictionary import WordsDictionary, presets
 
 if TYPE_CHECKING:

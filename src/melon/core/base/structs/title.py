@@ -2,7 +2,7 @@ from pathlib import Path
 from typing import TYPE_CHECKING, Any
 
 if TYPE_CHECKING:
-	from ..core.base.source_operator import BaseSourceOperator
+	from ..source_operator import BaseSourceOperator
 
 class TitleDescriptor:
 	"""Дескриптор тайтла."""

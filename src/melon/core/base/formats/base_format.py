@@ -15,8 +15,8 @@ from dublib.functions.filesystem import ReadJSON, WriteJSON
 from dublib.validators import Validator_Domain
 
 from ....core import exceptions
-from ....core.base.parsers.components.images_downloader import ImageData
 from ....core.base.parsers.components.words_dictionary import CheckLanguageCode
+from ..structs.image import ImageData
 from .components.enums import By, Statuses
 from .components.structs import ChapterSearchResult
 

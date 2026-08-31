@@ -2,7 +2,7 @@ from enum import Enum
 from typing import Any, Sequence, cast
 
 from ....core.base.formats.base_format import BaseBranch, BaseChapter, BaseTitle
-from ....core.base.parsers.components.images_downloader import ImageData
+from ..structs.image import ImageData
 
 #==========================================================================================#
 # >>>>> ПЕРЕЧИСЛЕНИЯ <<<<< #

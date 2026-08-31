@@ -11,11 +11,11 @@ import img2pdf
 from dublib.cli.text_styler import FastStyler
 from dublib.functions.data import StringifyFloat
 
-from ...core import exceptions
-from ...core.base.builder import BaseBuilder
+from ..core import exceptions
+from ..core.base.builder import BaseBuilder
 
 if TYPE_CHECKING:
-	from ...core.base.formats.manga import BaseBranch, Chapter
+	from ..core.base.formats.manga import BaseBranch, Chapter
 
 #==========================================================================================#
 # >>>>> ВСПОМОГАТЕЛЬНЫЕ СТРУКТУРЫ ДАННЫХ <<<<< #
