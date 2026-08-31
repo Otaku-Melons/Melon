@@ -25,6 +25,7 @@ dev = ["mypy", "ruff"]
 [project.scripts]
 melon = "melon:main"
 pxm = "melon:main"
+urun = "melon:main"
 
 [build-system]
 requires = ["uv-build>=0.12.5,<0.13.0"]

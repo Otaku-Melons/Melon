@@ -188,10 +188,7 @@ class MangaBuilder(BaseBuilder):
 				SlideInfo = Slides[Index]
 				FileIndex = Index + 1
 
-				self._Printer.emit(f"[{FileIndex} / {SlidesCount}] Downloading slide \"{SlideInfo.filename}\"… ", end_line = False, flush = True)
-
 				Filename = str(FileIndex).rjust(len(str(SlidesCount)), "0")
-
 				Future = self._Printer.templates.images.start_downloading(SlideInfo.filename, "slide")
 				Result = self._Parser.source_operator.download_image(SlideInfo.link, TempDirPath, filename = Filename)
 				Future.result(Result)

@@ -4,7 +4,8 @@ from typing import TYPE_CHECKING
 if TYPE_CHECKING:
 	from ...core.base.formats.base_format import BaseChapter, BaseTitle
 	from ...core.base.parsers.base_parser import BaseParser
-
+	from .source_operator import BaseSourceOperator, CustomSettingsTemplate
+	
 #==========================================================================================#
 # >>>>> БАЗОВЫЙ СБОРЩИК <<<<< #
 #==========================================================================================#
@@ -61,7 +62,7 @@ class BaseBuilder:
 	# >>>>> ПУБЛИЧНЫЕ МЕТОДЫ <<<<< #
 	#==========================================================================================#
 
-	def __init__(self, parser: "BaseParser", title: "BaseTitle"):
+	def __init__(self, parser: "BaseParser[BaseSourceOperator, CustomSettingsTemplate]", title: "BaseTitle"):
 		"""
 		Базовый сборщик.
 

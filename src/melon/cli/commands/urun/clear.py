@@ -9,7 +9,7 @@ from dublib.functions.filesystem import RemoveDirectoryContent
 from .... import utils
 from ..base_processor import PreparedData
 from ..base_processor.parameters_templates import T_SingleParserRequired
-from ._base import CommandProcessorTemplate
+from ..melon._base import CommandProcessorTemplate
 
 if TYPE_CHECKING:
 	from ....core.structs import TitleDescriptor
