@@ -4,6 +4,7 @@ from dublib.cli.terminalyzer import Command, ParsedCommandData
 
 from ....core.system_objects.manager.parsers import ExportStrategies
 from ..base_processor import PreparedData
+from ..base_processor.templates import T_SingleParserRequired
 from ._base import CommandProcessorTemplate
 
 #==========================================================================================#
@@ -11,10 +12,9 @@ from ._base import CommandProcessorTemplate
 #==========================================================================================#
 
 @dataclass(frozen = True)
-class Parameters:
+class Parameters(T_SingleParserRequired):
 	"""Параметры, требуемые обработчиком."""
 
-	parser: str
 	config_strategy: ExportStrategies
 
 #==========================================================================================#
@@ -69,7 +69,7 @@ class CommandProcessor(CommandProcessorTemplate[Parameters]):
 		if not Strategy: Strategy = "-s"
 
 		return Parameters(
-			parser = data.get_important_position_value("PARSER", expected_type = str),
+			required_parser = prepared_data.required_parsers[0],
 			config_strategy = ExportStrategies(Strategy)
 		)
 
@@ -83,8 +83,7 @@ class CommandProcessor(CommandProcessorTemplate[Parameters]):
 		:rtype: bool
 		"""
 
-		ParserOperator = self.system_objects.manager.parsers.get_operator(parameters.parser)
-		Result = ParserOperator.export_settings(parameters.config_strategy)
+		Result = parameters.required_parser.parser_operator.export_settings(parameters.config_strategy)
 		self.printer.templates.manager.exported(Result)
 		
 		return True

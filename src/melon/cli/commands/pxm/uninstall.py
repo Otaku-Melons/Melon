@@ -3,6 +3,7 @@ from dataclasses import dataclass
 from dublib.cli.terminalyzer import Command, ParsedCommandData
 
 from ..base_processor import PreparedData
+from ..base_processor.templates import T_SingleParserRequired
 from ._base import CommandProcessorTemplate
 
 #==========================================================================================#
@@ -10,10 +11,9 @@ from ._base import CommandProcessorTemplate
 #==========================================================================================#
 
 @dataclass(frozen = True)
-class Parameters:
+class Parameters(T_SingleParserRequired):
 	"""Параметры, требуемые обработчиком."""
 
-	parser: str
 	is_clear: bool
 
 #==========================================================================================#
@@ -65,11 +65,10 @@ class CommandProcessor(CommandProcessorTemplate[Parameters]):
 		:rtype: Parameters
 		"""
 
-		Parser: str = data.get_important_position_value("PARSER", expected_type = str)
 		IsClear: bool = data.check_flag("-c")
 
 		return Parameters(
-			parser = Parser,
+			required_parser = prepared_data.required_parsers[0],
 			is_clear = IsClear
 		)
 
@@ -83,8 +82,7 @@ class CommandProcessor(CommandProcessorTemplate[Parameters]):
 		:rtype: bool
 		"""
 
-		ParserOperator = self.system_objects.manager.parsers.get_operator(parameters.parser)
-		ParserOperator.uninstall(parameters.is_clear)
+		parameters.required_parser.parser_operator.uninstall(parameters.is_clear)
 		if parameters.is_clear: self.printer.emit("Temp files and config cleared.")
 
 		return True

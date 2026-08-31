@@ -4,7 +4,7 @@ from pathlib import Path
 from dublib.cli.terminalyzer import Command, ParsedCommandData, ValidableTypes
 
 from ..base_processor import PreparedData
-from ..base_processor.parameters_templates import (
+from ..base_processor.templates import (
 	T_ForceModeRequired,
 	T_SingleParserRequired,
 )

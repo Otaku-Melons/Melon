@@ -14,10 +14,3 @@ class CommandProcessorTemplate(BaseCommandProcessor[PARAMS]):
 		ComPos.add_flag("-s", description = "Skip installation (default).")
 		ComPos.add_flag("-o", description = "Overwrite exists config.")
 		ComPos.add_flag("-m", description = "Merge exists config parameters with preset.")
-
-	def _AddParserPosition(self):
-		"""Добавляет позицию имени парсера, используюмую **pxm**."""
-
-		ComPos = self._Command.create_position("PARSER", "Parser name.", important = True)
-		ComPos.set_argument()
-	

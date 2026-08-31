@@ -7,6 +7,7 @@ if TYPE_CHECKING:
 		ParserManifest,
 		ParserSettings,
 	)
+	from ....core.system_objects.manager.parsers import ParserOperator
 
 @dataclass(frozen = True)
 class DataclassStub:
@@ -19,12 +20,14 @@ class ProcessorOptions:
 	"""Контейнер настроек обработчика."""
 
 	use_timer: bool = True
+	allow_multiple_parsers: bool = False
 
 @dataclass(frozen = True)
 class RequiredParser:
 	"""Коллекция управляющих объектов трубемого парсера."""
 
 	name: str
+	parser_operator: "ParserOperator"
 	source_operator: "BaseSourceOperator"
 	manifest: "ParserManifest"
 	settings: "ParserSettings"

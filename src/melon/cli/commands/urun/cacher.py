@@ -3,8 +3,8 @@ from dataclasses import dataclass
 from dublib.cli.terminalyzer import Command, ParsedCommandData
 
 from .... import utils
-from ..base_processor import PreparedData
-from ..base_processor.parameters_templates import T_MultipleParsersRequired
+from ..base_processor import PreparedData, ProcessorOptions
+from ..base_processor.templates import T_MultipleParsersRequired
 from ..melon._base import CommandProcessorTemplate
 
 #==========================================================================================#
@@ -38,6 +38,16 @@ class CommandProcessor(CommandProcessorTemplate[Parameters]):
 
 		return "Run ID-slug caching."
 
+	def _ExportOptions(self) -> ProcessorOptions:
+		"""
+		Возвращает контейнер настроек обработчика.
+
+		:return: Контейнер настроек обработчика.
+		:rtype: ProcessorOptions
+		"""
+
+		return ProcessorOptions(allow_multiple_parsers = True)
+
 	def _GenerateCommand(self, command: Command) -> Command:
 		"""
 		Генерирует команду.
@@ -48,7 +58,7 @@ class CommandProcessor(CommandProcessorTemplate[Parameters]):
 		:rtype: Command
 		"""
 
-		self._AddParserPosition(multiple = True)
+		self._AddParserPosition()
 
 		return command
 

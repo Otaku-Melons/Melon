@@ -6,7 +6,7 @@ from dublib.cli.text_styler import GetStyledTextFromHTML
 
 from .... import utils
 from ..base_processor import PreparedData
-from ..base_processor.parameters_templates import (
+from ..base_processor.templates import (
 	T_ForceModeRequired,
 	T_SingleParserRequired,
 )

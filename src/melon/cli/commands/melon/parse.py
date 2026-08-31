@@ -12,7 +12,7 @@ from .... import utils
 from ....core import exceptions
 from ....core.base.parsers.components.manifest import ContentTypes
 from ..base_processor import PreparedData
-from ..base_processor.parameters_templates import (
+from ..base_processor.templates import (
 	T_ForceModeRequired,
 	T_SingleParserRequired,
 )

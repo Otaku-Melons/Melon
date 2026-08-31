@@ -1,6 +1,6 @@
 import sys
 from abc import ABC, abstractmethod
-from typing import TYPE_CHECKING, Any, ClassVar, Generic, Protocol, TypeVar
+from typing import TYPE_CHECKING, Any, ClassVar, Generic, Protocol, Sequence, TypeVar
 
 from dublib.cli.terminalyzer import Command, ParsedCommandData
 
@@ -62,6 +62,56 @@ class BaseCommandProcessor(ABC, Generic[PARAMS]):
 	# >>>>> НАСЛЕДУЕМЫЕ МЕТОДЫ <<<<< #
 	#==========================================================================================#
 
+	def _CheckRequiredParsers(self, parsers_names: Sequence[str]):
+		"""
+		Проверяет наличие требуемых парсеров в системе.
+
+		:param parsers_names: Последовательность имён парсеров.
+		:type parsers_names: Sequence[str]
+		:raises ParserNotFound: Парсер не найден.
+		:raises MultipleParsersDenienForCommand: Команде запрещено использование нескольких парсеров.
+		"""
+
+		if not parsers_names:
+			return ()
+
+		AllParsers = self._SystemObjects.manager.parsers.installed
+
+		for CurrentParser in parsers_names:
+			if CurrentParser not in AllParsers:
+				raise exceptions.system.ParserNotFound(CurrentParser)
+
+	def _GetRequiredParsers(self, data: ParsedCommandData) -> tuple[RequiredParser, ...]:
+		"""
+		Загружает последовательность управляющих структур затребованных парсеров.
+
+		:param data: Данные обработанной команды.
+		:type data: ParsedCommandData
+		:return: Последовательность управляющих структур затребованных парсеров.
+		:rtype: tuple[RequiredParser, ...]
+		:raises exceptions.cli.MultipleParsersDenienForCommand: Запрашивание нескольких парсеров запрещено.
+		"""
+
+		ParsersQuery: str | None = self._GetParsersQuery(data)
+
+		if not ParsersQuery:
+			return ()
+
+		RequiredParsersNames: Sequence[str] = tuple(Element.strip() for Element in ParsersQuery.split(","))
+
+		if not RequiredParsersNames:
+			if self.system_objects.options.DEBUG:
+				self.printer.debug("Parsers not selected. All will be loaded.")
+
+			RequiredParsersNames = self._SystemObjects.manager.parsers.installed
+
+		if not self.options.allow_multiple_parsers and len(RequiredParsersNames) > 1:
+			raise exceptions.cli.MultipleParsersDenienForCommand(data.name)
+
+		self._CheckRequiredParsers(RequiredParsersNames)
+
+		return tuple(self._GetParser(Name) for Name in RequiredParsersNames)
+
 	def _GetParser(self, parser: str) -> RequiredParser:
 		"""
 		Инициализирует требуемый парсер.
@@ -72,80 +122,10 @@ class BaseCommandProcessor(ABC, Generic[PARAMS]):
 		:rtype: RequiredParser
 		"""
 
-		SourceOperator = self.system_objects.manager.parsers.get_operator(parser).launch()
+		ParserOperator = self.system_objects.manager.parsers.get_operator(parser)
+		SourceOperator = ParserOperator.launch()
 
-		return RequiredParser(parser, SourceOperator, SourceOperator.manifest, SourceOperator.settings)
-
-	def _IsMultipleParsersRequired(self, data: ParsedCommandData) -> bool:
-		"""
-		Проверяет, разрешено ли команде выбирать несколько парсеров.
-
-		:param data: Данные обработанной команды.
-		:type data: ParsedCommandData
-		:return: Возвращает `True`, если команде разрешено выбирать несколько парсеров.
-		:rtype: bool
-		"""
-
-		try:
-			data.get_position_parameter("PARSERS")
-			return True
-
-		except Exception:
-			return False
-
-	def _LoadRequiredParsers(self, required_parsers: tuple[str, ...]) -> tuple[RequiredParser, ...]:
-		"""
-		Загружает управляющие объекты затребованных парсеров.
-
-		:param required_parsers: Последовательность имён парсеров.
-		:type required_parsers: tuple[str, ...]
-		:return: Последовательность управляющих объектов затребованных парсеров.
-		:rtype: tuple[RequiredParser, ...]
-		"""
-
-		if not required_parsers:
-			required_parsers = tuple(self.system_objects.manager.parsers.installed)
-			
-			if self.system_objects.options.DEBUG:
-				self.printer.debug("Parsers not selected. Loaded all.")
-
-		Parsers: list = []
-		for Name in required_parsers: 
-			Parsers.append(self._GetParser(Name))
-
-		return tuple(Parsers)
-
-	def _CheckRequiredParsers(self, data: ParsedCommandData) -> tuple[str, ...]:
-		"""
-		Проверяет наличие требуемых парсеров в системе.
-
-		:param data: Данные обработанной команды.
-		:type data: ParsedCommandData
-		:return: Последовательность имён затребованых парсеров.
-		:rtype: tuple[str, ...]
-		:raises ParserNotFound: Парсер не найден.
-		:raises MultipleParsersDenienForCommand: Команде запрещено использование нескольких парсеров.
-		"""
-		
-		ParsersNames: str | None = data.get_key_value("--use", expected_type = str)
-
-		if not ParsersNames:
-			return ()
-
-		Parsers: tuple[str, ...] = tuple(Element.strip() for Element in ParsersNames.split(","))
-		AllParsers: list[str] = self._SystemObjects.manager.parsers.installed
-	
-		if not Parsers:
-				Parsers = tuple(AllParsers)
-		else:
-			for CurrentParser in Parsers:
-				if CurrentParser not in AllParsers:
-					raise exceptions.system.ParserNotFound(CurrentParser)
-
-		if not self._IsMultipleParsersRequired(data) and len(Parsers) > 1:
-			raise exceptions.cli.MultipleParsersDenienForCommand(data.name)
-
-		return tuple(Parsers)
+		return RequiredParser(parser, ParserOperator, SourceOperator, SourceOperator.manifest, SourceOperator.settings)
 
 	def _SetMirror(self, parsers: tuple[RequiredParser, ...], mirror: str):
 		"""
@@ -177,9 +157,40 @@ class BaseCommandProcessor(ABC, Generic[PARAMS]):
 
 		self._Command.base.add_flag("-f", description = "Enable force mode.")
 
+	def _AddParserPosition(self):
+		"""Добавляет позицию для имени парсера(ов): `PARSER` или `PARSERS` в зависимости от параметров обработчика."""
+
+		if self.options.allow_multiple_parsers:
+			ComPos = self._Command.create_position("PARSERS", "One or more parsers names separated by comma. By default all.")
+			ComPos.add_key("--use")
+
+		else:
+			ComPos = self._Command.create_position("PARSER", "Parser name.", important = True)
+			ComPos.add_key("--use")
+
 	#==========================================================================================#
 	# >>>>> ПЕРЕОПРЕДЕЛЯЕМЫЕ МЕТОДЫ <<<<< #
 	#==========================================================================================#
+
+	def _GetParsersQuery(self, data: ParsedCommandData) -> str | None:
+		"""
+		Возвращает строку, представляющую последовательность имён затребованных парсеров, разделённых запятой.
+
+		По умолчанию берёт данные из позиций `PARSER` или `PARSERS`.
+		
+		:param data: Данные обработанной команды.
+		:type data: ParsedCommandData
+		:return: Строка с именами парсеров или `None`, если не требуются.
+		:rtype: str | None
+		"""
+
+		PositionName: str = "PARSERS" if self.options.allow_multiple_parsers else "PARSER"
+
+		try:
+			return data.get_position_value(PositionName, expected_type = str)
+
+		except KeyError:
+			return None
 
 	def _ProcessAndCatchExceptions(self, parameters: PARAMS) -> bool:
 		"""
@@ -196,15 +207,14 @@ class BaseCommandProcessor(ABC, Generic[PARAMS]):
 
 		except exceptions.system.ParserAlreadyExists as ExceptionData:
 			self.printer.error(f"Parser <b>{ExceptionData}</b> already exists.")
-			return False
-
+			
 		except exceptions.system.ParserNotFound as ExceptionData:
 			self.printer.error(f"Parser <b>{ExceptionData}</b> not found.")
-			return False
 
 		except exceptions.system.RepositoryError as ExceptionData:
 			self.printer.error(str(ExceptionData))
-			return False
+
+		return False
 
 	@abstractmethod
 	def _ExportCommandDescription(self) -> str:
@@ -282,10 +292,10 @@ class BaseCommandProcessor(ABC, Generic[PARAMS]):
 
 		self._SystemObjects: "SystemObjects" = system_objects
 
+		self._ProcessorOptions: ProcessorOptions = self._ExportOptions()
+
 		self._Command: Command = Command(self.__class__.__module__.split(".")[-1].replace("_", "-"), self._ExportCommandDescription())
 		self._GenerateCommand(self._Command)
-
-		self._ProcessorOptions: ProcessorOptions = self._ExportOptions()
 
 	def process(self, data: ParsedCommandData):
 		"""
@@ -295,11 +305,9 @@ class BaseCommandProcessor(ABC, Generic[PARAMS]):
 		:type data: ParsedCommandData
 		"""
 
-		Timer: utils.Timer | None = None
-		if self.options.use_timer: Timer = utils.Timer(start = True)
+		Timer: utils.Timer | None = utils.Timer(start = True) if self.options.use_timer else None
 
-		RequiredParsersNames: tuple[str, ...] = self._CheckRequiredParsers(data)
-		RequiredParsers = self._LoadRequiredParsers(RequiredParsersNames)
+		RequiredParsers: tuple[RequiredParser, ...] = self._GetRequiredParsers(data)
 		IsForceModeEnabled: bool = data.check_flag("-f")
 		Mirror: str | None = data.get_key_value("--mirror", expected_type = str)
 

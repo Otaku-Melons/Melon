@@ -3,6 +3,7 @@ from dataclasses import dataclass
 from dublib.cli.terminalyzer import Command, ParsedCommandData
 
 from ..base_processor import PreparedData
+from ..base_processor.templates import T_SingleParserRequired
 from ._base import CommandProcessorTemplate
 
 #==========================================================================================#
@@ -10,10 +11,10 @@ from ._base import CommandProcessorTemplate
 #==========================================================================================#
 
 @dataclass(frozen = True)
-class Parameters:
+class Parameters(T_SingleParserRequired):
 	"""Параметры, требуемые обработчиком."""
 
-	parser: str
+	pass
 
 #==========================================================================================#
 # >>>>> ОСНОВНОЙ КЛАСС <<<<< #
@@ -62,7 +63,7 @@ class CommandProcessor(CommandProcessorTemplate[Parameters]):
 		:rtype: Parameters
 		"""
 
-		return Parameters(data.get_important_position_value("PARSER", expected_type = str))
+		return Parameters(prepared_data.required_parsers[0])
 
 	def _Process(self, parameters: Parameters) -> bool:
 		"""
@@ -74,7 +75,6 @@ class CommandProcessor(CommandProcessorTemplate[Parameters]):
 		:rtype: bool
 		"""
 
-		ParserOperator = self.system_objects.manager.parsers.get_operator(parameters.parser)
-		self.system_objects.manager.packager.install_requirements(ParserOperator.requirements_path)
+		self.system_objects.manager.packager.install_requirements(parameters.required_parser.parser_operator.requirements_path)
 
 		return True

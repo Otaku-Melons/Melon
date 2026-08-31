@@ -6,7 +6,7 @@ from dublib.cli.terminalyzer import Command, ParsedCommandData, ValidableTypes
 from ....builders.manga_builder import MangaBuilder, MangaOutputFormats
 from ....core.base.formats.components.enums import By
 from ..base_processor import PreparedData
-from ..base_processor.parameters_templates import T_SingleParserRequired
+from ..base_processor.templates import T_SingleParserRequired
 from ._base import CommandProcessorTemplate
 
 #==========================================================================================#

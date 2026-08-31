@@ -4,6 +4,7 @@ from dublib.cli.terminalyzer import Command, ParsedCommandData
 
 from ....core.system_objects.manager.parsers import ExportStrategies
 from ..base_processor import PreparedData
+from ..base_processor.templates import T_SingleParserRequired
 from ._base import CommandProcessorTemplate
 
 #==========================================================================================#
@@ -11,10 +12,9 @@ from ._base import CommandProcessorTemplate
 #==========================================================================================#
 
 @dataclass(frozen = True)
-class Parameters:
+class Parameters(T_SingleParserRequired):
 	"""Параметры, требуемые обработчиком."""
 
-	parser: str
 	config_strategy: ExportStrategies
 
 #==========================================================================================#
@@ -65,12 +65,11 @@ class CommandProcessor(CommandProcessorTemplate[Parameters]):
 		:rtype: Parameters
 		"""
 
-		Parser: str = data.get_important_position_value("PARSER", expected_type = str)
 		Strategy: str | None = data.get_position_value("STRATEGY", expected_type = str)
 		if not Strategy: Strategy = "-s"
 
 		return Parameters(
-			parser = Parser,
+			required_parser = prepared_data.required_parsers[0],
 			config_strategy = ExportStrategies(Strategy)
 		)
 
@@ -84,8 +83,8 @@ class CommandProcessor(CommandProcessorTemplate[Parameters]):
 		:rtype: bool
 		"""
 
-		ParserOperator = self.system_objects.manager.parsers.get_operator(parameters.parser)
-		RepositoryURL: str = self.system_objects.manager.repositories.get(parameters.parser, exception = True)
+		ParserOperator = parameters.required_parser.parser_operator
+		RepositoryURL: str = self.system_objects.manager.repositories.get(parameters.required_parser.name, exception = True)
 		
 		self.printer.emit(f"Repository: <i>{RepositoryURL}</i>.")
 		ParserOperator.install()

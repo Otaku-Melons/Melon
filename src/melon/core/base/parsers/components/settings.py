@@ -35,13 +35,18 @@ _BASE_SETTINGS = MappingProxyType({
 		"images_mirrors": {}
 	},
 	"filters": {
-		"text_regexs": [],
-		"text_strings": [],
-		"image_min_height": None,
-		"image_min_width": None,
-		"image_max_height": None,
-		"image_max_width": None,
-		"image_min_size": 100
+		"text": {
+			"regexs": [],
+			"strings": []
+		},
+		"images": {
+			"min_height": None,
+			"min_width": None,
+			"max_height": None,
+			"max_width": None,
+			"min_size": 100,
+			"signatures": []
+		}
 	},
 	"custom": {},
 	"extensions": {}
@@ -126,13 +131,13 @@ class TextFilters:
 	def regexs(self) -> list[str]:
 		"""Список регулярных выражений фильтрации."""
 
-		return self.__Regexs
+		return self.__Data.get("regexs", [])
 	
 	@property
 	def strings(self) -> list[str]:
 		"""Список удаляемых строк."""
 
-		return self.__Strings
+		return self.__Data.get("strings", [])
 
 	#==========================================================================================#
 	# >>>>> ПУБЛИЧНЫЕ МЕТОДЫ <<<<< #
@@ -146,11 +151,7 @@ class TextFilters:
 		:type data: dict
 		"""
 
-		self.__Regexs = []
-		self.__Strings = []
-
-		if "text_regexs" in data.keys() and type(data["text_regexs"]) is list: self.__Regexs = data["text_regexs"]
-		if "text_strings" in data.keys() and type(data["text_strings"]) is list: self.__Strings = data["text_strings"]
+		self.__Data: dict = data
 
 	def clear(self, text: str) -> str:
 		"""
@@ -162,8 +163,8 @@ class TextFilters:
 		:rtype: str
 		"""
 
-		for Regex in self.__Regexs: text = re.sub(Regex, "", text)
-		for String in self.__Strings: text = text.replace(String, "")
+		for Regex in self.regexs: text = re.sub(Regex, "", text)
+		for String in self.strings: text = text.replace(String, "")
 
 		return text
 
@@ -204,6 +205,14 @@ class ImageFilters:
 
 		return self.__Data["image_max_width"]
 	
+	@property
+	def signatures(self) -> tuple[str, ...]:
+		"""Последовательность сигнатур изображений."""
+
+		Signatures: list[str] | None = self.__Data.get("signatures")
+
+		return tuple(Signatures) if Signatures else ()
+
 	#==========================================================================================#
 	# >>>>> ПУБЛИЧНЫЕ МЕТОДЫ <<<<< #
 	#==========================================================================================#
@@ -216,13 +225,7 @@ class ImageFilters:
 		:type data: dict
 		"""
 
-		self.__Data = {
-			"image_min_height": None,
-			"image_min_width": None,
-			"image_max_height": None,
-			"image_max_width": None,
-			"image_min_size": 100
-		} | data
+		self.__Data: dict = data
 
 	def check_sizes(self, width: int, height: int) -> bool:
 		"""
@@ -236,14 +239,12 @@ class ImageFilters:
 		:rtype: bool
 		"""
 
-		IsFiltered = False
+		if self.min_width and width < self.min_width: return True
+		if self.min_height and height < self.min_height: return True
+		if self.max_width and height > self.max_width: return True
+		if self.max_height and height > self.max_height: return True
 
-		if self.min_width and width < self.min_width: IsFiltered = True
-		if self.min_height and height < self.min_height: IsFiltered = True
-		if self.max_width and height > self.max_width: IsFiltered = True
-		if self.max_height and height > self.max_height: IsFiltered = True
-
-		return IsFiltered
+		return False
 
 #==========================================================================================#
 # >>>>> КАТЕГОРИИ НАСТРОЕК <<<<< #
@@ -427,13 +428,12 @@ class Filters:
 		"""
 		Фильтры контента.
 
-		:param settings: Словарь настроек.
+		:param settings: Словарь фильтров.
 		:type settings: dict
 		"""
-
-		if "filters" not in settings.keys() or type(settings["filters"]) is not dict: settings["filters"] = {}
-		self.__TextFilters = TextFilters(settings["filters"])
-		self.__ImageFilters = ImageFilters(settings["filters"])
+		
+		self.__TextFilters = TextFilters(settings.get("text", {}))
+		self.__ImageFilters = ImageFilters(settings.get("images", {}))
 
 class Custom:
 	"""Собственные настройки парсера."""
@@ -603,7 +603,7 @@ class ParserSettings[T: CustomSettingsTemplate]:
 		self.__Directories = Directories(self.__SystemObjects, self.__ParserName, self.__Settings.get("directories", {}))
 		self.__Common: Common = Common(self.__Settings.get("common", {}))
 		self.__Network: Network = Network(self.__Settings.get("network", {}))
-		self.__Filters = Filters(self.__Settings)
+		self.__Filters = Filters(self.__Settings.get("filters", {}))
 		self.__Extensions: Extensions = Extensions(self.__Settings.get("extensions", {}))
 
 		self.__Custom: T | None = None

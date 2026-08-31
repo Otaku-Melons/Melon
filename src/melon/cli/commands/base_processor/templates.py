@@ -19,3 +19,10 @@ class T_SingleParserRequired:
 	"""Шаблон: требуется один парсер."""
 
 	required_parser: RequiredParser
+
+@dataclass(frozen = True)
+class T_OptionalSingleParser:
+	"""Шаблон: возможен один необязательный парсер."""
+
+	required_parser: RequiredParser | None
+
