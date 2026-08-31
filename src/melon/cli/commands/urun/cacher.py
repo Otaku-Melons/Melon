@@ -5,7 +5,7 @@ from dublib.cli.terminalyzer import Command, ParsedCommandData
 from .... import utils
 from ..base_processor import PreparedData
 from ..base_processor.parameters_templates import T_MultipleParsersRequired
-from ._base import CommandProcessorTemplate
+from ..melon._base import CommandProcessorTemplate
 
 #==========================================================================================#
 # >>>>> ВСПОМОГАТЕЛЬНЫЕ СТРУКТУРЫ ДАННЫХ <<<<< #

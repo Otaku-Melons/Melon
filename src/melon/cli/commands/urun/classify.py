@@ -9,7 +9,7 @@ from dublib.functions.filesystem import WriteJSON
 from .... import utils
 from ....core import exceptions
 from ..base_processor import PreparedData, ProcessorOptions
-from ._base import CommandProcessorTemplate
+from ..melon._base import CommandProcessorTemplate
 
 #==========================================================================================#
 # >>>>> ВСПОМОГАТЕЛЬНЫЕ СТРУКТУРЫ ДАННЫХ <<<<< #
