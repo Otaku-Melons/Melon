@@ -103,8 +103,15 @@ class BaseCommandProcessor(ABC, Generic[PARAMS]):
 		:rtype: tuple[RequiredParser, ...]
 		"""
 
+		if not required_parsers:
+			required_parsers = tuple(self.system_objects.manager.parsers.installed)
+			
+			if self.system_objects.options.DEBUG:
+				self.printer.debug("Parsers not selected. Loaded all.")
+
 		Parsers: list = []
-		for Name in required_parsers: Parsers.append(self._GetParser(Name))
+		for Name in required_parsers: 
+			Parsers.append(self._GetParser(Name))
 
 		return tuple(Parsers)
 
