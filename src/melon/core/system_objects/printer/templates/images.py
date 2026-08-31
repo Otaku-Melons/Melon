@@ -34,8 +34,8 @@ class ImageDownloadingFuture(_BaseTemplatesSection):
 			self.printer.error(result.error_message)
 			return
 
-		elif result.is_already_exists and not result.is_downloaded: self.printer.emit("Image already exists.")
-		elif result.is_already_exists and result.is_downloaded: self.printer.emit("Image overwritten.")
+		elif result.is_already_exists and not result.is_downloaded: self.printer.emit("Already exists.")
+		elif result.is_already_exists and result.is_downloaded: self.printer.emit(f"Overwritten in {self.__Timer.ends()}.")
 		else: self.printer.emit(f"Done in {self.__Timer.ends()}.")
 		
 		if show_path: self.printer.emit(f"Image path: \"{result.path}\".")

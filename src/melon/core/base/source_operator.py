@@ -300,8 +300,9 @@ class BaseSourceOperator[CSM: CustomSettingsTemplate](ABC):
 
 		url = Validator_URL.parse(url)
 		ImageTargetPath = self._ImagesDownloader.build_target_path(url, directory, filename, is_full_filename)
-		
-		if ImageTargetPath.exists() and not force_mode:
+		IsTargetPathExists: bool = ImageTargetPath.exists()
+
+		if IsTargetPathExists and not force_mode:
 			return ImageDownloadingResult(
 				is_already_exists = True,
 				is_downloaded = False,
@@ -313,14 +314,14 @@ class BaseSourceOperator[CSM: CustomSettingsTemplate](ABC):
 		Result = self._TempImage(url, force_mode)
 		if Result.error_message or not Result.path:
 			return Result
-		
+
 		if directory:
 			self._ImagesDownloader.move_from_temp(directory, Result.path.name, filename, is_full_filename, force_mode)
 		else:
 			Result.path.replace(ImageTargetPath)
 		
 		return ImageDownloadingResult(
-			is_already_exists = False,
+			is_already_exists = IsTargetPathExists,
 			is_downloaded = True,
 			resolution = Result.resolution,
 			path = ImageTargetPath,

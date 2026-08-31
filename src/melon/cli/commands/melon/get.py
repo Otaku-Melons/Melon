@@ -122,7 +122,7 @@ class CommandProcessor(CommandProcessorTemplate[Parameters]):
 			force_mode = parameters.is_force_mode_enabled
 		)
 	
-		Future.result(Result)
+		Future.result(Result, show_path = True)
 
-		return True
+		return False
 	

@@ -390,4 +390,4 @@ class ImagesDownloader:
 		:rtype: ImageDownloadingResult
 		"""
 
-		return self.download_image(url, filename = filename, is_full_filename = is_full_filename)
+		return self.download_image(url, filename = filename, is_full_filename = is_full_filename, force_mode = force_mode)
