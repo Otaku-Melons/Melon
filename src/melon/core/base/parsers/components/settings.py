@@ -168,7 +168,7 @@ class TextFilters:
 
 		return text
 
-class ImageFilters:
+class ImagesFilters:
 	"""Фильтры изображений."""
 
 	#==========================================================================================#
@@ -419,10 +419,10 @@ class Filters:
 		return self.__TextFilters
 	
 	@property
-	def image(self) -> ImageFilters:
+	def images(self) -> ImagesFilters:
 		"""Фильтры изображений."""
 
-		return self.__ImageFilters
+		return self.__ImagesFilters
 
 	def __init__(self, settings: dict):
 		"""
@@ -433,7 +433,7 @@ class Filters:
 		"""
 		
 		self.__TextFilters = TextFilters(settings.get("text", {}))
-		self.__ImageFilters = ImageFilters(settings.get("images", {}))
+		self.__ImagesFilters = ImagesFilters(settings.get("images", {}))
 
 class Custom:
 	"""Собственные настройки парсера."""
