@@ -1,13 +1,13 @@
 import os
 import sys
 
-from dublib.functions.system import CheckPythonMinimalVersion
+from dublib.functions.system import check_python_minimal_version
 
 from .cli import CommandsOrchestrator
 from .core.system_objects import SystemObjects
 
 def main():
-	CheckPythonMinimalVersion(3, 12)
+	check_python_minimal_version(3, 12)
 	Objects = SystemObjects()
 
 	CalledCommand: str = sys.argv[0].split("/")[-1]

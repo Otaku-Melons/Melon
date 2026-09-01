@@ -8,7 +8,7 @@ from typing import TYPE_CHECKING
 from deepmerge import always_merger
 
 from dublib.functions.decorators import run_before_method
-from dublib.functions.filesystem import ReadJSON, WriteJSON
+from dublib.functions.filesystem import json
 
 from ....core import exceptions
 from ...base.parsers.components.manifest import ParserManifest
@@ -129,7 +129,7 @@ class ParserOperator:
 		StorageFile = self.__Parsers.manager.system_objects.options.CONFIGS_DIR.value / f"{self.__Name}.json"
 
 		if PresetFile.exists():
-			Buffer: dict = ReadJSON(PresetFile)
+			Buffer: dict = json.read(PresetFile)
 			Config = always_merger.merge(BaseConfig, Buffer)
 		else:
 			return ExportResults.Missing
@@ -141,16 +141,16 @@ class ParserOperator:
 					return ExportResults.AlreadyExists
 
 				case ExportStrategies.Overwrite:
-					WriteJSON(StorageFile, Config)
+					json.write(StorageFile, Config)
 					return ExportResults.Overwtitten
 
 				case ExportStrategies.Merge:
-					CurrentConfig: dict = ReadJSON(StorageFile)
+					CurrentConfig: dict = json.read(StorageFile)
 					Config = always_merger.merge(Config, CurrentConfig)
-					WriteJSON(StorageFile, Config)
+					json.write(StorageFile, Config)
 					return ExportResults.Merged
 
-		WriteJSON(StorageFile, Config)
+		json.write(StorageFile, Config)
 
 		return ExportResults.Installed
 

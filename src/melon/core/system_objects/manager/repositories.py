@@ -4,7 +4,7 @@ from urllib.parse import urlparse
 
 from dulwich import errors, porcelain
 
-from dublib.functions.filesystem import ReadTextFile, WriteTextFile
+from dublib.functions.filesystem import text
 from dublib.validators import Validator_URL
 
 from ....core import exceptions
@@ -161,7 +161,7 @@ class Repositories:
 		if not self.__StorageFile.exists():
 			return 0
 
-		Links: list[str] = ReadTextFile(self.__StorageFile, split = True, strip = True)
+		Links: list[str] = text.read(self.__StorageFile, split = True, strip_level = 2)
 		Links = [Element for Element in Links if Element]
 
 		for URL in Links:
@@ -189,4 +189,4 @@ class Repositories:
 	def save(self):
 		"""Сохраняет репозитории в файл _repositories.txt_."""
 
-		WriteTextFile(self.__StorageFile, tuple(sorted(self.__Repositories.values())))
+		text.write(self.__StorageFile, tuple(sorted(self.__Repositories.values())))

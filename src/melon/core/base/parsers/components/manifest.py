@@ -2,7 +2,7 @@ from enum import Enum
 from types import MappingProxyType
 from typing import TYPE_CHECKING
 
-from dublib.functions.filesystem import ReadJSON
+from dublib.functions.filesystem import json
 
 from .....core import exceptions
 
@@ -133,7 +133,7 @@ class ParserManifest:
 		self.__SystemObjects = system_objects
 		self.__ParserName = parser_name
 
-		self.__Data = ReadJSON(f"parsers/{self.__ParserName}/manifest.json")
+		self.__Data = json.read(f"parsers/{self.__ParserName}/manifest.json")
 		self.__Validate()
 
 		self.__Mirror: str | None = None

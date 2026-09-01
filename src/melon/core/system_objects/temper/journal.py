@@ -1,7 +1,7 @@
 from pathlib import Path
 from typing import TYPE_CHECKING
 
-from dublib.functions.filesystem import ReadJSON, WriteJSON
+from dublib.functions.filesystem import json
 
 if TYPE_CHECKING:
 	from .shared_data import SharedData
@@ -59,7 +59,7 @@ class Journal:
 		"""Загружает журнал."""
 
 		if self.__JournalPath.exists():
-			self.__Data = {int(Key): Value for Key, Value in ReadJSON(self.__JournalPath).items()}
+			self.__Data = {int(Key): Value for Key, Value in json.read(self.__JournalPath).items()}
 		else:
 			self.__Data = {}
 
@@ -67,7 +67,7 @@ class Journal:
 		"""Сохраняет журнал."""
 
 		self.__Data = dict(sorted(self.__Data.items()))
-		WriteJSON(self.__JournalPath, self.__Data)
+		json.write(self.__JournalPath, self.__Data)
 
 	def update(self, title_id: int, slug: str):
 		"""

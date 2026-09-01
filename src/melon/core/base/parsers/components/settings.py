@@ -6,8 +6,8 @@ from typing import TYPE_CHECKING, Any, Literal, cast
 from deepmerge import always_merger
 from pydantic.dataclasses import dataclass
 
-from dublib.functions.data import Zerotify
-from dublib.functions.filesystem import ReadJSON
+from dublib.functions.data import zerotify
+from dublib.functions.filesystem import json
 from dublib.web_requestor import Proxy
 
 if TYPE_CHECKING:
@@ -289,7 +289,7 @@ class Directories:
 		:rtype: Path
 		"""
 
-		Directory: str | None = Zerotify(self.__DirectoriesDict.get(dir_type))
+		Directory: str | None = zerotify(self.__DirectoriesDict.get(dir_type))
 		
 		DirectoryPath: Path = Path(Directory) if Directory else Path(f"{self.__SystemObjects.options.DEFAULT_OUTPUT_DIR}/{self.__ParserName}/{dir_type}")
 		if Directory in (None, "output"): DirectoryPath.mkdir(parents = True, exist_ok = True)
@@ -576,7 +576,7 @@ class ParserSettings[T: CustomSettingsTemplate]:
 
 		for ConfigPath in ConfigsPaths:
 			if ConfigPath.exists():
-				Buffer: dict = ReadJSON(ConfigPath)
+				Buffer: dict = json.read(ConfigPath)
 				Settings = always_merger.merge(Settings, Buffer)
 
 		return Settings

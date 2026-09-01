@@ -4,7 +4,7 @@ from pathlib import Path
 import orjson
 
 from dublib.cli.terminalyzer import Command, ParsedCommandData, ValidableTypes
-from dublib.functions.filesystem import WriteJSON
+from dublib.functions.filesystem import json
 
 from .... import utils
 from ....core import exceptions
@@ -141,7 +141,7 @@ class CommandProcessor(CommandProcessorTemplate[Parameters]):
 			self.printer.templates.classificator.result(ClassificationResult)
 		
 		if parameters.file_to_write:
-			WriteJSON(parameters.file_to_write, ClassificationResult.to_dict())
+			json.write(parameters.file_to_write, ClassificationResult.to_dict())
 			self.printer.emit(f"Classification result dumped in file: \"{parameters.file_to_write}\".")
 
 		return True

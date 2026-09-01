@@ -1,17 +1,17 @@
 import hashlib
-import json
 import os
 from abc import ABC, abstractmethod
+from json import JSONDecodeError
 from os import PathLike
 from pathlib import Path
 from typing import TYPE_CHECKING, Any, Sequence, cast
 
 import orjson
 
-from dublib.functions.data import Zerotify
-from dublib.functions.data.dictionary import InsertAfterKey
-from dublib.functions.data.string import RemoveRecurringSubstrings
-from dublib.functions.filesystem import ReadJSON, WriteJSON
+from dublib.functions.data import zerotify
+from dublib.functions.data.dictionary import insert_after_key
+from dublib.functions.data.string import remove_recurring_substrings
+from dublib.functions.filesystem import json
 from dublib.validators import Validator_Domain
 
 from ....core import exceptions
@@ -121,7 +121,7 @@ class Person:
 		:type description: str | None
 		"""
 
-		self.__Data["description"] = Zerotify(description)
+		self.__Data["description"] = zerotify(description)
 
 	def to_dict(self, sizing_images: bool = True) -> dict:
 		"""
@@ -318,7 +318,7 @@ class BaseChapter(ABC):
 		elif type(number) is not str: number = str(number)
 		if "-" in number: number = number.split("-")[0]
 		number = number.strip("\t .\n")
-		Number = cast(str | None, Zerotify(number))
+		Number = cast(str | None, zerotify(number))
 
 		return Number
 
@@ -438,7 +438,7 @@ class BaseChapter(ABC):
 		:type name: str | None
 		"""
 
-		name = Zerotify(name)
+		name = zerotify(name)
 		if name: name = name.strip()
 		
 		if name and self._Parser.settings.common.pretty:
@@ -446,7 +446,7 @@ class BaseChapter(ABC):
 			else: name = name.rstrip(".–")
 		
 			name = name.replace("\u00A0", " ")
-			name = RemoveRecurringSubstrings(name, " ")
+			name = remove_recurring_substrings(name, " ")
 
 			name = name.rstrip(":.")
 
@@ -498,7 +498,7 @@ class BaseChapter(ABC):
 
 		self._PreFormatter()
 
-		return InsertAfterKey(self._Data.copy(), self.extra_data.to_dict(), "workers")
+		return insert_after_key(self._Data.copy(), self.extra_data.to_dict(), "workers")
 
 class BaseBranch(ABC):
 	"""Базовая ветвь."""
@@ -830,7 +830,7 @@ class BaseTitle(ABC):
 
 		Filename: str = filename if filename.endswith(".json") else f"{filename}.json"
 		FilePath = self._Parser.settings.directories.titles / Filename
-		if FilePath.exists(): return ReadJSON(FilePath)
+		if FilePath.exists(): return json.read(FilePath)
 
 		return None
 
@@ -844,11 +844,11 @@ class BaseTitle(ABC):
 
 			if Slug:
 				FilePath = TitlesDirectory / f"{Slug}.json"
-				if FilePath.exists(): return ReadJSON(FilePath)
+				if FilePath.exists(): return json.read(FilePath)
 
 		else:
 			FilePath = TitlesDirectory / f"{title_id}.json"
-			if FilePath.exists(): return ReadJSON(FilePath)
+			if FilePath.exists(): return json.read(FilePath)
 
 		return self._SearchFileInDirectory(TitlesDirectory, title_id, By.ID) or {}
 
@@ -862,11 +862,11 @@ class BaseTitle(ABC):
 
 			if ID:
 				FilePath = TitlesDirectory / f"{ID}.json"
-				if FilePath.exists(): return ReadJSON(FilePath)
+				if FilePath.exists(): return json.read(FilePath)
 
 		else:
 			FilePath = TitlesDirectory / f"{slug}.json"
-			if FilePath.exists(): return ReadJSON(FilePath)
+			if FilePath.exists(): return json.read(FilePath)
 		
 		return self._SearchFileInDirectory(TitlesDirectory, slug, By.Slug)
 
@@ -902,7 +902,7 @@ class BaseTitle(ABC):
 
 		self._IsLocalFileLoaded = bool(DataBuffer)
 
-		return Zerotify(DataBuffer)
+		return zerotify(DataBuffer)
 
 	def _SearchFileInDirectory(self, directory: str | PathLike[str], identificator: int | str, identificator_type: By) -> dict | None:
 		"""
@@ -922,10 +922,10 @@ class BaseTitle(ABC):
 			if not Element.is_file() or not Element.name.endswith(".json"): continue
 
 			try: 
-				Data = ReadJSON(Element.path)
+				Data = json.read(Element.path)
 				if Data.get(identificator_type.value) == identificator: return Data
 
-			except (json.JSONDecodeError, exceptions.parsers.UnsupportedFormat): pass
+			except (JSONDecodeError, exceptions.parsers.UnsupportedFormat): pass
 
 		return None
 
@@ -964,7 +964,7 @@ class BaseTitle(ABC):
 		if not self.path.exists():
 			return False
 
-		LocalHasher = hashlib.sha256(orjson.dumps(ReadJSON(self.path)))
+		LocalHasher = hashlib.sha256(orjson.dumps(json.read(self.path)))
 		MemoryHasher = hashlib.sha256(orjson.dumps(self._Data))
 		
 		return LocalHasher.hexdigest() == MemoryHasher.hexdigest()
@@ -1271,7 +1271,7 @@ class BaseTitle(ABC):
 		IsLocalFileEqual = self._IsLocalFileEqual()
 
 		if not IsLocalFileEqual:
-			WriteJSON(self.path, self._Data)
+			json.write(self.path, self._Data)
 
 		return not IsLocalFileEqual
 

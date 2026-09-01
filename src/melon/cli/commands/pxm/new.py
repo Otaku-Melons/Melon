@@ -79,7 +79,7 @@ class CommandProcessor(CommandProcessorTemplate[Parameters]):
 		Domain: str = data.get_important_position_value("DOMAIN", expected_type = str)
 		UseGit: bool = data.check_flag("-git")
 		ContentTypesString: str = data.get_important_position_value("CONTENT_TYPES", expected_type = str)
-		ContentTypesValues = utils.DevelopmeptAssistant.parse_content_types(ContentTypesString)
+		ContentTypesValues = utils.DevelopmentAssistant.parse_content_types(ContentTypesString)
 
 		return Parameters(
 			parser_name = ParserName,
@@ -98,7 +98,7 @@ class CommandProcessor(CommandProcessorTemplate[Parameters]):
 		:rtype: bool
 		"""
 
-		Developer = utils.DevelopmeptAssistant(self.system_objects)
+		Developer = utils.DevelopmentAssistant(self.system_objects)
 		Developer.create_parser(parameters.parser_name, parameters.domain, parameters.content_types, parameters.is_use_git)
 
 		return True

@@ -7,7 +7,7 @@ from typing import TYPE_CHECKING, Sequence
 from dulwich import errors, porcelain
 
 from dublib.exceptions.web_requestor import TokenExpired
-from dublib.functions.filesystem import ReadJSON
+from dublib.functions.filesystem import json
 from dublib.validators import Validator_Domain, Validator_URL
 from dublib.web_requestor import WebConfig, WebLibs, WebRequestor
 
@@ -343,7 +343,7 @@ class BaseSourceOperator[CSM: CustomSettingsTemplate](ABC):
 			filename += ".json"
 
 		FilePath = self.settings.directories.titles / filename
-		TitleData = ReadJSON(FilePath)
+		TitleData = json.read(FilePath)
 		Type: str = TitleData["format"]
 		TypeName: str = Type.split("-")[1]
 		

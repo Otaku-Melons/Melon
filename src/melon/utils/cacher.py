@@ -3,7 +3,7 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import TYPE_CHECKING
 
-from dublib.functions.filesystem import ReadJSON
+from dublib.functions.filesystem import json
 
 if TYPE_CHECKING:
 	from ..core.base.source_operator import BaseSourceOperator
@@ -85,7 +85,7 @@ class Cacher:
 
 		for CurrentFile in Files:
 				try:
-					Data = ReadJSON(TitlesDirectory / f"{CurrentFile}.json")
+					Data = json.read(TitlesDirectory / f"{CurrentFile}.json")
 				except Exception:
 					Errors.append(CurrentFile)
 					continue

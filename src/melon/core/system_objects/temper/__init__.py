@@ -3,7 +3,7 @@ import shutil
 from pathlib import Path
 from typing import TYPE_CHECKING, Sequence
 
-from dublib.functions.filesystem import RemoveDirectoryContent
+from dublib.functions.filesystem import clear_directory
 
 from .shared_data import SharedData
 
@@ -39,7 +39,7 @@ class Temper:
 		ParserTempDirectory = self.get_parser_temp_directory(parser_name)
 
 		if not whitelist: 
-			RemoveDirectoryContent(ParserTempDirectory)
+			clear_directory(ParserTempDirectory)
 			return
 
 		for Descriptor in os.scandir(ParserTempDirectory):

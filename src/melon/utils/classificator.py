@@ -5,7 +5,7 @@ from os import PathLike
 from pathlib import Path
 from typing import Literal, Sequence, cast
 
-from dublib.functions.filesystem import ReadTextFile
+from dublib.functions.filesystem import text
 
 from ..core.exceptions.utils import classificator as classificator_exceptions
 
@@ -203,11 +203,11 @@ class Classificator:
 		"""
 
 		ScriptPath: Path = Path(script_file)
-		ScriptLines: list[str] = ReadTextFile(ScriptPath, split = True)
+		ScriptLines: list[str] = text.read(ScriptPath, split = True, strip_level = 2)
 		FileOperationsLines: list[ExecutableLine] = []
 
 		for Index in range(len(ScriptLines)):
-			Line = ScriptLines[Index].strip()
+			Line = ScriptLines[Index]
 
 			if not Line:
 				continue

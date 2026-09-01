@@ -1,7 +1,7 @@
 from typing import TYPE_CHECKING
 
 from dublib.cli.text_styler import FastStyler
-from dublib.functions.data import StringifyFloat
+from dublib.functions.data import stringify_float
 
 from ._base import _BaseTemplatesSection
 
@@ -64,7 +64,7 @@ class ParsingTemplates(_BaseTemplatesSection):
 		Number = index + 1
 		Progress = round(Number / count * 100, 2)
 		NumberString = FastStyler(str(Number)).colorize.magenta
-		ProgressString = StringifyFloat(Progress)
+		ProgressString = stringify_float(Progress)
 		ProgressString = FastStyler(ProgressString + "%").colorize.cyan
 
 		self.printer.progress_indicator.set_progress(Progress)

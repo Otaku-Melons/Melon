@@ -7,8 +7,8 @@ from urllib.parse import urlparse
 from dulwich.repo import Repo
 
 from dublib.engine.patcher import Patch
-from dublib.functions.data import ToSequence
-from dublib.functions.filesystem import WriteJSON, WriteTextFile
+from dublib.functions.data import to_sequence
+from dublib.functions.filesystem import json, text
 
 from ...core import exceptions
 from ...core.base.parsers.components.manifest import _BASE_MANIFEST, ContentTypes
@@ -17,7 +17,7 @@ from ...core.base.parsers.components.settings import ParserSettings
 if TYPE_CHECKING:
 	from ...core.system_objects import SystemObjects
 
-class DevelopmeptAssistant:
+class DevelopmentAssistant:
 	"""Ассистент разработчика."""
 
 	#==========================================================================================#
@@ -59,7 +59,7 @@ class DevelopmeptAssistant:
 		"""
 
 		Repo.init(path)
-		WriteTextFile(path / ".gitignore", "__pycache__")
+		text.write(path / ".gitignore", "__pycache__")
 
 	def __InitManifest(self, path: Path, domain: str, types: Sequence[ContentTypes]):
 		"""
@@ -78,7 +78,7 @@ class DevelopmeptAssistant:
 		ManifestDict["content_types"] = tuple(CurrentType.value for CurrentType in types)
 		ManifestDict["version"] = "$last_git_tag"
 		ManifestDict["melon_required_version"] = f">={self.__SystemObjects.MELON_VERSION}" if self.__SystemObjects.MELON_VERSION else None
-		WriteJSON(f"{path}/manifest.json", ManifestDict)
+		json.write(f"{path}/manifest.json", ManifestDict)
 
 	def __InitSettings(self, path: Path):
 		"""
@@ -88,7 +88,7 @@ class DevelopmeptAssistant:
 		:type path: Path
 		"""
 
-		WriteJSON(path / "settings.json", ParserSettings.get_base_settings(self.__SystemObjects, path.name))
+		json.write(path / "settings.json", ParserSettings.get_base_settings(self.__SystemObjects, path.name))
 
 	#==========================================================================================#
 	# >>>>> ПУБЛИЧНЫЕ МЕТОДЫ <<<<< #
@@ -120,7 +120,7 @@ class DevelopmeptAssistant:
 		"""
 
 		if domain.startswith("http"): domain = urlparse(domain).netloc
-		content_types = ToSequence(content_types)
+		content_types = to_sequence(content_types)
 
 		ParsersDirectoryPath = Path("parsers")
 		ParsersDirectoryPath.mkdir(exist_ok = True)

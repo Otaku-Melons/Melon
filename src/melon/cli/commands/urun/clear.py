@@ -4,7 +4,7 @@ from pathlib import Path
 from typing import TYPE_CHECKING, Sequence
 
 from dublib.cli.terminalyzer import Command, ParsedCommandData
-from dublib.functions.filesystem import RemoveDirectoryContent
+from dublib.functions.filesystem import clear_directory
 
 from .... import utils
 from ..base_processor import PreparedData
@@ -95,7 +95,7 @@ class CommandProcessor(CommandProcessorTemplate[Parameters]):
 		"""
 
 		ParserSettings = parameters.required_parser.settings
-		RemoveDirectoryContent(ParserSettings.directories.titles)
+		clear_directory(ParserSettings.directories.titles)
 		self.printer.emit("All files removed.")
 
 		return True

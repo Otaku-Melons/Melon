@@ -7,7 +7,7 @@ import imagehash
 from PIL.Image import open as open_image
 from PIL.ImageFile import ImageFile
 
-from dublib.functions.data import ToSequence
+from dublib.functions.data import to_sequence
 
 from .enums import SignaturesVersions
 
@@ -133,7 +133,7 @@ class Unstubber:
 		:rtype: bool
 		"""
 
-		Signatures: tuple[str, ...] = ToSequence(signatures)
+		Signatures: tuple[str, ...] = to_sequence(signatures)
 		TargetSignatures: list[str] = []
 
 		for Version in self.__GetUsedSignaturesVersions(Signatures):

@@ -4,8 +4,8 @@ from json import JSONDecodeError
 from pathlib import Path
 from typing import TYPE_CHECKING, Callable, Sequence, cast
 
-from dublib.functions.data import ToSequence
-from dublib.functions.filesystem import ReadJSON, ReadTextFile, WriteTextFile
+from dublib.functions.data import to_sequence
+from dublib.functions.filesystem import json, text
 
 from ..core.base.structs.title import TitleDescriptor
 
@@ -123,7 +123,7 @@ class Collector:
 			return
 
 		try:
-			Title = ReadJSON(cast(Path, descriptor.path)) 
+			Title = json.read(cast(Path, descriptor.path)) 
 			descriptor.extra["is_broken"] = False
 			Slug = Title.get("slug")
 			if Slug: descriptor.set_slug(Slug)
@@ -163,7 +163,7 @@ class Collector:
 		:rtype: int
 		"""
 
-		SlugsSet = ToSequence(slugs, target_type = set)
+		SlugsSet = to_sequence(slugs, target_type = set)
 		CollectionSet = set(self.__Collection)
 		UniqueSlugsSet = SlugsSet - CollectionSet
 		
@@ -189,7 +189,7 @@ class Collector:
 		"""
 
 		if self.__CollectionFile.exists():
-			CollectionSlugs: list[str] = ReadTextFile(self.__CollectionFile, split = True, strip = True)
+			CollectionSlugs: list[str] = text.read(self.__CollectionFile, split = True, strip_level = 2)
 			CollectionSlugs = [Slug for Item in CollectionSlugs if (Slug := Item.strip())]
 			return self.add(CollectionSlugs)
 		
@@ -203,7 +203,7 @@ class Collector:
 		:type sort: bool
 		"""
 
-		WriteTextFile(self.__CollectionFile, self.__Collection)
+		text.write(self.__CollectionFile, self.__Collection)
 	
 	#==========================================================================================#
 	# >>>>> ПУБЛИЧНЫЕ МЕТОДЫ СБОРКИ ПО КРИТЕРИЯМ <<<<< #

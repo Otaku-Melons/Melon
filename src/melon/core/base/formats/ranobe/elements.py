@@ -7,7 +7,7 @@ from typing import TYPE_CHECKING, Literal, cast
 import validators
 from bs4 import BeautifulSoup, Tag
 
-from dublib.functions.data.string import RemoveRecurringSubstrings
+from dublib.functions.data.string import remove_recurring_substrings
 from dublib.polyglot import HTML
 
 from .....core import exceptions
@@ -214,7 +214,7 @@ class Header:
 		#---> Удаление дублирующихся пробелов.
 		#==========================================================================================#
 		text = text.replace("\u00A0", " ")
-		text = RemoveRecurringSubstrings(text, " ")
+		text = remove_recurring_substrings(text, " ")
 
 		#---> Удаление пробельных символов в начале и конце строк.
 		#==========================================================================================#

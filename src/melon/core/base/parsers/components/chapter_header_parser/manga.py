@@ -1,7 +1,7 @@
 import re
 from typing import TYPE_CHECKING, Sequence
 
-from dublib.functions.data import Zerotify
+from dublib.functions.data import zerotify
 
 if TYPE_CHECKING:
 	from ......core.base.parsers.base_parser import BaseParser
@@ -36,7 +36,7 @@ class MangaChapterHeaderParser:
 	def name(self) -> str | None:
 		"""Название главы."""
 
-		return Zerotify(self._Header)
+		return zerotify(self._Header)
 
 	#==========================================================================================#
 	# >>>>> НАСЛЕДУЕМЫЕ МЕТОДЫ <<<<< #

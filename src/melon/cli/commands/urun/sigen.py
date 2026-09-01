@@ -2,7 +2,7 @@ from dataclasses import dataclass
 from pathlib import Path
 
 from dublib.cli.terminalyzer import Command, ParsedCommandData, ValidableTypes
-from dublib.functions.filesystem import ReadJSON, WriteJSON
+from dublib.functions.filesystem import json
 
 from .... import utils
 from ..base_processor import PreparedData, RequiredParser
@@ -49,7 +49,7 @@ class CommandProcessor(CommandProcessorTemplate[Parameters]):
 			self.printer.emit("Configuration file not found.")
 			return False
 
-		ConfigData: dict[str, dict] = ReadJSON(Config)
+		ConfigData: dict[str, dict] = json.read(Config)
 
 		if "filters" not in ConfigData: ConfigData["filters"] = {}
 		if "images" not in ConfigData["filters"]: ConfigData["filters"]["images"] = {}
@@ -62,7 +62,7 @@ class CommandProcessor(CommandProcessorTemplate[Parameters]):
 
 		Signatures.append(signature)
 		ConfigData["filters"]["images"]["signatures"] = Signatures
-		WriteJSON(Config, ConfigData)
+		json.write(Config, ConfigData)
 		self.printer.emit(f"Exported in <b>{required_parser.name}</b> config.")
 
 		return True

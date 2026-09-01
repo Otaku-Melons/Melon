@@ -1,7 +1,7 @@
 from pathlib import Path
 from typing import TYPE_CHECKING
 
-from dublib.functions.filesystem import ReadJSON, WriteJSON
+from dublib.functions.filesystem import json
 
 from .journal import Journal
 
@@ -67,7 +67,7 @@ class SharedData:
 		"""Загружает разделяемые данные."""
 
 		if self.__SharedDataPath.exists():
-			self.__Data = self.__Data | ReadJSON(self.__SharedDataPath)
+			self.__Data = self.__Data | json.read(self.__SharedDataPath)
 
 		self.__Journal.load()
 
@@ -85,4 +85,4 @@ class SharedData:
 	def save(self):
 		"""Сохраняет разделяемые данные."""
 
-		WriteJSON(self.__SharedDataPath, self.__Data)
+		json.write(self.__SharedDataPath, self.__Data)
