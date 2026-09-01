@@ -1,3 +1,5 @@
+from typing import Literal
+
 from ..base_format.data import BaseTitleData, ExtraField
 from .chapter import Chapter
 from .enums import Types
@@ -8,6 +10,12 @@ class TitleData(BaseTitleData[Chapter]):
 	#==========================================================================================#
 	# >>>>> СВОЙСТВА <<<<< #
 	#==========================================================================================#
+
+	@property
+	def format(self) -> Literal["melon-manga"]:
+		"""Формат данных."""
+
+		return "melon-manga"
 
 	@property
 	def title_type(self) -> Types | None:

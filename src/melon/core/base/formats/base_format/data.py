@@ -1,5 +1,5 @@
 from abc import ABC, abstractmethod
-from typing import TYPE_CHECKING, Any, Sequence, cast
+from typing import TYPE_CHECKING, Any, Literal, Sequence, cast
 
 from dublib.functions.data.dictionary import insert_item
 from dublib.validators import Validator_Domain
@@ -22,6 +22,12 @@ class BaseTitleData[C: "BaseChapter"](ABC):
 	#==========================================================================================#
 	# >>>>> СВОЙСТВА <<<<< #
 	#==========================================================================================#
+
+	@property
+	def format(self) -> Literal["melon-manga", "melon-ranobe"]:
+		"""Формат данных."""
+
+		return self._data["format"]
 
 	@property
 	def domain(self) -> str | None:

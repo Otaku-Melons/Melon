@@ -1,3 +1,5 @@
+from typing import Literal
+
 from ...parsers.components.words_dictionary import CheckLanguageCode
 from ..base_format.data import BaseTitleData, ExtraField
 from .chapter import Chapter
@@ -8,6 +10,12 @@ class TitleData(BaseTitleData[Chapter]):
 	#==========================================================================================#
 	# >>>>> СВОЙСТВА <<<<< #
 	#==========================================================================================#
+
+	@property
+	def format(self) -> Literal["melon-ranobe"]:
+		"""Формат данных."""
+
+		return "melon-ranobe"
 
 	@property
 	def original_language(self) -> str | None:
