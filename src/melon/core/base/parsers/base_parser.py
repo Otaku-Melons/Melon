@@ -30,7 +30,7 @@ if TYPE_CHECKING:
 class BaseParser[SO: "BaseSourceOperator", CSM: "CustomSettingsTemplate"](ABC):
 	"""Базовый парсер."""
 
-	_Title: BaseTitleController["BaseTitleData"] | None
+	_Title: "BaseTitleController[BaseTitleData] | None"
 
 	#==========================================================================================#
 	# >>>>> СВОЙСТВА <<<<< #
@@ -79,7 +79,7 @@ class BaseParser[SO: "BaseSourceOperator", CSM: "CustomSettingsTemplate"](ABC):
 		return self._source_operator
 
 	@property
-	def title(self) -> BaseTitleController["BaseTitleData"] | None:
+	def title(self) -> "BaseTitleController[BaseTitleData] | None":
 		"""Тайтл."""
 
 		return self._title
@@ -109,8 +109,8 @@ class BaseParser[SO: "BaseSourceOperator", CSM: "CustomSettingsTemplate"](ABC):
 		:rtype: list[ImageDownloadingResult]
 		"""
 
-		self._title = cast(BaseTitleController, self._title)
-		ImageDirecory: Path = self.settings.directories.images / self._title.used_filename / image_type
+		Title = cast(BaseTitleController, self._title)
+		ImageDirecory: Path = self.settings.directories.images / Title.used_filename / image_type
 		ImageDirecory.mkdir(parents = True, exist_ok = True)
 		Results: list = []
 		ImagesCount: int = len(images_data)
@@ -192,7 +192,7 @@ class BaseParser[SO: "BaseSourceOperator", CSM: "CustomSettingsTemplate"](ABC):
 		self._source_operator = source_operator
 
 		self._words_dictionary: WordsDictionary = WordsDictionary(None)
-		self._title: BaseTitleController["BaseTitleData"] | None = None
+		self._title: "BaseTitleController[BaseTitleData] | None" = None
 
 		self._post_init_method()
 
