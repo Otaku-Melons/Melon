@@ -156,6 +156,17 @@ class ImagesDownloader:
 		IsDownloaded: bool = False
 		ErrorMessage: str | None = None
 
+		#---> Проверка кэша отфильтрованных изображений.
+		#==========================================================================================#
+		IsFiltered = self.__SourceOperator.shared_data.filtered_images.check(url)
+		if IsFiltered:
+			return ImageDownloadingResult(
+				is_already_exists = False,
+				is_downloaded = False,
+				filtered_by = IsFiltered,
+				path = None
+			)
+
 		#---> Подстановка доменов зеркал.
 		#==========================================================================================#
 		ImagesMirrors: dict[str, str] = self.__SourceOperator.settings.network.images_mirrors
@@ -175,6 +186,8 @@ class ImagesDownloader:
 					with open(ImagePath, "wb") as FileWriter:
 						FileWriter.write(Response.content)
 						IsDownloaded = True
+
+				else: self.__SourceOperator.shared_data.filtered_images.add(url, IsFiltered)
 
 			else: ErrorMessage = f"Response code: {Response.status_code}."
 

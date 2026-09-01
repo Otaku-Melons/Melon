@@ -3,6 +3,7 @@ from typing import TYPE_CHECKING
 
 from dublib.functions.filesystem import json
 
+from .filtered_images import FilteredImages
 from .journal import Journal
 
 if TYPE_CHECKING:
@@ -16,22 +17,28 @@ class SharedData:
 	#==========================================================================================#
 
 	@property
+	def filtered_images(self) -> FilteredImages:
+		"""Кэш отфильтрованных изображений."""
+
+		return self.__filtered_images
+
+	@property
 	def journal(self) -> Journal:
 		"""Журнал кэша пар ID-алиас тайтлов."""
 
-		return self.__Journal
+		return self.__journal
 
 	@property
 	def last_parsed_slug(self) -> str | None:
 		"""Алиас последнего тайтла, обработанного парсером."""
 
-		return self.__Data.get("last_parsed_slug")
+		return self.__data.get("last_parsed_slug")
 
 	@property
 	def path(self) -> Path:
 		"""Путь к каталогу разделяемых данных."""
 
-		return self.__SharedDataDirectoryPath
+		return self.__shared_data_directory
 
 	#==========================================================================================#
 	# >>>>> СВОЙСТВА <<<<< #
@@ -47,29 +54,31 @@ class SharedData:
 		:type parser_name: str
 		"""
 
-		self.__Temper = temper
-		self.__ParserName = parser_name
+		self.__temper = temper
+		self.__parser_name = parser_name
 
-		self.__SharedDataDirectoryPath = Path(self.__Temper.get_parser_temp_directory(self.__ParserName) / "shared")
-		self.__SharedDataDirectoryPath.mkdir(exist_ok = True)
+		self.__shared_data_directory = Path(self.__temper.get_parser_temp_directory(self.__parser_name) / "shared")
+		self.__shared_data_directory.mkdir(exist_ok = True)
 
-		self.__SharedDataPath = Path(f"{self.__SharedDataDirectoryPath}/shared.json")
+		self.__shared_data_file = Path(f"{self.__shared_data_directory}/shared.json")
 
-		self.__Data: dict = {
+		self.__data: dict = {
 			"last_parsed_slug": None
 		}
 
-		self.__Journal = Journal(self)
+		self.__filtered_images = FilteredImages(self)
+		self.__journal = Journal(self)
 
 		self.load()
 
 	def load(self):
 		"""Загружает разделяемые данные."""
 
-		if self.__SharedDataPath.exists():
-			self.__Data = self.__Data | json.read(self.__SharedDataPath)
+		if self.__shared_data_file.exists():
+			self.__data = self.__data | json.read(self.__shared_data_file)
 
-		self.__Journal.load()
+		self.__filtered_images.load()
+		self.__journal.load()
 
 	def set_last_parsed_slug(self, slug: str):
 		"""
@@ -79,10 +88,10 @@ class SharedData:
 		:type slug: str
 		"""
 
-		self.__Data["last_parsed_slug"] = slug
+		self.__data["last_parsed_slug"] = slug
 		self.save()
 		
 	def save(self):
 		"""Сохраняет разделяемые данные."""
 
-		json.write(self.__SharedDataPath, self.__Data)
+		json.write(self.__shared_data_file, self.__data)

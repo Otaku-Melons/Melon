@@ -124,5 +124,5 @@ class CommandProcessor(CommandProcessorTemplate[Parameters]):
 	
 		Future.result(Result, show_path = True)
 
-		return False
+		return True
 	

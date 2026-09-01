@@ -11,7 +11,7 @@ class Journal:
 
 	def __init__(self, shared_data: "SharedData"):
 		"""
-		Журнал хранения пар ID-алиас тайтлов.
+		Журнал кэша пар ID-алиас тайтлов
 
 		:param shared_data: Разделяемые в контексте одного парсера данные.
 		:type shared_data: SharedData
