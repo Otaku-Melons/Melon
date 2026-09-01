@@ -19,7 +19,7 @@ if TYPE_CHECKING:
 	from dublib.web_requestor import WebRequestor
 
 	from ....core.base.formats.base_format.data import BaseTitleData
-	from ....core.base.parsers.components import ParserManifest
+	from ....core.base.parsers.components.manifest import ParserManifest
 	from ....core.base.parsers.components.settings import (
 		CustomSettingsTemplate,
 		ParserSettings,

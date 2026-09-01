@@ -13,8 +13,8 @@ from dublib.polyglot import HTML
 from .....core import exceptions
 
 if TYPE_CHECKING:
-	from ...parsers.base_ranobe_parser import BaseRanobeParser
 	from ...parsers.components.images_downloader import ImageResolution
+	from ...parsers.ranobe import BaseRanobeParser
 	from ..base_format.controller import BaseTitleController
 	from .chapter import Chapter
 
