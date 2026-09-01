@@ -1,13 +1,12 @@
 import shutil
 from dataclasses import dataclass
-from io import BytesIO
+from enum import Enum
 from os import PathLike
 from pathlib import Path
 from typing import TYPE_CHECKING
 from urllib.parse import urlparse, urlunparse
 
-from PIL import Image
-
+from .....utils.unstubber import Unstubber
 from ...structs.image import ImageResolution
 
 if TYPE_CHECKING:
@@ -19,15 +18,24 @@ if TYPE_CHECKING:
 # >>>>> ВСПОМОГАТЕЛЬНЫЕ СТРУКТУРЫ ДАННЫХ <<<<< #
 #==========================================================================================#
 
+class FilteredBy(Enum):
+	"""Перечисление типов фильтрации."""
+
+	Resolution = 1
+	Size = 2
+	Signature = 3
+
 @dataclass(frozen = True)
 class ImageDownloadingResult:
 	"""Результат скачивания изображения."""
 
-	is_already_exists: bool
 	is_downloaded: bool
-	resolution: ImageResolution | None
+	is_already_exists: bool
 	path: Path | None
-	error_message: str | None
+
+	filtered_by: FilteredBy | None = None
+	resolution: ImageResolution | None = None
+	error_message: str | None = None
 
 #==========================================================================================#
 # >>>>> ОСНОВНОЙ КЛАСС <<<<< #
@@ -70,6 +78,7 @@ class ImagesDownloader:
 		self.__Temper = self.__SystemObjects.temper
 		self.__ParserSettings = self.__SourceOperator.settings
 		self.__Requestor = self.__SourceOperator.requestor
+		self.__Unstubber = Unstubber()
 
 		self.__CustomRequestor: "WebRequestor | None" = None
 
@@ -143,6 +152,7 @@ class ImagesDownloader:
 
 		IsAlreadyExists: bool = ImagePath.exists()
 		Resolution: ImageResolution | None = None
+		IsFiltered: FilteredBy | None = None
 		IsDownloaded: bool = False
 		ErrorMessage: str | None = None
 
@@ -159,17 +169,51 @@ class ImagesDownloader:
 
 			if Response.ok and Response.content:
 				Resolution = self.get_image_resolution(Response.content)
-				MinImageSize: int = self.__SourceOperator.settings.filters.image.min_size
+				IsFiltered = self.filter_image(Response.content, Resolution)
 				
-				if len(Response.content) > MinImageSize:
-					with open(ImagePath, "wb") as FileWriter: FileWriter.write(Response.content)
-					IsDownloaded = True
-
-				else: ErrorMessage = f"Image is {MinImageSize} bytes or less."
+				if IsFiltered is None:
+					with open(ImagePath, "wb") as FileWriter:
+						FileWriter.write(Response.content)
+						IsDownloaded = True
 
 			else: ErrorMessage = f"Response code: {Response.status_code}."
 
-		return ImageDownloadingResult(IsAlreadyExists, IsDownloaded, Resolution, ImagePath, ErrorMessage)
+		return ImageDownloadingResult(
+			is_already_exists = IsAlreadyExists,
+			is_downloaded = IsDownloaded,
+			filtered_by = IsFiltered,
+			resolution = Resolution,
+			path = ImagePath,
+			error_message = ErrorMessage
+		)
+
+	def filter_image(self, image: bytes, resolution: ImageResolution | None) -> FilteredBy | None:
+		"""
+		Проверяет изображение фильтрами.
+
+		:param image: Бинарное представление изображения.
+		:type image: bytes
+		:param resolution: Разрешение изображения в пикселях.
+		:type resolution: ImageResolution | None
+		:return: Возвращает причину фильтрации.
+		:rtype: FilteredBy | None
+		"""
+
+		if resolution and not self.__SourceOperator.settings.filters.images.check_sizes(resolution.width, resolution.height):
+			return FilteredBy.Resolution
+
+		MinImageSize = self.__SourceOperator.settings.filters.images.min_size		
+		if len(image) < MinImageSize:
+			return FilteredBy.Size
+
+		Signatures = self.__SourceOperator.settings.filters.images.signatures
+		if Signatures:
+			Image = self.__Unstubber.build_image(image)
+
+			if self.__Unstubber.filter_image(Image, Signatures):
+				return FilteredBy.Signature
+
+		return None
 
 	def get_image_resolution(self, data: bytes) -> ImageResolution | None:
 		"""
@@ -188,7 +232,7 @@ class ImagesDownloader:
 		Resolution = None
 
 		try:
-			Buffer = Image.open(BytesIO(data))
+			Buffer = self.__Unstubber.build_image(data)
 			Resolution = ImageResolution(Buffer.size[0], Buffer.size[1])
 		except Exception:
 			return None

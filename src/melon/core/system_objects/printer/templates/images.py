@@ -1,12 +1,11 @@
-from typing import TYPE_CHECKING, Literal
+from typing import Literal
 
+from .....core.base.parsers.components.images_downloader import (
+	FilteredBy,
+	ImageDownloadingResult,
+)
 from .....utils.timer import Timer
 from ._base import _BaseTemplatesSection
-
-if TYPE_CHECKING:
-	from .....core.base.parsers.components.images_downloader import (
-		ImageDownloadingResult,
-	)
 
 #==========================================================================================#
 # >>>>> ФУТУРА ВЫВОДА <<<<< #
@@ -20,7 +19,7 @@ class ImageDownloadingFuture(_BaseTemplatesSection):
 
 		self.__Timer = Timer(start = True)
 
-	def result(self, result: "ImageDownloadingResult", show_path: bool = False):
+	def result(self, result: ImageDownloadingResult, show_path: bool = False):
 		"""
 		Шаблон вывода: результат скачивания изображения.
 
@@ -32,6 +31,13 @@ class ImageDownloadingFuture(_BaseTemplatesSection):
 
 		if result.error_message:
 			self.printer.error(result.error_message)
+			return
+
+		elif result.filtered_by:
+			match result.filtered_by:
+				case FilteredBy.Resolution: self.printer.emit("Filtered by resolution.")
+				case FilteredBy.Size: self.printer.emit("Filtered by size.")
+				case FilteredBy.Signature: self.printer.emit("Filtered by signature.")
 			return
 
 		elif result.is_already_exists and not result.is_downloaded: self.printer.emit("Already exists.")

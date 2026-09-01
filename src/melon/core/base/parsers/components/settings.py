@@ -179,31 +179,31 @@ class ImagesFilters:
 	def min_height(self) -> int | None:
 		"""Минимальная высота изображения."""
 
-		return self.__Data["image_min_height"]
+		return self.__Data["min_height"]
 	
 	@property
 	def min_size(self) -> int:
 		"""Минимальный размер изображения в байтах."""
 
-		return self.__Data["image_min_size"] or 0
+		return self.__Data["min_size"] or 0
 
 	@property
 	def min_width(self) -> int | None:
 		"""Минимальная ширина изображения."""
 
-		return self.__Data["image_min_width"]
+		return self.__Data["min_width"]
 	
 	@property
 	def max_height(self) -> int | None:
 		"""Максимальная высота изображения."""
 
-		return self.__Data["image_max_height"]
+		return self.__Data["max_height"]
 	
 	@property
 	def max_width(self) -> int | None:
 		"""Максимальная ширина изображения."""
 
-		return self.__Data["image_max_width"]
+		return self.__Data["max_width"]
 	
 	@property
 	def signatures(self) -> tuple[str, ...]:
@@ -235,16 +235,16 @@ class ImagesFilters:
 		:type width: int
 		:param height: Высота изображения.
 		:type height: int
-		:return: Возвращает `True` при превышении одного из размеров.
+		:return: Возвращает `True` при корректном разрешении изображения..
 		:rtype: bool
 		"""
 
-		if self.min_width and width < self.min_width: return True
-		if self.min_height and height < self.min_height: return True
-		if self.max_width and height > self.max_width: return True
-		if self.max_height and height > self.max_height: return True
+		if self.min_width and width < self.min_width: return False
+		if self.min_height and height < self.min_height: return False
+		if self.max_width and height > self.max_width: return False
+		if self.max_height and height > self.max_height: return False
 
-		return False
+		return True
 
 #==========================================================================================#
 # >>>>> КАТЕГОРИИ НАСТРОЕК <<<<< #

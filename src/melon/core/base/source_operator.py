@@ -323,6 +323,7 @@ class BaseSourceOperator[CSM: CustomSettingsTemplate](ABC):
 		return ImageDownloadingResult(
 			is_already_exists = IsTargetPathExists,
 			is_downloaded = True,
+			filtered_by = Result.filtered_by,
 			resolution = Result.resolution,
 			path = ImageTargetPath,
 			error_message = None

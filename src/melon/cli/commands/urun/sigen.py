@@ -149,7 +149,8 @@ class CommandProcessor(CommandProcessorTemplate[Parameters]):
 		"""
 
 		Unstubber = utils.Unstubber()
-		Signature: str = Unstubber.generate_signature(parameters.image, parameters.signature_version)
+		Image = Unstubber.load_image(parameters.image)
+		Signature: str = Unstubber.generate_signature(Image, parameters.signature_version)
 		self.printer.emit(f"Signature: <i>{Signature}</i>")
 
 		if parameters.required_parser:
