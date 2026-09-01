@@ -1,5 +1,6 @@
 from dataclasses import dataclass
 from pathlib import Path
+from typing import override
 
 from dublib.cli.terminalyzer import Command, ParsedCommandData, ValidableTypes
 from dublib.functions.filesystem import json
@@ -71,6 +72,7 @@ class CommandProcessor(CommandProcessorTemplate[Parameters]):
 	# >>>>> ПЕРЕОПРЕДЕЛЯЕМЫЕ МЕТОДЫ <<<<< #
 	#==========================================================================================#
 
+	@override
 	def _GetParsersQuery(self, data: ParsedCommandData) -> str | None:
 		"""
 		Возвращает строку, представляющую последовательность имён затребованных парсеров, разделённых запятой.
@@ -85,6 +87,7 @@ class CommandProcessor(CommandProcessorTemplate[Parameters]):
 
 		return data.get_key_value("--export", expected_type = str)
 
+	@override
 	def _ExportCommandDescription(self) -> str:
 		"""
 		Возвращает описание команды.
@@ -95,6 +98,7 @@ class CommandProcessor(CommandProcessorTemplate[Parameters]):
 
 		return "Generate image signature."
 
+	@override
 	def _GenerateCommand(self, command: Command) -> Command:
 		"""
 		Генерирует команду.
@@ -116,6 +120,7 @@ class CommandProcessor(CommandProcessorTemplate[Parameters]):
 
 		return command
 
+	@override
 	def _ParseParameters(self, data: ParsedCommandData, prepared_data: PreparedData) -> Parameters:
 		"""
 		Парсит данные обработанной команды в структуру **dataclass**.
@@ -138,6 +143,7 @@ class CommandProcessor(CommandProcessorTemplate[Parameters]):
 			signature_version = Version
 		)
 
+	@override
 	def _Process(self, parameters: Parameters) -> bool:
 		"""
 		Выполняет команду.

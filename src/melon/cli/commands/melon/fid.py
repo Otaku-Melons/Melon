@@ -1,4 +1,5 @@
 from dataclasses import dataclass
+from typing import override
 
 import orjson
 
@@ -55,6 +56,7 @@ class CommandProcessor(CommandProcessorTemplate[Parameters]):
 	# >>>>> ПЕРЕОПРЕДЕЛЯЕМЫЕ МЕТОДЫ <<<<< #
 	#==========================================================================================#
 
+	@override
 	def _ExportCommandDescription(self) -> str:
 		"""
 		Возвращает описание команды.
@@ -65,6 +67,7 @@ class CommandProcessor(CommandProcessorTemplate[Parameters]):
 
 		return "Find title ID by slug in cache."
 
+	@override
 	def _GenerateCommand(self, command: Command) -> Command:
 		"""
 		Генерирует команду.
@@ -84,6 +87,7 @@ class CommandProcessor(CommandProcessorTemplate[Parameters]):
 
 		return command
 
+	@override
 	def _ParseParameters(self, data: ParsedCommandData, prepared_data: PreparedData) -> Parameters:
 		"""
 		Парсит данные обработанной команды в структуру **dataclass**.
@@ -102,6 +106,7 @@ class CommandProcessor(CommandProcessorTemplate[Parameters]):
 			is_json_output = data.check_flag("-j")
 		)
 
+	@override
 	def _Process(self, parameters: Parameters) -> bool:
 		"""
 		Выполняет команду.

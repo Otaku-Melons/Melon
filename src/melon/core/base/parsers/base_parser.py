@@ -40,62 +40,62 @@ class BaseParser[SO: "BaseSourceOperator", CSM: "CustomSettingsTemplate"](ABC):
 	def images_downloader(self) -> "ImagesDownloader":
 		"""Оператор скачивания изображений."""
 
-		return self._SourceOperator.images_downloader
+		return self._source_operator.images_downloader
 
 	@property
 	def manifest(self) -> "ParserManifest":
 		"""Манифест парсера."""
 
-		return self._SourceOperator.manifest
+		return self._source_operator.manifest
 
 	@property
 	def temp_directory(self) -> Path:
 		"""Путь ко временному каталогу парсера."""
 
-		return self._SourceOperator.system_objects.temper.get_parser_temp_directory(self.manifest.parser_name)
+		return self._source_operator.system_objects.temper.get_parser_temp_directory(self.manifest.parser_name)
 
 	@property
 	def portals(self) -> "Portals":
 		"""Порталы вывода парсера."""
 
-		return self._SourceOperator.portals
+		return self._source_operator.portals
 
 	@property
 	def requestor(self) -> "WebRequestor":
 		"""Менеджер запросов."""
 
-		return self._SourceOperator.requestor
+		return self._source_operator.requestor
 
 	@property
 	def settings(self) -> "ParserSettings[CSM]":
 		"""Настройки парсера."""
 
-		return self._SourceOperator.settings
+		return self._source_operator.settings
 	
 	@property
 	def source_operator(self) -> SO:
 		"""Оператор источника."""
 
-		return self._SourceOperator
+		return self._source_operator
 
 	@property
 	def title(self) -> BaseTitleController["BaseTitleData"] | None:
 		"""Тайтл."""
 
-		return self._Title
+		return self._title
 
 	@property
 	def words_dictionary(self) -> WordsDictionary:
 		"""Словарь ключевых локализованных определений."""
 
-		return self._WordsDictionary
+		return self._words_dictionary
 
 	#==========================================================================================#
 	# >>>>> НАСЛЕДУЕМЫЕ МЕТОДЫ <<<<< #
 	#==========================================================================================#
 
-	@run_before_method("_RequireTitle")
-	def _DownloadImages(self, images_data: Sequence[ImageData], image_type: Literal["cover", "person"], force_mode: bool) -> list[ImageDownloadingResult]:
+	@run_before_method("_require_title")
+	def _download_images(self, images_data: Sequence[ImageData], image_type: Literal["cover", "person"], force_mode: bool) -> list[ImageDownloadingResult]:
 		"""
 		Скачивает изображения тайтла определённого типа.
 
@@ -109,8 +109,8 @@ class BaseParser[SO: "BaseSourceOperator", CSM: "CustomSettingsTemplate"](ABC):
 		:rtype: list[ImageDownloadingResult]
 		"""
 
-		self._Title = cast(BaseTitleController, self._Title)
-		ImageDirecory: Path = self.settings.directories.images / self._Title.used_filename / image_type
+		self._title = cast(BaseTitleController, self._title)
+		ImageDirecory: Path = self.settings.directories.images / self._title.used_filename / image_type
 		ImageDirecory.mkdir(parents = True, exist_ok = True)
 		Results: list = []
 		ImagesCount: int = len(images_data)
@@ -119,13 +119,8 @@ class BaseParser[SO: "BaseSourceOperator", CSM: "CustomSettingsTemplate"](ABC):
 			CurrentImageData = images_data[Index]
 
 			Future = self.portals.printer.templates.images.start_downloading(CurrentImageData.filename, image_type)
-			Result = self._SourceOperator.images_downloader.download_image(CurrentImageData.link, ImageDirecory, force_mode = force_mode)
+			Result = self._source_operator.images_downloader.download_image(CurrentImageData.link, ImageDirecory, force_mode = force_mode)
 			Results.append(Result)
-
-			if Result.filtered_by:
-				# self.remove_image(CurrentImageData, image_type)
-				self.portals.covers_unstubbed()
-				continue
 			
 			if Result.resolution:
 				CurrentImageData.set_resolution(Result.resolution)
@@ -137,22 +132,22 @@ class BaseParser[SO: "BaseSourceOperator", CSM: "CustomSettingsTemplate"](ABC):
 
 		return Results
 
-	def _RequireTitle(self):
+	def _require_title(self):
 		"""
 		Проверяет, задан ли тайтл.
 
 		:raises exceptions.parsers.TitleNotSetted: Не задан тайтл.
 		"""
 
-		if not self._Title:
+		if not self._title:
 			raise exceptions.parsers.TitleNotSetted()
 
 	#==========================================================================================#
-	# >>>>> ПЕРЕОПРЕДЕЛЯЕМЫЕ МЕТОДЫ <<<<< #
+	# >>>>> ПЕРЕОПРЕДЕЛЯЕМЫЕМЕТОДЫ <<<<< #
 	#==========================================================================================#
 
 	@abstractmethod
-	def _Amend(self, branch: Branch, chapter: Any) -> str | None:
+	def _amend(self, branch: Branch, chapter: Any) -> str | None:
 		"""
 		Дополняет главу дайными о контенте.
 
@@ -167,17 +162,17 @@ class BaseParser[SO: "BaseSourceOperator", CSM: "CustomSettingsTemplate"](ABC):
 		pass
 
 	@abstractmethod
-	def _Parse(self):
+	def _parse(self):
 		"""Получает основные данные тайтла."""
 
 		pass
 
-	def _PostInitMethod(self):
+	def _post_init_method(self):
 		"""Метод, выполняющийся после инициализации объекта."""
 
 		pass
 
-	def _PreSaver(self):
+	def _pre_saver(self):
 		"""Запускается непосредственно перед сохранением тайтла."""
 
 		pass
@@ -194,12 +189,12 @@ class BaseParser[SO: "BaseSourceOperator", CSM: "CustomSettingsTemplate"](ABC):
 		:type source_operator: source_operator
 		"""
 
-		self._SourceOperator = source_operator
+		self._source_operator = source_operator
 
-		self._WordsDictionary: WordsDictionary = WordsDictionary(None)
-		self._Title: BaseTitleController["BaseTitleData"] | None = None
+		self._words_dictionary: WordsDictionary = WordsDictionary(None)
+		self._title: BaseTitleController["BaseTitleData"] | None = None
 
-		self._PostInitMethod()
+		self._post_init_method()
 
 	@abstractmethod
 	def amend(self):
@@ -207,7 +202,7 @@ class BaseParser[SO: "BaseSourceOperator", CSM: "CustomSettingsTemplate"](ABC):
 
 		pass
 
-	@run_before_method("_RequireTitle")
+	@run_before_method("_require_title")
 	def download_images(self, force_mode: bool) -> "tuple[ImageDownloadingResult, ...]":
 		"""
 		Скачивает обложки и портреты персонажей.
@@ -218,15 +213,15 @@ class BaseParser[SO: "BaseSourceOperator", CSM: "CustomSettingsTemplate"](ABC):
 		:rtype: tuple[ImageDownloadingResult, ...]
 		"""
 
-		self._Title = cast(BaseTitleController, self._Title)
+		Title = cast(BaseTitleController["BaseTitleData"], self._title)
 		
-		Results = self._DownloadImages(self._Title.data.covers, "cover", force_mode)
+		Results = self._download_images(Title.data.covers, "cover", force_mode)
 
 		PersonsImages: list[ImageData] = []
-		for CurrentPerson in self._Title.data.perons:
+		for CurrentPerson in Title.data.perons:
 			PersonsImages += list(CurrentPerson.images)
 
-		Results += self._DownloadImages(PersonsImages, "person", force_mode)
+		Results += self._download_images(PersonsImages, "person", force_mode)
 
 		return tuple(Results)
 
@@ -243,7 +238,7 @@ class BaseParser[SO: "BaseSourceOperator", CSM: "CustomSettingsTemplate"](ABC):
 		Preset = presets.GetDictionaryPreset(language_code)
 
 		if Preset:
-			self._WordsDictionary = Preset
+			self._words_dictionary = Preset
 
 		return Preset
 
@@ -255,16 +250,16 @@ class BaseParser[SO: "BaseSourceOperator", CSM: "CustomSettingsTemplate"](ABC):
 		:param slug: Алиас тайтла.
 		:type slug: str
 		:return: Тайтл.
-		:rtype: BaseTitle
+		:rtype: BaseTitleController
 		"""
 		
 		pass
 
-	@run_before_method("_RequireTitle")
+	@run_before_method("_require_title")
 	def parse(self):
 		"""Получает основные данные тайтла."""
 
-		self._Parse()
+		self._parse()
 
 	@abstractmethod
 	def repair(self, chapter_id: int) -> bool:
@@ -280,7 +275,7 @@ class BaseParser[SO: "BaseSourceOperator", CSM: "CustomSettingsTemplate"](ABC):
 
 		pass
 
-	@run_before_method("_RequireTitle")
+	@run_before_method("_require_title")
 	def save(self, sorting: bool = False) -> bool:
 		"""
 		Сохраняет тайтл и выгружает его из парсера.
@@ -291,10 +286,10 @@ class BaseParser[SO: "BaseSourceOperator", CSM: "CustomSettingsTemplate"](ABC):
 		:rtype: bool
 		"""
 
-		self._Title = cast(BaseTitleController, self._Title)
+		self._title = cast(BaseTitleController, self._title)
 
-		self._PreSaver()
-		IsSaved = self._Title.save(sorting)
-		self._Title = None
+		self._pre_saver()
+		IsSaved = self._title.save(sorting)
+		self._title = None
 
 		return IsSaved

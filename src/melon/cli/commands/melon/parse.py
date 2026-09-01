@@ -3,7 +3,7 @@ from abc import ABC, abstractmethod
 from dataclasses import dataclass
 from enum import Enum
 from json import JSONDecodeError
-from typing import TYPE_CHECKING, Sequence
+from typing import TYPE_CHECKING, Sequence, override
 
 from dublib.cli.terminalyzer import Command, ParsedCommandData, ValidableTypes
 from dublib.cli.text_styler import GetStyledTextFromHTML
@@ -471,6 +471,7 @@ class CommandProcessor(CommandProcessorTemplate[Parameters]):
 	# >>>>> ПЕРЕОПРЕДЕЛЯЕМЫЕ МЕТОДЫ <<<<< #
 	#==========================================================================================#
 
+	@override
 	def _ExportCommandDescription(self) -> str:
 		"""
 		Возвращает описание команды.
@@ -481,6 +482,7 @@ class CommandProcessor(CommandProcessorTemplate[Parameters]):
 
 		return "Parse titles."
 
+	@override
 	def _GenerateCommand(self, command: Command) -> Command:
 		"""
 		Генерирует команду.
@@ -514,6 +516,7 @@ class CommandProcessor(CommandProcessorTemplate[Parameters]):
 
 		return command
 
+	@override
 	def _ParseParameters(self, data: ParsedCommandData, prepared_data: PreparedData) -> Parameters:
 		"""
 		Парсит данные обработанной команды в структуру **dataclass**.
@@ -538,6 +541,7 @@ class CommandProcessor(CommandProcessorTemplate[Parameters]):
 			is_cold_saving = not data.check_flag("-no-cold-save")
 		)
 
+	@override
 	def _Process(self, parameters: Parameters) -> bool:
 		"""
 		Выполняет команду.

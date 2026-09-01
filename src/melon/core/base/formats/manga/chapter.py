@@ -1,4 +1,4 @@
-from typing import Sequence, cast
+from typing import Sequence, cast, override
 
 from ...structs.image import ImageData
 from ..base_format.chapter import BaseChapter
@@ -40,12 +40,13 @@ class Chapter(BaseChapter):
 	#==========================================================================================#
 	# >>>>> ПЕРЕОПРЕДЕЛЯЕМЫЕ МЕТОДЫ <<<<< #
 	#==========================================================================================#
-
+	@override
 	def _clear(self):
 		"""Очищает контент главы."""
 
 		self.__slides.clear()
 
+	@override
 	def _is_empty(self) -> bool:
 		"""
 		Проверяет, пустая ли глава.
@@ -56,6 +57,7 @@ class Chapter(BaseChapter):
 
 		return not bool(self.slides)
 
+	@override
 	def _from_dict(self, data: dict):
 		"""
 		Заполняет данные главы из словаря.
@@ -79,12 +81,14 @@ class Chapter(BaseChapter):
 
 			self.__slides[SlideIndex] = SlideImage
 
+	@override
 	def _post_init_method(self):
 		"""Метод, выполняющийся после инициализации объекта."""
 
 		self._data["slides"] = []
 		self.__slides: "dict[int, ImageData]" = {}
 
+	@override
 	def _pre_formatter(self):
 		"""Метод, запускающийся перед генерацией словарного представления объекта."""
 

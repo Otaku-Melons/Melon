@@ -1,4 +1,4 @@
-from typing import Sequence, cast
+from typing import Sequence, cast, override
 
 from ..base_format.chapter import BaseChapter
 from .elements import Blockquote, Header, Image, Paragraph
@@ -33,12 +33,14 @@ class Chapter(BaseChapter):
 	# >>>>> ПЕРЕОПРЕДЕЛЯЕМЫЕ МЕТОДЫ <<<<< #
 	#==========================================================================================#
 
+	@override
 	def _clear(self):
 		"""Очищает контент главы."""
 
 		self._data["paragraphs"] = []
 		self._data["footnotes"] = []
 
+	@override
 	def _is_empty(self) -> bool:
 		"""
 		Проверяет, пустая ли глава.
@@ -49,6 +51,7 @@ class Chapter(BaseChapter):
 
 		return not bool(self._data["paragraphs"])
 
+	@override
 	def _from_dict(self, data: dict):
 		"""
 		Заполняет данные главы из словаря.
@@ -59,6 +62,7 @@ class Chapter(BaseChapter):
 
 		self._data = self._data | data
 
+	@override
 	def _post_init_method(self):
 		"""Метод, выполняющийся после инициализации объекта."""
 

@@ -1,4 +1,4 @@
-from typing import Literal
+from typing import Literal, override
 
 from ...parsers.components.words_dictionary import CheckLanguageCode
 from ..base_format.data import BaseTitleData, ExtraField
@@ -27,6 +27,7 @@ class TitleData(BaseTitleData[Chapter]):
 	# >>>>> ПЕРЕОПРЕДЕЛЯЕМЫЕ МЕТОДЫ <<<<< #
 	#==========================================================================================#
 
+	@override
 	def _export_chapter_type(self) -> type[Chapter]:
 		"""
 		Экспортирует тип главы.
@@ -37,6 +38,7 @@ class TitleData(BaseTitleData[Chapter]):
 
 		return Chapter
 
+	@override
 	def _export_extra_fields(self) -> tuple[ExtraField, ...]:
 		"""
 		Экспортирует последовательность дополнительных корневых полей данных.

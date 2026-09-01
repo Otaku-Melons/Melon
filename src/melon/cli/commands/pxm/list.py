@@ -1,3 +1,5 @@
+from typing import override
+
 from dublib.cli.terminalyzer import Command, ParsedCommandData
 
 from ....core.base.parsers.components.manifest import ContentTypes
@@ -12,6 +14,7 @@ class CommandProcessor(CommandProcessorTemplate[DataclassStub]):
 	# >>>>> ПЕРЕОПРЕДЕЛЯЕМЫЕ МЕТОДЫ <<<<< #
 	#==========================================================================================#
 
+	@override
 	def _ExportCommandDescription(self) -> str:
 		"""
 		Возвращает описание команды.
@@ -22,6 +25,7 @@ class CommandProcessor(CommandProcessorTemplate[DataclassStub]):
 
 		return "List installed parsers."
 
+	@override
 	def _ExportOptions(self) -> ProcessorOptions:
 		"""
 		Возвращает контейнер настроек обработчика.
@@ -32,6 +36,7 @@ class CommandProcessor(CommandProcessorTemplate[DataclassStub]):
 
 		return ProcessorOptions(use_timer = False)
 
+	@override
 	def _GenerateCommand(self, command: Command) -> Command:
 		"""
 		Генерирует команду.
@@ -44,6 +49,7 @@ class CommandProcessor(CommandProcessorTemplate[DataclassStub]):
 
 		return command
 
+	@override
 	def _ParseParameters(self, data: ParsedCommandData, prepared_data: PreparedData) -> DataclassStub:
 		"""
 		Парсит данные обработанной команды в структуру **dataclass**.
@@ -58,6 +64,7 @@ class CommandProcessor(CommandProcessorTemplate[DataclassStub]):
 
 		return DataclassStub()
 
+	@override
 	def _Process(self, parameters: DataclassStub) -> bool:
 		"""
 		Выполняет команду.

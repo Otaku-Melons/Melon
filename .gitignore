@@ -8,4 +8,4 @@ temp
 .env
 # Parsers manager data.
 repositories.txt
-parsers
+/parsers

@@ -1,7 +1,7 @@
 from dataclasses import dataclass
 from enum import Enum
 from pathlib import Path
-from typing import TYPE_CHECKING, Sequence
+from typing import TYPE_CHECKING, Sequence, override
 
 from dublib.cli.terminalyzer import Command, ParsedCommandData
 from dublib.functions.filesystem import clear_directory
@@ -191,6 +191,7 @@ class CommandProcessor(CommandProcessorTemplate[Parameters]):
 	# >>>>> ПЕРЕОПРЕДЕЛЯЕМЫЕ МЕТОДЫ <<<<< #
 	#==========================================================================================#
 
+	@override
 	def _ExportCommandDescription(self) -> str:
 		"""
 		Возвращает описание команды.
@@ -201,6 +202,7 @@ class CommandProcessor(CommandProcessorTemplate[Parameters]):
 
 		return "Clear local JSON files by rule."
 
+	@override
 	def _GenerateCommand(self, command: Command) -> Command:
 		"""
 		Генерирует команду.
@@ -223,6 +225,7 @@ class CommandProcessor(CommandProcessorTemplate[Parameters]):
 
 		return command
 
+	@override
 	def _ParseParameters(self, data: ParsedCommandData, prepared_data: PreparedData) -> Parameters:
 		"""
 		Парсит данные обработанной команды в структуру **dataclass**.
@@ -248,6 +251,7 @@ class CommandProcessor(CommandProcessorTemplate[Parameters]):
 			collection_file = CollectionFile
 		)
 
+	@override
 	def _Process(self, parameters: Parameters) -> bool:
 		"""
 		Выполняет команду.

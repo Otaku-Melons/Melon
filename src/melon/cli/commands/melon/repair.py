@@ -1,4 +1,5 @@
 from dataclasses import dataclass
+from typing import override
 
 from dublib.cli.terminalyzer import Command, ParsedCommandData, ValidableTypes
 
@@ -30,6 +31,7 @@ class CommandProcessor(CommandProcessorTemplate[Parameters]):
 	# >>>>> ПЕРЕОПРЕДЕЛЯЕМЫЕ МЕТОДЫ <<<<< #
 	#==========================================================================================#
 
+	@override
 	def _ExportCommandDescription(self) -> str:
 		"""
 		Возвращает описание команды.
@@ -40,6 +42,7 @@ class CommandProcessor(CommandProcessorTemplate[Parameters]):
 
 		return "Repair chapter chapter in local title."
 
+	@override
 	def _GenerateCommand(self, command: Command) -> Command:
 		"""
 		Генерирует команду.
@@ -63,6 +66,7 @@ class CommandProcessor(CommandProcessorTemplate[Parameters]):
 
 		return command
 
+	@override
 	def _ParseParameters(self, data: ParsedCommandData, prepared_data: PreparedData) -> Parameters:
 		"""
 		Парсит данные обработанной команды в структуру **dataclass**.
@@ -89,6 +93,7 @@ class CommandProcessor(CommandProcessorTemplate[Parameters]):
 			is_target_chapter = IsTargetChapter
 		)
 
+	@override
 	def _Process(self, parameters: Parameters) -> bool:
 		"""
 		Выполняет команду.

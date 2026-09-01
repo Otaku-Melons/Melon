@@ -136,6 +136,8 @@ class BaseSourceOperator[CSM: CustomSettingsTemplate](ABC):
 		:rtype: Sequence[str]
 		"""
 
+		period, filters, pages # type: ignore
+
 		return ()
 
 	def _InitializeRequestor(self) -> WebRequestor:
@@ -170,6 +172,8 @@ class BaseSourceOperator[CSM: CustomSettingsTemplate](ABC):
 		:return: Возвращает статус существования файла на сервере или `None` при невозможности проверки.
 		:rtype: bool | None
 		"""
+
+		slug  # type: ignore
 
 		return None
 
@@ -359,6 +363,8 @@ class BaseSourceOperator[CSM: CustomSettingsTemplate](ABC):
 		:rtype: ContentTypes
 		"""
 
+		slug # type: ignore
+		
 		# To-Do: метод для определения типа контента по алиасу.
 		return self._Manifest.content_types[0]
 

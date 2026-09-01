@@ -1,5 +1,6 @@
 from dataclasses import dataclass
 from enum import Enum
+from typing import override
 
 from dublib.cli.terminalyzer import Command, ParsedCommandData, ValidableTypes
 from dublib.cli.text_styler import GetStyledTextFromHTML
@@ -61,14 +62,12 @@ class CommandProcessor(CommandProcessorTemplate[Parameters]):
 
 		return collector.add(CollectedSlugs)
 
-	def __CollectLocal(self, collector: utils.Collector, parameters: Parameters) -> int:
+	def __CollectLocal(self, collector: utils.Collector) -> int:
 		"""
 		Собирает алиасы тайтлов: локальные файлы.
 
 		:param collector: Сборщик алиасов.
 		:type collector: utils.Collector
-		:param parameters: Параметры, требуемые обработчиком.
-		:type parameters: Parameters
 		:return: Количество уникальных добавленных в коллекцию тайтлов.
 		:rtype: int
 		"""
@@ -77,14 +76,12 @@ class CommandProcessor(CommandProcessorTemplate[Parameters]):
 
 		return collector.collect_local().added
 
-	def __CollectNotFound(self, collector: utils.Collector, parameters: Parameters) -> int:
+	def __CollectNotFound(self, collector: utils.Collector) -> int:
 		"""
 		Собирает алиасы тайтлов: не найденные на сервере источника тайтлы.
 
 		:param collector: Сборщик алиасов.
 		:type collector: utils.Collector
-		:param parameters: Параметры, требуемые обработчиком.
-		:type parameters: Parameters
 		:return: Количество уникальных добавленных в коллекцию тайтлов.
 		:rtype: int
 		"""
@@ -97,6 +94,7 @@ class CommandProcessor(CommandProcessorTemplate[Parameters]):
 	# >>>>> ПЕРЕОПРЕДЕЛЯЕМЫЕ МЕТОДЫ <<<<< #
 	#==========================================================================================#
 
+	@override
 	def _ExportCommandDescription(self) -> str:
 		"""
 		Возвращает описание команды.
@@ -107,6 +105,7 @@ class CommandProcessor(CommandProcessorTemplate[Parameters]):
 
 		return "Collect titles slugs into file in parser's temporary directory."
 
+	@override
 	def _GenerateCommand(self, command: Command) -> Command:
 		"""
 		Генерирует команду.
@@ -139,6 +138,7 @@ class CommandProcessor(CommandProcessorTemplate[Parameters]):
 
 		return command
 
+	@override
 	def _ParseParameters(self, data: ParsedCommandData, prepared_data: PreparedData) -> Parameters:
 		"""
 		Парсит данные обработанной команды в структуру **dataclass**.
@@ -169,6 +169,7 @@ class CommandProcessor(CommandProcessorTemplate[Parameters]):
 			pages = Pages
 		)
 
+	@override
 	def _Process(self, parameters: Parameters) -> bool:
 		"""
 		Выполняет команду.
@@ -193,8 +194,8 @@ class CommandProcessor(CommandProcessorTemplate[Parameters]):
 
 				AddedSlugs = self.__CollectFromServer(Collector, parameters)
 
-			case CollectingTargets.Local: AddedSlugs = self.__CollectLocal(Collector, parameters)
-			case CollectingTargets.NotFound: AddedSlugs = self.__CollectNotFound(Collector, parameters)
+			case CollectingTargets.Local: AddedSlugs = self.__CollectLocal(Collector)
+			case CollectingTargets.NotFound: AddedSlugs = self.__CollectNotFound(Collector)
 
 		Collector.save()
 	

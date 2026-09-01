@@ -1,4 +1,5 @@
 from dataclasses import dataclass
+from typing import override
 
 from dublib.cli.terminalyzer import Command, ParsedCommandData
 
@@ -28,6 +29,7 @@ class CommandProcessor(CommandProcessorTemplate[Parameters]):
 	# >>>>> ПЕРЕОПРЕДЕЛЯЕМЫЕ МЕТОДЫ <<<<< #
 	#==========================================================================================#
 
+	@override
 	def _ExportCommandDescription(self) -> str:
 		"""
 		Возвращает описание команды.
@@ -38,6 +40,7 @@ class CommandProcessor(CommandProcessorTemplate[Parameters]):
 
 		return "Install parser."
 
+	@override
 	def _GenerateCommand(self, command: Command) -> Command:
 		"""
 		Генерирует команду.
@@ -53,6 +56,7 @@ class CommandProcessor(CommandProcessorTemplate[Parameters]):
 		
 		return command
 
+	@override
 	def _ParseParameters(self, data: ParsedCommandData, prepared_data: PreparedData) -> Parameters:
 		"""
 		Парсит данные обработанной команды в структуру **dataclass**.
@@ -73,6 +77,7 @@ class CommandProcessor(CommandProcessorTemplate[Parameters]):
 			config_strategy = ExportStrategies(Strategy)
 		)
 
+	@override
 	def _Process(self, parameters: Parameters) -> bool:
 		"""
 		Выполняет команду.
