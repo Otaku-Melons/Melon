@@ -19,7 +19,7 @@ from ..base_processor.templates import (
 from ._base import CommandProcessorTemplate
 
 if TYPE_CHECKING:
-	from ....core.base.formats.base_format import BaseTitle
+	from ....core.base.formats.base_format.controller import BaseTitleController
 	from ....core.base.parsers.base_parser import BaseParser
 	from ....core.base.source_operator import BaseSourceOperator
 
@@ -384,7 +384,7 @@ class CommandProcessor(CommandProcessorTemplate[Parameters]):
 				Parser = source_operator.launch_parser(ContentType)
 	
 			Title = Parser.init_empty_title(Slug)
-			self.printer.templates.parsing.start(Title, Index, TotalCount)
+			self.printer.templates.parsing.start(Title.data, Index, TotalCount)
 	
 			match self.__ParseAndCatchExceptions(parameters, Parser, Title):
 
@@ -412,7 +412,7 @@ class CommandProcessor(CommandProcessorTemplate[Parameters]):
 
 		return ParsingStatistics(ParsedCount, NotFoundCount, ErrorsCount)
 
-	def __ParseAndCatchExceptions(self, parameters: Parameters, parser: "BaseParser", title: "BaseTitle") -> ParsingSignals:
+	def __ParseAndCatchExceptions(self, parameters: Parameters, parser: "BaseParser", title: "BaseTitleController") -> ParsingSignals:
 
 		try:
 			parser.parse()

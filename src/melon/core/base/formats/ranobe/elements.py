@@ -15,8 +15,8 @@ from .....core import exceptions
 if TYPE_CHECKING:
 	from ...parsers.base_ranobe_parser import BaseRanobeParser
 	from ...parsers.components.images_downloader import ImageResolution
-	from ..base_format import BaseTitle
-	from . import Chapter
+	from ..base_format.controller import BaseTitleController
+	from .chapter import Chapter
 
 class Footnote:
 	"""
@@ -371,7 +371,7 @@ class Image:
 
 		self.__Parser = parser
 		self.__ImagesDownloader = self.__Parser.images_downloader
-		self.__Title = cast("BaseTitle", self.__Parser.title)
+		self.__Title = cast("BaseTitleController", self.__Parser.title)
 		self.__Chapter = chapter
 
 		self.__Portals = self.__Parser.portals

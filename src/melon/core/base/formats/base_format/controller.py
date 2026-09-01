@@ -1,0 +1,342 @@
+import hashlib
+import os
+from abc import ABC, abstractmethod
+from json import JSONDecodeError
+from os import PathLike
+from pathlib import Path
+from typing import TYPE_CHECKING, Any, cast
+
+import orjson
+
+from dublib.functions.data import zerotify
+from dublib.functions.filesystem import json
+
+from .... import exceptions
+from .enums import By
+
+if TYPE_CHECKING:
+	from ...parsers.base_parser import BaseParser
+	from ...parsers.components.settings import CustomSettingsTemplate
+	from ...source_operator import BaseSourceOperator
+	from .data import BaseTitleData
+
+class BaseTitleController[TD: "BaseTitleData"](ABC):
+	"""Базовый контроллер тайтла."""
+
+	#==========================================================================================#
+	# >>>>> СВОЙСТВА <<<<< #
+	#==========================================================================================#
+
+	@property
+	def chapters_count(self) -> int:
+		"""Количество глав во всех ветвях."""
+
+		return sum(Branch.chapters_count for Branch in self._data.branches)
+
+	@property
+	def data(self) -> TD:
+		"""Данные тайтла."""
+
+		return self._data
+
+	@property
+	def empty_chapters_count(self) -> int:
+		"""Количество глав без контента во всех ветвях."""
+
+		return sum(Branch.empty_chapters_count for Branch in self._data.branches)
+
+	@property
+	def is_local_file_loaded(self) -> bool:
+		"""Состояние: считывались ли данные из локального файла."""
+
+		return self._is_local_file_loaded
+
+	@property
+	def parser(self) -> "BaseParser":
+		"""Парсер."""
+
+		return self._parser
+
+	@property
+	def path(self) -> Path:
+		"""Путь к файлу."""
+
+		return self._parser.settings.directories.titles / f"{self.used_filename}.json"
+
+	@property
+	def used_filename(self) -> str:
+		"""Используемое имя файла."""
+
+		if self._parser.settings.common.use_id_as_filename and self._data.id is not None:
+			return str(self._data.id)
+
+		return self._slug
+
+	#==========================================================================================#
+	# >>>>> НАСЛЕДУЕМЫЕ МЕТОДЫ ЧТЕНИЯ ЛОКАЛЬНЫХ ФАЙЛОВ <<<<< #
+	#==========================================================================================#
+	
+	def _load_data_by_filename(self, filename: str) -> dict | None:
+
+		Filename: str = filename if filename.endswith(".json") else f"{filename}.json"
+		FilePath = self._parser.settings.directories.titles / Filename
+		if FilePath.exists(): return json.read(FilePath)
+
+		return None
+
+	def _load_data_by_id(self, title_id: int) -> dict | None:
+
+		Journal = self._parser.source_operator.shared_data.journal
+		TitlesDirectory = self._parser.settings.directories.titles
+	
+		if not self._parser.settings.common.use_id_as_filename:
+			Slug = Journal.get_slug_by_id(title_id)
+
+			if Slug:
+				FilePath = TitlesDirectory / f"{Slug}.json"
+				if FilePath.exists(): return json.read(FilePath)
+
+		else:
+			FilePath = TitlesDirectory / f"{title_id}.json"
+			if FilePath.exists(): return json.read(FilePath)
+
+		return self._search_file_in_directory(TitlesDirectory, title_id, By.ID) or {}
+
+	def _load_data_by_slug(self, slug: str) -> dict | None:
+
+		Journal = self._parser.source_operator.shared_data.journal
+		TitlesDirectory = self._parser.settings.directories.titles
+
+		if self._parser.settings.common.use_id_as_filename:
+			ID = Journal.get_id_by_slug(slug)
+
+			if ID:
+				FilePath = TitlesDirectory / f"{ID}.json"
+				if FilePath.exists(): return json.read(FilePath)
+
+		else:
+			FilePath = TitlesDirectory / f"{slug}.json"
+			if FilePath.exists(): return json.read(FilePath)
+		
+		return self._search_file_in_directory(TitlesDirectory, slug, By.Slug)
+
+	def _load_data(self, identificator: int | str, selector_type: By = By.Slug) -> dict | None:
+		"""
+		Открывает локальный JSON файл и считывает его данные.
+
+		:param identificator: Идентификатор тайтла: имя файла (без расширения), ID или алиас тайтла.
+		:type identificator: int | str
+		:param selector_type: Режим поиска файла. По умолчанию `By.Slug` – идентификатор соответствует алиасу тайтла.
+		:type selector_type: By
+		:return: Словарь данных тайтла или `None` при отсутствии файла.
+		:rtype: dict | None
+		:raises JSONDecodeError: Ошибка десериализации JSON.
+		:raises UnsupportedFormat: Неподдерживаемый формат JSON.
+		"""
+
+		DataBuffer: dict | None = None
+
+		match selector_type:
+
+			case By.Filename:
+				if type(identificator) is not str: raise ValueError("Filename must be str.")
+				DataBuffer = self._load_data_by_filename(identificator)
+				
+			case By.Slug:
+				if type(identificator) is not str: raise ValueError("Slug must be str.")
+				DataBuffer = self._load_data_by_slug(cast(str, identificator))
+
+			case By.ID:
+				if type(identificator) is not int: raise ValueError("ID must be int.")
+				DataBuffer = self._load_data_by_id(identificator)
+
+		self._IsLocalFileLoaded = bool(DataBuffer)
+
+		return zerotify(DataBuffer)
+
+	def _search_file_in_directory(self, directory: str | PathLike[str], identificator: int | str, identificator_type: By) -> dict | None:
+		"""
+		Находит файл JSON в директории по идентификатору определённого типа.
+
+		:param directory: Путь к каталогу файлов.
+		:type directory: str | PathLike[str]
+		:param identificator: Идентификатор: ID или алиас.
+		:type identificator: int | str
+		:param identificator_type: Тип идентификатора: `By.Slug` или `By.ID`.
+		:type identificator_type: By
+		:return: Содержимое файла или `None` при отсутствии оного или ошибке.
+		:rtype: dict | None
+		"""
+
+		for Element in os.scandir(directory):
+			if not Element.is_file() or not Element.name.endswith(".json"): continue
+
+			try: 
+				Data = json.read(Element.path)
+				if Data.get(identificator_type.value) == identificator: return Data
+
+			except (JSONDecodeError, exceptions.parsers.UnsupportedFormat): pass
+
+		return None
+
+	#==========================================================================================#
+	# >>>>> НАСЛЕДУЕМЫЕ МЕТОДЫ <<<<< #
+	#==========================================================================================
+
+	def _is_local_file_equal(self, data: dict) -> bool:
+		"""
+		Проверяет, идентичны ли данные тайтла локальным данным.
+
+		:param data: Словарное представление данных тайтла.
+		:type data: dict
+		:return: Возвращает `True`, если данные идентичны, или `False` в противном случа и при отсутствии локального файла.
+		:rtype: bool
+		"""
+
+		if not self.path.exists():
+			return False
+
+		local_hash = hashlib.sha256(orjson.dumps(json.read(self.path)))
+		memore_hash = hashlib.sha256(orjson.dumps(data))
+		
+		return local_hash.hexdigest() == memore_hash.hexdigest()
+
+	def _update_journal(self):
+		"""Обновляет кэш пары алиас-ID, если оба валидны."""
+
+		if self._data.id:
+			self._parser.source_operator.shared_data.journal.update(self._data.id, self._slug)
+
+	#==========================================================================================#
+	# >>>>> ПЕРЕОПРЕДЕЛЯЕМЫЕ МЕТОДЫ <<<<< #
+	#==========================================================================================#
+	
+	@abstractmethod
+	def _export_data_type(self) -> type[TD]:
+		"""
+		Экспортирует тип данных тайтла.
+
+		:return: Тип данных тайтла.
+		:rtype: type[BaseTitleData]
+		"""
+
+		pass
+
+	def _post_init_method(self):
+		"""Метод, выполняющийся после инициализации объекта."""
+
+		pass
+
+	#==========================================================================================#
+	# >>>>> ПУБЛИЧНЫЕ МЕТОДЫ <<<<< #
+	#==========================================================================================#
+
+	def __init__(self, parser: "BaseParser", slug: str):
+
+		self._parser: "BaseParser[BaseSourceOperator, CustomSettingsTemplate]" = parser
+		self._slug: str = slug
+
+		self._data: TD = self._export_data_type()(
+			title_controller = self,
+			title_format = "melon-" + type(self).__name__.lower()
+		)
+		self._data.set_domain(self._parser.manifest.domain)
+		self._data.set_slug(self._slug)
+
+		self._is_local_file_loaded: bool = False
+
+		self._post_init_method()
+
+	def load(self, identificator: int | str, selector_type: By = By.Slug) -> bool:
+		"""
+		Открывает локальный JSON файл и интерпретирует его данные.
+
+		:param identificator: Идентификатор тайтла: имя файла (без расширения), ID или алиас тайтла.
+		:type identificator: int | str
+		:param selector_type: Режим поиска файла. По умолчанию `By.Slug` – идентификатор соответствует алиасу тайтла.
+		:type selector_type: By
+		:return: Возвращает `True`, если удалось найти и открыть файл.
+		:rtype: bool
+		"""
+
+		data: dict | None = self._load_data(identificator, selector_type)
+		if data: self._data.from_dict(data)
+
+		return bool(data)
+
+	def merge(self) -> int:
+		"""
+		Считывает данные о контенте тайтла.
+
+		:return: Количество глав, для которых считан контент.
+		:rtype: int
+		"""
+
+		DataBuffer: dict | None = self._load_data(self._slug)
+
+		if not DataBuffer:
+			return 0
+		
+		#---> Слияние размеров обложек.
+		#==========================================================================================#
+		CoversData: list[dict] = DataBuffer["covers"]
+
+		for CoverData in CoversData:
+			Link = CoverData["link"]
+			TargetCover = self._data.find_cover(Link)
+
+			if TargetCover:
+				TargetCover.create_resolution(CoverData.get("width"), CoverData.get("height"))
+
+		#---> Слияние размеров портретов персонажей.
+		#==========================================================================================#
+		PersonsData: list[dict] | None = DataBuffer.get("persons")
+
+		if PersonsData:
+			for PersonData in PersonsData:
+				PersonObject = self._data.find_person(PersonData["name"])
+				if not PersonObject: continue
+
+				for CurrentImage in cast(list[dict], PersonData["images"]):
+					Link = CurrentImage["link"]
+					TargetImage = PersonObject.find_image_by_link(Link)
+					
+					if TargetImage:
+						TargetImage.create_resolution(CurrentImage.get("width"), CurrentImage.get("height"))
+			
+		#---> Слияние контента глав.
+		#==========================================================================================#
+		ContentData: dict[str, dict] = DataBuffer["content"]
+		MergedChaptersCount: int = 0
+
+		for BranchKey in ContentData.keys():
+			for ChapterData in ContentData[BranchKey]:
+				ChapterID = int(ChapterData["id"])
+				
+				SearchResult = self._data.find_chapter(ChapterID)
+
+				if SearchResult and SearchResult.chapter.is_empty:
+					SearchResult.chapter.from_dict(ChapterData)
+					MergedChaptersCount += 1
+
+		return MergedChaptersCount
+
+	def save(self, sorting: bool = False) -> bool:
+		"""
+		Сохраняет данные тайтла в локальный файл JSON.
+
+		:param sorting: Указывает, нужно ли провести сортировку глав на основе их нумерации.
+		:type sorting: bool
+		:return: Возвращает `True`, если файл сохранён, и `False`, если из-за отсутствия изменений запись не выполнялась.
+		:rtype: bool
+		"""
+
+		data: dict[str, Any] = self._data.to_dict(sorting)
+		is_local_file_equal: bool = self._is_local_file_equal(data)
+
+		if not is_local_file_equal:
+			json.write(self.path, data)
+
+		self._update_journal()
+
+		return not is_local_file_equal

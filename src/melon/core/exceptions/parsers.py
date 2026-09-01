@@ -1,7 +1,7 @@
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
-	from ...core.base.formats.base_format import BaseTitle
+	from ...core.base.formats.base_format.data import BaseTitleData
 	from ...core.base.parsers.components.manifest import ContentTypes
 
 #==========================================================================================#
@@ -59,15 +59,15 @@ class ParsingError(Exception):
 class TitleNotFound(Exception):
 	"""Исключение: тайтл не найден."""
 
-	def __init__(self, title: "BaseTitle"):
+	def __init__(self, title_data: "BaseTitleData"):
 		"""
 		Исключение: тайтл не найден.
 
-		:param title: Тайтл.
-		:type title: BaseTitle
+		:param title: Данные тайтла..
+		:type title: BaseTitleData
 		"""
 
-		super().__init__(f"Title \"{title.slug}\" not found.") 
+		super().__init__(f"Title \"{title_data.slug}\" not found.") 
 
 class TitleNotSetted(Exception):
 	"""Исключение: не задан тайтл."""

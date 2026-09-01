@@ -6,7 +6,8 @@ from dublib.functions.data import stringify_float
 from ._base import _BaseTemplatesSection
 
 if TYPE_CHECKING:
-	from .....core.base.formats.base_format import BaseChapter, BaseTitle
+	from .....core.base.formats.base_format.chapter import BaseChapter
+	from .....core.base.formats.base_format.data import BaseTitleData
 
 class ParsingTemplates(_BaseTemplatesSection):
 	"""Расширенные шаблоны вывода: процесс парсинга."""
@@ -70,24 +71,24 @@ class ParsingTemplates(_BaseTemplatesSection):
 		self.printer.progress_indicator.set_progress(Progress)
 		self.printer.emit(f"[{NumberString} / {count} | {ProgressString}] ", end_line = False, flush = True)
 
-	def start(self, title: "BaseTitle", index: int, titles_count: int):
+	def start(self, title_data: "BaseTitleData", index: int, titles_count: int):
 		"""
 		Шаблон сообщения: парсинг начат.
 
-		:param title: Данные тайтла.
-		:type title: BaseTitle
+		:param title_data: Данные тайтла.
+		:type title_data: BaseTitle
 		:param index: Индекс текущей операции парсинга.
 		:type index: int
 		:param titles_count: Количество тайтлов.
 		:type titles_count: int
 		"""
 
-		NoteID = f" (ID: {title.id})" if title.id else ""
+		NoteID = f" (ID: {title_data.id})" if title_data.id else ""
 
 		if titles_count > 1:
 			self.progress(index, titles_count)
 
-		self.printer.emit(f"Parsing <b>{title.slug}</b>{NoteID}…")
+		self.printer.emit(f"Parsing <b>{title_data.slug}</b>{NoteID}…")
 
 	def summary(self, parsed: int, not_found: int, errors: int):
 		"""

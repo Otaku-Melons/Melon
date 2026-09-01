@@ -5,7 +5,8 @@ from dublib.web_requestor import WebResponse
 from ....core import exceptions
 
 if TYPE_CHECKING:
-	from ....core.base.formats.base_format import BaseChapter, BaseTitle
+	from ....core.base.formats.base_format.chapter import BaseChapter
+	from ....core.base.formats.base_format.data import BaseTitleData
 	from . import Printer
 
 class Portals:
@@ -131,24 +132,24 @@ class Portals:
 		if exception:
 			raise exceptions.parsers.ChapterNotFound(chapter.id, chapter.slug)
 
-	def title_not_found(self, title: "BaseTitle", exception: bool = True):
+	def title_not_found(self, title_data: "BaseTitleData", exception: bool = True):
 		"""
 		Портал предупреждения: тайтл не найден.
 
-		:param title: Данные тайтла.
-		:type title: BaseTitle
+		:param title_data: Данные тайтла.
+		:type title_data: BaseTitleData
 		:param exception: Указывает, следует ли выбросить исключение.
 		:type exception: bool
 		:raises TitleNotFound: Выбрасывается в качестве исключения портала.
 		"""
 
-		NoteID = f" (ID: {title.id})" if title.id else ""
-		Text = f"Title: \"{title.slug}\"{NoteID}. Not found."
+		NoteID = f" (ID: {title_data.id})" if title_data.id else ""
+		Text = f"Title: \"{title_data.slug}\"{NoteID}. Not found."
 
 		self.__Printer.warning(Text)
 
 		if exception:
-			raise exceptions.parsers.TitleNotFound(title)
+			raise exceptions.parsers.TitleNotFound(title_data)
 
 	#==========================================================================================#
 	# >>>>> ШАБЛОНЫ СООБЩЕНИЙ <<<<< #

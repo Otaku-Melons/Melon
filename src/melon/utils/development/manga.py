@@ -1,4 +1,5 @@
-from ...core.base.formats.manga import BaseBranch, Chapter
+from ...core.base.formats.base_format.branch import Branch
+from ...core.base.formats.manga.chapter import Chapter
 from ...core.base.parsers.base_manga_parser import BaseMangaParser
 
 class Parser(BaseMangaParser):
@@ -8,12 +9,12 @@ class Parser(BaseMangaParser):
 	# >>>>> ПЕРЕОПРЕДЕЛЯЕМЫЕ МЕТОДЫ <<<<< #
 	#==========================================================================================#
 
-	def _Amend(self, branch: BaseBranch, chapter: Chapter) -> str | None:
+	def _Amend(self, branch: Branch, chapter: Chapter) -> str | None:
 		"""
 		Дополняет главу дайными о контенте.
 
 		:param branch: Ветвь.
-		:type branch: BaseBranch
+		:type branch: Branch
 		:param chapter: Глава.
 		:type chapter: Chapter
 		:return: Дополнительное необязательное сообщение о дополнении.

@@ -1,4 +1,4 @@
-from ...core.base.formats.ranobe import BaseBranch, Chapter
+from ...core.base.formats.ranobe_old import Branch, Chapter
 from ...core.base.parsers.base_ranobe_parser import BaseRanobeParser
 
 class Parser(BaseRanobeParser):
@@ -8,12 +8,12 @@ class Parser(BaseRanobeParser):
 	# >>>>> ПЕРЕОПРЕДЕЛЯЕМЫЕ МЕТОДЫ <<<<< #
 	#==========================================================================================#
 
-	def _Amend(self, branch: BaseBranch, chapter: Chapter) -> str | None:
+	def _Amend(self, branch: Branch, chapter: Chapter) -> str | None:
 		"""
 		Дополняет главу дайными о контенте.
 
 		:param branch: Ветвь.
-		:type branch: BaseBranch
+		:type branch: Branch
 		:param chapter: Глава.
 		:type chapter: Chapter
 		:return: Дополнительное необязательное сообщение о дополнении.

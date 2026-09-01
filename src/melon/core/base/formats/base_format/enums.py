@@ -1,14 +1,14 @@
-import enum
+from enum import Enum
 
-class By(enum.Enum):
+class By(Enum):
 	"""Типы идентификаторов описательных файлов."""
 	
 	Filename = None
 	Slug = "slug"
 	ID = "id"
 	
-class Statuses(enum.Enum):
-	"""Определения статусов."""
+class Statuses(Enum):
+	"""Перечисление статусов тайтла."""
 
 	announced = "announced"
 	ongoing = "ongoing"

@@ -15,7 +15,8 @@ from ..core import exceptions
 from ..core.base.builder import BaseBuilder
 
 if TYPE_CHECKING:
-	from ..core.base.formats.manga import BaseBranch, Chapter
+	from ..core.base.formats.base_format.branch import Branch
+	from ..core.base.formats.manga.chapter import Chapter
 
 #==========================================================================================#
 # >>>>> ВСПОМОГАТЕЛЬНЫЕ СТРУКТУРЫ ДАННЫХ <<<<< #
@@ -267,7 +268,7 @@ class MangaBuilder(BaseBuilder):
 		:raises ChapterNotFound: Глава не найдена.
 		"""
 
-		ChapterSearchResult = self._Title.find_chapter_by_id(chapter_id)
+		ChapterSearchResult = self._Title.data.find_chapter(chapter_id)
 
 		if not ChapterSearchResult:
 			raise exceptions.parsers.ChapterNotFound(chapter_id)
@@ -283,19 +284,19 @@ class MangaBuilder(BaseBuilder):
 		:raises BuildingError: Ошибка сборки.
 		"""
 
-		Branches = self._Title.branches
+		Branches = self._Title.data.branches
 		if not Branches:
 			raise exceptions.builders.BuildingError("Title hasn't branches.")
 		
 		BranchToBuild = Branches[0]
 
 		if branch_id:
-			SearchResult = self._Title.find_branch_by_id(branch_id)
+			SearchResult = self._Title.data.find_branch(branch_id)
 
 			if SearchResult:
 				raise exceptions.builders.BuildingError(f"Branch {branch_id} not found.")
 			
-			BranchToBuild = cast("BaseBranch", SearchResult)
+			BranchToBuild = cast("Branch", SearchResult)
 
 		Chapters = BranchToBuild.chapters
 

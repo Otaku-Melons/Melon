@@ -3,7 +3,8 @@ from typing import TYPE_CHECKING, cast
 from dublib.functions.decorators import run_before_method
 
 from ....core import exceptions
-from ....core.base.formats.ranobe import Chapter, Ranobe
+from ....core.base.formats import Ranobe
+from ..formats.ranobe.chapter import Chapter
 from .base_parser import BaseParser
 
 if TYPE_CHECKING:
@@ -22,7 +23,7 @@ class BaseRanobeParser[SO: "BaseSourceOperator", CSM: "CustomSettingsTemplate"](
 		AmendedChaptersCount: int = 0
 		ProgressIndex: int = 0
 
-		for CurrentBranch in self._Title.branches:
+		for CurrentBranch in self._Title.data.branches:
 			for CurrentChapter in CurrentBranch.chapters:
 				CurrentChapter = cast("Chapter", CurrentChapter)
 
@@ -64,7 +65,7 @@ class BaseRanobeParser[SO: "BaseSourceOperator", CSM: "CustomSettingsTemplate"](
 
 		self._Title = cast("Ranobe", self._Title)
 
-		SearchResult = self._Title.find_chapter_by_id(chapter_id)
+		SearchResult = self._Title.data.find_chapter(chapter_id)
 
 		if not SearchResult:
 			raise exceptions.parsers.ChapterNotFound(chapter_id)

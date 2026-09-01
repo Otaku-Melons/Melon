@@ -3,7 +3,8 @@ from typing import TYPE_CHECKING, cast
 from dublib.functions.decorators import run_before_method
 
 from ....core import exceptions
-from ....core.base.formats.manga import Chapter, Manga
+from ....core.base.formats.manga.controller import Manga
+from ..formats.manga.chapter import Chapter
 from .base_parser import BaseParser
 
 if TYPE_CHECKING:
@@ -17,12 +18,12 @@ class BaseMangaParser[SO: "BaseSourceOperator", CSM: "CustomSettingsTemplate"](B
 	def amend(self):
 		"""Дополняет главы дайными о контенте."""
 
-		self._Title = cast("Manga", self._Title)
+		self._Title = cast(Manga, self._Title)
 
 		AmendedChaptersCount: int = 0
 		ProgressIndex: int = 0
 
-		for CurrentBranch in self._Title.branches:
+		for CurrentBranch in self._Title.data.branches:
 			for CurrentChapter in CurrentBranch.chapters:
 				CurrentChapter = cast("Chapter", CurrentChapter)
 
@@ -62,9 +63,9 @@ class BaseMangaParser[SO: "BaseSourceOperator", CSM: "CustomSettingsTemplate"](B
 		:rtype: bool
 		"""
 
-		self._Title = cast("Manga", self._Title)
+		Title = cast(Manga, self._Title)
 
-		SearchResult = self._Title.find_chapter_by_id(chapter_id)
+		SearchResult = Title.data.find_chapter(chapter_id)
 
 		if not SearchResult:
 			raise exceptions.parsers.ChapterNotFound(chapter_id)

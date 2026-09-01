@@ -5,7 +5,9 @@ from typing import TYPE_CHECKING, Any, Literal, Sequence, cast
 from dublib.functions.decorators import run_before_method
 
 from ....core import exceptions
-from ....core.base.formats.base_format import BaseBranch, BaseTitle
+from ....core.base.formats.base_format.branch import Branch
+from ....core.base.formats.base_format.controller import BaseTitleController
+from ....core.base.formats.base_format.data import BaseTitleData
 from ....core.base.parsers.components.images_downloader import (
 	ImageDownloadingResult,
 	ImagesDownloader,
@@ -16,6 +18,7 @@ from .components.words_dictionary import WordsDictionary, presets
 if TYPE_CHECKING:
 	from dublib.web_requestor import WebRequestor
 
+	from ....core.base.formats.base_format.data import BaseTitleData
 	from ....core.base.parsers.components import ParserManifest
 	from ....core.base.parsers.components.settings import (
 		CustomSettingsTemplate,
@@ -27,7 +30,7 @@ if TYPE_CHECKING:
 class BaseParser[SO: "BaseSourceOperator", CSM: "CustomSettingsTemplate"](ABC):
 	"""Базовый парсер."""
 
-	_Title: BaseTitle | None
+	_Title: BaseTitleController["BaseTitleData"] | None
 
 	#==========================================================================================#
 	# >>>>> СВОЙСТВА <<<<< #
@@ -76,7 +79,7 @@ class BaseParser[SO: "BaseSourceOperator", CSM: "CustomSettingsTemplate"](ABC):
 		return self._SourceOperator
 
 	@property
-	def title(self) -> BaseTitle | None:
+	def title(self) -> BaseTitleController["BaseTitleData"] | None:
 		"""Тайтл."""
 
 		return self._Title
@@ -106,7 +109,7 @@ class BaseParser[SO: "BaseSourceOperator", CSM: "CustomSettingsTemplate"](ABC):
 		:rtype: list[ImageDownloadingResult]
 		"""
 
-		self._Title = cast(BaseTitle, self._Title)
+		self._Title = cast(BaseTitleController, self._Title)
 		ImageDirecory: Path = self.settings.directories.images / self._Title.used_filename / image_type
 		ImageDirecory.mkdir(parents = True, exist_ok = True)
 		Results: list = []
@@ -118,6 +121,11 @@ class BaseParser[SO: "BaseSourceOperator", CSM: "CustomSettingsTemplate"](ABC):
 			Future = self.portals.printer.templates.images.start_downloading(CurrentImageData.filename, image_type)
 			Result = self._SourceOperator.images_downloader.download_image(CurrentImageData.link, ImageDirecory, force_mode = force_mode)
 			Results.append(Result)
+
+			if Result.filtered_by:
+				# self.remove_image(CurrentImageData, image_type)
+				self.portals.covers_unstubbed()
+				continue
 			
 			if Result.resolution:
 				CurrentImageData.set_resolution(Result.resolution)
@@ -144,12 +152,12 @@ class BaseParser[SO: "BaseSourceOperator", CSM: "CustomSettingsTemplate"](ABC):
 	#==========================================================================================#
 
 	@abstractmethod
-	def _Amend(self, branch: BaseBranch, chapter: Any) -> str | None:
+	def _Amend(self, branch: Branch, chapter: Any) -> str | None:
 		"""
 		Дополняет главу дайными о контенте.
 
 		:param branch: Ветвь.
-		:type branch: BaseBranch
+		:type branch: Branch
 		:param chapter: Глава.
 		:type chapter: BaseChapter
 		:return: Дополнительное необязательное сообщение о дополнении.
@@ -189,7 +197,7 @@ class BaseParser[SO: "BaseSourceOperator", CSM: "CustomSettingsTemplate"](ABC):
 		self._SourceOperator = source_operator
 
 		self._WordsDictionary: WordsDictionary = WordsDictionary(None)
-		self._Title: BaseTitle | None = None
+		self._Title: BaseTitleController["BaseTitleData"] | None = None
 
 		self._PostInitMethod()
 
@@ -210,12 +218,12 @@ class BaseParser[SO: "BaseSourceOperator", CSM: "CustomSettingsTemplate"](ABC):
 		:rtype: tuple[ImageDownloadingResult, ...]
 		"""
 
-		self._Title = cast(BaseTitle, self._Title)
+		self._Title = cast(BaseTitleController, self._Title)
 		
-		Results = self._DownloadImages(self._Title.covers, "cover", force_mode)
+		Results = self._DownloadImages(self._Title.data.covers, "cover", force_mode)
 
 		PersonsImages: list[ImageData] = []
-		for CurrentPerson in self._Title.perons:
+		for CurrentPerson in self._Title.data.perons:
 			PersonsImages += list(CurrentPerson.images)
 
 		Results += self._DownloadImages(PersonsImages, "person", force_mode)
@@ -240,7 +248,7 @@ class BaseParser[SO: "BaseSourceOperator", CSM: "CustomSettingsTemplate"](ABC):
 		return Preset
 
 	@abstractmethod
-	def init_empty_title(self, slug: str) -> BaseTitle:
+	def init_empty_title(self, slug: str) -> BaseTitleController:
 		"""
 		Устанавливает пустой тайтл для парсера.
 
@@ -283,7 +291,7 @@ class BaseParser[SO: "BaseSourceOperator", CSM: "CustomSettingsTemplate"](ABC):
 		:rtype: bool
 		"""
 
-		self._Title = cast(BaseTitle, self._Title)
+		self._Title = cast(BaseTitleController, self._Title)
 
 		self._PreSaver()
 		IsSaved = self._Title.save(sorting)

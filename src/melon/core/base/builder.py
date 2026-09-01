@@ -2,7 +2,9 @@ import re
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
-	from ...core.base.formats.base_format import BaseChapter, BaseTitle
+	from ...core.base.formats.base_format.chapter import BaseChapter
+	from ...core.base.formats.base_format.controller import BaseTitleController
+	from ...core.base.formats.base_format.data import BaseTitleData
 	from ...core.base.parsers.base_parser import BaseParser
 	from .source_operator import BaseSourceOperator, CustomSettingsTemplate
 	
@@ -62,14 +64,14 @@ class BaseBuilder:
 	# >>>>> ПУБЛИЧНЫЕ МЕТОДЫ <<<<< #
 	#==========================================================================================#
 
-	def __init__(self, parser: "BaseParser[BaseSourceOperator, CustomSettingsTemplate]", title: "BaseTitle"):
+	def __init__(self, parser: "BaseParser[BaseSourceOperator, CustomSettingsTemplate]", title: "BaseTitleController[BaseTitleData]"):
 		"""
 		Базовый сборщик.
 
 		:param parser: Парсер.
 		:type parser: BaseParser
 		:param title: Тайтл.
-		:type title: BaseTitle
+		:type title: BaseTitleController
 		"""
 		
 		self._Parser = parser
@@ -82,7 +84,7 @@ class BaseBuilder:
 
 		self._Portals = parser.source_operator.portals
 		self._ParserTempDirectory = self._Temper.get_parser_temp_directory(self._Parser.manifest.parser_name)
-		self._WordsDictionary = self._Parser.load_words_dictionary_preset(self._Title.content_language) if self._Title.content_language else None
+		self._WordsDictionary = self._Parser.load_words_dictionary_preset(self._Title.data.content_language) if self._Title.data.content_language else None
 
 		self._BuildSystem: str | None = None
 		self._ChapterNameTemplate: str = "{ch_word} {ch_number}{if:name:. } {name}"

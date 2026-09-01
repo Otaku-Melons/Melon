@@ -9,7 +9,8 @@ from ..core import exceptions
 from ..core.base.builder import BaseBuilder
 
 if TYPE_CHECKING:
-	from ..core.base.formats.ranobe import BaseBranch, Chapter
+	from ..core.base.formats.base_format.branch import Branch
+	from ..core.base.formats.ranobe.chapter import Chapter
 
 #==========================================================================================#
 # >>>>> ВСПОМОГАТЕЛЬНЫЕ СТРУКТУРЫ ДАННЫХ <<<<< #
@@ -69,7 +70,7 @@ class RanobeBuilder(BaseBuilder):
 			title = ChapterTitle,
 			file_name = f"{chapter.id}.xhtml",
 			content = f"<h2>{ChapterNumeration}{chapter.name}</h2>" + str(Soup),
-			lang = self._Title.content_language
+			lang = self._Title.data.content_language
 		)
 		
 		return ChapterItems(ChapterContent, tuple(ChapterImages))
@@ -86,24 +87,24 @@ class RanobeBuilder(BaseBuilder):
 		:type branch_id: int | None
 		"""
 
-		Branches = self._Title.branches
+		Branches = self._Title.data.branches
 		if not Branches:
 			raise exceptions.builders.BuildingError("Title hasn't branches.")
 		
 		BranchToBuild = Branches[0]
 
 		if branch_id:
-			SearchResult = self._Title.find_branch_by_id(branch_id)
+			SearchResult = self._Title.data.find_branch(branch_id)
 
 			if SearchResult:
 				raise exceptions.builders.BuildingError(f"Branch {branch_id} not found.")
 			
-			BranchToBuild = cast("BaseBranch", SearchResult)
+			BranchToBuild = cast("Branch", SearchResult)
 
 		Book = epub.EpubBook()
-		Book.set_title(self._Title.localized_name)
-		Book.set_language(self._Title.content_language)
-		for Author in self._Title.authors: Book.add_author(Author)
+		Book.set_title(self._Title.data.localized_name)
+		Book.set_language(self._Title.data.content_language)
+		for Author in self._Title.data.authors: Book.add_author(Author)
 
 		Chapters = []
 
@@ -117,7 +118,7 @@ class RanobeBuilder(BaseBuilder):
 		Book.spine = ["nav"] + Chapters
 		Book.add_item(epub.EpubNav())
 
-		FilePath = self._ParserSettings.directories.content / f"{self._Title.localized_name}.epub"
+		FilePath = self._ParserSettings.directories.content / f"{self._Title.data.localized_name}.epub"
 		epub.write_epub(FilePath, Book)
 
-		self._Printer.emit(f"For <i>{self._Title.slug}</i> builded {BranchToBuild.chapters_count} chapters.")
+		self._Printer.emit(f"For <i>{self._Title.data.slug}</i> builded {BranchToBuild.chapters_count} chapters.")

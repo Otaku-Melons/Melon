@@ -2,7 +2,7 @@ from dataclasses import dataclass
 
 from dublib.cli.terminalyzer import Command, ParsedCommandData, ValidableTypes
 
-from ....core.base.formats.components.enums import By
+from ....core.base.formats.base_format.enums import By
 from ..base_processor import PreparedData
 from ..base_processor.templates import T_SingleParserRequired
 from ._base import CommandProcessorTemplate
