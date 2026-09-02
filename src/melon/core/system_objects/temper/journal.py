@@ -26,9 +26,14 @@ class Journal:
 		"""
 		Ищет ID тайтла по его алиасу.
 
+		Отключается переменной среды `MELON_USE_CACHE`.
+
 		:param slug: Алиас тайтла.
 		:type slug: str
 		"""
+
+		if not self.__SharedData.temper.system_obejcts.options.USE_CACHE:
+			return None
 
 		for ID, Slug in self.__Data.items():
 			if slug == Slug:
@@ -40,9 +45,14 @@ class Journal:
 		"""
 		Ищет алиас тайтла по его ID.
 
+		Отключается переменной среды `MELON_USE_CACHE`.
+
 		:param title_id: ID тайтла.
 		:type title_id: int
 		"""
+
+		if not self.__SharedData.temper.system_obejcts.options.USE_CACHE:
+			return None
 
 		try:
 			return self.__Data[title_id]

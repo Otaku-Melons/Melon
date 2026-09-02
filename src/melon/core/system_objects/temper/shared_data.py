@@ -30,7 +30,14 @@ class SharedData:
 
 	@property
 	def last_parsed_slug(self) -> str | None:
-		"""Алиас последнего тайтла, обработанного парсером."""
+		"""
+		Алиас последнего тайтла, обработанного парсером.
+
+		Отключается переменной среды `MELON_USE_CACHE`.
+		"""
+
+		if not self.__temper.system_obejcts.options.USE_CACHE:
+			return None
 
 		return self.__data.get("last_parsed_slug")
 
@@ -39,6 +46,12 @@ class SharedData:
 		"""Путь к каталогу разделяемых данных."""
 
 		return self.__shared_data_directory
+
+	@property
+	def temper(self) -> "Temper":
+		"""Дескриптор временных каталогов и объектов."""
+		
+		return self.__temper
 
 	#==========================================================================================#
 	# >>>>> СВОЙСТВА <<<<< #

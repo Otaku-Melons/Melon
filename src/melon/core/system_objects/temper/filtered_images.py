@@ -63,11 +63,16 @@ class FilteredImages:
 		"""
 		Проверяет, содержится ли ссылка в кэше.
 
+		Отключается переменной среды `MELON_USE_CACHE`.
+
 		:param link: Ссылка.
 		:type link: str
 		:return: Причина фильтрации или `None`, если ссылка не найдена.
 		:rtype: FilteredBy | None
 		"""
+
+		if not self.__shared_data.temper.system_obejcts.options.USE_CACHE:
+			return None
 
 		link = urlparse(link).path
 
@@ -90,11 +95,16 @@ class FilteredImages:
 		"""
 		Получает содержимое секции кэша.
 
+		Отключается переменной среды `MELON_USE_CACHE`.
+
 		:param filtered_by: Причина фильтрации.
 		:type filtered_by: FilteredBy
 		:return: Содержимое секции.
 		:rtype: tuple[str, ...]
 		"""
+
+		if not self.__shared_data.temper.system_obejcts.options.USE_CACHE:
+			return ()
 
 		section: str = self.__reason_to_section_name(filtered_by)
 

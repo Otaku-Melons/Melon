@@ -13,6 +13,12 @@ if TYPE_CHECKING:
 class Temper:
 	"""Дескриптор временных каталогов и объектов."""
 
+	@property
+	def system_obejcts(self) -> "SystemObjects":
+		"""Коллекция системных объектов."""
+
+		return self.__SystemObjects
+
 	def __init__(self, system_objects: "SystemObjects"):
 		"""
 		Оператор временных каталогов и объектов.

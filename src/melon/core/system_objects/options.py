@@ -200,6 +200,12 @@ class Options:
 
 		return self.__Paths[sys._getframe(0).f_code.co_name]
 
+	@property
+	def USE_CACHE(self) -> BoolOption:
+		"""Состояние: используется ли кэш."""
+
+		return self.__Bools[sys._getframe(0).f_code.co_name]
+
 	#==========================================================================================#
 	# >>>>> ПРИВАТНЫЕ МЕТОДЫ <<<<< #
 	#==========================================================================================#
@@ -261,7 +267,8 @@ class Options:
 		"""Менеджер переменных среды парсера."""
 
 		self.__Bools: dict[str, BoolOption] = {
-			"DEBUG": BoolOption(False, is_overrided = False)
+			"DEBUG": BoolOption(False, is_overrided = False),
+			"USE_CACHE": BoolOption(True, is_overrided = False)
 		}
 		self.__Links: dict[str, LinkOption] = {
 			"REPOS_URL": LinkOption("https://github.com/otaku-melons/melon", is_overrided = False)
