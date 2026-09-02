@@ -42,16 +42,71 @@ class Collector:
 	#==========================================================================================#
 
 	@property
+	def is_operation_cached(self) -> bool:
+		"""
+		Состояние: используется ли кэш для операции. 
+
+		Кэширование выполняется только для метода сборки `collect_not_found()`.
+		
+		При отключении кэша через переменную среды `MELON_USE_CACHE` всегда возвращает `False`.
+		"""
+
+		if not self.__source_operator.system_objects.options.USE_CACHE:
+			return False
+
+		return self.__cache_file.exists()
+
+	@property
 	def is_collection_file_exists(self) -> bool:
 		"""Состояние: существует ли файл коллекции."""
 
-		return self.__CollectionFile.exists()
+		return self.__collection_file.exists()
 
 	@property
 	def slugs(self) -> tuple[str, ...]:
 		"""Последовательность алиасов коллекции."""
 
-		return tuple(self.__Collection)
+		return tuple(self.__collection)
+
+	#==========================================================================================#
+	# >>>>> ПРИВАТНЫЕ МЕТОДЫ КЭШИРОВАНИЯ ОПЕРАЦИИ <<<<< #
+	#==========================================================================================#
+
+	def __clear_cache(self):
+		"""Очищает кэш операции."""
+
+		self.__cache_file.unlink(missing_ok = True)
+
+	def __read_cached_slugs(self) -> tuple[str, ...]:
+		"""
+		Считывает кэш сборки.
+
+		Отключается переменной среды `MELON_USE_CACHE`.
+
+		:return: Последовательность обработанных алиасов.
+		:rtype: tuple[str, ...]
+		"""
+
+		if not self.__source_operator.system_objects.options.USE_CACHE:
+			return ()
+
+		return tuple(text.read(self.__cache_file, split = True, strip_level = 2))
+
+	def __save_progress_in_cache(self, checked_slug: str):
+		"""
+		Сохраняет прогресс сборки коллекции в кэш.
+
+		:param checked_slug: Обработанный алиас.
+		:type checked_slug: str
+		"""
+
+		if not self.__cache_file.exists():
+			with open(self.__cache_file, "w", encoding = "utf-8") as writer:
+				writer.write(checked_slug + "\n")
+
+		else:
+			with open(self.__cache_file, "a", encoding = "utf-8") as writer:
+				writer.write(checked_slug + "\n")
 
 	#==========================================================================================#
 	# >>>>> ПРИВАТНЫЕ МЕТОДЫ <<<<< #
@@ -83,16 +138,16 @@ class Collector:
 		:rtype: tuple[TitleDescriptor, ...]
 		"""
 
-		Directory: Path = self.__SourceOperator.settings.directories.titles
+		Directory: Path = self.__source_operator.settings.directories.titles
 		Descriptors: list[TitleDescriptor] = []
 
 		for Entry in os.scandir(Directory):
 			if Entry.is_file() and Entry.name.endswith(".json"):
-				Buffer = TitleDescriptor(self.__SourceOperator)
+				Buffer = TitleDescriptor(self.__source_operator)
 				Buffer.set_filename(Entry.name)
 				Descriptors.append(Buffer)
 
-		if self.__SourceOperator.settings.common.use_id_as_filename:
+		if self.__source_operator.settings.common.use_id_as_filename:
 			for Descriptor in Descriptors:
 				self.__TryGetSlugFromFile(Descriptor)
 
@@ -145,13 +200,16 @@ class Collector:
 		:type filename: str | None
 		"""
 
-		self.__SourceOperator = source_operator
-		self.__Filename: str = filename or "collection"
+		self.__source_operator = source_operator
+		self.__filename: str = filename or "collection"
 
-		if not self.__Filename.endswith(".txt"): self.__Filename = f"{self.__Filename}.txt"
+		if not self.__filename.endswith(".txt"): self.__filename = f"{self.__filename}.txt"
 
-		self.__CollectionFile = self.__SourceOperator.system_objects.temper.get_parser_collections_directory(self.__SourceOperator.parser_name) / self.__Filename
-		self.__Collection: list[str] = []
+		self.__collections_directory = self.__source_operator.system_objects.temper.get_parser_collections_directory(self.__source_operator.parser_name)
+		self.__collection_file = self.__collections_directory / self.__filename
+		self.__cache_file = self.__source_operator.temp_directory / f".{self.__filename}.cache.json"
+
+		self.__collection: list[str] = []
 
 	def add(self, slugs: str | Sequence[str]) -> int:
 		"""
@@ -164,10 +222,10 @@ class Collector:
 		"""
 
 		SlugsSet = to_sequence(slugs, target_type = set)
-		CollectionSet = set(self.__Collection)
+		CollectionSet = set(self.__collection)
 		UniqueSlugsSet = SlugsSet - CollectionSet
 		
-		self.__Collection = sorted(CollectionSet | SlugsSet)
+		self.__collection = sorted(CollectionSet | SlugsSet)
 		self.save()
 
 		return len(UniqueSlugsSet)
@@ -175,10 +233,8 @@ class Collector:
 	def clear(self):
 		"""Очищает коллекцию и удаляет её файл."""
 
-		self.__Collection.clear()
-
-		if self.is_collection_file_exists:
-			self.__CollectionFile.unlink()
+		self.__collection.clear()
+		self.__collection_file.unlink(missing_ok = True)
 
 	def load(self) -> int:
 		"""
@@ -188,9 +244,8 @@ class Collector:
 		:rtype: int
 		"""
 
-		if self.__CollectionFile.exists():
-			CollectionSlugs: list[str] = text.read(self.__CollectionFile, split = True, strip_level = 2)
-			CollectionSlugs = [Slug for Item in CollectionSlugs if (Slug := Item.strip())]
+		if self.__collection_file.exists():
+			CollectionSlugs: list[str] = sorted(text.read(self.__collection_file, split = True, strip_level = 2))
 			return self.add(CollectionSlugs)
 		
 		return 0
@@ -203,7 +258,7 @@ class Collector:
 		:type sort: bool
 		"""
 
-		text.write(self.__CollectionFile, self.__Collection)
+		text.write(self.__collection_file, self.__collection)
 	
 	#==========================================================================================#
 	# >>>>> ПУБЛИЧНЫЕ МЕТОДЫ СБОРКИ ПО КРИТЕРИЯМ <<<<< #
@@ -258,21 +313,28 @@ class Collector:
 		NotFoundDescriptors: list[TitleDescriptor] = []
 		Added: int = 0
 
-		for Descriptor in self.__CollectDescriptors():
-			if not Descriptor.slug or Descriptor.slug in self.__Collection: continue
+		cached_slugs: tuple[str, ...] = self.__read_cached_slugs()
 
-			IsTitleExists: bool | None = self.__SourceOperator.is_title_exists(Descriptor.slug)
+		for Descriptor in self.__CollectDescriptors():
+			if not Descriptor.slug or Descriptor.slug in self.__collection: continue
+			if Descriptor.slug in cached_slugs: continue
+
+			IsTitleExists: bool | None = self.__source_operator.is_title_exists(Descriptor.slug)
 			Descriptor.extra["is_title_exists"] = IsTitleExists
 
 			if IsTitleExists is False:
 				NotFoundDescriptors.append(Descriptor)
+
 				if autosave:
 					self.add(Descriptor.slug)
 					Added += 1
 
+				self.__save_progress_in_cache(Descriptor.slug)
+
 			if callback: callback(Descriptor)
 
 		Slugs = tuple(Descriptor.slug for Descriptor in NotFoundDescriptors if Descriptor.slug)
+		self.__clear_cache()
 		
 		return CollectingResult(
 			slugs = Slugs,

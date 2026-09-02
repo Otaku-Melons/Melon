@@ -88,6 +88,9 @@ class CommandProcessor(CommandProcessorTemplate[Parameters]):
 
 		self.printer.emit("Checking titles existing…", flush = True)
 
+		if collector.is_operation_cached:
+			self.printer.debug("Using previous operation cache.")
+
 		return collector.collect_not_found().added
 
 	#==========================================================================================#

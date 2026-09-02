@@ -2,6 +2,7 @@ import importlib
 from abc import ABC, abstractmethod
 from dataclasses import dataclass
 from os import PathLike
+from pathlib import Path
 from typing import TYPE_CHECKING, Sequence
 
 from dulwich import errors, porcelain
@@ -117,6 +118,12 @@ class BaseSourceOperator[CSM: CustomSettingsTemplate](ABC):
 		"""Коллекция системных объектов."""
 
 		return self._SystemObjects
+
+	@property
+	def temp_directory(self) -> Path:
+		"""Путь ко временному каталогу парсера.."""
+		
+		return self._Temper.get_parser_temp_directory(self._Manifest.parser_name)
 
 	#==========================================================================================#
 	# >>>>> ПЕРЕОПРЕДЕЛЯЕМЫЕ МЕТОДЫ <<<<< #
