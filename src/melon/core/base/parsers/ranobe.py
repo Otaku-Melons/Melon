@@ -19,7 +19,7 @@ class BaseRanobeParser[SO: "BaseSourceOperator", CSM: "CustomSettingsTemplate"](
 	def amend(self):
 		"""Дополняет главы дайными о контенте."""
 
-		Title = cast(Ranobe, self._Title)
+		Title = cast(Ranobe, self._title)
 
 		AmendedChaptersCount: int = 0
 		ProgressIndex: int = 0
@@ -49,9 +49,9 @@ class BaseRanobeParser[SO: "BaseSourceOperator", CSM: "CustomSettingsTemplate"](
 		:rtype: Ranobe
 		"""
 
-		self._Title = Ranobe(self, slug)
+		self._title = Ranobe(self, slug)
 
-		return self._Title
+		return self._title
 
 	@override
 	@run_before_method("_require_title")
@@ -66,7 +66,7 @@ class BaseRanobeParser[SO: "BaseSourceOperator", CSM: "CustomSettingsTemplate"](
 		:rtype: bool
 		"""
 
-		Title = cast(Ranobe, self._Title)
+		Title = cast(Ranobe, self._title)
 
 		SearchResult = Title.data.find_chapter(chapter_id)
 

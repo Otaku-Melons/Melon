@@ -19,7 +19,7 @@ class BaseMangaParser[SO: "BaseSourceOperator", CSM: "CustomSettingsTemplate"](B
 	def amend(self):
 		"""Дополняет главы дайными о контенте."""
 
-		Title = cast(Manga, self._Title)
+		Title = cast(Manga, self._title)
 
 		AmendedChaptersCount: int = 0
 		ProgressIndex: int = 0
@@ -49,9 +49,9 @@ class BaseMangaParser[SO: "BaseSourceOperator", CSM: "CustomSettingsTemplate"](B
 		:rtype: Manga
 		"""
 
-		self._Title = Manga(self, slug)
+		self._title = Manga(self, slug)
 
-		return self._Title
+		return self._title
 
 	@override
 	@run_before_method("_require_title")
@@ -66,7 +66,7 @@ class BaseMangaParser[SO: "BaseSourceOperator", CSM: "CustomSettingsTemplate"](B
 		:rtype: bool
 		"""
 
-		Title = cast(Manga, self._Title)
+		Title = cast(Manga, self._title)
 
 		SearchResult = Title.data.find_chapter(chapter_id)
 

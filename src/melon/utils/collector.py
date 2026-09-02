@@ -90,6 +90,9 @@ class Collector:
 		if not self.__source_operator.system_objects.options.USE_CACHE:
 			return ()
 
+		if not self.is_operation_cached:
+			return ()
+
 		return tuple(text.read(self.__cache_file, split = True, strip_level = 2))
 
 	def __save_progress_in_cache(self, checked_slug: str):
@@ -203,11 +206,11 @@ class Collector:
 		self.__source_operator = source_operator
 		self.__filename: str = filename or "collection"
 
-		if not self.__filename.endswith(".txt"): self.__filename = f"{self.__filename}.txt"
+		if self.__filename.endswith(".txt"): self.__filename = Path(self.__filename).stem
 
 		self.__collections_directory = self.__source_operator.system_objects.temper.get_parser_collections_directory(self.__source_operator.parser_name)
-		self.__collection_file = self.__collections_directory / self.__filename
-		self.__cache_file = self.__source_operator.temp_directory / f".{self.__filename}.cache.json"
+		self.__collection_file = self.__collections_directory / f"{self.__filename}.txt"
+		self.__cache_file = self.__source_operator.temp_directory / f".{self.__filename}.cache.txt"
 
 		self.__collection: list[str] = []
 
@@ -329,8 +332,7 @@ class Collector:
 					self.add(Descriptor.slug)
 					Added += 1
 
-				self.__save_progress_in_cache(Descriptor.slug)
-
+			self.__save_progress_in_cache(Descriptor.slug)
 			if callback: callback(Descriptor)
 
 		Slugs = tuple(Descriptor.slug for Descriptor in NotFoundDescriptors if Descriptor.slug)
