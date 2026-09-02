@@ -5,7 +5,7 @@ from urllib.parse import urlparse
 from dulwich import errors, porcelain
 
 from dublib.functions.filesystem import text
-from dublib.validators import Validator_URL
+from dublib.validators import types
 
 from ....core import exceptions
 
@@ -48,7 +48,7 @@ class Repositories:
 		if is_available and not self.__IsRepositoryAvailable(url):
 			raise exceptions.system.RepositoryError("Remote repository is't available.")
 
-		return Validator_URL.parse(url)
+		return types.URL.parse(url)
 
 	def __GetParserNameFromRepositoryURL(self, repository: str) -> str:
 		"""
@@ -165,7 +165,7 @@ class Repositories:
 		Links = [Element for Element in Links if Element]
 
 		for URL in Links:
-			URL = Validator_URL.parse(URL)
+			URL = types.URL.parse(URL)
 			Name = Path(URL).name
 			self.__Repositories[Name] = URL
 

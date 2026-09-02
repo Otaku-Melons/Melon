@@ -82,7 +82,7 @@ class Chapter(BaseChapter):
 			self.__slides[SlideIndex] = SlideImage
 
 	@override
-	def _post_init_method(self):
+	def _post_init(self):
 		"""Метод, выполняющийся после инициализации объекта."""
 
 		self._data["slides"] = []

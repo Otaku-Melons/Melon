@@ -2,7 +2,7 @@ from abc import ABC, abstractmethod
 from typing import TYPE_CHECKING, Any, Literal, Sequence, cast
 
 from dublib.functions.data.dictionary import insert_item
-from dublib.validators import Validator_Domain
+from dublib.validators import types
 
 from .... import exceptions
 from ...parsers.components.words_dictionary import CheckLanguageCode
@@ -345,7 +345,7 @@ class BaseTitleData[C: "BaseChapter"](ABC):
 
 		return ()
 
-	def _post_init_method(self):
+	def _post_init(self):
 		"""Метод, выполняющийся после инициализации объекта."""
 
 		pass
@@ -374,7 +374,7 @@ class BaseTitleData[C: "BaseChapter"](ABC):
 		self._persons: list[Person] = []
 		self._branches: dict[int, Branch] = {}
 		
-		self._post_init_method()
+		self._post_init()
 
 	def from_dict(self, data: dict):
 		"""
@@ -697,7 +697,7 @@ class BaseTitleData[C: "BaseChapter"](ABC):
 		:raises ValueError: Некорректный домен.
 		"""
 
-		if domain and not Validator_Domain.validate(domain):
+		if domain and not types.Domain.validate(domain):
 			raise ValueError("Incorrect domain.")
 
 		self._data["domain"] = domain

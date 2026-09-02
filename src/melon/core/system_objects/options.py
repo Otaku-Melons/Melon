@@ -5,7 +5,7 @@ from pathlib import Path
 
 from dotenv import load_dotenv
 
-from dublib.validators import Validator_Bool, Validator_URL
+from dublib.validators import types
 
 #==========================================================================================#
 # >>>>> ВСПОМОГАТЕЛЬНЫЕ СТРУКТУРЫ ДАННЫХ <<<<< #
@@ -216,7 +216,7 @@ class Options:
 
 		for Name in self.__Links.keys():
 			Value: str | None = os.environ.get(f"MELON_{Name}")
-			if Value: self.__Links[Name] = LinkOption(Validator_URL.parse(Value))
+			if Value: self.__Links[Name] = LinkOption(types.URL.parse(Value))
 
 	def __LoadEnviromentPathVariables(self):
 		"""Загружает опции на основе переменных сред, представляющих пути, и создаёт каталоги."""
@@ -245,8 +245,8 @@ class Options:
 		:raises ValueError: Некорректное значение переменной среды.
 		"""
 
-		if Validator_Bool.validate(data):
-			return Validator_Bool.convert(data)
+		if types.Bool.validate(data):
+			return types.Bool.convert(data)
 
 		if data.isdigit():
 			return bool(int(data))

@@ -222,7 +222,7 @@ class BaseTitleController[TD: "BaseTitleData"](ABC):
 
 		pass
 
-	def _post_init_method(self):
+	def _post_init(self):
 		"""Метод, выполняющийся после инициализации объекта."""
 
 		pass
@@ -245,7 +245,7 @@ class BaseTitleController[TD: "BaseTitleData"](ABC):
 
 		self._is_local_file_loaded: bool = False
 
-		self._post_init_method()
+		self._post_init()
 
 	def load(self, identificator: int | str, selector_type: By = By.Slug) -> bool:
 		"""

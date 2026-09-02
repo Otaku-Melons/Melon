@@ -63,7 +63,7 @@ class Chapter(BaseChapter):
 		self._data = self._data | data
 
 	@override
-	def _post_init_method(self):
+	def _post_init(self):
 		"""Метод, выполняющийся после инициализации объекта."""
 
 		self._data["paragraphs"] = []

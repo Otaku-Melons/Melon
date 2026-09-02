@@ -221,7 +221,7 @@ class BaseChapter(ABC):
 
 		return False
 
-	def _post_init_method(self):
+	def _post_init(self):
 		"""Метод, выполняющийся после инициализации объекта."""
 
 		pass
@@ -257,7 +257,7 @@ class BaseChapter(ABC):
 			"workers": []
 		}
 
-		self._post_init_method()
+		self._post_init()
 		self._extra_data = ExtraData(tuple(self._data.keys()))
 
 	def add_worker(self, worker: str):

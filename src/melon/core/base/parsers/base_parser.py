@@ -167,7 +167,7 @@ class BaseParser[SO: "BaseSourceOperator", CSM: "CustomSettingsTemplate"](ABC):
 
 		pass
 
-	def _post_init_method(self):
+	def _post_init(self):
 		"""Метод, выполняющийся после инициализации объекта."""
 
 		pass
@@ -194,7 +194,7 @@ class BaseParser[SO: "BaseSourceOperator", CSM: "CustomSettingsTemplate"](ABC):
 		self._words_dictionary: WordsDictionary = WordsDictionary(None)
 		self._title: "BaseTitleController[BaseTitleData] | None" = None
 
-		self._post_init_method()
+		self._post_init()
 
 	@abstractmethod
 	def amend(self):
