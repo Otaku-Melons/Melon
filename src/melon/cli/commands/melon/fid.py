@@ -50,7 +50,10 @@ class CommandProcessor(CommandProcessorTemplate[Parameters]):
 			self.printer.emit(orjson.dumps(OutputDictionary).decode())
 
 		else:
-			self.printer.emit(f"Found ID {title_id} for parser \"{parameters.required_parser.name}\".")
+			if title_id:
+				self.printer.emit(f"Found ID {title_id} for parser \"{parameters.required_parser.name}\".")
+			else:
+				self.printer.emit(f"ID not foind in \"{parameters.required_parser.name}\" cache.")
 
 	#==========================================================================================#
 	# >>>>> ПЕРЕОПРЕДЕЛЯЕМЫЕ МЕТОДЫ <<<<< #
