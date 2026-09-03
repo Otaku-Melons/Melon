@@ -272,7 +272,7 @@ class MangaBuilder(BaseBuilder):
 		ChapterSearchResult = self._Title.data.find_chapter(chapter_id)
 
 		if not ChapterSearchResult:
-			raise exceptions.parsers.ChapterNotFound(chapter_id)
+			raise exceptions.parsing.ChapterNotFound(chapter_id)
 
 		self.__BuildChapter(cast("Chapter", ChapterSearchResult.chapter))
 

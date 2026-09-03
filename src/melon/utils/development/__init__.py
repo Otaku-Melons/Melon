@@ -128,7 +128,7 @@ class DevelopmentAssistant:
 		ParserPath = ParsersDirectoryPath / name
 
 		if ParserPath.exists():
-			raise exceptions.system.ParserAlreadyExists(name)
+			raise exceptions.parsers.ParserAlreadyExists(name)
 
 		ParserPath.mkdir(parents = True)
 

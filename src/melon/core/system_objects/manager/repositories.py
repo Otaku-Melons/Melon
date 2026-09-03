@@ -46,7 +46,7 @@ class Repositories:
 		url = url.split("?", maxsplit = 1)[0]
 
 		if is_available and not self.__IsRepositoryAvailable(url):
-			raise exceptions.system.RepositoryError("Remote repository is't available.")
+			raise exceptions.parsers.RepositoryError("Remote repository is't available.")
 
 		return types.URL.parse(url)
 
@@ -114,7 +114,7 @@ class Repositories:
 		ParserName: str = self.__GetParserNameFromRepositoryURL(repository)
 
 		if ParserName in self.__Repositories:
-			if not exists_ok: raise exceptions.system.RepositoryError(f"Repository for parser \"{ParserName}\" already exists.")
+			if not exists_ok: raise exceptions.parsers.RepositoryError(f"Repository for parser \"{ParserName}\" already exists.")
 			return ParserName
 
 		self.__Repositories[ParserName] = url
@@ -143,7 +143,7 @@ class Repositories:
 		RepositoryURL: str | None = self.__Repositories.get(parser_name)
 
 		if not RepositoryURL and exception:
-			raise exceptions.system.RepositoryError(f"Repository for parser \"{parser_name}\" not found.")
+			raise exceptions.parsers.RepositoryError(f"Repository for parser \"{parser_name}\" not found.")
 		
 		return RepositoryURL
 
@@ -181,7 +181,7 @@ class Repositories:
 		"""
 
 		if parser not in self.__Repositories:
-			raise exceptions.system.RepositoryError(f"Repository for parser \"{parser}\" not found.")
+			raise exceptions.parsers.RepositoryError(f"Repository for parser \"{parser}\" not found.")
 
 		del self.__Repositories[parser]
 		self.save()

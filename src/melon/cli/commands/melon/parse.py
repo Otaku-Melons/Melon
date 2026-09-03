@@ -348,7 +348,7 @@ class CommandProcessor(CommandProcessorTemplate[Parameters]):
 			Target = Type(Parser.source_operator, data)
 			if Target.is_used: return Target
 
-		raise exceptions.parsers.ParsingError("Unable determine parsing target.")
+		raise exceptions.parsing.ParsingError("Unable determine parsing target.")
 
 	def __ParseSlugs(self, parameters: Parameters, source_operator: "BaseSourceOperator", slugs: Sequence[str], start_index: int) -> ParsingStatistics:
 		"""
@@ -427,13 +427,13 @@ class CommandProcessor(CommandProcessorTemplate[Parameters]):
 			else:
 				self.printer.emit("Amending skipped by flag.")
 
-		except exceptions.parsers.AuthorizationRequired:
+		except exceptions.parsing.AuthorizationRequired:
 			return ParsingSignals.Break
 
-		except exceptions.parsers.ParsingError:
+		except exceptions.parsing.ParsingError:
 			return ParsingSignals.Error
 
-		except exceptions.parsers.TitleNotFound:
+		except exceptions.parsing.TitleNotFound:
 			return ParsingSignals.NotFound
 
 		except (JSONDecodeError, exceptions.parsers.UnsupportedFormat):

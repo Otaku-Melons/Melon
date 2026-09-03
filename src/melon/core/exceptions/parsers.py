@@ -1,73 +1,46 @@
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
-	from ...core.base.formats.base_format.data import BaseTitleData
-	from ...core.base.parsers.components.manifest import ContentTypes
+	from ..base.parsers.components.manifest import ContentTypes
 
-#==========================================================================================#
-# >>>>> ИСКЛЮЧЕНИЯ ПАРСЕРОВ <<<<< #
-#==========================================================================================#
-	
-class AuthorizationRequired(Exception):
-	"""Исключение: требуется авторизация."""
+class BadManifest(Exception):
+	"""Исключение: неверное определение манифеста."""
 
 	def __init__(self, message: str):
 		"""
-		Исключение: требуется авторизация.
+		Исключение: неверное определение манифеста.
 
-		:param message: Описание требования авторизации.
+		:param message: Сообщение об ошибке.
 		:type message: str
 		"""
 
-		super().__init__(message) 
+		super().__init__(message)
 
-class ChapterNotFound(Exception):
-	"""Исключение: глава не найдена."""
+class ParserAlreadyExists(Exception):
+	"""Исключение: парсер уже существует."""
 
-	def __init__(self, chapter_id: int | None = None, slug: str | None = None):
+	def __init__(self, parser_name: str):
 		"""
-		Исключение: глава не найдена.
+		Исключение: парсер уже существует.
 
-		:param chapter_id: ID главы.
-		:type id: int | None
-		:param slug: Алиас главы.
-		:type slug: str | None
+		:param parser_name: Имя парсера.
+		:type parser_name: str
 		"""
 
-		ChapterIdentificator = ""
+		super().__init__(parser_name) 
 
-		if chapter_id:
-			ChapterIdentificator = f" {chapter_id}"
-		elif slug:
-			ChapterIdentificator = f" \"{slug}\""
+class ParserNotFound(Exception):
+	"""Исключение: парсер не найден."""
 
-		super().__init__(f"Chapter{ChapterIdentificator} not found.") 
-
-class ParsingError(Exception):
-	"""Исключение: ошибка парсинга."""
-
-	def __init__(self, description: str | None = None):
+	def __init__(self, parser_name: str):
 		"""
-		Исключение: ошибка парсинга.
+		Исключение: парсер не найден.
 
-		:param description: Описание ошибки.
-		:type description: str | None
+		:param parser_name: Имя парсера.
+		:type parser_name: str
 		"""
 
-		super().__init__(description or "Error occurs during parsing.") 
-
-class TitleNotFound(Exception):
-	"""Исключение: тайтл не найден."""
-
-	def __init__(self, title_data: "BaseTitleData"):
-		"""
-		Исключение: тайтл не найден.
-
-		:param title: Данные тайтла..
-		:type title: BaseTitleData
-		"""
-
-		super().__init__(f"Title \"{title_data.slug}\" not found.") 
+		super().__init__(parser_name) 
 
 class TitleNotSetted(Exception):
 	"""Исключение: не задан тайтл."""
@@ -76,6 +49,19 @@ class TitleNotSetted(Exception):
 		"""Исключение: не задан тайтл."""
 
 		super().__init__("Open title before using methods, that it requires.") 
+
+class RepositoryError(Exception):
+	"""Исключение: ошибка работы с репозиториями."""
+
+	def __init__(self, message: str):
+		"""
+		Исключение: ошибка работы с репозиториями.
+
+		:param message: Сообщение об ошибке.
+		:type message: str
+		"""
+
+		super().__init__(message) 
 
 class UnsupportedContent(Exception):
 	"""Исключение: неподдерживаемый тип контента."""
@@ -102,34 +88,4 @@ class UnsupportedFormat(Exception):
 		"""
 
 		title_format = f" \"{title_format}\"" if title_format else ""
-		super().__init__(f"Unsupported format{title_format}.") 
-
-#==========================================================================================#
-# >>>>> ИСКЛЮЧЕНИЯ ПАРСЕРОВ РАНОБЭ <<<<< #
-#==========================================================================================#
-
-class FootnoteCompositionError(Exception):
-	"""Исключение: ошибка композиции заметки."""
-
-	def __init__(self, description: str):
-		"""
-		Исключение: ошибка композиции заметки.
-
-		:param description: Описание ошибки.
-		:type description: str
-		"""
-
-		super().__init__(description) 
-
-class UnresolvedTag(Exception):
-	"""Исключение: неразрешённый тег."""
-
-	def __init__(self, tag: str):
-		"""
-		Исключение: неразрешённый тег.
-
-		:param tag: Имя тега.
-		:type tag: str
-		"""
-
-		super().__init__(f"Unresolved tag \"{tag}\".") 
+		super().__init__(f"Unsupported format{title_format}.")

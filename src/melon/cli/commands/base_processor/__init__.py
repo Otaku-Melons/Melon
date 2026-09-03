@@ -79,7 +79,7 @@ class BaseCommandProcessor(ABC, Generic[PARAMS]):
 
 		for CurrentParser in parsers_names:
 			if CurrentParser not in AllParsers:
-				raise exceptions.system.ParserNotFound(CurrentParser)
+				raise exceptions.parsers.ParserNotFound(CurrentParser)
 
 	def _GetRequiredParsers(self, data: ParsedCommandData) -> tuple[RequiredParser, ...]:
 		"""
@@ -205,13 +205,13 @@ class BaseCommandProcessor(ABC, Generic[PARAMS]):
 		try:
 			return self._Process(parameters)
 
-		except exceptions.system.ParserAlreadyExists as ExceptionData:
+		except exceptions.parsers.ParserAlreadyExists as ExceptionData:
 			self.printer.error(f"Parser <b>{ExceptionData}</b> already exists.")
 			
-		except exceptions.system.ParserNotFound as ExceptionData:
+		except exceptions.parsers.ParserNotFound as ExceptionData:
 			self.printer.error(f"Parser <b>{ExceptionData}</b> not found.")
 
-		except exceptions.system.RepositoryError as ExceptionData:
+		except exceptions.parsers.RepositoryError as ExceptionData:
 			self.printer.error(str(ExceptionData))
 
 		return False

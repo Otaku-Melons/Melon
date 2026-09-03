@@ -62,7 +62,7 @@ class Portals:
 		self.__Printer.critical(text)
 
 		if exception:
-			raise exceptions.parsers.AuthorizationRequired(text)
+			raise exceptions.parsing.AuthorizationRequired(text)
 
 	@overload
 	def request_error(self, response: WebResponse, text: str | None = None, exception: Literal[True] = True) -> NoReturn: ...
@@ -92,7 +92,7 @@ class Portals:
 			self.printer.debug(str(response.json))
 
 		if exception:
-			raise exceptions.parsers.ParsingError(text)
+			raise exceptions.parsing.ParsingError(text)
 
 	def unsupported_format(self, title_format: str | None = None, exception: bool = True):
 		"""
@@ -132,7 +132,7 @@ class Portals:
 		self.__Printer.error(Text)
 
 		if exception:
-			raise exceptions.parsers.ChapterNotFound(chapter.id, chapter.slug)
+			raise exceptions.parsing.ChapterNotFound(chapter.id, chapter.slug)
 
 	def title_not_found(self, title_data: "BaseTitleData", exception: bool = True):
 		"""
@@ -151,7 +151,7 @@ class Portals:
 		self.__Printer.warning(Text)
 
 		if exception:
-			raise exceptions.parsers.TitleNotFound(title_data)
+			raise exceptions.parsing.TitleNotFound(title_data)
 
 	#==========================================================================================#
 	# >>>>> ШАБЛОНЫ СООБЩЕНИЙ <<<<< #

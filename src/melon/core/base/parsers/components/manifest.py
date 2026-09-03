@@ -98,23 +98,23 @@ class ParserManifest:
 		
 		for Key in _BASE_MANIFEST.keys():
 			if Key not in self.__Data:
-				raise exceptions.system.BadManifest(f"Key \"{Key}\" not found.")
+				raise exceptions.parsers.BadManifest(f"Key \"{Key}\" not found.")
 
 		if not self.__Data["domain"]:
-			raise exceptions.system.BadManifest("Domain must be specified.")
+			raise exceptions.parsers.BadManifest("Domain must be specified.")
 
 		if not self.__Data["content_types"]:
-			raise exceptions.system.BadManifest("Types must be specified.")
+			raise exceptions.parsers.BadManifest("Types must be specified.")
 		for ContentType in self.__Data["content_types"]:
 			if ContentType not in ("manga", "ranobe"):
-				raise exceptions.system.BadManifest(f"Unsupported content type \"{ContentType}\".")
+				raise exceptions.parsers.BadManifest(f"Unsupported content type \"{ContentType}\".")
 
 		for Key in ("version", "melon_required_version"):
 			if self.__Data[Key] == "$from_parent" and not self.__Data["parent"]:
-				raise exceptions.system.BadManifest("Parent must be specified if using \"$from_parent\".")
+				raise exceptions.parsers.BadManifest("Parent must be specified if using \"$from_parent\".")
 
 		if self.__Data["parent"] and self.__Data["parent"] not in self.__SystemObjects.manager.parsers.installed:
-			raise exceptions.system.BadManifest("Parent \"" + self.__Data["parent"] + "\" not found.")
+			raise exceptions.parsers.BadManifest("Parent \"" + self.__Data["parent"] + "\" not found.")
 
 	#==========================================================================================#
 	# >>>>> ПУБЛИЧНЫЕ МЕТОДЫ <<<<< #

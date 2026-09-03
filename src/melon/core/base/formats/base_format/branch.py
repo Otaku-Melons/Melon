@@ -76,7 +76,7 @@ class Branch(ABC):
 		"""
 
 		if chapter.id is None:
-			raise exceptions.parsers.ParsingError("Chapter must have unique ID.")
+			raise exceptions.parsing.ParsingError("Chapter must have unique ID.")
 		
 		if chapter.id in tuple(Value.id for Value in self._Chapters.values()):
 			return

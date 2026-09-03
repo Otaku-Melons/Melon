@@ -2,6 +2,8 @@ from typing import TYPE_CHECKING
 
 from dublib.functions.filesystem import json
 
+from ... import exceptions
+
 if TYPE_CHECKING:
 	from ..extensions import BaseExtension
 	from . import BaseSourceOperator
@@ -68,10 +70,13 @@ class ExtensionsOperator:
 		:type extension: type[BaseExtension]
 		:return: Состояние: включено ли расширение.
 		:rtype: bool
-		:raises KeyError: Расширение не найдено.
+		:raises ExtensionNotFound: Расширение не найдено.
 		"""
 
 		extension_name: str = extension.__module__.split(".")[-1]
+
+		if extension_name not in self.__activation_states:
+			raise exceptions.extensions.ExtensionNotFound(extension_name)
 
 		return self.__activation_states[extension_name]
 		
@@ -86,5 +91,3 @@ class ExtensionsOperator:
 		"""
 
 		return extension(self.__source_operator)
-
-	

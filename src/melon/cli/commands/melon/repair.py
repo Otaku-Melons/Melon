@@ -113,7 +113,7 @@ class CommandProcessor(CommandProcessorTemplate[Parameters]):
 		TypingResult = parameters.required_parser.source_operator.get_content_type_by_file(parameters.filename)
 
 		if not TypingResult.slug:
-			raise exceptions.parsers.ParsingError("Undefined title slug.")
+			raise exceptions.parsing.ParsingError("Undefined title slug.")
 
 		Parser = parameters.required_parser.source_operator.launch_parser(TypingResult.content_type)
 		Title = Parser.init_empty_title(TypingResult.slug)

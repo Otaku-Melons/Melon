@@ -617,7 +617,7 @@ class BaseTitleData[C: "BaseChapter"](ABC):
 		AddedCount = branch.chapters_count
 
 		if not branch.id:
-			exceptions.parsers.ParsingError("Branch must have ID.")
+			exceptions.parsing.ParsingError("Branch must have ID.")
 
 		if branch.id in self._branches.keys():
 			AddedCount = self._merge_branch(branch)

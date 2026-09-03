@@ -185,7 +185,7 @@ class Header:
 		"""
 
 		if not self._Text:
-			raise exceptions.parsers.FootnoteCompositionError("Text must be setted before footnotes compositing.")
+			raise exceptions.parsing.FootnoteCompositionError("Text must be setted before footnotes compositing.")
 		Text = self._Text
 
 		FootnoteIndex = 0
@@ -194,7 +194,7 @@ class Header:
 
 		for CurrentNote in self._Footnotes:
 			FootnoteID = "{" + CurrentNote.uuid + "}"
-			if FootnoteID not in self._Text: raise exceptions.parsers.FootnoteCompositionError("Footnote UUID not found in text.")
+			if FootnoteID not in self._Text: raise exceptions.parsing.FootnoteCompositionError("Footnote UUID not found in text.")
 			Text = Text.replace(FootnoteID, f"<a href=\"#{FootnoteIndex}\">{CurrentNote.placeholder}</a>")
 			self.__Parser.portals.printer.emit(f"Footnote with index {FootnoteIndex} added.")
 			FootnoteIndex += 1
@@ -564,7 +564,7 @@ class Paragraph(Header):
 
 			if CurrentTag.name not in self.__AllowedTags.keys():
 				self._Portals.printer.error(f"Unresolved tag \"{CurrentTag.name}\".")
-				if raise_exceptions: raise exceptions.parsers.UnresolvedTag(str(CurrentTag))
+				if raise_exceptions: raise exceptions.parsing.UnresolvedTag(str(CurrentTag))
 
 			else:
 				Attributes = CurrentTag.attrs.copy()

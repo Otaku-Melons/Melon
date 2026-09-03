@@ -17,7 +17,7 @@ def catch_base_exceptions(method: Callable[..., Any]) -> Callable[..., Any]:
 	def wrapper(*args: Any, **kwargs: Any) -> Any:
 		try:
 			return method(*args, **kwargs)
-		except exceptions.system.ParserNotFound:
+		except exceptions.parsers.ParserNotFound:
 			return False
 
 	return wrapper
