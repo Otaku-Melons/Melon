@@ -1,7 +1,7 @@
 from abc import ABC, abstractmethod
 from typing import TYPE_CHECKING
 
-from ...base.parsers.components.settings import BaseExtensionOptions
+from .options import BaseExtensionOptions
 
 if TYPE_CHECKING:
 	from pathlib import Path
@@ -25,67 +25,67 @@ class BaseExtension[SO: "BaseSourceOperator", CSM: "CustomSettingsTemplate", EO:
 	def manifest(self) -> "ParserManifest":
 		"""Манифест парсера."""
 
-		return self._SourceOperator.manifest
+		return self._source_operator.manifest
 
 	@property
 	def name(self) -> str:
 		"""Имя расширения."""
 
-		return self._Name
+		return self._name
 
 	@property
 	def options(self) -> EO:
 		"""Настройки расширения."""
 
-		return self._Options
+		return self._options
 
 	@property
 	def parser_settings(self) -> "ParserSettings[CSM]":
 		"""Настройки парсера."""
 
-		return self._SourceOperator.settings
+		return self._source_operator.settings
 
 	@property
 	def portals(self) -> "Portals":
 		"""Порталы вывода парсера."""
 
-		return self._SourceOperator.portals
+		return self._source_operator.portals
 
 	@property
 	def source_operator(self) -> SO:
 		"""Оператор источника."""
 
-		return self._SourceOperator
+		return self._source_operator
 
 	@property
 	def system_objects(self) -> "SystemObjects":
 		"""Коллекция системных объектов."""
 
-		return self._SourceOperator.system_objects
+		return self._source_operator.system_objects
 
 	@property
 	def temp_directory(self) -> "Path":
 		"""Путь ко временной директории расширения."""
 
-		return self._TempDirectory
+		return self._temp_directory
 
 	#==========================================================================================#
 	# >>>>> ПЕРЕОПРЕДЕЛЯЕМЫЕ МЕТОДЫ <<<<< #
 	#==========================================================================================#
 
-	def _PostInitMethod(self):
-		"""Метод, выполняющийся после инициализации объекта."""
+	@abstractmethod
+	def _export_options_model(self) -> type[EO]:
+		"""
+		Возвращает модель опций.
+
+		:return: Модель опций.
+		:rtype: type[BaseExtensionOptions]
+		"""
 
 		pass
 
-	@abstractmethod
-	def _ReturnOptionsType(self) -> type[EO]:
-		"""
-		Возвращает тип контейнера опций.
-
-		:return: Тип контейнера опций.
-		:rtype: type[T]
-		"""
+	def _post_init(self):
+		"""Метод, выполняющийся после инициализации объекта."""
 
 		pass
 
@@ -104,10 +104,10 @@ class BaseExtension[SO: "BaseSourceOperator", CSM: "CustomSettingsTemplate", EO:
 		:raises FileNotFoundError: Каталог расширения не найден.
 		"""
 
-		self._SourceOperator: SO = source_operator
-		self._Name: str = self.__module__.split(".")[-1]
+		self._source_operator: SO = source_operator
+		self._name: str = self.__module__.split(".")[-1]
 		
-		self._Options: EO = self.parser_settings.extensions.get(self._Name, self._ReturnOptionsType())
-		self._TempDirectory: "Path" = self._SourceOperator.system_objects.temper.get_extension_temp_directory(self._SourceOperator.parser_name, self._Name)
+		self._options: EO = self.parser_settings.extensions.get(self._name, self._export_options_model())
+		self._temp_directory: "Path" = self._source_operator.system_objects.temper.get_extension_temp_directory(self._source_operator.parser_name, self._name)
 
-		self._PostInitMethod()
+		self._post_init()

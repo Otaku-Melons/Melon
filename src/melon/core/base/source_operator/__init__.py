@@ -22,6 +22,7 @@ from ..parsers.components.settings import (
 	ParserSettings,
 )
 from ..structs.title import TitleDescriptor
+from .extensions import ExtensionsOperator
 from .properties import SourceProperties
 
 if TYPE_CHECKING:
@@ -38,6 +39,12 @@ class BaseSourceOperator[CSM: CustomSettingsTemplate](ABC):
 	#==========================================================================================#
 	# >>>>> СВОЙСТВА <<<<< #
 	#==========================================================================================#
+
+	@property
+	def extensions(self) -> ExtensionsOperator:
+		"""Оператор расширений."""
+
+		return self._Extensions
 
 	@property
 	def images_downloader(self) -> ImagesDownloader:
@@ -286,6 +293,8 @@ class BaseSourceOperator[CSM: CustomSettingsTemplate](ABC):
 		self._Portals = self._SystemObjects.printer.get_parser_portals(self._Manifest.parser_name)
 		self._SharedData = self._SystemObjects.temper.load_parser_shared_data(self._Manifest.parser_name)
 		
+		self._Extensions = ExtensionsOperator(self)
+
 		self._post_init()
 
 	def collect_slugs(self, period: int | None = None, filters: str | None = None, pages: int | None = None) -> tuple[str, ...]:
@@ -326,6 +335,8 @@ class BaseSourceOperator[CSM: CustomSettingsTemplate](ABC):
 		ImageTargetPath = self._ImagesDownloader.build_target_path(url, directory, filename, is_full_filename)
 		IsTargetPathExists: bool = ImageTargetPath.exists()
 
+		#---> Пропуск скачивания уже существующего изображения.
+		#==========================================================================================#
 		if IsTargetPathExists and not force_mode:
 			return ImageDownloadingResult(
 				url = url,
@@ -336,10 +347,14 @@ class BaseSourceOperator[CSM: CustomSettingsTemplate](ABC):
 				error_message = None
 			)
 
+		#---> Скачивание изображения во временный каталог парсера.
+		#==========================================================================================#
 		Result = self._temp_image(url, force_mode)
-		if Result.error_message or not Result.path:
+		if Result.error_message or Result.filtered_by or not Result.path:
 			return Result
 
+		#---> Перемещение изображения в целевой каталог.
+		#==========================================================================================#
 		if directory:
 			self._ImagesDownloader.move_from_temp(directory, Result.path.name, filename, is_full_filename, force_mode)
 		else:

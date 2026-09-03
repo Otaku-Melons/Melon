@@ -4,11 +4,14 @@ from types import MappingProxyType
 from typing import TYPE_CHECKING, Any, Literal, cast
 
 from deepmerge import always_merger
+from pydantic import TypeAdapter
 from pydantic.dataclasses import dataclass
 
 from dublib.functions.data import zerotify
 from dublib.functions.filesystem import json
 from dublib.web_requestor import Proxy
+
+from ...extensions.options import BaseExtensionOptions
 
 if TYPE_CHECKING:
 	from .....core.system_objects import SystemObjects
@@ -61,64 +64,6 @@ class CustomSettingsTemplate:
 	"""Шаблон модели собственных настроек парсера."""
 
 	pass
-
-class BaseExtensionOptions:
-	"""Базовые настройки расширения."""
-
-	#==========================================================================================#
-	# >>>>> СВОЙСТВА <<<<< #
-	#==========================================================================================#
-
-	@property
-	def is_enabled(self) -> bool:
-		"""Состояние: включено ли расширение."""
-
-		return bool(self._Data["is_enabled"])
-
-	@property
-	def options(self) -> dict[str, Any]:
-		"""Копия словаря опций расширения."""
-
-		return self._Options.copy()
-
-	#==========================================================================================#
-	# >>>>> ПУБЛИЧНЫЕ МЕТОДЫ <<<<< #
-	#==========================================================================================#
-
-	def __init__(self, data: dict | None = None):
-		"""
-		Настройки расширения.
-
-		:param data: Словарь настроек расширения.
-		:type data: dict | None
-		"""
-
-		if data is None: data = {}
-		
-		self._Data: dict = {
-			"is_enabled": False,
-			"options": {}
-		} | data
-		self._Options: dict = self._Data["options"]
-
-	def get(self, option: str, exception: bool = False) -> Any:
-		"""
-		Возвращает значение опции расширения.
-
-		:param option: Имя опции.
-		:type option: str
-		:param exception: Указывает, выбрасывать ли исключение при отсутствии запрашиваемой опции.
-		:type exception: bool
-		:raises KeyError: Запрашиваемая опция не найдена.
-		:return: Значение опции или `None` при её отсутствии.
-		:rtype: Any
-		"""
-
-		if option not in self._Options:
-			if exception: raise KeyError(option)
-			else: return None
-
-		return self._Options[option]
 
 class TextFilters:
 	"""Фильтры текста."""
@@ -179,39 +124,37 @@ class ImagesFilters:
 	def min_height(self) -> int | None:
 		"""Минимальная высота изображения."""
 
-		return self.__Data["min_height"]
+		return self.__data["min_height"]
 	
 	@property
 	def min_size(self) -> int:
 		"""Минимальный размер изображения в байтах."""
 
-		return self.__Data["min_size"] or 0
+		return self.__data["min_size"] or 0
 
 	@property
 	def min_width(self) -> int | None:
 		"""Минимальная ширина изображения."""
 
-		return self.__Data["min_width"]
+		return self.__data["min_width"]
 	
 	@property
 	def max_height(self) -> int | None:
 		"""Максимальная высота изображения."""
 
-		return self.__Data["max_height"]
+		return self.__data["max_height"]
 	
 	@property
 	def max_width(self) -> int | None:
 		"""Максимальная ширина изображения."""
 
-		return self.__Data["max_width"]
+		return self.__data["max_width"]
 	
 	@property
 	def signatures(self) -> tuple[str, ...]:
 		"""Последовательность сигнатур изображений."""
 
-		Signatures: list[str] | None = self.__Data.get("signatures")
-
-		return tuple(Signatures) if Signatures else ()
+		return tuple(self.__data["signatures"])
 
 	#==========================================================================================#
 	# >>>>> ПУБЛИЧНЫЕ МЕТОДЫ <<<<< #
@@ -225,7 +168,7 @@ class ImagesFilters:
 		:type data: dict
 		"""
 
-		self.__Data: dict = data
+		self.__data: dict = data
 
 	def check_sizes(self, width: int, height: int) -> bool:
 		"""
@@ -431,7 +374,7 @@ class Filters:
 		:param settings: Словарь фильтров.
 		:type settings: dict
 		"""
-		
+
 		self.__TextFilters = TextFilters(settings.get("text", {}))
 		self.__ImagesFilters = ImagesFilters(settings.get("images", {}))
 
@@ -490,7 +433,7 @@ class Extensions:
 		:type settings: dict[str, Any]
 		"""
 
-		self.__ExtensionsSettings: dict[str, dict] = settings
+		self.__extensions_settings: dict[str, dict] = settings
 
 	def get[T: BaseExtensionOptions](self, extension_name: str, container: type[T]) -> T:
 		"""
@@ -504,7 +447,7 @@ class Extensions:
 		:rtype: BaseExtensionOptions
 		"""
 		
-		return container(self.__ExtensionsSettings.get(extension_name))
+		return TypeAdapter(container).validate_python(self.__extensions_settings[extension_name])
 
 #==========================================================================================#
 # >>>>> ОСНОВНОЙ КЛАСС <<<<< #
@@ -521,46 +464,46 @@ class ParserSettings[T: CustomSettingsTemplate]:
 	def common(self) -> Common:
 		"""Базовые настройки."""
 
-		return self.__Common
+		return self.__common
 
 	@property
 	def custom(self) -> T:
 		"""Собственные настройки парсера."""
 
-		if self.__Custom is None:
+		if self.__custom is None:
 			raise ValueError("Custom settings required, but unparsed.")
 
-		return self.__Custom
+		return self.__custom
 	
 	@property
 	def directories(self) -> Directories:
 		"""Пути к директориям."""
 
-		return self.__Directories
+		return self.__directories
 
 	@property
 	def extensions(self) -> Extensions:
 		"""Настройки расширений."""
 
-		return self.__Extensions
+		return self.__extensions
 
 	@property
 	def filters(self) -> Filters:
 		"""Фильтры контента."""
 
-		return self.__Filters
+		return self.__filters
 
 	@property
 	def network(self) -> Network:
 		"""Настройки сетевых подключений."""
 
-		return self.__Network
+		return self.__network
 
 	#==========================================================================================#
 	# >>>>> ПРИВАТНЫЕ МЕТОДЫ <<<<< #
 	#==========================================================================================#
 
-	def __ReadSettings(self) -> dict:
+	def __read(self) -> dict:
 		"""
 		Считывает настройки парсера из JSON в порядке приоритета: сначала из каталога конфигураций, затем из домашнего каталога парсера.
 
@@ -568,10 +511,10 @@ class ParserSettings[T: CustomSettingsTemplate]:
 		:rtype: dict
 		"""
 
-		Settings: dict = self.get_base_settings(self.__SystemObjects, self.__ParserName)
+		Settings: dict = self.get_base_settings(self.__system_objects, self.__parser_name)
 		ConfigsPaths: tuple[Path, Path] = (
-			Path(f"parsers/{self.__ParserName}/settings.json"),
-			Path(f"{self.__SystemObjects.options.CONFIGS_DIR}/{self.__ParserName}.json")
+			self.__system_objects.manager.parsers.root / f"{self.__parser_name}/settings.json",
+			self.__system_objects.options.CONFIGS_DIR.value / f"{self.__parser_name}.json"
 		)
 
 		for ConfigPath in ConfigsPaths:
@@ -595,18 +538,17 @@ class ParserSettings[T: CustomSettingsTemplate]:
 		:type parser_name: str
 		"""
 		
-		self.__SystemObjects: "SystemObjects" = system_objects
-		self.__ParserName: str = parser_name
+		self.__system_objects: "SystemObjects" = system_objects
+		self.__parser_name: str = parser_name
+		self.__settings: dict = self.__read()
 
-		self.__Settings: dict = self.__ReadSettings()
+		self.__directories = Directories(self.__system_objects, self.__parser_name, self.__settings.get("directories", {}))
+		self.__common: Common = Common(self.__settings.get("common", {}))
+		self.__network: Network = Network(self.__settings.get("network", {}))
+		self.__filters = Filters(self.__settings.get("filters", {}))
+		self.__extensions: Extensions = Extensions(self.__settings.get("extensions", {}))
 
-		self.__Directories = Directories(self.__SystemObjects, self.__ParserName, self.__Settings.get("directories", {}))
-		self.__Common: Common = Common(self.__Settings.get("common", {}))
-		self.__Network: Network = Network(self.__Settings.get("network", {}))
-		self.__Filters = Filters(self.__Settings.get("filters", {}))
-		self.__Extensions: Extensions = Extensions(self.__Settings.get("extensions", {}))
-
-		self.__Custom: T | None = None
+		self.__custom: T | None = None
 
 	@staticmethod
 	def get_base_settings(system_objects: "SystemObjects", parser_name: str) -> dict:
@@ -625,10 +567,7 @@ class ParserSettings[T: CustomSettingsTemplate]:
 		Extensions: tuple[str, ...] = system_objects.manager.parsers.get_operator(parser_name).extensions_names
 
 		for ExtensionName in Extensions:
-			BaseSetings["extensions"][ExtensionName] = {
-				"is_enabled": False,
-				"options": {}
-			}
+			BaseSetings["extensions"][ExtensionName] = {}
 
 		return BaseSetings
 
@@ -640,4 +579,4 @@ class ParserSettings[T: CustomSettingsTemplate]:
 		:type model: type[T]
 		"""
 
-		self.__Custom = cast(T, model(**self.__Settings.get("custom", {})))
+		self.__custom = cast(T, model(**self.__settings.get("custom", {})))
