@@ -12,7 +12,7 @@ from ...structs.image import ImageResolution
 if TYPE_CHECKING:
 	from dublib.web_requestor import WebRequestor
 
-	from .....core.base.source_operator import BaseSourceOperator
+	from ...source_operator import BaseSourceOperator
 
 #==========================================================================================#
 # >>>>> ВСПОМОГАТЕЛЬНЫЕ СТРУКТУРЫ ДАННЫХ <<<<< #

@@ -12,22 +12,23 @@ from dublib.functions.filesystem import json
 from dublib.validators import types
 from dublib.web_requestor import WebConfig, WebLibs, WebRequestor
 
-from ...core import exceptions
-from ...core.base.parsers.components.images_downloader import (
+from ... import exceptions
+from ..parsers.components.images_downloader import (
 	ImageDownloadingResult,
 	ImagesDownloader,
 )
-from ...core.base.parsers.components.manifest import ContentTypes, ParserManifest
-from ...core.base.parsers.components.settings import (
+from ..parsers.components.manifest import ContentTypes, ParserManifest
+from ..parsers.components.settings import (
 	CustomSettingsTemplate,
 	ParserSettings,
 )
+from ..structs.title import TitleDescriptor
 
 if TYPE_CHECKING:
-	from ...core.base.parsers.base_parser import BaseParser
-	from ...core.system_objects import SystemObjects
-	from ...core.system_objects.printer import Portals
-	from ...core.system_objects.temper import SharedData
+	from ...system_objects import SystemObjects
+	from ...system_objects.printer import Portals
+	from ...system_objects.temper import SharedData
+	from ..parsers.base_parser import BaseParser
 
 #==========================================================================================#
 # >>>>> ВСПОМОГАТЕЛЬНЫЕ СТРУКТУРЫ ДАННЫХ <<<<< #
@@ -346,25 +347,29 @@ class BaseSourceOperator[CSM: CustomSettingsTemplate](ABC):
 			error_message = None
 		)
 
-	def get_content_type_by_file(self, filename: str) -> FileTypingResult:
+	def get_content_type_by_file(self, filename: str) -> TitleDescriptor:
 		"""
 		Определяет тип контента по файлу.
 
 		:param filename: Имя файла с расширением или без него.
 		:type filename: str
-		:return: Результат определения типа файла тайтла.
-		:rtype: FileTypingResult
+		:return: Дескриптор тайтла.
+		:rtype: TitleDescriptor
 		"""
 
 		if not filename.endswith(".json"):
 			filename += ".json"
 
-		FilePath = self.settings.directories.titles / filename
-		TitleData = json.read(FilePath)
-		Type: str = TitleData["format"]
-		TypeName: str = Type.split("-")[1]
+		file = self.settings.directories.titles / filename
+		title_data = json.read(file)
+		title_format: str = title_data["format"]
+		type_name: str = title_format.split("-")[1]
 		
-		return FileTypingResult(TitleData["slug"], ContentTypes(TypeName))
+		descriptor = TitleDescriptor(self)
+		descriptor.set_slug(title_data["slug"])
+		descriptor.set_content_type(ContentTypes(type_name))
+
+		return descriptor
 
 	def get_content_type_by_slug(self, slug: str) -> ContentTypes:
 		"""

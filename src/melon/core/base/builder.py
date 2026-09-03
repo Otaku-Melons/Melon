@@ -2,10 +2,10 @@ import re
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
-	from ...core.base.formats.base_format.chapter import BaseChapter
-	from ...core.base.formats.base_format.controller import BaseTitleController
-	from ...core.base.formats.base_format.data import BaseTitleData
-	from ...core.base.parsers.base_parser import BaseParser
+	from .formats.base_format.chapter import BaseChapter
+	from .formats.base_format.controller import BaseTitleController
+	from .formats.base_format.data import BaseTitleData
+	from .parsers.base_parser import BaseParser
 	from .source_operator import BaseSourceOperator, CustomSettingsTemplate
 	
 #==========================================================================================#

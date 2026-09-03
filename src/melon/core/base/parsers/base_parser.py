@@ -24,8 +24,8 @@ if TYPE_CHECKING:
 		CustomSettingsTemplate,
 		ParserSettings,
 	)
-	from ....core.base.source_operator import BaseSourceOperator
 	from ....core.system_objects.printer import Portals
+	from ..source_operator import BaseSourceOperator
 
 class BaseParser[SO: "BaseSourceOperator", CSM: "CustomSettingsTemplate"](ABC):
 	"""Базовый парсер."""

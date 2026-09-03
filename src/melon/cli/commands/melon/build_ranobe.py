@@ -4,6 +4,7 @@ from typing import override
 from dublib.cli.terminalyzer import Command, ParsedCommandData, ValidableTypes
 
 from ....builders.ranobe import RanobeBuilder
+from ....core import exceptions
 from ....core.base.formats.base_format.enums import By
 from ..base_processor import PreparedData
 from ..base_processor.templates import T_SingleParserRequired
@@ -93,9 +94,14 @@ class CommandProcessor(CommandProcessorTemplate[Parameters]):
 		:type parameters: Parameters
 		:return: Возвращает `False`, если команда требует прерывания выполнения.
 		:rtype: bool
+		:raises BuildingError: Алиас тайтла не определён.
 		"""
 
 		TypingResult = parameters.required_parser.source_operator.get_content_type_by_file(parameters.filename)
+
+		if not TypingResult.slug:
+			raise exceptions.builders.BuildingError("Undefined title slug.")
+
 		Parser = parameters.required_parser.source_operator.launch_parser(TypingResult.content_type)
 		
 		Title = Parser.init_empty_title(TypingResult.slug)
