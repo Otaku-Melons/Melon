@@ -1,6 +1,5 @@
 import importlib
 from abc import ABC, abstractmethod
-from dataclasses import dataclass
 from os import PathLike
 from pathlib import Path
 from typing import TYPE_CHECKING, Sequence
@@ -23,6 +22,7 @@ from ..parsers.components.settings import (
 	ParserSettings,
 )
 from ..structs.title import TitleDescriptor
+from .properties import SourceProperties
 
 if TYPE_CHECKING:
 	from ...system_objects import SystemObjects
@@ -30,20 +30,7 @@ if TYPE_CHECKING:
 	from ...system_objects.temper import SharedData
 	from ..parsers.base_parser import BaseParser
 
-#==========================================================================================#
-# >>>>> ВСПОМОГАТЕЛЬНЫЕ СТРУКТУРЫ ДАННЫХ <<<<< #
-#==========================================================================================#
-
-@dataclass
-class FileTypingResult:
-	"""Результат определения типа файла тайтла."""
-
-	slug: str
-	content_type: ContentTypes
-
-#==========================================================================================#
-# >>>>> ОСНОВНОЙ КЛАСС <<<<< #
-#==========================================================================================#
+__all__ = ["BaseSourceOperator", "SourceProperties"]
 
 class BaseSourceOperator[CSM: CustomSettingsTemplate](ABC):
 	"""Базовый оператор источника."""
@@ -95,6 +82,12 @@ class BaseSourceOperator[CSM: CustomSettingsTemplate](ABC):
 		"""Порталы вывода парсера."""
 
 		return self._Portals
+
+	@property
+	def properties(self) -> SourceProperties:
+		"""Свойства источника."""
+
+		return self._Properties
 
 	@property
 	def requestor(self) -> WebRequestor:
@@ -167,6 +160,18 @@ class BaseSourceOperator[CSM: CustomSettingsTemplate](ABC):
 		"""
 
 		pass
+
+	def _export_source_properties(self) -> SourceProperties:
+		"""
+		Экспортирует свойства источника.
+
+		:return: Свойства источника.
+		:rtype: SourceProperties
+		"""
+
+		return SourceProperties(
+			one_cover = True
+		)
 
 	def _extract_slug_from_string(self, string: str) -> str | None:
 		"""
@@ -269,6 +274,7 @@ class BaseSourceOperator[CSM: CustomSettingsTemplate](ABC):
 		self._Settings: ParserSettings[CSM] = ParserSettings(self._SystemObjects, self._Manifest.parser_name)
 		self._Settings.parse_custom_settings(self._export_custom_settings_model())
 
+		self._Properties = self._export_source_properties()
 		self._Requestor = self._initialize_requestor()
 
 		try:
@@ -322,6 +328,7 @@ class BaseSourceOperator[CSM: CustomSettingsTemplate](ABC):
 
 		if IsTargetPathExists and not force_mode:
 			return ImageDownloadingResult(
+				url = url,
 				is_already_exists = True,
 				is_downloaded = False,
 				resolution = None,
@@ -339,6 +346,7 @@ class BaseSourceOperator[CSM: CustomSettingsTemplate](ABC):
 			Result.path.replace(ImageTargetPath)
 		
 		return ImageDownloadingResult(
+			url = url,
 			is_already_exists = IsTargetPathExists,
 			is_downloaded = True,
 			filtered_by = Result.filtered_by,

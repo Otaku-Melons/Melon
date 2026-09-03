@@ -2,11 +2,13 @@ from typing import TYPE_CHECKING, Literal, NoReturn, overload
 
 from dublib.web_requestor import WebResponse
 
-from ....core import exceptions
+from ... import exceptions
+from ...base.formats.base_format.enums import ImagesTypes
 
 if TYPE_CHECKING:
-	from ....core.base.formats.base_format.chapter import BaseChapter
-	from ....core.base.formats.base_format.data import BaseTitleData
+	from ...base.formats.base_format.chapter import BaseChapter
+	from ...base.formats.base_format.controller import BaseTitleController
+	from ...base.formats.base_format.data import BaseTitleData
 	from . import Printer
 
 class Portals:
@@ -188,7 +190,17 @@ class Portals:
 
 		self.__Printer.emit(f"Titles on page {page} collected.")
 
-	def covers_unstubbed(self):
-		"""Портал сообщения: обложки отфильтрованы, так как являются заглушками."""
+	def covers_unstubbed(self, title: "BaseTitleController[BaseTitleData]"):
+		"""
+		Портал сообщения: обложки отфильтрованы, так как являются заглушками.
 
-		self.__Printer.emit("Stubs detected. Covers data cleared and downloading skipped.")
+		Также полностью удаляет данные обложек и их директорию.
+
+		:param title: Тайтл.
+		:type title: BaseTitleController
+		"""
+
+		title.data.clear_covers()
+		title.remove_images_type_directory(ImagesTypes.Cover)
+
+		self.__Printer.emit("Stubs detected. Covers data cleared.")

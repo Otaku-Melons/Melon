@@ -29,6 +29,7 @@ class FilteredBy(Enum):
 class ImageDownloadingResult:
 	"""Результат скачивания изображения."""
 
+	url: str
 	is_downloaded: bool
 	is_already_exists: bool
 	path: Path | None
@@ -161,6 +162,7 @@ class ImagesDownloader:
 		IsFiltered = self.__SourceOperator.shared_data.filtered_images.check(url)
 		if IsFiltered:
 			return ImageDownloadingResult(
+				url = url,
 				is_already_exists = False,
 				is_downloaded = False,
 				filtered_by = IsFiltered,
@@ -192,6 +194,7 @@ class ImagesDownloader:
 			else: ErrorMessage = f"Response code: {Response.status_code}."
 
 		return ImageDownloadingResult(
+			url = url,
 			is_already_exists = IsAlreadyExists,
 			is_downloaded = IsDownloaded,
 			filtered_by = IsFiltered,

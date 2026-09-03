@@ -1,5 +1,6 @@
 import hashlib
 import os
+import shutil
 from abc import ABC, abstractmethod
 from json import JSONDecodeError
 from os import PathLike
@@ -12,7 +13,7 @@ from dublib.functions.data import zerotify
 from dublib.functions.filesystem import json
 
 from .... import exceptions
-from .enums import By
+from .enums import By, ImagesTypes
 
 if TYPE_CHECKING:
 	from ...parsers.base_parser import BaseParser
@@ -44,6 +45,15 @@ class BaseTitleController[TD: "BaseTitleData"](ABC):
 		"""Количество глав без контента во всех ветвях."""
 
 		return sum(Branch.empty_chapters_count for Branch in self._data.branches)
+
+	@property
+	def images_directory(self) -> Path:
+		"""Путь к директории изображений тайтла."""
+
+		directory = self._parser.settings.directories.images / self.used_filename
+		directory.mkdir(exist_ok = True)
+
+		return directory
 
 	@property
 	def is_local_file_loaded(self) -> bool:
@@ -183,6 +193,21 @@ class BaseTitleController[TD: "BaseTitleData"](ABC):
 	# >>>>> НАСЛЕДУЕМЫЕ МЕТОДЫ <<<<< #
 	#==========================================================================================
 
+	def _remove_empty_images_directories(self):
+		"""Удаляет пустые каталоги в директории изображений тайтла и саму директорию, если пуста."""
+
+		images_directory = self.images_directory
+
+		for entry_point in os.scandir(images_directory):
+			if not entry_point.is_dir(): continue
+			directory = Path(entry_point.path)
+
+			if not any(directory.iterdir()):
+				directory.rmdir()
+
+		if not any(images_directory.iterdir()):
+			images_directory.rmdir()
+
 	def _is_local_file_equal(self, data: dict) -> bool:
 		"""
 		Проверяет, идентичны ли данные тайтла локальным данным.
@@ -247,6 +272,23 @@ class BaseTitleController[TD: "BaseTitleData"](ABC):
 
 		self._post_init()
 
+	def get_images_type_directory(self, images_type: ImagesTypes, create: bool = True) -> Path:
+		"""
+		Возвращает путь к директории типа изображений, автоматически создаёт её.
+
+		:param images_type: Тип изображений.
+		:type images_type: ImagesTypes
+		:param create: Указывает, пытаться ли создавать директорию.
+		:type create: bool
+		:return: Путь к существующей директории типа изображений.
+		:rtype: Path
+		"""
+
+		directory = self.images_directory / images_type.value
+		if create: directory.mkdir(exist_ok = True)
+
+		return directory
+
 	def load(self, identificator: int | str, selector_type: By = By.Slug) -> bool:
 		"""
 		Открывает локальный JSON файл и интерпретирует его данные.
@@ -299,7 +341,7 @@ class BaseTitleController[TD: "BaseTitleData"](ABC):
 
 				for CurrentImage in cast(list[dict], PersonData["images"]):
 					Link = CurrentImage["link"]
-					TargetImage = PersonObject.find_image_by_link(Link)
+					TargetImage = PersonObject.find_image(Link)
 					
 					if TargetImage:
 						TargetImage.create_resolution(CurrentImage.get("width"), CurrentImage.get("height"))
@@ -321,6 +363,19 @@ class BaseTitleController[TD: "BaseTitleData"](ABC):
 
 		return MergedChaptersCount
 
+	def remove_images_type_directory(self, images_type: ImagesTypes):
+		"""
+		Удаляет директорию типа изображений со всем содержимым.
+
+		:param images_type: Тип изображений.
+		:type images_type: ImagesTypes
+		"""
+
+		directory = self.get_images_type_directory(images_type, create = False)
+
+		if directory.exists():
+			shutil.rmtree(directory)
+
 	def save(self, sorting: bool = False) -> bool:
 		"""
 		Сохраняет данные тайтла в локальный файл JSON.
@@ -338,5 +393,6 @@ class BaseTitleController[TD: "BaseTitleData"](ABC):
 			json.write(self.path, data)
 
 		self._update_journal()
+		self._remove_empty_images_directories()
 
 		return not is_local_file_equal

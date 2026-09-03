@@ -354,7 +354,7 @@ class BaseTitleData[C: "BaseChapter"](ABC):
 	# >>>>> ПУБЛИЧНЫЕ МЕТОДЫ <<<<< #
 	#==========================================================================================#
 
-	def __init__(self, title_controller: "BaseTitleController", title_format: str):
+	def __init__(self, title_controller: "BaseTitleController[BaseTitleData]", title_format: str):
 		"""
 		Базовые данные тайтла.
 
@@ -408,7 +408,7 @@ class BaseTitleData[C: "BaseChapter"](ABC):
 		return self._data.copy()
 
 	#==========================================================================================#
-	# >>>>> ПУБЛИЧНЫЕ МЕТОДЫ ПОИСКА ОБЪЕКТОВ <<<<< #
+	# >>>>> ПУБЛИЧНЫЕ МЕТОДЫ ПОИСКА ДАННЫХ <<<<< #
 	#==========================================================================================#
 
 	def find_branch(self, branch_id: int) -> Branch | None:
@@ -479,6 +479,33 @@ class BaseTitleData[C: "BaseChapter"](ABC):
 				return CurrentPerson
 			
 		return None
+
+	#==========================================================================================#
+	# >>>>> ПУБЛИЧНЫЕ МЕТОДЫ УДАЛЕНИЯ ДАННЫХ <<<<< #
+	#==========================================================================================#
+
+	def clear_covers(self):
+		"""Удаляет данные обо всех обложках."""
+
+		self._covers.clear()
+
+	def remove_cover(self, link: str) -> bool:
+		"""
+		Удаляет обложку.
+
+		:param link: Ссылка на обложку.
+		:type link: str
+		:return: Возвращает `True`, если обложка найдена и удалена.
+		:rtype: bool
+		"""
+
+		cover = self.find_cover(link)
+
+		if cover:
+			self._covers.remove(cover)
+			return True
+
+		return False
 
 	#==========================================================================================#
 	# >>>>> ПУБЛИЧНЫЕ МЕТОДЫ ДОБАВЛЕНИЯ ДАННЫХ В КОНТЕЙНЕРЫ <<<<< #

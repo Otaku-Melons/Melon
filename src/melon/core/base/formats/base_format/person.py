@@ -34,7 +34,7 @@ class Person:
 		return self.__Data["description"]
 	
 	#==========================================================================================#
-	# >>>>> МЕТОДЫ <<<<< #
+	# >>>>> ПУБЛИЧНЫЕ МЕТОДЫ <<<<< #
 	#==========================================================================================#
 
 	def __init__(self, name: str):
@@ -72,7 +72,7 @@ class Person:
 
 		self.__Images.append(image)
 
-	def find_image_by_link(self, link: str) -> ImageData | None:
+	def find_image(self, link: str) -> ImageData | None:
 		"""
 		Производит поиск изображения по ссылке.
 
@@ -87,6 +87,24 @@ class Person:
 				return CurrentImage
 			
 		return None
+
+	def remove_image(self, link: str) -> bool:
+		"""
+		Удаляет изображение.
+
+		:param link: Ссылка на изображение.
+		:type link: str
+		:return: Возвращает `True`, если изображение найдено и удалено.
+		:rtype: bool
+		"""
+
+		image = self.find_image(link)
+
+		if image:
+			self.__Images.remove(image)
+			return True
+
+		return False
 
 	def set_description(self, description: str | None):
 		"""

@@ -13,6 +13,7 @@ from dublib.functions.data import stringify_float
 
 from ..core import exceptions
 from ..core.base.builder import BaseBuilder
+from ..core.base.formats.base_format.enums import ImagesTypes
 
 if TYPE_CHECKING:
 	from ..core.base.formats.base_format.branch import Branch
@@ -190,7 +191,7 @@ class MangaBuilder(BaseBuilder):
 				FileIndex = Index + 1
 
 				Filename = str(FileIndex).rjust(len(str(SlidesCount)), "0")
-				Future = self._Printer.templates.images.start_downloading(SlideInfo.filename, "slide")
+				Future = self._Printer.templates.images.start_downloading(SlideInfo.filename, ImagesTypes.Slide)
 				Result = self._Parser.source_operator.download_image(SlideInfo.link, TempDirPath, filename = Filename)
 				Future.result(Result)
 

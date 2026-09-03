@@ -1,10 +1,9 @@
-from typing import Literal
-
-from .....core.base.parsers.components.images_downloader import (
+from .....utils.timer import Timer
+from ....base.formats.base_format.enums import ImagesTypes
+from ....base.parsers.components.images_downloader import (
 	FilteredBy,
 	ImageDownloadingResult,
 )
-from .....utils.timer import Timer
 from ._base import _BaseTemplatesSection
 
 #==========================================================================================#
@@ -56,7 +55,7 @@ class ImagesTemplates(_BaseTemplatesSection):
 	def start_downloading(
 		self,
 		filename: str,
-		image_type: Literal["cover", "image", "person", "slide"] | None = None
+		image_type: ImagesTypes | None = None
 	) -> ImageDownloadingFuture:
 		"""
 		Шаблон вывода: скачивание изображения начато.
@@ -64,12 +63,12 @@ class ImagesTemplates(_BaseTemplatesSection):
 		:param filename: Имя файла.
 		:type filename: str
 		:param image_type: Тип изображения.
-		:type image_type: Literal["cover", "image", "person", "slide"] | None
+		:type image_type: ImagesTypes | None
 		:return: Футура вывода для результата скачивания изображения.
 		:rtype: ImageDownloadingFuture
 		"""
 
-		ImageType: str = "" if image_type is None else f" {image_type}"
+		ImageType: str = "" if image_type is None else f" {image_type.name.lower()}"
 		self.printer.emit(f"Downloading{ImageType} \"{filename}\"… ", flush = True, end_line = False)
 
 		return ImageDownloadingFuture(self.printer)

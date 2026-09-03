@@ -1,14 +1,15 @@
 from abc import ABC, abstractmethod
 from pathlib import Path
-from typing import TYPE_CHECKING, Any, Literal, Sequence, cast
+from typing import TYPE_CHECKING, Any, Sequence, cast
 
 from dublib.functions.decorators import run_before_method
 
 from ....core import exceptions
-from ....core.base.formats.base_format.branch import Branch
-from ....core.base.formats.base_format.controller import BaseTitleController
-from ....core.base.formats.base_format.data import BaseTitleData
-from ....core.base.parsers.components.images_downloader import (
+from ..formats.base_format.branch import Branch
+from ..formats.base_format.controller import BaseTitleController
+from ..formats.base_format.data import BaseTitleData
+from ..formats.base_format.enums import ImagesTypes
+from ..parsers.components.images_downloader import (
 	ImageDownloadingResult,
 	ImagesDownloader,
 )
@@ -95,30 +96,33 @@ class BaseParser[SO: "BaseSourceOperator", CSM: "CustomSettingsTemplate"](ABC):
 	#==========================================================================================#
 
 	@run_before_method("_require_title")
-	def _download_images(self, images_data: Sequence[ImageData], image_type: Literal["cover", "person"], force_mode: bool) -> list[ImageDownloadingResult]:
+	def _download_images(self, images_data: Sequence[ImageData], images_type: ImagesTypes, force_mode: bool) -> list[ImageDownloadingResult]:
 		"""
 		Скачивает изображения тайтла определённого типа.
 
 		:param images_data: Данные изображений.
 		:type images_data: Sequence[ImageData]
-		:param image_type: Тип изображения.
-		:type image_type: Literal["cover", "person"]
+		:param images_type: Тип изображений.
+		:type images_type: ImagesTypes
 		:param force_mode: Указывает, перезаписывать ли существующие файлы изображений.
 		:type force_mode: bool
 		:return: Список результатов скачивания изображений.
 		:rtype: list[ImageDownloadingResult]
 		"""
 
+		if not images_data:
+			return []
+
 		Title = cast(BaseTitleController, self._title)
-		ImageDirecory: Path = self.settings.directories.images / Title.used_filename / image_type
-		ImageDirecory.mkdir(parents = True, exist_ok = True)
+
+		ImageDirecory: Path = Title.get_images_type_directory(images_type)
 		Results: list = []
 		ImagesCount: int = len(images_data)
 
 		for Index in range(ImagesCount):
 			CurrentImageData = images_data[Index]
 
-			Future = self.portals.printer.templates.images.start_downloading(CurrentImageData.filename, image_type)
+			Future = self.portals.printer.templates.images.start_downloading(CurrentImageData.filename, images_type)
 			Result = self._source_operator.images_downloader.download_image(CurrentImageData.link, ImageDirecory, force_mode = force_mode)
 			Results.append(Result)
 			
@@ -141,6 +145,43 @@ class BaseParser[SO: "BaseSourceOperator", CSM: "CustomSettingsTemplate"](ABC):
 
 		if not self._title:
 			raise exceptions.parsers.TitleNotSetted()
+
+	def _unstub_covers(self, title: "BaseTitleController[BaseTitleData]", results: list[ImageDownloadingResult]):
+		"""
+		Обрабатывает результаты скачивания обложек. Если находит отфильтрованные, удаляет их данные.
+
+		:param title: Тайтл.
+		:type title: BaseTitleController
+		:param results: Список результатов.
+		:type results: list[ImageDownloadingResult]
+		"""
+
+		for result in results:
+			if result.filtered_by:
+
+				if self.source_operator.properties.one_cover:
+					self.portals.covers_unstubbed(title)
+					return
+
+				title.data.remove_cover(result.url)
+				if result.path: result.path.unlink(missing_ok = True)
+
+	def _unstub_persons(self, title_data: "BaseTitleData", results: list[ImageDownloadingResult]):
+		"""
+		Обрабатывает результаты скачивания изображений персонажей. Если находит отфильтрованные, удаляет их данные.
+
+		:param title_data: Данные тайтла.
+		:type title_data: BaseTitleData
+		:param results: Список результатов.
+		:type results: list[ImageDownloadingResult]
+		"""
+
+		for result in results:
+			if result.filtered_by:
+
+				for person in title_data.perons:
+					person.remove_image(result.url)
+					if result.path: result.path.unlink(missing_ok = True)
 
 	#==========================================================================================#
 	# >>>>> ПЕРЕОПРЕДЕЛЯЕМЫЕМЕТОДЫ <<<<< #
@@ -213,17 +254,19 @@ class BaseParser[SO: "BaseSourceOperator", CSM: "CustomSettingsTemplate"](ABC):
 		:rtype: tuple[ImageDownloadingResult, ...]
 		"""
 
-		Title = cast(BaseTitleController["BaseTitleData"], self._title)
+		title = cast(BaseTitleController["BaseTitleData"], self._title)
 		
-		Results = self._download_images(Title.data.covers, "cover", force_mode)
+		covers_results = self._download_images(title.data.covers, ImagesTypes.Cover, force_mode)
+		self._unstub_covers(title, covers_results)
 
-		PersonsImages: list[ImageData] = []
-		for CurrentPerson in Title.data.perons:
-			PersonsImages += list(CurrentPerson.images)
+		persons_images: list[ImageData] = []
+		for person in title.data.perons:
+			persons_images += person.images
 
-		Results += self._download_images(PersonsImages, "person", force_mode)
+		persons_results = self._download_images(persons_images, ImagesTypes.Person, force_mode)
+		self._unstub_persons(title.data, persons_results)
 
-		return tuple(Results)
+		return tuple(covers_results + persons_results)
 
 	def load_words_dictionary_preset(self, language_code: str) -> WordsDictionary | None:
 		"""
