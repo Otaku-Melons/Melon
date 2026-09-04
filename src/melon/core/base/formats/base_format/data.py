@@ -150,11 +150,14 @@ class BaseTitleData[C: "BaseChapter"](ABC):
 	def _parse_content(self):
 		"""Парсит контент в объектные представления."""
 
-		for branch_data in self._data["branches"]:
-			branch_id: int = branch_data["id"]
+		content: dict[str, list] = self._data["content"]
+
+		for branch_id_string in content.keys():
+			branch_data: list[dict] = content[branch_id_string]
+			branch_id: int = int(branch_id_string)
 			branch_buffer = Branch(branch_id)
 
-			for chapter_data in branch_data["chapters"]:
+			for chapter_data in branch_data:
 				chapter_id: int = chapter_data["id"]
 				chapter_buffer = self._chapter_type(self._title_controller.parser, chapter_id)
 				chapter_buffer.from_dict(chapter_data)

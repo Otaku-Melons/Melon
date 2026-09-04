@@ -501,7 +501,7 @@ class CommandProcessor(CommandProcessorTemplate[Parameters]):
 		ComPos.add_key("--id", value_type = ValidableTypes.UnsignedInteger, description = "Title ID.")
 		ComPos.add_key("--updates", value_type = ValidableTypes.UnsignedInteger, description = "Parse updates for period in hours.")
 
-		self._AddParserPosition()
+		self._AddParserPosition(key = "--use")
 
 		self._AddForceModeFlag()
 

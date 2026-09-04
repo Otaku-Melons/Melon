@@ -84,7 +84,7 @@ class CommandProcessor(CommandProcessorTemplate[Parameters]):
 		ComPos = command.create_position("SLUG", "Title slug.", important = True)
 		ComPos.set_argument()
 
-		self._AddParserPosition()
+		self._AddParserPosition(key = "--use")
 
 		command.base.add_flag("-j", description = "Print result in JSON format.")
 

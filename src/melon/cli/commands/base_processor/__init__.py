@@ -157,16 +157,23 @@ class BaseCommandProcessor(ABC, Generic[PARAMS]):
 
 		self._Command.base.add_flag("-f", description = "Enable force mode.")
 
-	def _AddParserPosition(self):
-		"""Добавляет позицию для имени парсера(ов): `PARSER` или `PARSERS` в зависимости от параметров обработчика."""
+	def _AddParserPosition(self, key: str | None = None, important: bool = True):
+		"""
+		Добавляет позицию для имени парсера(ов): `PARSER` или `PARSERS` в зависимости от параметров обработчика.
+
+
+		:param key: Имя ключа. Если отсутствует, будет использован аргумент.
+		:type key: str | None
+		:param important: Указывает, является ли позиция обязательной.
+		:type important: bool
+		"""
 
 		if self.options.allow_multiple_parsers:
-			ComPos = self._Command.create_position("PARSERS", "One or more parsers names separated by comma. By default all.")
-			ComPos.add_key("--use")
-
+			ComPos = self._Command.create_position("PARSERS", "One or more parsers names separated by comma. By default all.", important = important)
 		else:
-			ComPos = self._Command.create_position("PARSER", "Parser name.", important = True)
-			ComPos.add_key("--use")
+			ComPos = self._Command.create_position("PARSER", "Parser name.", important = important)
+
+		ComPos.add_key(key) if key else ComPos.set_argument()
 
 	#==========================================================================================#
 	# >>>>> ПЕРЕОПРЕДЕЛЯЕМЫЕ МЕТОДЫ <<<<< #

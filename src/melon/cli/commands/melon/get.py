@@ -60,7 +60,7 @@ class CommandProcessor(CommandProcessorTemplate[Parameters]):
 		ComPos = command.create_position("URL", "Link to image.", important = True)
 		ComPos.set_argument(ValidableTypes.URL)
 
-		self._AddParserPosition()
+		self._AddParserPosition(key = "--use")
 
 		ComPos = command.create_position("NAME", "Naming operation. By default save original.")
 		ComPos.add_key("--fullname", description = "Set full name with filename extension.")

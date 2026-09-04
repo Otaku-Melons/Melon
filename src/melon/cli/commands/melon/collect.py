@@ -119,7 +119,7 @@ class CommandProcessor(CommandProcessorTemplate[Parameters]):
 		:rtype: Command
 		"""
 
-		self._AddParserPosition()
+		self._AddParserPosition(key = "--use")
 
 		ComPos = command.create_position("TARGETS", "Alternative targets to collecting.")
 		ComPos.add_flag(CollectingTargets.Local.value, description = "Scan local titles and put slugs into collection.")

@@ -57,7 +57,7 @@ class CommandProcessor(CommandProcessorTemplate[Parameters]):
 		ComPos = command.create_position("FILE", "Filename of local JSON.", important = True)
 		ComPos.set_argument()
 
-		self._AddParserPosition()
+		self._AddParserPosition(key = "--use")
 
 		command.base.add_key("--branch", value_type = ValidableTypes.UnsignedInteger, description = "Branch ID to building.")
 
