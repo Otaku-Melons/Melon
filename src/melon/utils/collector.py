@@ -253,6 +253,27 @@ class Collector:
 		
 		return 0
 
+	def replace(self, slug: str, new_slug: str) -> bool:
+		"""
+		Заменяет один алиас на другой.
+
+		:param slug: Текущий алиас.
+		:type slug: str
+		:param new_slug: Новый алиас.
+		:type new_slug: str
+		:return: Возвращает `True`, если алиас найден и заменён.
+		:rtype: bool
+		"""
+
+		if slug not in self.__collection:
+			return False
+
+		self.__collection.remove(slug)
+		self.__collection.append(new_slug)
+		self.save()
+
+		return True
+
 	def save(self):
 		"""
 		Сохраняет коллекцию в файл.
