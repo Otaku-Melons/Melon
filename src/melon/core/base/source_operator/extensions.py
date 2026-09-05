@@ -34,9 +34,13 @@ class ExtensionsOperator:
 		"""
 
 		enabled_file = self.__source_operator.temp_directory / "extensions" / "enabled.json"
-		file_states: dict = json.read(enabled_file)
-		activation_states: dict[str, bool] = {}
+		activation_states: dict[str, bool] = dict.fromkeys(self.names, False)
 
+		if not enabled_file.exists():
+			return activation_states
+
+		file_states: dict = json.read(enabled_file)
+		
 		for name in self.names:
 			is_enabled = file_states.get(name, False)
 			activation_states[name] = is_enabled
