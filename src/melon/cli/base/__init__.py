@@ -93,7 +93,7 @@ class BaseCommandProcessor[PARAMS: "BaseParameters"](ABC):
 	def _end_timer(self):
 		"""Выводит результат таймера, если производился отсчёт."""
 
-		if self._timer is not None:
+		if self._timer is not None and not self._internal_storage.is_json_output:
 			self.printer.emit(f"Done in {self._timer.ends()}.")
 
 	def _launch_source_operator(self, parser_operator: "ParserOperator") -> "BaseSourceOperator":
