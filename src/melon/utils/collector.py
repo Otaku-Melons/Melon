@@ -63,6 +63,12 @@ class Collector:
 		return self.__collection_file.exists()
 
 	@property
+	def name(self) -> str:
+		"""Имя коллекции."""
+
+		return self.__filename
+
+	@property
 	def slugs(self) -> tuple[str, ...]:
 		"""Последовательность алиасов коллекции."""
 

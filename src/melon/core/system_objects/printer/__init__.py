@@ -4,7 +4,7 @@ import orjson
 
 from dublib.cli.progress_indicator import ProgressIndicator
 from dublib.cli.templates.bus import GenerateMessage, MessagesTypes
-from dublib.cli.text_styler import GetStyledTextFromHTML
+from dublib.cli.text_styler import get_styled_text_from_html
 
 from .portals import Portals
 from .templates import Templates
@@ -70,11 +70,11 @@ class Printer:
 		:type end_line: bool
 		:param flush: Переключает вывод кэшированных данных.
 		:type flush: bool
-		:param parse_html: Указывает, парсить HTML теги при помощи функции `GetStyledTextFromHTML()`.
+		:param parse_html: Указывает, парсить HTML теги при помощи функции `get_styled_text_from_html()`.
 		:type parse_html: bool
 		"""
 
-		if parse_html: text = GetStyledTextFromHTML(text)
+		if parse_html: text = get_styled_text_from_html(text)
 		MessageText = GenerateMessage(text, message_type)
 		print(MessageText, end = "\n" if end_line else "", flush = flush)
 
