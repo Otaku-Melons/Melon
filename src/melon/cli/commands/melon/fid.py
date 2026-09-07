@@ -1,6 +1,10 @@
 from dataclasses import dataclass
 from typing import TYPE_CHECKING, override
 
+from dublib.cli.text_styler import FastStyler
+from dublib.validators import ValidableTypes
+
+from ....core.base.structs.title import TitleDescriptor
 from ...base.templates import T_SingleParserRequired
 from ._base import CommandProcessorTemplate
 
@@ -13,7 +17,8 @@ if TYPE_CHECKING:
 class Parameters(T_SingleParserRequired):
 	"""Параметры, требуемые обработчиком."""
 
-	slug: str
+	slug: str | None
+	title_id: int | None
 	is_json_output: bool
 
 class CommandProcessor(CommandProcessorTemplate[Parameters]):
@@ -23,29 +28,38 @@ class CommandProcessor(CommandProcessorTemplate[Parameters]):
 	# >>>>> ПРИВАТНЫЕ МЕТОДЫ <<<<< #
 	#==========================================================================================#
 
-	def __print_result(self, parameters: Parameters, title_id: int | None):
+	def __print_result(self, parameters: Parameters, descriptor: TitleDescriptor):
 		"""
 		Выводит результат поиска ID.
 
 		:param parameters: Параметры команды.
 		:type parameters: Parameters
-		:param title_id: Результат поиска.
-		:type title_id: int | None
+		:param descriptor: Дескриптор тайтла.
+		:type descriptor: TitleDescriptor
 		"""
+
+		file_path = descriptor.path.as_posix() if descriptor.path else None
 
 		if parameters.is_json_output:
 			OutputDictionary: dict[str, int | str | None] = {
 				"parser": parameters.required_parser.name,
-				"slug": parameters.slug,
-				"id": title_id
+				"slug": descriptor.slug,
+				"id": descriptor.id,
+				"path": file_path
 			}
 			self.printer.json(OutputDictionary)
 
 		else:
-			if title_id:
-				self.printer.emit(f"Found ID {title_id} for parser \"{parameters.required_parser.name}\".")
-			else:
-				self.printer.emit(f"ID not foind in \"{parameters.required_parser.name}\" cache.")
+			data: dict[str, int | str | None] = {
+				"Parser": parameters.required_parser.name,
+				"Slug": descriptor.slug,
+				"ID": descriptor.id,
+				"Path": file_path
+			}
+
+			for key, value in data.items():
+				value = FastStyler(str(value)).decorate.italic if value else FastStyler("✕").colorize.red
+				self.printer.emit(f"{key}: {value}")
 
 	#==========================================================================================#
 	# >>>>> ПЕРЕОПРЕДЕЛЯЕМЫЕ МЕТОДЫ <<<<< #
@@ -62,8 +76,9 @@ class CommandProcessor(CommandProcessorTemplate[Parameters]):
 		:rtype: CommandModel
 		"""
 
-		position = model.create_position("SLUG", "Title slug.", important = True)
-		position.set_argument()
+		position = model.create_position("QUERY", "Seqrch query", important = True)
+		position.add_key("--id", value_type = ValidableTypes.UnsignedInteger, description = "Title ID.")
+		position.set_argument(description = "Title slug.")
 
 		self._add_parser_position(key = "--use")
 		self._add_json_output_flag()
@@ -94,10 +109,17 @@ class CommandProcessor(CommandProcessorTemplate[Parameters]):
 		:rtype: Parameters
 		"""
 
+		title_id: int | None = entity.get_key_value("--id", expected_type = int, not_found_error = False)
+		slug: str | None = None
+
+		if not title_id:
+			slug = entity.get_position_value("QUERY", expected_type = str, important = True)
+
 		return Parameters(
 			required_parser = prepared_data.required_parsers[0],
-			slug = entity.get_position_value("SLUG", expected_type = str, important = True),
-			is_json_output = entity.check_flag("-j")
+			is_json_output = prepared_data.is_json_output,
+			slug = slug,
+			title_id = title_id
 		)
 
 	@override
@@ -111,8 +133,23 @@ class CommandProcessor(CommandProcessorTemplate[Parameters]):
 		:rtype: bool
 		"""
 
-		source_operator = self._launch_source_operator(parameters.required_parser)
-		title_id: int | None = source_operator.shared_data.journal.get_id_by_slug(parameters.slug)
-		self.__print_result(parameters, title_id)
+		if not self.system_objects.options.USE_CACHE:
+			self.printer.error("Cache using disabled. Unprocessable.")
+			return False
 
-		return False if parameters.is_json_output else True
+		source_operator = self._launch_source_operator(parameters.required_parser)
+		descriptor = TitleDescriptor(source_operator)
+
+		if parameters.title_id:
+			descriptor.set_id(parameters.title_id)
+			slug: str | None = source_operator.shared_data.journal.get_slug_by_id(parameters.title_id)
+			if slug: descriptor.set_slug(slug)
+
+		elif parameters.slug:
+			descriptor.set_slug(parameters.slug)
+			title_id: int | None = source_operator.shared_data.journal.get_id_by_slug(parameters.slug)
+			if title_id: descriptor.set_id(title_id)
+
+		self.__print_result(parameters, descriptor)
+
+		return True

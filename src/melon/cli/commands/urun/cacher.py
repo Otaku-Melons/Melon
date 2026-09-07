@@ -34,7 +34,7 @@ class CommandProcessor(CommandProcessorTemplate[Parameters]):
 		:rtype: CommandModel
 		"""
 
-		self._add_parser_position(multiple = True)
+		self._add_parser_position(key = "--use", multiple = True)
 
 		return model
 
