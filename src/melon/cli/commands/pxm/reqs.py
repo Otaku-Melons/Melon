@@ -1,15 +1,13 @@
 from dataclasses import dataclass
-from typing import override
+from typing import TYPE_CHECKING, override
 
-from dublib.cli.terminalyzer import Command, ParsedCommandData
+from ...base import BaseCommandProcessor
+from ...base.templates import T_SingleParserRequired
 
-from ..base_processor import PreparedData
-from ..base_processor.templates import T_SingleParserRequired
-from ._base import CommandProcessorTemplate
+if TYPE_CHECKING:
+	from dublib.cli.terminalyzer import CommandEntity, CommandModel
 
-#==========================================================================================#
-# >>>>> ВСПОМОГАТЕЛЬНЫЕ СТРУКТУРЫ ДАННЫХ <<<<< #
-#==========================================================================================#
+	from ...base.structs import PreparedData
 
 @dataclass(frozen = True)
 class Parameters(T_SingleParserRequired):
@@ -17,11 +15,7 @@ class Parameters(T_SingleParserRequired):
 
 	pass
 
-#==========================================================================================#
-# >>>>> ОСНОВНОЙ КЛАСС <<<<< #
-#==========================================================================================#
-
-class CommandProcessor(CommandProcessorTemplate[Parameters]):
+class CommandProcessor(BaseCommandProcessor[Parameters]):
 	"""Обработчик команды."""
 
 	#==========================================================================================#
@@ -29,7 +23,22 @@ class CommandProcessor(CommandProcessorTemplate[Parameters]):
 	#==========================================================================================#
 
 	@override
-	def _ExportCommandDescription(self) -> str:
+	def _build_model(self, model: CommandModel) -> CommandModel:
+		"""
+		Генерирует модель команды.
+		
+		:param model: Шаблон модели команды.
+		:type model: Command
+		:return: Модель команды.
+		:rtype: CommandModel
+		"""
+
+		self._add_parser_position()
+
+		return model
+
+	@override
+	def _export_description(self) -> str:
 		"""
 		Возвращает описание команды.
 		
@@ -40,47 +49,34 @@ class CommandProcessor(CommandProcessorTemplate[Parameters]):
 		return "Install parser requirements."
 
 	@override
-	def _GenerateCommand(self, command: Command) -> Command:
-		"""
-		Генерирует команду.
-		
-		:param command: Шаблон для команды.
-		:type command: Command
-		:return: Команда.
-		:rtype: Command
-		"""
-
-		self._AddParserPosition()
-		
-		return command
-
-	@override
-	@override
-	def _ParseParameters(self, data: ParsedCommandData, prepared_data: PreparedData) -> Parameters:
+	def _parse_parameters(self, entity: "CommandEntity", prepared_data: PreparedData) -> Parameters:
 		"""
 		Парсит данные обработанной команды в структуру **dataclass**.
 
-		:param data: Данные обработанной команды.
-		:type data: ParsedCommandData
-		:param prepared_data: Предподготолвенные данные.
-		:type prepared_data: PreparedDatas
+		:param entity: Сущность команды.
+		:type entity: CommandEntity
+		:param prepared_data: Подготовленные шаблонные параметры команды.
+		:type prepared_data: PreparedData
 		:return: Структура **dataclass**.
 		:rtype: Parameters
 		"""
 
-		return Parameters(prepared_data.required_parsers[0])
+		return Parameters(
+			required_parser =  prepared_data.required_parsers[0]
+		)
 
 	@override
-	def _Process(self, parameters: Parameters) -> bool:
+	def _process(self, parameters: Parameters) -> bool:
 		"""
 		Выполняет команду.
 
-		:param parameters: Параметры команды.
+		:param parameters: Требуемые параметры.
 		:type parameters: Parameters
-		:return: Возвращает `False`, если команда требует прерывания выполнения.
+		:return: Возвращает `True`, если выполнение успешно и прерывание не требуется.
 		:rtype: bool
 		"""
 
-		self.system_objects.manager.packager.install_requirements(parameters.required_parser.parser_operator.requirements_path)
+		self.system_objects.manager.packager.install_requirements(parameters.required_parser.requirements_path)
 
 		return True
+

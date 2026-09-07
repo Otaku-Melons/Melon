@@ -1,4 +1,4 @@
-class MultipleParsersDenienForCommand(Exception):
+class MultipleParsersDeniedForCommand(Exception):
 	"""Исключение: команде запрещено использование нескольких парсеров."""
 
 	def __init__(self, command_name: str):

@@ -1,16 +1,17 @@
-from ..base_processor import PARAMS, BaseCommandProcessor
+from ...base import BaseCommandProcessor
+from ...base.templates import BaseParameters
 
-class CommandProcessorTemplate(BaseCommandProcessor[PARAMS]):
+class CommandProcessorTemplate[PARAMS: "BaseParameters"](BaseCommandProcessor[PARAMS]):
 	"""Контейнер шаблонов генерации команд."""
 	
 	#==========================================================================================#
 	# >>>>> НАСЛЕДУЕМЫЕ МЕТОДЫ ГЕНЕРАЦИИ КОМАНДЫ <<<<< #
 	#==========================================================================================#
 
-	def _AddSettingsExportStrategyPosition(self):
+	def _add_settings_export_strategy_position(self):
 		"""Добавляет позицию стратегии слияния конфигурации."""
 
-		ComPos = self._Command.create_position("STRATEGY", "Strategy of config installation conflict resolution.")
-		ComPos.add_flag("-s", description = "Skip installation (default).")
-		ComPos.add_flag("-o", description = "Overwrite exists config.")
-		ComPos.add_flag("-m", description = "Merge exists config parameters with preset.")
+		position = self._model.create_position("STRATEGY", "Strategy of config installation conflict resolution.")
+		position.add_flag("-s", description = "Skip installation (default).")
+		position.add_flag("-o", description = "Overwrite exists config.")
+		position.add_flag("-m", description = "Merge exists config parameters with preset.")

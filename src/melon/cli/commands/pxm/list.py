@@ -1,13 +1,16 @@
-from typing import override
-
-from dublib.cli.terminalyzer import Command, ParsedCommandData
+from typing import TYPE_CHECKING, override
 
 from ....core.base.parsers.components.manifest import ContentTypes
-from ..base_processor import PreparedData, ProcessorOptions
-from ..base_processor.structs import DataclassStub
-from ._base import CommandProcessorTemplate
+from ...base import BaseCommandProcessor
+from ...base.options import ProcessorOptions
+from ...base.templates import BaseParameters
 
-class CommandProcessor(CommandProcessorTemplate[DataclassStub]):
+if TYPE_CHECKING:
+	from dublib.cli.terminalyzer import CommandEntity, CommandModel
+
+	from ...base.structs import PreparedData
+
+class CommandProcessor(BaseCommandProcessor[BaseParameters]):
 	"""Обработчик команды."""
 
 	#==========================================================================================#
@@ -15,7 +18,20 @@ class CommandProcessor(CommandProcessorTemplate[DataclassStub]):
 	#==========================================================================================#
 
 	@override
-	def _ExportCommandDescription(self) -> str:
+	def _build_model(self, model: "CommandModel") -> "CommandModel":
+		"""
+		Генерирует модель команды.
+		
+		:param model: Шаблон модели команды.
+		:type model: Command
+		:return: Модель команды.
+		:rtype: CommandModel
+		"""
+
+		return model
+
+	@override
+	def _export_description(self) -> str:
 		"""
 		Возвращает описание команды.
 		
@@ -26,52 +42,39 @@ class CommandProcessor(CommandProcessorTemplate[DataclassStub]):
 		return "List installed parsers."
 
 	@override
-	def _ExportOptions(self) -> ProcessorOptions:
+	def _export_options(self) -> ProcessorOptions:
 		"""
-		Возвращает контейнер настроек обработчика.
+		Возвращает настройки обработчика.
 
-		:return: Контейнер настроек обработчика.
+		:return: Настройки обработчика.
 		:rtype: ProcessorOptions
 		"""
 
 		return ProcessorOptions(use_timer = False)
 
 	@override
-	def _GenerateCommand(self, command: Command) -> Command:
-		"""
-		Генерирует команду.
-		
-		:param command: Шаблон для команды.
-		:type command: Command
-		:return: Команда.
-		:rtype: Command
-		"""
-
-		return command
-
-	@override
-	def _ParseParameters(self, data: ParsedCommandData, prepared_data: PreparedData) -> DataclassStub:
+	def _parse_parameters(self, entity: "CommandEntity", prepared_data: "PreparedData") -> BaseParameters:
 		"""
 		Парсит данные обработанной команды в структуру **dataclass**.
 
-		:param data: Данные обработанной команды.
-		:type data: ParsedCommandData
-		:param prepared_data: Предподготолвенные данные.
-		:type prepared_data: PreparedDatas
+		:param entity: Сущность команды.
+		:type entity: CommandEntity
+		:param prepared_data: Подготовленные шаблонные параметры команды.
+		:type prepared_data: PreparedData
 		:return: Структура **dataclass**.
-		:rtype: Parameters
+		:rtype: BaseParameters
 		"""
 
-		return DataclassStub()
+		return BaseParameters()
 
 	@override
-	def _Process(self, parameters: DataclassStub) -> bool:
+	def _process(self, parameters: BaseParameters) -> bool:
 		"""
 		Выполняет команду.
 
-		:param parameters: Параметры команды.
-		:type parameters: DataclassStub
-		:return: Возвращает `False`, если команда требует прерывания выполнения.
+		:param parameters: Требуемые параметры.
+		:type parameters: BaseParameters
+		:return: Возвращает `True`, если выполнение успешно и прерывание не требуется.
 		:rtype: bool
 		"""
 
@@ -83,8 +86,8 @@ class CommandProcessor(CommandProcessorTemplate[DataclassStub]):
 			"collect": []
 		}
 	
-		for ParserName in self._SystemObjects.manager.parsers.installed:
-			SourceOperator = self._SystemObjects.manager.parsers.get_operator(ParserName).launch()
+		for ParserName in self.system_objects.manager.parsers.installed:
+			SourceOperator = self.system_objects.manager.parsers.get_operator(ParserName).launch()
 			TypesEmoji = {
 				ContentTypes.Manga: "m",
 				ContentTypes.Ranobe: "r"

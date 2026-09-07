@@ -5,26 +5,25 @@ from enum import Enum
 from json import JSONDecodeError
 from typing import TYPE_CHECKING, Sequence, override
 
-from dublib.cli.terminalyzer import Command, ParsedCommandData, ValidableTypes
 from dublib.cli.text_styler import GetStyledTextFromHTML
+from dublib.validators import ValidableTypes
 
 from .... import utils
 from ....core import exceptions
 from ....core.base.parsers.components.manifest import ContentTypes
-from ..base_processor import PreparedData
-from ..base_processor.templates import (
-	T_ForceModeRequired,
-	T_SingleParserRequired,
-)
+from ...base.templates import T_ForceModeRequired, T_SingleParserRequired
 from ._base import CommandProcessorTemplate
 
 if TYPE_CHECKING:
+	from dublib.cli.terminalyzer import CommandEntity, CommandModel
+
 	from ....core.base.formats.base_format.controller import BaseTitleController
 	from ....core.base.parsers.base_parser import BaseParser
 	from ....core.base.source_operator import BaseSourceOperator
+	from ...base.structs import PreparedData
 
 #==========================================================================================#
-# >>>>> ВСПОМОГАТЕЛЬНЫЕ СТРУКТУРЫ ДАННЫХ <<<<< #
+# >>>>> ПРЕДСТАВЛЕНИЯ ЦЕЛЕЙ ДЛЯ ПАРСИНГА <<<<< #
 #==========================================================================================#
 
 class _BaseParserTarget(ABC):
@@ -50,7 +49,7 @@ class _BaseParserTarget(ABC):
 		Возвращает список алиасов для парсинга.
 
 		:param data: Данные обработанной команды.
-		:type data: ParsedCommandData
+		:type data: CommandEntity
 		:return: Список алиасов.
 		:rtype: list[str]
 		"""
@@ -72,14 +71,14 @@ class _BaseParserTarget(ABC):
 	# >>>>> ПУБЛИЧНЫЕ МЕТОДЫ <<<<< #
 	#==========================================================================================#
 
-	def __init__(self, source_operator: "BaseSourceOperator", data: ParsedCommandData):
+	def __init__(self, source_operator: "BaseSourceOperator", data: CommandEntity):
 		"""
 		Базовая цель для парсинга.
 
 		:param source_operator: Оператор источника.
 		:type source_operator: BaseSourceOperator
 		:param data: Данные обработанной команды.
-		:type data: ParsedCommandData
+		:type data: CommandEntity
 		"""
 
 		self._SourceOperator = source_operator
@@ -105,7 +104,7 @@ class PasingTarget_Collection(_BaseParserTarget):
 		Возвращает список алиасов для парсинга.
 
 		:param data: Данные обработанной команды.
-		:type data: ParsedCommandData
+		:type data: CommandEntity
 		:return: Список алиасов.
 		:rtype: list[str]
 		"""
@@ -227,7 +226,7 @@ class PasingTarget_Slug(_BaseParserTarget):
 		:rtype: list[str]
 		"""
 
-		Slug: str = self._Data.get_important_position_value("TARGET", expected_type = str)
+		Slug: str = self._Data.get_position_value("TARGET", expected_type = str, important = True)
 		TargetSlug: str | None = self._SourceOperator.parse_slug_from_string(Slug)
 		if TargetSlug: return [TargetSlug]
 		else: self._Printer.warning("Unable to parse title slug from target.")
@@ -322,20 +321,20 @@ class CommandProcessor(CommandProcessorTemplate[Parameters]):
 	# >>>>> ПРИВАТНЫЕ МЕТОДЫ <<<<< #
 	#==========================================================================================#
 
-	def __GetParsingTarget(self, data: ParsedCommandData, prepared_data: PreparedData) -> _BaseParserTarget:
+	def __get_parsing_targets(self, data: CommandEntity, prepared_data: PreparedData) -> _BaseParserTarget:
 		"""
 		Определяет цель для парсинга.
 
 		:param data: Данные обработанной команды.
-		:type data: ParsedCommandData
+		:type data: CommandEntity
 		:param prepared_data: Предподготолвенные данные.
 		:type prepared_data: PreparedData
 		:return: Цель для парсинга.
 		:rtype: _BaseParserTarget
 		"""
 
-		Parser = prepared_data.required_parsers[0]
-		TargetTypes: tuple[type[_BaseParserTarget], ...] = (
+		source_operator = prepared_data.required_parsers[0].launch()
+		targets_types: tuple[type[_BaseParserTarget], ...] = (
 			PasingTarget_Collection,
 			PasingTarget_ID,
 			PasingTarget_Last,
@@ -344,13 +343,13 @@ class CommandProcessor(CommandProcessorTemplate[Parameters]):
 			PasingTarget_Updates
 		)
 
-		for Type in TargetTypes:
-			Target = Type(Parser.source_operator, data)
-			if Target.is_used: return Target
+		for target_type in targets_types:
+			target = target_type(source_operator, data)
+			if target.is_used: return target
 
 		raise exceptions.parsing.ParsingError("Unable determine parsing target.")
 
-	def __ParseSlugs(self, parameters: Parameters, source_operator: "BaseSourceOperator", slugs: Sequence[str], start_index: int) -> ParsingStatistics:
+	def __parse_slugs(self, parameters: Parameters, source_operator: "BaseSourceOperator", slugs: Sequence[str], start_index: int) -> ParsingStatistics:
 		"""
 		Парсит набор алиасов тайтлов.
 
@@ -386,7 +385,7 @@ class CommandProcessor(CommandProcessorTemplate[Parameters]):
 			Title = Parser.init_empty_title(Slug)
 			self.printer.templates.parsing.start(Title.data, Index, TotalCount)
 	
-			match self.__ParseAndCatchExceptions(parameters, Parser, Title):
+			match self.__parse_safely(parameters, Parser, Title):
 
 				case ParsingSignals.Break:
 					break
@@ -399,7 +398,7 @@ class CommandProcessor(CommandProcessorTemplate[Parameters]):
 					ErrorsCount += 1
 					continue
 
-			if parameters.is_download_images: Parser.download_images(parameters.is_force_mode_enabled)
+			if parameters.is_download_images: Parser.download_images(parameters.force_mode)
 			else: self.printer.emit("Images downloading skipped by flag.")
 	
 			if not Title.is_local_file_loaded and not parameters.is_cold_saving:
@@ -412,12 +411,24 @@ class CommandProcessor(CommandProcessorTemplate[Parameters]):
 
 		return ParsingStatistics(ParsedCount, NotFoundCount, ErrorsCount)
 
-	def __ParseAndCatchExceptions(self, parameters: Parameters, parser: "BaseParser", title: "BaseTitleController") -> ParsingSignals:
+	def __parse_safely(self, parameters: Parameters, parser: "BaseParser", title: "BaseTitleController") -> ParsingSignals:
+		"""
+		Выполняет парсинг тайта, отлавливая общие исключения.
+
+		:param parameters: Параметры, требуемые обработчиком.
+		:type parameters: Parameters
+		:param parser: Парсер.
+		:type parser: BaseParser
+		:param title: Контроллер тайтла.
+		:type title: BaseTitleController
+		:return: Сигнал парсинга.
+		:rtype: ParsingSignals
+		"""
 
 		try:
 			parser.parse()
 			
-			if not parameters.is_force_mode_enabled:
+			if not parameters.force_mode:
 				MergedChaptersCount = title.merge()
 				if MergedChaptersCount: self.printer.emit(f"Merged {MergedChaptersCount} chapters.")
 
@@ -447,7 +458,7 @@ class CommandProcessor(CommandProcessorTemplate[Parameters]):
 
 		return ParsingSignals.OK
 
-	def __SkipSlugsBefore(self, slugs: tuple[str, ...], starting_slug: str) -> int:
+	def __skip_slugs_before(self, slugs: tuple[str, ...], starting_slug: str) -> int:
 		"""
 		Определяет стартовый индекс последовательности для парсинга.
 
@@ -472,7 +483,40 @@ class CommandProcessor(CommandProcessorTemplate[Parameters]):
 	#==========================================================================================#
 
 	@override
-	def _ExportCommandDescription(self) -> str:
+	def _build_model(self, model: CommandModel) -> CommandModel:
+		"""
+		Генерирует модель команды.
+		
+		:param model: Шаблон модели команды.
+		:type model: Command
+		:return: Модель команды.
+		:rtype: CommandModel
+		"""
+
+		position = model.create_position("TARGET", "Target for parsing.", important = True)
+		position.set_argument(description = "Title slug.")
+		position.add_flag("-local", description = "Parse all locally saved titles.")
+		position.add_flag("-last", description = "Parse last parsed title.")
+		position.add_key("--collection", description = GetStyledTextFromHTML("Name of collection file. Put . to default <i>collection</i>."))
+		position.add_key("--id", value_type = ValidableTypes.UnsignedInteger, description = "Title ID.")
+		position.add_key("--updates", value_type = ValidableTypes.UnsignedInteger, description = "Parse updates for period in hours.")
+
+		self._add_parser_position(key = "--use")
+		self._add_force_mode_flag()
+
+		model.base.add_flag("-no-amend", description = "Disable chapters content amending.")
+		model.base.add_flag("-no-images", description = "Disable covers and persons portraits downloading.")
+		model.base.add_flag("-sort", description = "Enable chapters sorting after parsing.")
+		model.base.add_flag("-no-cold-save", description = "Disable saving if local file does't exists.")
+
+		self._add_mirror_key()
+
+		model.base.add_key("--from", description = "Skip titles before this slug.")
+
+		return model
+
+	@override
+	def _export_description(self) -> str:
 		"""
 		Возвращает описание команды.
 		
@@ -483,87 +527,55 @@ class CommandProcessor(CommandProcessorTemplate[Parameters]):
 		return "Parse titles."
 
 	@override
-	def _GenerateCommand(self, command: Command) -> Command:
-		"""
-		Генерирует команду.
-		
-		:param command: Шаблон для команды.
-		:type command: Command
-		:return: Команда.
-		:rtype: Command
-		"""
-
-		ComPos = command.create_position("TARGET", "Target for parsing.", important = True)
-		ComPos.set_argument(description = "Title slug.")
-		ComPos.add_flag("-local", description = "Parse all locally saved titles.")
-		ComPos.add_flag("-last", description = "Parse last parsed title.")
-		ComPos.add_key("--collection", description = GetStyledTextFromHTML("Name of collection file. Put . to default <i>collection</i>."))
-		ComPos.add_key("--id", value_type = ValidableTypes.UnsignedInteger, description = "Title ID.")
-		ComPos.add_key("--updates", value_type = ValidableTypes.UnsignedInteger, description = "Parse updates for period in hours.")
-
-		self._AddParserPosition(key = "--use")
-
-		self._AddForceModeFlag()
-
-		command.base.add_flag("-no-amend", description = "Disable chapters content amending.")
-		command.base.add_flag("-no-images", description = "Disable covers and persons portraits downloading.")
-		command.base.add_flag("-sort", description = "Enable chapters sorting after parsing.")
-		command.base.add_flag("-no-cold-save", description = "Disable saving if local file does't exists.")
-
-		self._AddMirrorKey()
-
-		command.base.add_key("--from", description = "Skip titles before this slug.")
-
-		return command
-
-	@override
-	def _ParseParameters(self, data: ParsedCommandData, prepared_data: PreparedData) -> Parameters:
+	def _parse_parameters(self, entity: "CommandEntity", prepared_data: PreparedData) -> Parameters:
 		"""
 		Парсит данные обработанной команды в структуру **dataclass**.
 
-		:param data: Данные обработанной команды.
-		:type data: ParsedCommandData
-		:param prepared_data: Предподготолвенные данные.
+		:param entity: Сущность команды.
+		:type entity: CommandEntity
+		:param prepared_data: Подготовленные шаблонные параметры команды.
 		:type prepared_data: PreparedData
 		:return: Структура **dataclass**.
 		:rtype: Parameters
-		"""
+		""" 
 
 		return Parameters(
 			required_parser = prepared_data.required_parsers[0],
-			target = self.__GetParsingTarget(data, prepared_data),
-			parse_from = data.get_key_value("--from", expected_type = str),
+			target = self.__get_parsing_targets(entity, prepared_data),
+			parse_from = entity.get_key_value("--from", expected_type = str),
 			
-			is_force_mode_enabled = prepared_data.is_force_mode_enabled,
-			is_sorting_enabled = data.check_flag("-sort"),
-			is_amending_enabled = not data.check_flag("-no-amend"),
-			is_download_images = not data.check_flag("-no-images"),
-			is_cold_saving = not data.check_flag("-no-cold-save")
+			force_mode = prepared_data.force_mode,
+			is_sorting_enabled = entity.check_flag("-sort"),
+			is_amending_enabled = not entity.check_flag("-no-amend"),
+			is_download_images = not entity.check_flag("-no-images"),
+			is_cold_saving = not entity.check_flag("-no-cold-save")
 		)
 
 	@override
-	def _Process(self, parameters: Parameters) -> bool:
+	def _process(self, parameters: Parameters) -> bool:
 		"""
 		Выполняет команду.
 
-		:param parameters: Параметры команды.
+		:param parameters: Требуемые параметры.
 		:type parameters: Parameters
-		:return: Возвращает `False`, если команда требует прерывания выполнения.
+		:return: Возвращает `True`, если выполнение успешно и прерывание не требуется.
 		:rtype: bool
 		"""
 
-		Slugs: tuple[str, ...] =  tuple(sorted(parameters.target.get_slugs()))
-		StartIndex: int = 0
+		slugs: tuple[str, ...] =  tuple(sorted(parameters.target.get_slugs()))
+		start_index: int = 0
 
 		if parameters.parse_from:
-			TargetStartIndex: int = self.__SkipSlugsBefore(Slugs, parameters.parse_from)
-			if TargetStartIndex: StartIndex = TargetStartIndex
+			target_start_index: int = self.__skip_slugs_before(slugs, parameters.parse_from)
+			if target_start_index: start_index = target_start_index
 	
-		if not Slugs:
+		if not slugs:
 			self.printer.error("No slugs for parsing.")
 			return False
 
-		Statistics = self.__ParseSlugs(parameters, parameters.required_parser.source_operator, Slugs, StartIndex)
-		self.printer.templates.parsing.summary(Statistics.parsed, Statistics.not_found, Statistics.errors)
+		source_operator = parameters.required_parser.launch()
+		statistics = self.__parse_slugs(parameters, source_operator, slugs, start_index)
+		# To-Do: передавать статистику.
+		self.printer.templates.parsing.summary(statistics.parsed, statistics.not_found, statistics.errors)
 
 		return True

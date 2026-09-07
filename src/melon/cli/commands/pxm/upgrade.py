@@ -1,12 +1,14 @@
-from typing import override
+from typing import TYPE_CHECKING, override
 
-from dublib.cli.terminalyzer import Command, ParsedCommandData
+from ...base import BaseCommandProcessor
+from ...base.templates import BaseParameters
 
-from ..base_processor import PreparedData
-from ..base_processor.structs import DataclassStub
-from ._base import CommandProcessorTemplate
+if TYPE_CHECKING:
+	from dublib.cli.terminalyzer import CommandEntity, CommandModel
 
-class CommandProcessor(CommandProcessorTemplate[DataclassStub]):
+	from ...base.structs import PreparedData
+
+class CommandProcessor(BaseCommandProcessor[BaseParameters]):
 	"""Обработчик команды."""
 
 	#==========================================================================================#
@@ -14,7 +16,20 @@ class CommandProcessor(CommandProcessorTemplate[DataclassStub]):
 	#==========================================================================================#
 
 	@override
-	def _ExportCommandDescription(self) -> str:
+	def _build_model(self, model: "CommandModel") -> "CommandModel":
+		"""
+		Генерирует модель команды.
+		
+		:param model: Шаблон модели команды.
+		:type model: Command
+		:return: Модель команды.
+		:rtype: CommandModel
+		"""
+
+		return model
+
+	@override
+	def _export_description(self) -> str:
 		"""
 		Возвращает описание команды.
 		
@@ -25,43 +40,28 @@ class CommandProcessor(CommandProcessorTemplate[DataclassStub]):
 		return "Upgrade Melon."
 
 	@override
-	def _GenerateCommand(self, command: Command) -> Command:
-		"""
-		Генерирует команду.
-		
-		:param command: Шаблон для команды.
-		:type command: Command
-		:return: Команда.
-		:rtype: Command
-		"""
-
-		self._AddForceModeFlag()
-		
-		return command
-
-	@override
-	def _ParseParameters(self, data: ParsedCommandData, prepared_data: PreparedData) -> DataclassStub:
+	def _parse_parameters(self, entity: "CommandEntity", prepared_data: "PreparedData") -> BaseParameters:
 		"""
 		Парсит данные обработанной команды в структуру **dataclass**.
 
-		:param data: Данные обработанной команды.
-		:type data: PreparedData
-		:param prepared_data: Предподготолвенные данные.
-		:type prepared_data: PreparedDatas
+		:param entity: Сущность команды.
+		:type entity: CommandEntity
+		:param prepared_data: Подготовленные шаблонные параметры команды.
+		:type prepared_data: PreparedData
 		:return: Структура **dataclass**.
-		:rtype: DataclassStub
+		:rtype: BaseParameters
 		"""
 
-		return DataclassStub()
+		return BaseParameters()
 
 	@override
-	def _Process(self, parameters: DataclassStub) -> bool:
+	def _process(self, parameters: BaseParameters) -> bool:
 		"""
 		Выполняет команду.
 
-		:param parameters: Параметры команды.
-		:type parameters: DataclassStub
-		:return: Возвращает `False`, если команда требует прерывания выполнения.
+		:param parameters: Требуемые параметры.
+		:type parameters: BaseParameters
+		:return: Возвращает `True`, если выполнение успешно и прерывание не требуется.
 		:rtype: bool
 		"""
 

@@ -3,17 +3,18 @@ from enum import Enum
 from pathlib import Path
 from typing import TYPE_CHECKING, Sequence, override
 
-from dublib.cli.terminalyzer import Command, ParsedCommandData
 from dublib.functions.filesystem import clear_directory
 
 from .... import utils
-from ..base_processor import PreparedData
-from ..base_processor.templates import T_SingleParserRequired
+from ...base.templates import T_SingleParserRequired
 from ..melon._base import CommandProcessorTemplate
 
 if TYPE_CHECKING:
-	from ....core.base.structs.title import TitleDescriptor
+	from dublib.cli.terminalyzer import CommandEntity, CommandModel
 
+	from ....core.base.structs.title import TitleDescriptor
+	from ...base.structs import PreparedData
+	
 #==========================================================================================#
 # >>>>> ВСПОМОГАТЕЛЬНЫЕ СТРУКТУРЫ ДАННЫХ <<<<< #
 #==========================================================================================#
@@ -39,12 +40,11 @@ class Parameters(T_SingleParserRequired):
 
 class CommandProcessor(CommandProcessorTemplate[Parameters]):
 	"""Обработчик команды."""
-
 	#==========================================================================================#
 	# >>>>> ПРИВАТНЫЕ МЕТОДЫ <<<<< #
 	#==========================================================================================#
 
-	def __Callback_NotFound(self, descriptor: "TitleDescriptor"):
+	def __callback_not_found(self, descriptor: "TitleDescriptor"):
 		"""
 		Callback-метод: вывод результата проверки существования тайтла.
 
@@ -57,7 +57,7 @@ class CommandProcessor(CommandProcessorTemplate[Parameters]):
 		if IsTitleExists is False:
 			self.printer.emit(f"Title <i>{descriptor.full_filename}</i> marked to remove.")
 
-	def __RemoveFilesInDirectory(self, directory: Path, files: Sequence[str]) -> int:
+	def __remove_files_form_directory(self, directory: Path, files: Sequence[str]) -> int:
 		"""
 		Удаляет файлы из директории по списку.
 
@@ -79,12 +79,11 @@ class CommandProcessor(CommandProcessorTemplate[Parameters]):
 				FilesRemoved += 1
 		
 		return FilesRemoved
-
 	#==========================================================================================#
 	# >>>>> ПРИВАТНЫЕ МЕТОДЫ РЕАЛИЗАЦИИ ПРАВИЛ <<<<< #
 	#==========================================================================================#
 
-	def __ClearAll(self, parameters: Parameters) -> bool:
+	def __clear_all(self, parameters: Parameters) -> bool:
 		"""
 		Реализует стратегию очистки: удалить всё.
 
@@ -94,13 +93,13 @@ class CommandProcessor(CommandProcessorTemplate[Parameters]):
 		:rtype: bool
 		"""
 
-		ParserSettings = parameters.required_parser.settings
+		ParserSettings = parameters.required_parser.launch().settings
 		clear_directory(ParserSettings.directories.titles)
 		self.printer.emit("All files removed.")
 
 		return True
 
-	def __ClearBroken(self, parameters: Parameters) -> bool:
+	def __clear_broken(self, parameters: Parameters) -> bool:
 		"""
 		Реализует стратегию очистки: повреждённый файлы.
 
@@ -110,20 +109,20 @@ class CommandProcessor(CommandProcessorTemplate[Parameters]):
 		:rtype: bool
 		"""
 
-		SourceOperator = parameters.required_parser.source_operator
+		SourceOperator = parameters.required_parser.launch()
 		Collector = utils.Collector(SourceOperator)
 		self.printer.emit("Search broken files…", flush = True)
 
 		Result = Collector.collect_broken()
 		FilesToRemove: tuple[str, ...] = tuple(Descriptor.full_filename for Descriptor in Result.descriptors if Descriptor.full_filename)
-		RemovedFilesCount: int = self.__RemoveFilesInDirectory(SourceOperator.settings.directories.titles, FilesToRemove)
+		RemovedFilesCount: int = self.__remove_files_form_directory(SourceOperator.settings.directories.titles, FilesToRemove)
 
 		if RemovedFilesCount: self.printer.emit(f"Removed {RemovedFilesCount} files.")
 		else: self.printer.emit("No broken files found.")
 		
 		return True
 
-	def __ClearCollection(self, parameters: Parameters) -> bool:
+	def __clear_collection(self, parameters: Parameters) -> bool:
 		"""
 		Реализует стратегию очистки: по алиасам из коллекции.
 
@@ -133,7 +132,7 @@ class CommandProcessor(CommandProcessorTemplate[Parameters]):
 		:rtype: bool
 		"""
 
-		SourceOperator = parameters.required_parser.source_operator
+		SourceOperator = parameters.required_parser.launch()
 		Collector = utils.Collector(SourceOperator, parameters.collection_file)
 
 		if not Collector.is_collection_file_exists:
@@ -159,12 +158,12 @@ class CommandProcessor(CommandProcessorTemplate[Parameters]):
 
 		else: Filenames = [f"{Slug}.json" for Slug in Slugs]
 
-		RemovedFilesCount: int = self.__RemoveFilesInDirectory(SourceOperator.settings.directories.titles, Filenames)
+		RemovedFilesCount: int = self.__remove_files_form_directory(SourceOperator.settings.directories.titles, Filenames)
 		if RemovedFilesCount: self.printer.emit(f"Removed {RemovedFilesCount} files.")
 		
 		return True
 
-	def __ClearNotFound(self, parameters: Parameters) -> bool:
+	def __clear_not_found(self, parameters: Parameters) -> bool:
 		"""
 		Реализует стратегию очистки: файлы, описывающие тайтлы, не найденные по алиасу на сервере.
 
@@ -174,13 +173,13 @@ class CommandProcessor(CommandProcessorTemplate[Parameters]):
 		:rtype: bool
 		"""
 		
-		SourceOperator = parameters.required_parser.source_operator
+		SourceOperator = parameters.required_parser.launch()
 		Collector = utils.Collector(SourceOperator)
 		self.printer.emit("Check titles existing…", flush = True)
 
-		Result = Collector.collect_not_found(callback = self.__Callback_NotFound)
+		Result = Collector.collect_not_found(callback = self.__callback_not_found)
 		FilesToRemove: tuple[str, ...] = tuple(Descriptor.full_filename for Descriptor in Result.descriptors if Descriptor.full_filename)
-		RemovedFilesCount: int = self.__RemoveFilesInDirectory(SourceOperator.settings.directories.titles, FilesToRemove)
+		RemovedFilesCount: int = self.__remove_files_form_directory(SourceOperator.settings.directories.titles, FilesToRemove)
 
 		if RemovedFilesCount: self.printer.emit(f"Removed {RemovedFilesCount} files.")
 		else: self.printer.emit("No files to remove.")
@@ -192,7 +191,30 @@ class CommandProcessor(CommandProcessorTemplate[Parameters]):
 	#==========================================================================================#
 
 	@override
-	def _ExportCommandDescription(self) -> str:
+	def _build_model(self, model: "CommandModel") -> "CommandModel":
+		"""
+		Генерирует модель команды.
+		
+		:param model: Шаблон модели команды.
+		:type model: Command
+		:return: Модель команды.
+		:rtype: CommandModel
+		"""
+
+		self._add_parser_position()
+
+		position = model.create_position(name = "RULE", description = "Rule to clearing files.", important = True)
+		position.add_flag(ClearingRules.All.value, description = "Delete all files.")
+		position.add_flag(ClearingRules.Broken.value, description = "Delete broken JSON files.")
+		position.add_flag(ClearingRules.NotFound.value, description = "Delete files for titles that not found on server by slug.")
+		position.add_key(ClearingRules.Collection.value, description = "Delete files from collection.")
+
+		self._add_mirror_key()
+
+		return model
+
+	@override
+	def _export_description(self) -> str:
 		"""
 		Возвращает описание команды.
 		
@@ -203,47 +225,24 @@ class CommandProcessor(CommandProcessorTemplate[Parameters]):
 		return "Clear local JSON files by rule."
 
 	@override
-	def _GenerateCommand(self, command: Command) -> Command:
-		"""
-		Генерирует команду.
-		
-		:param command: Шаблон для команды.
-		:type command: Command
-		:return: Команда.
-		:rtype: Command
-		"""
-
-		self._AddParserPosition()
-
-		ComPos = command.create_position(name = "RULE", description = "Rule to clearing files.", important = True)
-		ComPos.add_flag(ClearingRules.All.value, description = "Delete all files.")
-		ComPos.add_flag(ClearingRules.Broken.value, description = "Delete broken JSON files.")
-		ComPos.add_flag(ClearingRules.NotFound.value, description = "Delete files for titles that not found on server by slug.")
-		ComPos.add_key(ClearingRules.Collection.value, description = "Delete files from collection.")
-
-		self._AddMirrorKey()
-
-		return command
-
-	@override
-	def _ParseParameters(self, data: ParsedCommandData, prepared_data: PreparedData) -> Parameters:
+	def _parse_parameters(self, entity: "CommandEntity", prepared_data: "PreparedData") -> Parameters:
 		"""
 		Парсит данные обработанной команды в структуру **dataclass**.
 
-		:param data: Данные обработанной команды.
-		:type data: ParsedCommandData
-		:param prepared_data: Предподготолвенные данные.
+		:param entity: Сущность команды.
+		:type entity: CommandEntity
+		:param prepared_data: Подготовленные шаблонные параметры команды.
 		:type prepared_data: PreparedData
 		:return: Структура **dataclass**.
 		:rtype: Parameters
 		"""
 
-		Parameter = data.get_important_position_named_parameter("RULE")
-		Rule: ClearingRules = ClearingRules(Parameter.name)
+		Parameter = entity.get_position_parameter("RULE")
+		Rule: ClearingRules = ClearingRules(getattr(Parameter, "name"))
 		CollectionFile: str | None = None
 
 		if Rule is ClearingRules.Collection: 
-			CollectionFile = data.get_key_value(ClearingRules.Collection.value, expected_type = str)
+			CollectionFile = entity.get_key_value(ClearingRules.Collection.value, expected_type = str)
 		
 		return Parameters(
 			required_parser = prepared_data.required_parsers[0],
@@ -252,22 +251,22 @@ class CommandProcessor(CommandProcessorTemplate[Parameters]):
 		)
 
 	@override
-	def _Process(self, parameters: Parameters) -> bool:
+	def _process(self, parameters: Parameters) -> bool:
 		"""
 		Выполняет команду.
 
-		:param parameters: Параметры команды.
+		:param parameters: Требуемые параметры.
 		:type parameters: Parameters
-		:return: Возвращает `False`, если команда требует прерывания выполнения.
+		:return: Возвращает `True`, если выполнение успешно и прерывание не требуется.
 		:rtype: bool
 		"""
 
 		Result: bool = True
 
 		match parameters.rule:
-			case ClearingRules.All: Result = self.__ClearAll(parameters)
-			case ClearingRules.Broken: Result = self.__ClearBroken(parameters)
-			case ClearingRules.Collection: Result = self.__ClearCollection(parameters)
-			case ClearingRules.NotFound: Result = self.__ClearNotFound(parameters)
+			case ClearingRules.All: Result = self.__clear_all(parameters)
+			case ClearingRules.Broken: Result = self.__clear_broken(parameters)
+			case ClearingRules.Collection: Result = self.__clear_collection(parameters)
+			case ClearingRules.NotFound: Result = self.__clear_not_found(parameters)
 
 		return Result

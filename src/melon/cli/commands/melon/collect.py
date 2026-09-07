@@ -1,17 +1,18 @@
 from dataclasses import dataclass
 from enum import Enum
-from typing import override
+from typing import TYPE_CHECKING, override
 
-from dublib.cli.terminalyzer import Command, ParsedCommandData, ValidableTypes
 from dublib.cli.text_styler import GetStyledTextFromHTML
+from dublib.validators import ValidableTypes
 
 from .... import utils
-from ..base_processor import PreparedData
-from ..base_processor.templates import (
-	T_ForceModeRequired,
-	T_SingleParserRequired,
-)
+from ...base.templates import T_ForceModeRequired, T_SingleParserRequired
 from ._base import CommandProcessorTemplate
+
+if TYPE_CHECKING:
+	from dublib.cli.terminalyzer import CommandEntity, CommandModel
+
+	from ...base.structs import PreparedData
 
 #==========================================================================================#
 # >>>>> ВСПОМОГАТЕЛЬНЫЕ СТРУКТУРЫ ДАННЫХ <<<<< #
@@ -46,7 +47,7 @@ class CommandProcessor(CommandProcessorTemplate[Parameters]):
 	# >>>>> ПРИВАТНЫЕ МЕТОДЫ <<<<< #
 	#==========================================================================================#
 
-	def __CollectFromServer(self, collector: utils.Collector, parameters: Parameters) -> int:
+	def __collect_from_source(self, collector: utils.Collector, parameters: Parameters) -> int:
 		"""
 		Собирает алиасы тайтлов: с сервера источника по заданным параметрам.
 
@@ -58,11 +59,12 @@ class CommandProcessor(CommandProcessorTemplate[Parameters]):
 		:rtype: int
 		"""
 
-		CollectedSlugs = parameters.required_parser.source_operator.collect_slugs(parameters.period, parameters.filters, parameters.pages)
+		source_operator = parameters.required_parser.launch()
+		slugs = source_operator.collect_slugs(parameters.period, parameters.filters, parameters.pages)
 
-		return collector.add(CollectedSlugs)
+		return collector.add(slugs)
 
-	def __CollectLocal(self, collector: utils.Collector) -> int:
+	def __collect_local(self, collector: utils.Collector) -> int:
 		"""
 		Собирает алиасы тайтлов: локальные файлы.
 
@@ -76,7 +78,7 @@ class CommandProcessor(CommandProcessorTemplate[Parameters]):
 
 		return collector.collect_local().added
 
-	def __CollectNotFound(self, collector: utils.Collector) -> int:
+	def __collect_not_found(self, collector: utils.Collector) -> int:
 		"""
 		Собирает алиасы тайтлов: не найденные на сервере источника тайтлы.
 
@@ -98,7 +100,39 @@ class CommandProcessor(CommandProcessorTemplate[Parameters]):
 	#==========================================================================================#
 
 	@override
-	def _ExportCommandDescription(self) -> str:
+	def _build_model(self, model: CommandModel) -> CommandModel:
+		"""
+		Генерирует модель команды.
+		
+		:param model: Шаблон модели команды.
+		:type model: Command
+		:return: Модель команды.
+		:rtype: CommandModel
+		"""
+
+		self._add_parser_position(key = "--use")
+
+		position = model.create_position("TARGETS", "Alternative targets to collecting.")
+		position.add_flag(CollectingTargets.Local.value, description = "Scan local titles and put slugs into collection.")
+		position.add_flag(CollectingTargets.NotFound.value, description = "Check titles existing on server and collect not found slugs.")
+
+		position = model.create_position(
+			name = "FILE",
+			description = GetStyledTextFromHTML("Collection filename without filetype. By default <i>collection</i>.")
+		)
+		position.add_key("--file")
+
+		self._add_force_mode_flag()
+		self._add_mirror_key()
+
+		model.base.add_key("--filters", description = "Query string for filtering titles.")
+		model.base.add_key("--pages", value_type = ValidableTypes.UnsignedInteger, description = "Count of pages to collecting.")
+		model.base.add_key("--period", value_type = ValidableTypes.UnsignedInteger, description = "Period in hours for parsing updates.")
+
+		return model
+
+	@override
+	def _export_description(self) -> str:
 		"""
 		Возвращает описание команды.
 		
@@ -109,100 +143,63 @@ class CommandProcessor(CommandProcessorTemplate[Parameters]):
 		return "Collect titles slugs into file in parser's temporary directory."
 
 	@override
-	def _GenerateCommand(self, command: Command) -> Command:
-		"""
-		Генерирует команду.
-		
-		:param command: Шаблон для команды.
-		:type command: Command
-		:return: Команда.
-		:rtype: Command
-		"""
-
-		self._AddParserPosition(key = "--use")
-
-		ComPos = command.create_position("TARGETS", "Alternative targets to collecting.")
-		ComPos.add_flag(CollectingTargets.Local.value, description = "Scan local titles and put slugs into collection.")
-		ComPos.add_flag(CollectingTargets.NotFound.value, description = "Check titles existing on server and collect not found slugs.")
-
-		ComPos = command.create_position(
-			name = "FILE",
-			description = GetStyledTextFromHTML("Collection filename without filetype. By default <i>collection</i>.")
-		)
-		ComPos.add_key("--file")
-
-		self._AddForceModeFlag()
-
-		self._AddMirrorKey()
-
-		command.base.add_key("--filters", description = "Query string for filtering titles.")
-		command.base.add_key("--pages", value_type = ValidableTypes.UnsignedInteger, description = "Count of pages to collecting.")
-		command.base.add_key("--period", value_type = ValidableTypes.UnsignedInteger, description = "Period in hours for parsing updates.")
-
-		return command
-
-	@override
-	def _ParseParameters(self, data: ParsedCommandData, prepared_data: PreparedData) -> Parameters:
+	def _parse_parameters(self, entity: "CommandEntity", prepared_data: PreparedData) -> Parameters:
 		"""
 		Парсит данные обработанной команды в структуру **dataclass**.
 
-		:param data: Данные обработанной команды.
-		:type data: ParsedCommandData
-		:param prepared_data: Предподготолвенные данные.
+		:param entity: Сущность команды.
+		:type entity: CommandEntity
+		:param prepared_data: Подготовленные шаблонные параметры команды.
 		:type prepared_data: PreparedData
 		:return: Структура **dataclass**.
 		:rtype: Parameters
-		"""
-
-		File: str | None = data.get_position_value("FILE", expected_type = str)
-
-		CollectingTarget: str | None = data.get_position_value("TARGETS", expected_type = str)
-	
-		Period: int | None = data.get_key_value("--period", expected_type = int)
-		Filters: str | None = data.get_key_value("--filters", expected_type = str)
-		Pages: int | None = data.get_key_value("--pages", expected_type = int)
+		""" 
 
 		return Parameters(
 			required_parser = prepared_data.required_parsers[0],
-			is_force_mode_enabled = prepared_data.is_force_mode_enabled,
-			file = File,
-			collecting_target = CollectingTargets(CollectingTarget),
-			period = Period,
-			filters = Filters,
-			pages = Pages
+			force_mode = prepared_data.force_mode,
+			file = entity.get_position_value("FILE", expected_type = str),
+			collecting_target = CollectingTargets(entity.get_position_value("TARGETS", expected_type = str)),
+			period = entity.get_key_value("--period", expected_type = int),
+			filters = entity.get_key_value("--filters", expected_type = str),
+			pages = entity.get_key_value("--pages", expected_type = int)
 		)
 
 	@override
-	def _Process(self, parameters: Parameters) -> bool:
+	def _process(self, parameters: Parameters) -> bool:
 		"""
 		Выполняет команду.
 
-		:param parameters: Параметры команды.
+		:param parameters: Требуемые параметры.
 		:type parameters: Parameters
-		:return: Возвращает `False`, если команда требует прерывания выполнения.
+		:return: Возвращает `True`, если выполнение успешно и прерывание не требуется.
 		:rtype: bool
 		"""
-		
-		Collector = utils.Collector(parameters.required_parser.source_operator, parameters.file)
-		if not parameters.is_force_mode_enabled: Collector.load()
-		AddedSlugs: int = 0
+
+		source_operator = parameters.required_parser.launch()
+		collector = utils.Collector(source_operator, parameters.file)
+
+		if not parameters.force_mode:
+			collector.load()
+
+		added_slugs_count: int = 0
 
 		match parameters.collecting_target:
 
 			case CollectingTargets.FromServer:
 
-				if not parameters.required_parser.source_operator.is_collector_implemented:
+				if not source_operator.is_collector_implemented:
 					self.printer.critical("Collector method not implemented.")
 					return False
 
-				AddedSlugs = self.__CollectFromServer(Collector, parameters)
+				added_slugs_count = self.__collect_from_source(collector, parameters)
 
-			case CollectingTargets.Local: AddedSlugs = self.__CollectLocal(Collector)
-			case CollectingTargets.NotFound: AddedSlugs = self.__CollectNotFound(Collector)
+			case CollectingTargets.Local: added_slugs_count = self.__collect_local(collector)
+			case CollectingTargets.NotFound: added_slugs_count = self.__collect_not_found(collector)
 
-		Collector.save()
+		collector.save()
 	
-		if AddedSlugs: self.printer.emit(f"Unique slugs added: {AddedSlugs}.")
+		if added_slugs_count: self.printer.emit(f"Unique slugs added: {added_slugs_count}.")
 		else: self.printer.emit("No new slugs in collection.")
 
 		return True

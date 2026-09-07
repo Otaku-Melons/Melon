@@ -1,17 +1,15 @@
 from dataclasses import dataclass
-from typing import override
+from typing import TYPE_CHECKING, override
 
 import orjson
 
-from dublib.cli.terminalyzer import Command, ParsedCommandData
-
-from ..base_processor import PreparedData
-from ..base_processor.templates import T_SingleParserRequired
+from ...base.templates import T_SingleParserRequired
 from ._base import CommandProcessorTemplate
 
-#==========================================================================================#
-# >>>>> ВСПОМОГАТЕЛЬНЫЕ СТРУКТУРЫ ДАННЫХ <<<<< #
-#==========================================================================================#
+if TYPE_CHECKING:
+	from dublib.cli.terminalyzer import CommandEntity, CommandModel
+
+	from ...base.structs import PreparedData
 
 @dataclass(frozen = True)
 class Parameters(T_SingleParserRequired):
@@ -20,10 +18,6 @@ class Parameters(T_SingleParserRequired):
 	slug: str
 	is_json_output: bool
 
-#==========================================================================================#
-# >>>>> ОСНОВНОЙ КЛАСС <<<<< #
-#==========================================================================================#
-
 class CommandProcessor(CommandProcessorTemplate[Parameters]):
 	"""Обработчик команды."""
 
@@ -31,7 +25,7 @@ class CommandProcessor(CommandProcessorTemplate[Parameters]):
 	# >>>>> ПРИВАТНЫЕ МЕТОДЫ <<<<< #
 	#==========================================================================================#
 
-	def __PrintResult(self, parameters: Parameters, title_id: int | None):
+	def __print_result(self, parameters: Parameters, title_id: int | None):
 		"""
 		Выводит результат поиска ID.
 
@@ -60,7 +54,28 @@ class CommandProcessor(CommandProcessorTemplate[Parameters]):
 	#==========================================================================================#
 
 	@override
-	def _ExportCommandDescription(self) -> str:
+	def _build_model(self, model: CommandModel) -> CommandModel:
+		"""
+		Генерирует модель команды.
+		
+		:param model: Шаблон модели команды.
+		:type model: Command
+		:return: Модель команды.
+		:rtype: CommandModel
+		"""
+
+		position = model.create_position("SLUG", "Title slug.", important = True)
+		position.set_argument()
+
+		self._add_parser_position(key = "--use")
+
+		# To-Do: вынести флаг в генераторы.
+		model.base.add_flag("-j", description = "Print result in JSON format.")
+
+		return model
+
+	@override
+	def _export_description(self) -> str:
 		"""
 		Возвращает описание команды.
 		
@@ -68,36 +83,16 @@ class CommandProcessor(CommandProcessorTemplate[Parameters]):
 		:rtype: str
 		"""
 
-		return "Find title ID by slug in cache."
+		return "Find title identificator in cache."
 
 	@override
-	def _GenerateCommand(self, command: Command) -> Command:
-		"""
-		Генерирует команду.
-		
-		:param command: Шаблон для команды.
-		:type command: Command
-		:return: Команда.
-		:rtype: Command
-		"""
-		
-		ComPos = command.create_position("SLUG", "Title slug.", important = True)
-		ComPos.set_argument()
-
-		self._AddParserPosition(key = "--use")
-
-		command.base.add_flag("-j", description = "Print result in JSON format.")
-
-		return command
-
-	@override
-	def _ParseParameters(self, data: ParsedCommandData, prepared_data: PreparedData) -> Parameters:
+	def _parse_parameters(self, entity: "CommandEntity", prepared_data: PreparedData) -> Parameters:
 		"""
 		Парсит данные обработанной команды в структуру **dataclass**.
 
-		:param data: Данные обработанной команды.
-		:type data: ParsedCommandData
-		:param prepared_data: Предподготолвенные данные.
+		:param entity: Сущность команды.
+		:type entity: CommandEntity
+		:param prepared_data: Подготовленные шаблонные параметры команды.
 		:type prepared_data: PreparedData
 		:return: Структура **dataclass**.
 		:rtype: Parameters
@@ -105,22 +100,23 @@ class CommandProcessor(CommandProcessorTemplate[Parameters]):
 
 		return Parameters(
 			required_parser = prepared_data.required_parsers[0],
-			slug = data.get_important_position_value("SLUG", expected_type = str),
-			is_json_output = data.check_flag("-j")
+			slug = entity.get_position_value("SLUG", expected_type = str, important = True),
+			is_json_output = entity.check_flag("-j")
 		)
 
 	@override
-	def _Process(self, parameters: Parameters) -> bool:
+	def _process(self, parameters: Parameters) -> bool:
 		"""
 		Выполняет команду.
 
-		:param parameters: Параметры команды.
+		:param parameters: Требуемые параметры.
 		:type parameters: Parameters
-		:return: Возвращает `False`, если команда требует прерывания выполнения.
+		:return: Возвращает `True`, если выполнение успешно и прерывание не требуется.
 		:rtype: bool
 		"""
 
-		ID = parameters.required_parser.source_operator.shared_data.journal.get_id_by_slug(parameters.slug)
-		self.__PrintResult(parameters, ID)
+		source_operator = parameters.required_parser.launch()
+		title_id: int | None = source_operator.shared_data.journal.get_id_by_slug(parameters.slug)
+		self.__print_result(parameters, title_id)
 
 		return False if parameters.is_json_output else True

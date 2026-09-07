@@ -1,15 +1,16 @@
-from dublib.cli.terminalyzer import ValidableTypes
+from dublib.validators import ValidableTypes
 
-from ..base_processor import PARAMS, BaseCommandProcessor
+from ...base import BaseCommandProcessor
+from ...base.templates import BaseParameters
 
-class CommandProcessorTemplate(BaseCommandProcessor[PARAMS]):
+class CommandProcessorTemplate[PARAMS: "BaseParameters"](BaseCommandProcessor[PARAMS]):
 	"""Контейнер шаблонов генерации команд."""
 	
 	#==========================================================================================#
 	# >>>>> НАСЛЕДУЕМЫЕ МЕТОДЫ ГЕНЕРАЦИИ КОМАНДЫ <<<<< #
 	#==========================================================================================#
 
-	def _AddMirrorKey(self):
+	def _add_mirror_key(self):
 		"""Добавляет ключ подключения зеркала."""
 
-		self._Command.base.add_key("--mirror", value_type = ValidableTypes.Domain, description = "Source mirror to requests.")
+		self._model.base.add_key("--mirror", value_type = ValidableTypes.Domain, description = "Source mirror to requests.")

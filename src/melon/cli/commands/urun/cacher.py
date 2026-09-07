@@ -1,26 +1,20 @@
 from dataclasses import dataclass
-from typing import override
-
-from dublib.cli.terminalyzer import Command, ParsedCommandData
+from typing import TYPE_CHECKING, override
 
 from .... import utils
-from ..base_processor import PreparedData, ProcessorOptions
-from ..base_processor.templates import T_MultipleParsersRequired
+from ...base.templates import T_MultipleParsersRequired
 from ..melon._base import CommandProcessorTemplate
 
-#==========================================================================================#
-# >>>>> ВСПОМОГАТЕЛЬНЫЕ СТРУКТУРЫ ДАННЫХ <<<<< #
-#==========================================================================================#
+if TYPE_CHECKING:
+	from dublib.cli.terminalyzer import CommandEntity, CommandModel
+
+	from ...base.structs import PreparedData
 
 @dataclass(frozen = True)
 class Parameters(T_MultipleParsersRequired):
 	"""Параметры, требуемые обработчиком."""
 
 	pass
-
-#==========================================================================================#
-# >>>>> ОСНОВНОЙ КЛАСС <<<<< #
-#==========================================================================================#
 
 class CommandProcessor(CommandProcessorTemplate[Parameters]):
 	"""Обработчик команды."""
@@ -30,7 +24,22 @@ class CommandProcessor(CommandProcessorTemplate[Parameters]):
 	#==========================================================================================#
 
 	@override
-	def _ExportCommandDescription(self) -> str:
+	def _build_model(self, model: "CommandModel") -> "CommandModel":
+		"""
+		Генерирует модель команды.
+		
+		:param model: Шаблон модели команды.
+		:type model: Command
+		:return: Модель команды.
+		:rtype: CommandModel
+		"""
+
+		self._add_parser_position(multiple = True)
+
+		return model
+
+	@override
+	def _export_description(self) -> str:
 		"""
 		Возвращает описание команды.
 		
@@ -41,39 +50,13 @@ class CommandProcessor(CommandProcessorTemplate[Parameters]):
 		return "Run ID-slug caching."
 
 	@override
-	def _ExportOptions(self) -> ProcessorOptions:
-		"""
-		Возвращает контейнер настроек обработчика.
-
-		:return: Контейнер настроек обработчика.
-		:rtype: ProcessorOptions
-		"""
-
-		return ProcessorOptions(allow_multiple_parsers = True)
-
-	@override
-	def _GenerateCommand(self, command: Command) -> Command:
-		"""
-		Генерирует команду.
-		
-		:param command: Шаблон для команды.
-		:type command: Command
-		:return: Команда.
-		:rtype: Command
-		"""
-
-		self._AddParserPosition()
-
-		return command
-
-	@override
-	def _ParseParameters(self, data: ParsedCommandData, prepared_data: PreparedData) -> Parameters:
+	def _parse_parameters(self, entity: "CommandEntity", prepared_data: "PreparedData") -> Parameters:
 		"""
 		Парсит данные обработанной команды в структуру **dataclass**.
 
-		:param data: Данные обработанной команды.
-		:type data: ParsedCommandData
-		:param prepared_data: Предподготолвенные данные.
+		:param entity: Сущность команды.
+		:type entity: CommandEntity
+		:param prepared_data: Подготовленные шаблонные параметры команды.
 		:type prepared_data: PreparedData
 		:return: Структура **dataclass**.
 		:rtype: Parameters
@@ -82,21 +65,21 @@ class CommandProcessor(CommandProcessorTemplate[Parameters]):
 		return Parameters(prepared_data.required_parsers)
 
 	@override
-	def _Process(self, parameters: Parameters) -> bool:
+	def _process(self, parameters: Parameters) -> bool:
 		"""
 		Выполняет команду.
 
-		:param parameters: Параметры команды.
+		:param parameters: Требуемые параметры.
 		:type parameters: Parameters
-		:return: Возвращает `False`, если команда требует прерывания выполнения.
+		:return: Возвращает `True`, если выполнение успешно и прерывание не требуется.
 		:rtype: bool
 		"""
 
-		for CurrentParser in parameters.required_parsers:
-			self.printer.emit(f"Caching titles for <b>{CurrentParser.name}</b>…")
-			Cacher = utils.Cacher(CurrentParser.source_operator)
+		for parser_operator in parameters.required_parsers:
+			self.printer.emit(f"Caching titles for <b>{parser_operator.name}</b>…")
+			Cacher = utils.Cacher(parser_operator.launch())
 	
-			Result = Cacher.cache_parser_output()
-			self.printer.templates.cacher.result(Result)
+			result = Cacher.cache_parser_output()
+			self.printer.templates.cacher.result(result)
 
 		return True

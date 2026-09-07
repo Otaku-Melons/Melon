@@ -1,33 +1,30 @@
 from dataclasses import dataclass
 from pathlib import Path
-from typing import override
+from typing import TYPE_CHECKING, override
 
 import orjson
 
-from dublib.cli.terminalyzer import Command, ParsedCommandData, ValidableTypes
 from dublib.functions.filesystem import json
+from dublib.validators import ValidableTypes
 
 from .... import utils
 from ....core import exceptions
-from ..base_processor import PreparedData, ProcessorOptions
+from ...base.templates import BaseParameters
 from ..melon._base import CommandProcessorTemplate
 
-#==========================================================================================#
-# >>>>> ВСПОМОГАТЕЛЬНЫЕ СТРУКТУРЫ ДАННЫХ <<<<< #
-#==========================================================================================#
+if TYPE_CHECKING:
+	from dublib.cli.terminalyzer import CommandEntity, CommandModel
+
+	from ...base.structs import PreparedData
 
 @dataclass(frozen = True)
-class Parameters:
+class Parameters(BaseParameters):
 	"""Параметры, требуемые обработчиком."""
 
 	target: str
 	is_output_json: bool
 	file_to_write: Path | None
 	is_ignore_case: bool
-
-#==========================================================================================#
-# >>>>> ОСНОВНОЙ КЛАСС <<<<< #
-#==========================================================================================#
 
 class CommandProcessor(CommandProcessorTemplate[Parameters]):
 	"""Обработчик команды."""
@@ -37,7 +34,31 @@ class CommandProcessor(CommandProcessorTemplate[Parameters]):
 	#==========================================================================================#
 
 	@override
-	def _ExportCommandDescription(self) -> str:
+	def _build_model(self, model: "CommandModel") -> "CommandModel":
+		"""
+		Генерирует модель команды.
+		
+		:param model: Шаблон модели команды.
+		:type model: Command
+		:return: Модель команды.
+		:rtype: CommandModel
+		"""
+
+
+		position = model.create_position("VALUE", "Input value to classification.", important = True)
+		position.set_argument()
+
+		position = model.create_position("MODE", "Output mode. By default styled print to terminal.")
+		# To-Do: заменить на шаблон.
+		position.add_flag("-j", aliases = ("--json",), description = "Prints JSON-string in terminal.")
+		position.add_key("--file", value_type = ValidableTypes.Path, description = "Path to dump JSON file.")
+
+		model.base.add_flag("-i", aliases = ("--ignorecase",), description = "Ignore characters case in procedures searching.")
+
+		return model
+
+	@override
+	def _export_description(self) -> str:
 		"""
 		Возвращает описание команды.
 		
@@ -48,71 +69,33 @@ class CommandProcessor(CommandProcessorTemplate[Parameters]):
 		return "Process titles classificators."
 
 	@override
-	def _ExportOptions(self) -> ProcessorOptions:
-		"""
-		Возвращает контейнер настроек обработчика.
-
-		:return: Контейнер настроек обработчика.
-		:rtype: ProcessorOptions
-		"""
-
-		return ProcessorOptions(use_timer = False)
-
-	@override
-	def _GenerateCommand(self, command: Command) -> Command:
-		"""
-		Генерирует команду.
-		
-		:param command: Шаблон для команды.
-		:type command: Command
-		:return: Команда.
-		:rtype: Command
-		"""
-
-		ComPos = command.create_position("VALUE", "Input value to classification.", important = True)
-		ComPos.set_argument()
-
-		ComPos = command.create_position("MODE", "Output mode. By default styled print to terminal.")
-		ComPos.add_flag("-j", aliases = ("--json",), description = "Prints JSON-string in terminal.")
-		ComPos.add_key("--file", value_type = ValidableTypes.Path, description = "Path to dump JSON file.")
-
-		command.base.add_flag("-i", aliases = ("--ignorecase",), description = "Ignore characters case in procedures searching.")
-
-		return command
-
-	@override
-	def _ParseParameters(self, data: ParsedCommandData, prepared_data: PreparedData) -> Parameters:
+	def _parse_parameters(self, entity: "CommandEntity", prepared_data: "PreparedData") -> Parameters:
 		"""
 		Парсит данные обработанной команды в структуру **dataclass**.
 
-		:param data: Данные обработанной команды.
-		:type data: ParsedCommandData
-		:param prepared_data: Предподготолвенные данные.
+		:param entity: Сущность команды.
+		:type entity: CommandEntity
+		:param prepared_data: Подготовленные шаблонные параметры команды.
 		:type prepared_data: PreparedData
 		:return: Структура **dataclass**.
 		:rtype: Parameters
 		"""
 
-		Target: str = data.get_important_position_value("VALUE", expected_type = str)
-		IsOutputJSON: bool = data.check_flag("-j")
-		FileToWrite: Path | None = data.get_key_value("--file", expected_type = Path)
-		IgnoreCase: bool = data.check_flag("-i")
-
 		return Parameters(
-			target = Target,
-			is_output_json = IsOutputJSON,
-			file_to_write = FileToWrite,
-			is_ignore_case = IgnoreCase
+			target = entity.get_position_value("VALUE", expected_type = str, important = True),
+			is_output_json = entity.check_flag("-j"),
+			file_to_write =  entity.get_key_value("--file", expected_type = Path),
+			is_ignore_case = entity.check_flag("-i")
 		)
 
 	@override
-	def _Process(self, parameters: Parameters) -> bool:
+	def _process(self, parameters: Parameters) -> bool:
 		"""
 		Выполняет команду.
 
-		:param parameters: Параметры команды.
+		:param parameters: Требуемые параметры.
 		:type parameters: Parameters
-		:return: Возвращает `False`, если команда требует прерывания выполнения.
+		:return: Возвращает `True`, если выполнение успешно и прерывание не требуется.
 		:rtype: bool
 		"""
 

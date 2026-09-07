@@ -3,7 +3,7 @@ import sys
 
 from dublib.functions.system import check_python_minimal_version
 
-from .cli import CommandsOrchestrator
+from .cli.orchestrator import CommandsOrchestrator
 from .core.system_objects import SystemObjects
 
 def main():
@@ -14,7 +14,7 @@ def main():
 	WorkingDirectory: str = os.getcwd()
 
 	sys.path.append(WorkingDirectory)
-	CommandsOrchestrator(Objects, CalledCommand).run()
+	CommandsOrchestrator(Objects).run(CalledCommand)
 
 if __name__ == "__main__":
 	main()

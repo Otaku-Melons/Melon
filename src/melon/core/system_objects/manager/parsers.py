@@ -66,6 +66,12 @@ class ParserOperator:
 		return self.__Parsers.is_installed(self.__Name, exception = False)
 
 	@property
+	def name(self) -> str:
+		"""Имя парсера."""
+
+		return self.__Name
+
+	@property
 	def path(self) -> Path:
 		"""Путь к директории парсера."""
 

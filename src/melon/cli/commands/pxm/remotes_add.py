@@ -3,11 +3,8 @@ from typing import TYPE_CHECKING, override
 
 from dublib.validators import ValidableTypes
 
-from ....builders.ranobe import RanobeBuilder
-from ....core import exceptions
-from ....core.base.formats.base_format.enums import By
-from ...base.templates import T_SingleParserRequired
-from ._base import CommandProcessorTemplate
+from ...base import BaseCommandProcessor
+from ...base.templates import BaseParameters
 
 if TYPE_CHECKING:
 	from dublib.cli.terminalyzer import CommandEntity, CommandModel
@@ -15,13 +12,12 @@ if TYPE_CHECKING:
 	from ...base.structs import PreparedData
 
 @dataclass(frozen = True)
-class Parameters(T_SingleParserRequired):
+class Parameters(BaseParameters):
 	"""Параметры, требуемые обработчиком."""
 
-	filename: str
-	branch_id: int | None
+	url: str
 
-class CommandProcessor(CommandProcessorTemplate[Parameters]):
+class CommandProcessor(BaseCommandProcessor[Parameters]):
 	"""Обработчик команды."""
 
 	#==========================================================================================#
@@ -39,12 +35,8 @@ class CommandProcessor(CommandProcessorTemplate[Parameters]):
 		:rtype: CommandModel
 		"""
 
-		position = model.create_position("FILE", "Filename of local JSON.", important = True)
-		position.set_argument()
-
-		self._add_parser_position(key = "--use")
-
-		model.base.add_key("--branch", value_type = ValidableTypes.UnsignedInteger, description = "Branch ID to building.")
+		position = model.create_position("REPOSITORY", "Repository URL.")
+		position.set_argument(ValidableTypes.URL)
 
 		return model
 
@@ -57,7 +49,7 @@ class CommandProcessor(CommandProcessorTemplate[Parameters]):
 		:rtype: str
 		"""
 
-		return "Build read-ready ranobe content."
+		return "Add parser repository."
 
 	@override
 	def _parse_parameters(self, entity: "CommandEntity", prepared_data: PreparedData) -> Parameters:
@@ -70,12 +62,10 @@ class CommandProcessor(CommandProcessorTemplate[Parameters]):
 		:type prepared_data: PreparedData
 		:return: Структура **dataclass**.
 		:rtype: Parameters
-		""" 
-	
+		"""
+
 		return Parameters(
-			filename = entity.get_position_value("FILE", expected_type = str, important = True),
-			required_parser = prepared_data.required_parsers[0],
-			branch_id = entity.get_key_value("--branch", expected_type = int)
+			url = entity.get_position_value("REPOSITORY", expected_type = str, important = True)
 		)
 
 	@override
@@ -89,25 +79,7 @@ class CommandProcessor(CommandProcessorTemplate[Parameters]):
 		:rtype: bool
 		"""
 
-		source_operator = parameters.required_parser.launch()
-		typing_result = source_operator.get_content_type_by_file(parameters.filename)
-
-		typing_result = source_operator.get_content_type_by_file(parameters.filename)
-
-		if not typing_result.slug:
-			raise exceptions.builders.BuildingError("Undefined title slug.")
-
-		Parser = source_operator.launch_parser(typing_result.content_type)
-		
-		Title = Parser.init_empty_title(typing_result.slug)
-	
-		if Title.load(parameters.filename, By.Filename):
-			self.printer.emit(f"Loaded file: <i>{parameters.filename}</i>.")
-		else:
-			self.printer.error(f"Unable load file: <b>{parameters.filename}</b>.")
-			return False
-	
-		Builder = RanobeBuilder(Parser, Title)
-		Builder.build(parameters.branch_id)
+		self.system_objects.manager.repositories.add(parameters.url)
 
 		return True
+

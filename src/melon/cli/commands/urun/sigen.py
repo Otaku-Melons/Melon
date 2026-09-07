@@ -1,18 +1,19 @@
 from dataclasses import dataclass
 from pathlib import Path
-from typing import override
+from typing import TYPE_CHECKING, override
 
-from dublib.cli.terminalyzer import Command, ParsedCommandData, ValidableTypes
 from dublib.functions.filesystem import json
+from dublib.validators import ValidableTypes
 
 from .... import utils
-from ..base_processor import PreparedData, RequiredParser
-from ..base_processor.templates import T_OptionalSingleParser
+from ...base.templates import T_OptionalSingleParser
 from ..melon._base import CommandProcessorTemplate
 
-#==========================================================================================#
-# >>>>> ВСПОМОГАТЕЛЬНЫЕ СТРУКТУРЫ ДАННЫХ <<<<< #
-#==========================================================================================#
+if TYPE_CHECKING:
+	from dublib.cli.terminalyzer import CommandEntity, CommandModel
+
+	from ....core.system_objects.manager.parsers import ParserOperator
+	from ...base.structs import PreparedData
 
 @dataclass(frozen = True)
 class Parameters(T_OptionalSingleParser):
@@ -21,10 +22,6 @@ class Parameters(T_OptionalSingleParser):
 	image: Path
 	signature_version: utils.unstubber.SignaturesVersions
 
-#==========================================================================================#
-# >>>>> ОСНОВНОЙ КЛАСС <<<<< #
-#==========================================================================================#
-
 class CommandProcessor(CommandProcessorTemplate[Parameters]):
 	"""Обработчик команды."""
 
@@ -32,14 +29,14 @@ class CommandProcessor(CommandProcessorTemplate[Parameters]):
 	# >>>>> ПРИВАТНЫЕ МЕТОДЫ <<<<< #
 	#==========================================================================================#
 
-	def __ExportSingature(self, signature: str, required_parser: RequiredParser) -> bool:
+	def __export_signature(self, signature: str, required_parser: ParserOperator) -> bool:
 		"""
 		Экспортирует сигнатуру в файл конфигурации парсера.
 
 		:param signature: Сигнатура изображения.
 		:type signature: str
-		:param required_parser: Коллекция управляющих объектов трубемого парсера.
-		:type required_parser: RequiredParser
+		:param required_parser: Оператор парсера.
+		:type required_parser: ParserOperator
 		:return: Возвращает `False`, если команда требует прерывания выполнения.
 		:rtype: bool
 		"""
@@ -73,22 +70,30 @@ class CommandProcessor(CommandProcessorTemplate[Parameters]):
 	#==========================================================================================#
 
 	@override
-	def _GetParsersQuery(self, data: ParsedCommandData) -> str | None:
+	def _build_model(self, model: "CommandModel") -> "CommandModel":
 		"""
-		Возвращает строку, представляющую последовательность имён затребованных парсеров, разделённых запятой.
-
-		По умолчанию берёт данные из позиций `PARSER` или `PARSERS`.
+		Генерирует модель команды.
 		
-		:param data: Данные обработанной команды.
-		:type data: ParsedCommandData
-		:return: Строка с именами парсеров или `None`, если не требуются.
-		:rtype: str | None
+		:param model: Шаблон модели команды.
+		:type model: Command
+		:return: Модель команды.
+		:rtype: CommandModel
 		"""
 
-		return data.get_key_value("--export", expected_type = str)
+		position = model.create_position("IMAGE", "Path to image.", important = True)
+		position.set_argument(ValidableTypes.ValidPath)
+
+		position = model.create_position("VERSION", "Signature version.", important = True)
+		position.add_flag("-v1", description = "Based on image sizes and pixels SHA256 hash: exact match.")
+		position.add_flag("-v2", description = "Based on perceptual hash: approximate match.")
+
+		# To-Do: кастомные описания.
+		self._add_parser_position(key = "--export")
+
+		return model
 
 	@override
-	def _ExportCommandDescription(self) -> str:
+	def _export_description(self) -> str:
 		"""
 		Возвращает описание команды.
 		
@@ -96,61 +101,39 @@ class CommandProcessor(CommandProcessorTemplate[Parameters]):
 		:rtype: str
 		"""
 
-		return "Generate image signature."
+		return "Generate image filtering signature."
 
 	@override
-	def _GenerateCommand(self, command: Command) -> Command:
-		"""
-		Генерирует команду.
-		
-		:param command: Шаблон для команды.
-		:type command: Command
-		:return: Команда.
-		:rtype: Command
-		"""
-
-		ComPos = command.create_position("IMAGE", "Path to image.", important = True)
-		ComPos.set_argument(ValidableTypes.ValidPath)
-
-		ComPos = command.create_position("VERSION", "Signature version.", important = True)
-		ComPos.add_flag("-v1", description = "Based on image sizes and pixels SHA256 hash: exact match.")
-		ComPos.add_flag("-v2", description = "Based on perceptual hash: approximate match.")
-
-		command.base.add_key("--export", description = "Exports signature in parser config.")
-
-		return command
-
-	@override
-	def _ParseParameters(self, data: ParsedCommandData, prepared_data: PreparedData) -> Parameters:
+	def _parse_parameters(self, entity: "CommandEntity", prepared_data: "PreparedData") -> Parameters:
 		"""
 		Парсит данные обработанной команды в структуру **dataclass**.
 
-		:param data: Данные обработанной команды.
-		:type data: ParsedCommandData
-		:param prepared_data: Предподготолвенные данные.
+		:param entity: Сущность команды.
+		:type entity: CommandEntity
+		:param prepared_data: Подготовленные шаблонные параметры команды.
 		:type prepared_data: PreparedData
 		:return: Структура **dataclass**.
 		:rtype: Parameters
 		"""
 
-		VersionKey: str = data.get_important_position_value("VERSION", expected_type = str)
-		VersionKey = VersionKey.lstrip("-")
-		Version = utils.unstubber.SignaturesVersions[VersionKey]
+		version_key: str = entity.get_position_value("VERSION", expected_type = str, important = True)
+		version_key = version_key.lstrip("-")
+		version = utils.unstubber.SignaturesVersions[version_key]
 
 		return Parameters(
 			required_parser = prepared_data.required_parsers[0] if prepared_data.required_parsers else None,
-			image = data.get_important_position_value("IMAGE", expected_type = Path),
-			signature_version = Version
+			image = entity.get_position_value("IMAGE", expected_type = Path, important = True),
+			signature_version = version
 		)
 
 	@override
-	def _Process(self, parameters: Parameters) -> bool:
+	def _process(self, parameters: Parameters) -> bool:
 		"""
 		Выполняет команду.
 
-		:param parameters: Параметры команды.
+		:param parameters: Требуемые параметры.
 		:type parameters: Parameters
-		:return: Возвращает `False`, если команда требует прерывания выполнения.
+		:return: Возвращает `True`, если выполнение успешно и прерывание не требуется.
 		:rtype: bool
 		"""
 
@@ -160,6 +143,6 @@ class CommandProcessor(CommandProcessorTemplate[Parameters]):
 		self.printer.emit(f"Signature: <i>{Signature}</i>")
 
 		if parameters.required_parser:
-			return self.__ExportSingature(Signature, parameters.required_parser)
+			return self.__export_signature(Signature, parameters.required_parser)
 
 		return True
