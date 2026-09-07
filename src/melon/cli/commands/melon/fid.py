@@ -1,8 +1,6 @@
 from dataclasses import dataclass
 from typing import TYPE_CHECKING, override
 
-import orjson
-
 from ...base.templates import T_SingleParserRequired
 from ._base import CommandProcessorTemplate
 
@@ -41,7 +39,7 @@ class CommandProcessor(CommandProcessorTemplate[Parameters]):
 				"slug": parameters.slug,
 				"id": title_id
 			}
-			self.printer.emit(orjson.dumps(OutputDictionary).decode())
+			self.printer.json(OutputDictionary)
 
 		else:
 			if title_id:

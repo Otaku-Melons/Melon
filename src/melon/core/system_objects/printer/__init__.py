@@ -1,5 +1,7 @@
 from typing import TYPE_CHECKING
 
+import orjson
+
 from dublib.cli.progress_indicator import ProgressIndicator
 from dublib.cli.templates.bus import GenerateMessage, MessagesTypes
 from dublib.cli.text_styler import GetStyledTextFromHTML
@@ -94,7 +96,7 @@ class Printer:
 
 	def critical(self, text: str):
 		"""
-		Обрабатывает вывод критической ошибки.
+		Выводит в терминал критическую ошибку.
 
 		:param text: Текст сообщения.
 		:type text: str
@@ -104,7 +106,7 @@ class Printer:
 
 	def debug(self, text: str):
 		"""
-		Обрабатывает вывод сообщения отладки.
+		Выводит в терминал сообщение отладки.
 
 		:param text: Текст сообщения.
 		:type text: str
@@ -115,7 +117,7 @@ class Printer:
 
 	def error(self, text: str):
 		"""
-		Обрабатывает вывод ошибки.
+		Выводит в терминал ошибку.
 
 		:param text: Текст сообщения.
 		:type text: str
@@ -123,9 +125,19 @@ class Printer:
 
 		self.emit(text, MessagesTypes.Error)
 
+	def json(self, data: dict):
+		"""
+		Выводит в терминал JSON-строку.
+
+		:param data: Словарь для преобразования в JSON-строку.
+		:type data: dict
+		"""
+
+		self.emit(orjson.dumps(data).decode())
+
 	def warning(self, text: str):
 		"""
-		Обрабатывает вывод предупреждения.
+		Выводит в терминал предупреждения.
 
 		:param text: Текст сообщения.
 		:type text: str

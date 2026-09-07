@@ -2,8 +2,6 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import TYPE_CHECKING, override
 
-import orjson
-
 from .... import utils
 from ....core import exceptions
 from ...base.templates import BaseParameters
@@ -122,7 +120,7 @@ class CommandProcessor(CommandProcessorTemplate[Parameters]):
 		classification_result = classificator.classify(parameters.target, procedures, ignore_case = parameters.is_ignore_case)
 		
 		if parameters.is_output_json:
-			self.printer.emit(orjson.dumps(classification_result.to_dict()).decode())
+			self.printer.json(classification_result.to_dict())
 		else:
 			self.printer.templates.classificator.result(classification_result)
 
