@@ -2,7 +2,7 @@ from typing import TYPE_CHECKING, override
 
 from ....core.base.parsers.components.manifest import ContentTypes
 from ...base import BaseCommandProcessor
-from ...base.options import ProcessorOptions
+from ...base.structs import ProcessorOptions
 from ...base.templates import BaseParameters
 
 if TYPE_CHECKING:

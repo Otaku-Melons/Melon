@@ -115,7 +115,7 @@ class CommandProcessor(CommandProcessorTemplate[Parameters]):
 		:rtype: bool
 		"""
 
-		source_operator = parameters.required_parser.launch()
+		source_operator = self._launch_source_operator(parameters.required_parser)
 		title_id: int | None = source_operator.shared_data.journal.get_id_by_slug(parameters.slug)
 		self.__print_result(parameters, title_id)
 

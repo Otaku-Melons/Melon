@@ -98,7 +98,7 @@ class CommandProcessor(CommandProcessorTemplate[Parameters]):
 		:rtype: bool
 		"""
 
-		source_operator = parameters.required_parser.launch()
+		source_operator = self._launch_source_operator(parameters.required_parser)
 		filename: str = source_operator.images_downloader.build_target_filename(
 			url = parameters.link,
 			filename = parameters.full_name or parameters.name,

@@ -460,13 +460,13 @@ class BaseSourceOperator[CSM: CustomSettingsTemplate](ABC):
 		
 		:param mirror: Домен зеркала.
 		:type mirror: str | None
-		:raises ValueError: Некорректный домен зеркала.
+		:raises ValidationError: Некорректный домен зеркала.
 		:return: Возвращает `True`, если зеркало было изменено.
 		:rtype: bool
 		"""
 
-		if mirror and not types.Domain.validate(mirror):
-			raise ValueError("Incorrect mirror domain.")
+		if mirror:
+			mirror = types.Domain.parse(mirror)
 
 		if mirror == self.manifest.original_domain or mirror == self.manifest.mirror:
 			return False

@@ -98,7 +98,7 @@ class CommandProcessor(CommandProcessorTemplate[Parameters]):
 		:rtype: bool
 		"""
 
-		source_operator = parameters.required_parser.launch()
+		source_operator = self._launch_source_operator(parameters.required_parser)
 
 		if not parameters.is_target_chapter:
 			self.printer.error("For now only chapters supported as target to repairing.")

@@ -6,13 +6,18 @@ from dublib.cli.terminalyzer import CommandModel
 
 from ...core import exceptions
 from ...utils.timer import Timer
-from .options import GeneratorOptions, ProcessorOptions
-from .structs import PreparedData
+from .structs import (
+	PreparedData,
+	ProcessorOptions,
+	_GeneratorOptions,
+	_InternalStorage,
+)
 
 if TYPE_CHECKING:
 	from dublib.cli.terminalyzer.commands.group import ModelsGroup
 	from dublib.cli.terminalyzer.parser.entitites import CommandEntity
 
+	from ...core.base.source_operator import BaseSourceOperator
 	from ...core.system_objects import SystemObjects
 	from ...core.system_objects.manager.parsers import ParserOperator
 	from ...core.system_objects.printer import Printer
@@ -96,6 +101,28 @@ class BaseCommandProcessor[PARAMS: "BaseParameters"](ABC):
 		if self._timer is not None:
 			self.printer.emit(f"Done in {self._timer.ends()}.")
 
+	def _launch_source_operator(self, parser_operator: "ParserOperator") -> "BaseSourceOperator":
+		"""
+		Запускает оператор контента.
+		
+		Автоматически применяет зеркало, полученное из ключа `--mirror`, а также кэширует результат для быстрого повторного вызова.
+
+		:param parser_operator: Оператор парсера.
+		:type parser_operator: ParserOperator
+		:return: Оператор источника.
+		:rtype: BaseSourceOperator
+		"""
+
+		parser_name: str = parser_operator.name
+
+		if parser_name not in self._internal_storage.source_operators:
+			source_operator = parser_operator.launch()
+			if self._internal_storage.mirror: source_operator.set_mirror(self._mirror)
+			self._internal_storage.source_operators[parser_name] = source_operator
+			return source_operator
+
+		return self._internal_storage.source_operators[parser_name]
+
 	def _load_required_parsers(self, data: "CommandEntity") -> tuple["ParserOperator", ...]:
 		"""
 		Загружает последовательность управляющих структур затребованных парсеров.
@@ -142,12 +169,12 @@ class BaseCommandProcessor[PARAMS: "BaseParameters"](ABC):
 
 		required_parsers: tuple["ParserOperator", ...] = self._load_required_parsers(entity)
 		is_force_mode: bool = entity.check_flag("-f")
-		mirror: str | None = entity.get_key_value("--mirror", expected_type = str, not_found_error = False)
+
+		self._internal_storage.mirror = entity.get_key_value("--mirror", expected_type = str, not_found_error = False)
 
 		return PreparedData(
 			required_parsers = required_parsers,
-			force_mode = is_force_mode,
-			mirror = mirror 
+			force_mode = is_force_mode
 		)
 
 	def _process_safely(self, parameters: PARAMS) -> bool:
@@ -294,7 +321,9 @@ class BaseCommandProcessor[PARAMS: "BaseParameters"](ABC):
 
 		self._system_objects: "SystemObjects" = system_objects
 
-		self._generator_options: GeneratorOptions = GeneratorOptions()
+		self._generator_options: _GeneratorOptions = _GeneratorOptions()
+		self._internal_storage: _InternalStorage = _InternalStorage()
+
 		self._options: ProcessorOptions = self._export_options()
 		self._timer: Timer | None = None
 
@@ -303,6 +332,8 @@ class BaseCommandProcessor[PARAMS: "BaseParameters"](ABC):
 			description = self._export_description()
 		)
 		self._model = self._build_model(self._model)
+
+		self._mirror: str | None = None
 
 	def process(self, entity: "CommandEntity"):
 		"""

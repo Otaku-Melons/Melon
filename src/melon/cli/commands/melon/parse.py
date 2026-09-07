@@ -333,7 +333,7 @@ class CommandProcessor(CommandProcessorTemplate[Parameters]):
 		:rtype: _BaseParserTarget
 		"""
 
-		source_operator = prepared_data.required_parsers[0].launch()
+		source_operator = self._launch_source_operator(prepared_data.required_parsers[0])
 		targets_types: tuple[type[_BaseParserTarget], ...] = (
 			PasingTarget_Collection,
 			PasingTarget_ID,
@@ -573,7 +573,7 @@ class CommandProcessor(CommandProcessorTemplate[Parameters]):
 			self.printer.error("No slugs for parsing.")
 			return False
 
-		source_operator = parameters.required_parser.launch()
+		source_operator = self._launch_source_operator(parameters.required_parser)
 		statistics = self.__parse_slugs(parameters, source_operator, slugs, start_index)
 		# To-Do: передавать статистику.
 		self.printer.templates.parsing.summary(statistics.parsed, statistics.not_found, statistics.errors)

@@ -118,7 +118,7 @@ class CommandProcessor(CommandProcessorTemplate[Parameters]):
 		:rtype: bool
 		"""
 
-		source_operator = parameters.required_parser.launch()
+		source_operator = self._launch_source_operator(parameters.required_parser)
 		typing_result = source_operator.get_content_type_by_file(parameters.filename)
 
 		if not typing_result.slug:

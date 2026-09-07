@@ -5,7 +5,7 @@ from prettytable import PLAIN_COLUMNS, PrettyTable
 from dublib.cli.text_styler import FastStyler
 
 from ...base import BaseCommandProcessor
-from ...base.options import ProcessorOptions
+from ...base.structs import ProcessorOptions
 from ...base.templates import BaseParameters
 
 if TYPE_CHECKING:

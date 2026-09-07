@@ -93,7 +93,7 @@ class CommandProcessor(CommandProcessorTemplate[Parameters]):
 		:rtype: bool
 		"""
 
-		ParserSettings = parameters.required_parser.launch().settings
+		ParserSettings = self._launch_source_operator(parameters.required_parser).settings
 		clear_directory(ParserSettings.directories.titles)
 		self.printer.emit("All files removed.")
 
@@ -109,7 +109,7 @@ class CommandProcessor(CommandProcessorTemplate[Parameters]):
 		:rtype: bool
 		"""
 
-		SourceOperator = parameters.required_parser.launch()
+		SourceOperator = self._launch_source_operator(parameters.required_parser)
 		Collector = utils.Collector(SourceOperator)
 		self.printer.emit("Search broken files…", flush = True)
 
@@ -132,7 +132,7 @@ class CommandProcessor(CommandProcessorTemplate[Parameters]):
 		:rtype: bool
 		"""
 
-		SourceOperator = parameters.required_parser.launch()
+		SourceOperator = self._launch_source_operator(parameters.required_parser)
 		Collector = utils.Collector(SourceOperator, parameters.collection_file)
 
 		if not Collector.is_collection_file_exists:
@@ -173,7 +173,7 @@ class CommandProcessor(CommandProcessorTemplate[Parameters]):
 		:rtype: bool
 		"""
 		
-		SourceOperator = parameters.required_parser.launch()
+		SourceOperator = self._launch_source_operator(parameters.required_parser)
 		Collector = utils.Collector(SourceOperator)
 		self.printer.emit("Check titles existing…", flush = True)
 

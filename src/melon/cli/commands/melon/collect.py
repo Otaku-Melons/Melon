@@ -59,7 +59,7 @@ class CommandProcessor(CommandProcessorTemplate[Parameters]):
 		:rtype: int
 		"""
 
-		source_operator = parameters.required_parser.launch()
+		source_operator = self._launch_source_operator(parameters.required_parser)
 		slugs = source_operator.collect_slugs(parameters.period, parameters.filters, parameters.pages)
 
 		return collector.add(slugs)
@@ -176,7 +176,7 @@ class CommandProcessor(CommandProcessorTemplate[Parameters]):
 		:rtype: bool
 		"""
 
-		source_operator = parameters.required_parser.launch()
+		source_operator = self._launch_source_operator(parameters.required_parser)
 		collector = utils.Collector(source_operator, parameters.file)
 
 		if not parameters.force_mode:
