@@ -4,9 +4,6 @@ from typing import TYPE_CHECKING, override
 
 import orjson
 
-from dublib.functions.filesystem import json
-from dublib.validators import ValidableTypes
-
 from .... import utils
 from ....core import exceptions
 from ...base.templates import BaseParameters
@@ -48,10 +45,7 @@ class CommandProcessor(CommandProcessorTemplate[Parameters]):
 		position = model.create_position("VALUE", "Input value to classification.", important = True)
 		position.set_argument()
 
-		position = model.create_position("MODE", "Output mode. By default styled print to terminal.")
-		# To-Do: заменить на шаблон.
-		position.add_flag("-j", aliases = ("--json",), description = "Prints JSON-string in terminal.")
-		position.add_key("--file", value_type = ValidableTypes.Path, description = "Path to dump JSON file.")
+		self._add_json_output_flag()
 
 		model.base.add_flag("-i", aliases = ("--ignorecase",), description = "Ignore characters case in procedures searching.")
 
@@ -99,38 +93,37 @@ class CommandProcessor(CommandProcessorTemplate[Parameters]):
 		:rtype: bool
 		"""
 
-		ScriptPath: Path = Path(f"{self.system_objects.options.CONFIGS_DIR}/classificator.ini")
+		script_work_dir: Path = self.system_objects.options.CONFIGS_DIR.value / "classificator"
+		script_work_dir.mkdir(exist_ok = True)
 		
-		if not ScriptPath.exists():
-			self.printer.critical(f"Script file \"{ScriptPath}\" doesn't exists.")
-			return False
+		try:
+			classificator = utils.Classificator(script_work_dir)
+		except FileNotFoundError as exception_data:
+			self.printer.critical(f"Script file \"{exception_data}\" doesn't exists.")
+			return False			
 		
-		ClassificatorObject = utils.Classificator(ScriptPath)
-		ExecutableLines = ClassificatorObject.read_script()
-		ScriptValidationErrors = ClassificatorObject.validate_script(ExecutableLines)
+
+		executable_lines = classificator.read_script()
+		validation_errors = classificator.validate_script(executable_lines)
 		
-		for ErrorData in ScriptValidationErrors:
-			self.printer.error(f"[{ErrorData.line.file.name}:{ErrorData.line.number}] {ErrorData.message}")
+		for error_data in validation_errors:
+			self.printer.error(f"[{error_data.line.file.name}:{error_data.line.number}] {error_data.message}")
 		
-		if ScriptValidationErrors:
+		if validation_errors:
 			self.printer.critical("Script failure due to validation errors.")
 			return False
 		
 		try:
-			Procedures = ClassificatorObject.parse_procedures(ExecutableLines)
-		except exceptions.utils.classificator.ScriptRuntimeError as ExecutionData:
-			self.printer.critical(str(ExecutionData))
+			procedures = classificator.parse_procedures(executable_lines)
+		except exceptions.utils.classificator.ScriptRuntimeError as exception_data:
+			self.printer.critical(str(exception_data))
 			return False
 		
-		ClassificationResult = ClassificatorObject.classify(parameters.target, Procedures, ignore_case = parameters.is_ignore_case)
+		classification_result = classificator.classify(parameters.target, procedures, ignore_case = parameters.is_ignore_case)
 		
 		if parameters.is_output_json:
-			self.printer.emit(orjson.dumps(ClassificationResult.to_dict()).decode())
+			self.printer.emit(orjson.dumps(classification_result.to_dict()).decode())
 		else:
-			self.printer.templates.classificator.result(ClassificationResult)
-		
-		if parameters.file_to_write:
-			json.write(parameters.file_to_write, ClassificationResult.to_dict())
-			self.printer.emit(f"Classification result dumped in file: \"{parameters.file_to_write}\".")
+			self.printer.templates.classificator.result(classification_result)
 
 		return True

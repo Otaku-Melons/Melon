@@ -150,7 +150,7 @@ class Classificator:
 
 		Filename: str = self.__ExtractDirectiveValues(line)[0]
 		if not Filename.endswith(".ini"): Filename += ".ini"
-		ScriptFile: Path = self.__ScriptDirectory / Filename
+		ScriptFile: Path = self.__work_directory / Filename
 		if not ScriptFile.exists(): raise FileNotFoundError(ScriptFile)
 
 		return self.__ReadScriptFile(ScriptFile)
@@ -320,16 +320,19 @@ class Classificator:
 	# >>>>> ПУБЛИЧНЫЕ МЕТОДЫ <<<<< #
 	#==========================================================================================#
 
-	def __init__(self, main_file: str | PathLike[str]):
+	def __init__(self, work_directory: Path):
 		"""
 		Оператор обработки скрипта классификации.
 
-		:param main_file: Путь к точке входа скрипта классификации.
-		:type main_file: str | PathLike[str]
+		:param work_directory: Путь к рабочей директории.
+		:type work_directory: Path
 		"""
 
-		self.__MainFilePath: Path = Path(main_file)
-		self.__ScriptDirectory: Path = self.__MainFilePath.parent
+		self.__work_directory: Path = work_directory
+		self.__main_file: Path = work_directory / "main.ini"
+
+		if not self.__main_file.exists():
+			raise FileNotFoundError(self.__main_file)
 
 	def classify(self, target: str, procedures: Sequence[Procedure], ignore_case: bool = False) -> ClassificationResult:
 		"""
@@ -353,8 +356,6 @@ class Classificator:
 			ProceduresCache = {CurrentProcedure.name: CurrentProcedure for CurrentProcedure in procedures}
 		
 		TargetProcedure: Procedure | None = ProceduresCache.get(target.lower() if ignore_case else target)
-
-		
 
 		if TargetProcedure:
 			NewName: str | None = TargetProcedure.rename if TargetProcedure.rename != target else None
@@ -455,7 +456,7 @@ class Classificator:
 		:rtype: tuple[ExecutableLine, ...]
 		"""
 
-		return tuple(self.__ReadScriptFile(self.__MainFilePath))
+		return tuple(self.__ReadScriptFile(self.__main_file))
 	
 	def validate_script(self, script_lines: Sequence[ExecutableLine]) -> tuple[ScriptValidationError, ...]:
 		"""
