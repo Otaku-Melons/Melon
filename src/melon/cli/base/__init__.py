@@ -6,12 +6,7 @@ from dublib.cli.terminalyzer import CommandModel
 
 from ...core import exceptions
 from ...utils.timer import Timer
-from .structs import (
-	PreparedData,
-	ProcessorOptions,
-	_GeneratorOptions,
-	_InternalStorage,
-)
+from .structs import PreparedData, ProcessorOptions, _InternalStorage
 
 if TYPE_CHECKING:
 	from dublib.cli.terminalyzer.commands.group import ModelsGroup
@@ -91,7 +86,7 @@ class BaseCommandProcessor[PARAMS: "BaseParameters"](ABC):
 		:rtype: str | None
 		"""
 
-		position_name: str = "PARSERS" if self._generator_options.is_multiple_parsers_allowed else "PARSER"
+		position_name: str = "PARSERS" if self._internal_storage.is_multiple_parsers_allowed else "PARSER"
 
 		return entity.get_position_value(position_name, expected_type = str, important = False)
 
@@ -147,7 +142,7 @@ class BaseCommandProcessor[PARAMS: "BaseParameters"](ABC):
 
 			parsers_names = tuple(self.system_objects.manager.parsers.installed)
 
-		if not self._generator_options.is_multiple_parsers_allowed and len(parsers_names) > 1:
+		if not self._internal_storage.is_multiple_parsers_allowed and len(parsers_names) > 1:
 			raise exceptions.cli.MultipleParsersDeniedForCommand(data.model.name)
 
 		self._check_required_parsers(parsers_names)
@@ -167,14 +162,12 @@ class BaseCommandProcessor[PARAMS: "BaseParameters"](ABC):
 		:rtype: PreparedData
 		"""
 
-		required_parsers: tuple["ParserOperator", ...] = self._load_required_parsers(entity)
-		is_force_mode: bool = entity.check_flag("-f")
-
 		self._internal_storage.mirror = entity.get_key_value("--mirror", expected_type = str, not_found_error = False)
 
 		return PreparedData(
-			required_parsers = required_parsers,
-			force_mode = is_force_mode
+			required_parsers = self._load_required_parsers(entity),
+			force_mode = entity.check_flag("-f"),
+			is_json_output = entity.check_flag("-j")
 		)
 
 	def _process_safely(self, parameters: PARAMS) -> bool:
@@ -214,28 +207,53 @@ class BaseCommandProcessor[PARAMS: "BaseParameters"](ABC):
 	def _add_force_mode_flag(self):
 		"""Добавляет флаг переключения режима перезаписи."""
 
-		self.model.base.add_flag("-f", description = "Enable force mode.")
+		self.model.base.add_flag(
+			name = "-f",
+			aliases = ("--force",),
+			description = "Enable force mode.")
 
-		self._generator_options.is_force_mode_available = True
+		self._internal_storage.is_force_mode = True
 
-	def _add_parser_position(self, key: str | None = None, multiple: bool = False, important: bool = True):
+	def _add_json_output_flag(self):
+		"""Добавляет флаг включения режима вывода в виде JSON."""
+
+		self._model.base.add_flag(
+			name = "-j",
+			aliases = ("--json",),
+			description = "Prints output as JSON-string."
+		)
+
+		self._internal_storage.is_json_output = True
+
+	def _add_parser_position(self, key: str | None = None, description: str | None = None, multiple: bool = False, important: bool = True):
 		"""
 		Добавляет позицию для имени парсера(ов): `PARSER` или `PARSERS` в зависимости от параметров обработчика.
 
 		:param key: Имя ключа. Если отсутствует, будет использован аргумент.
 		:type key: str | None
+		:param description: Описание позиции. Если отсутствует, будет использовано стандартное.
+		:type description: str | None
 		:param multiple: Указывает, разрешена ли загрузка нескольких парсеров.
 		:type multiple: bool
 		:param important: Указывает, является ли позиция обязательной.
 		:type important: bool
 		"""
 
-		self._generator_options.is_multiple_parsers_allowed = multiple
+		if multiple:
+			self._internal_storage.is_multiple_parsers_allowed = True
 
-		if self._generator_options.is_multiple_parsers_allowed:
-			position = self.model.create_position("PARSERS", "One or more parsers names separated by comma. By default all.", important = important)
+			position = self.model.create_position(
+				name = "PARSERS",
+				description = description or "One or more parsers names separated by comma. By default all.",
+				important = important
+			)
+
 		else:
-			position = self.model.create_position("PARSER", "Parser name.", important = important)
+			position = self.model.create_position(
+				name = "PARSER",
+				description = description or "Parser name.",
+				important = important
+			)
 
 		position.add_key(key) if key else position.set_argument()
 
@@ -321,9 +339,7 @@ class BaseCommandProcessor[PARAMS: "BaseParameters"](ABC):
 
 		self._system_objects: "SystemObjects" = system_objects
 
-		self._generator_options: _GeneratorOptions = _GeneratorOptions()
 		self._internal_storage: _InternalStorage = _InternalStorage()
-
 		self._options: ProcessorOptions = self._export_options()
 		self._timer: Timer | None = None
 

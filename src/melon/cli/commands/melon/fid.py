@@ -68,9 +68,7 @@ class CommandProcessor(CommandProcessorTemplate[Parameters]):
 		position.set_argument()
 
 		self._add_parser_position(key = "--use")
-
-		# To-Do: вынести флаг в генераторы.
-		model.base.add_flag("-j", description = "Print result in JSON format.")
+		self._add_json_output_flag()
 
 		return model
 

@@ -154,7 +154,7 @@ class BaseTitleController[TD: "BaseTitleData"](ABC):
 				
 			case By.Slug:
 				if type(identificator) is not str: raise ValueError("Slug must be str.")
-				DataBuffer = self._load_data_by_slug(cast(str, identificator))
+				DataBuffer = self._load_data_by_slug(identificator)
 
 			case By.ID:
 				if type(identificator) is not int: raise ValueError("ID must be int.")
