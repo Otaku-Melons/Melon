@@ -6,7 +6,7 @@ from typing import TYPE_CHECKING, Sequence
 
 from dulwich import errors, porcelain
 
-from dublib.exceptions.web_requestor import TokenExpired
+from dublib.exceptions.web_requestor import TokenExpiredError
 from dublib.functions.filesystem import json
 from dublib.validators import types
 from dublib.web_requestor import WebConfig, WebLibs, WebRequestor
@@ -286,7 +286,7 @@ class BaseSourceOperator[CSM: CustomSettingsTemplate](ABC):
 
 		try:
 			self._authorize()
-		except TokenExpired as ExceptionData:
+		except TokenExpiredError as ExceptionData:
 			self._Printer.error(f"Token expired: {ExceptionData}.")
 
 		self._ImagesDownloader = ImagesDownloader(self)

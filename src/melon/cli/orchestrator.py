@@ -4,20 +4,13 @@ from importlib import resources
 from typing import TYPE_CHECKING, cast
 
 from dublib.cli.terminalyzer import ModelsGroup, Terminalyzer
+from dublib.cli.terminalyzer.helper import Helper
 
 if TYPE_CHECKING:
+	from dublib.cli.terminalyzer.parser.entitites import CommandEntity
+
 	from ..core.system_objects import Printer, SystemObjects
 	from .base import BaseCommandProcessor
-
-from dataclasses import dataclass
-
-@dataclass
-class CommandProcedure:
-
-	processor_module: str
-	processor: "BaseCommandProcessor"
-	group: ModelsGroup
-
 
 class CommandsOrchestrator:
 	"""Оркестратор команд."""
@@ -64,8 +57,14 @@ class CommandsOrchestrator:
 		"""
 
 		if name not in self.__groups:
-			if name: self.__groups[name] = ModelsGroup(name, supergroup = True)
-			else: self.__groups[None] = ModelsGroup(None)
+			if name:
+				self.__groups[name] = ModelsGroup(name.title(), name)
+
+			else:
+				self.__groups[name] = ModelsGroup("Other")
+				model = self.__groups[name].create_model("help", "Show commands list. Add command to more info.")
+				model.base.add_argument()
+				model.base.add_argument()
 		
 		return self.__groups[name]
 
@@ -128,6 +127,29 @@ class CommandsOrchestrator:
 
 		return (supergroup, name)
 
+	def __process_help(self, entity: "CommandEntity"):
+		"""
+		Обрабатывает команду помощи.
+
+		:param entity: Сущность команды.
+		:type entity: CommandEntity
+		"""
+
+		arguments = entity.arguments
+
+		if arguments:
+			identificator: tuple[str, ...] = tuple(str(value) for value in entity.arguments)
+			model = self.__terminalyzer.find_model(identificator)
+
+			if not model:
+				self.printer.error("Info for command not found.")
+				sys.exit(1)
+
+			self.printer.emit(self.__helper.generate_command_info(model))
+
+		else:
+			self.printer.emit(self.__helper.generate_groups_list(self.__terminalyzer.groups))
+
 	#==========================================================================================#
 	# >>>>> ПУБЛИЧНЫЕ МЕТОДЫ <<<<< #
 	#==========================================================================================#
@@ -145,21 +167,31 @@ class CommandsOrchestrator:
 		self.__system_objects: "SystemObjects" = system_objects
 
 		self.__processors: "dict[str, BaseCommandProcessor]" = {}
-		self.__groups: dict[str | None, ModelsGroup] = {
-			None: ModelsGroup()
-		}
+		self.__groups: dict[str | None, ModelsGroup] = {}
 		self.__terminalyzer = Terminalyzer()
+		self.__helper = Helper()
 
 	def run(self, module_name: str):
+		"""
+		Запускает проверку команды по аргументам скрипта.
+
+		:param module_name: Имя используемого модуля команд.
+		:type module_name: str
+		"""
 
 		self.__load_processors(module_name)
 		self.__terminalyzer.set_commands_groups(tuple(self.__groups.values()))
 
 		entity = self.__terminalyzer.parse_parameters()
-		
+
 		if entity is None:
-			self.printer.critical("Unknown command!")
+			self.printer.critical("Command not found.")
+			self.printer.emit(f"Execute <b>{module_name} help</b> to show commands list.")
 			sys.exit(1)
+
+		if entity.model.name == "help":
+			self.__process_help(entity)
+			return
 
 		submodule_name: str = self.__build_submodule_name(entity.model.group.name, entity.model.name)
 		self.__processors[submodule_name].process(entity)
